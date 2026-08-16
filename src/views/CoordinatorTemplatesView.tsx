@@ -34,7 +34,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
         id: t.id || t.Id,
         templateName: t.templateName || t.TemplateName || "Bộ tiêu chí",
         description: t.description || t.Description || "",
-        createdDate: t.createdDate ? new Date(t.createdDate).toLocaleDateString("vi-VN") : "2026-08-16",
+        createdDate: t.createdDate ? new Date(t.createdDate).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
         criterias: (t.criterias || t.TemplateCriterias || []).map((c: any) => ({
           id: c.criteriaId || c.id || c.Id,
           criterionName: c.criteriaName || c.criterionName || c.Name || "Tiêu chí",

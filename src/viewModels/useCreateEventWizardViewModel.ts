@@ -68,80 +68,34 @@ export function useCreateEventWizardViewModel() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Step 1 State: Event Basic Info (Pre-populated by Admin)
+  // Step 1 State: Event Basic Info
   const [eventData, setEventData] = useState<EventFormState>({
-    eventName: "SEAL Hackathon 2026",
-    season: "Mùa Hè",
-    year: 2026,
-    startDate: "2026-06-01T08:00",
-    endDate: "2026-06-30T18:00",
-    registrationStartDate: "2026-05-01T08:00",
-    registrationEndDate: "2026-05-25T23:59",
-    maxTeams: 50,
-    minTeamSize: 3,
+    eventName: "",
+    season: "",
+    year: new Date().getFullYear(),
+    startDate: "",
+    endDate: "",
+    registrationStartDate: "",
+    registrationEndDate: "",
+    maxTeams: 0,
+    minTeamSize: 1,
     maxTeamSize: 5,
-    tagline: "Cuộc thi lập trình công nghệ SEAL 2026",
-    description: "Sự kiện thi đấu phát triển giải pháp phần mềm và thuật toán dành cho sinh viên do Admin khởi tạo.",
+    tagline: "",
+    description: "",
   });
 
-  // Created Event Entity after Step 1 submit (Pre-set for Coordinator context)
-  const [createdEvent, setCreatedEvent] = useState<EventEntity | null>({
-    id: "EV-02",
-    eventName: "SEAL Hackathon 2026",
-    season: "Mùa Hè",
-    year: 2026,
-    startDate: "2026-06-01T08:00",
-    endDate: "2026-06-30T18:00",
-    status: false,
-  } as any);
+  // Created Event Entity after Step 1 submit
+  const [createdEvent, setCreatedEvent] = useState<EventEntity | null>(null);
 
   // Step 2 State: Initial Rounds for Coordinator to configure
-  const [rounds, setRounds] = useState<RoundFormState[]>([
-    {
-      id: "tmp-r1",
-      roundName: "Vòng 1: Sơ Loại",
-      roundNumber: 1,
-      startDate: "2026-06-01T08:00",
-      endDate: "2026-06-15T18:00",
-      scoringStartDate: "2026-06-16T08:00",
-      scoringEndDate: "2026-06-20T18:00",
-      advancementRule: "top:10",
-    },
-    {
-      id: "tmp-r2",
-      roundName: "Vòng 2: Chung Kết",
-      roundNumber: 2,
-      startDate: "2026-06-21T08:00",
-      endDate: "2026-06-30T18:00",
-      scoringStartDate: "2026-07-01T08:00",
-      scoringEndDate: "2026-07-03T18:00",
-      advancementRule: "top:3",
-    },
-  ]);
+  const [rounds, setRounds] = useState<RoundFormState[]>([]);
 
   // Step 3 State: Initial Tracks
-  const [tracks, setTracks] = useState<TrackFormState[]>([
-    {
-      id: "tmp-t1",
-      trackName: "Advanced Cloud Architecture",
-      templateId: "TPL-CLOUD-02",
-      description: "Hạng mục phát triển kiến trúc đám mây nâng cao.",
-    },
-    {
-      id: "tmp-t2",
-      trackName: "DevOps & AI Security",
-      templateId: "TPL-DEVOPS-01",
-      description: "Hạng mục tự động hóa hạ tầng và bảo mật AI.",
-    },
-  ]);
+  const [tracks, setTracks] = useState<TrackFormState[]>([]);
 
   // Step 4 State: Criteria & Template Config
-  const [templateName, setTemplateName] = useState<string>("Bản mẫu Tiêu chí Chấm RBL");
-  const [criterias, setCriterias] = useState<TemplateCriteriaFormState[]>([
-    { criteriaId: "crit-1", criterionName: "Kiến trúc hệ thống (System Architecture)", description: "Đánh giá tính mở rộng và tối ưu", weight: 30, maxScore: 10 },
-    { criteriaId: "crit-2", criterionName: "Bảo mật & Compliance", description: "Đánh giá bảo mật dữ liệu và mã nguồn", weight: 30, maxScore: 10 },
-    { criteriaId: "crit-3", criterionName: "Tính sáng tạo & Giải pháp", description: "Đánh giá đột phá tính năng", weight: 40, maxScore: 10 },
-  ]);
+  const [templateName, setTemplateName] = useState<string>("");
+  const [criterias, setCriterias] = useState<TemplateCriteriaFormState[]>([]);
 
   const [criteriasByTrack, setCriteriasByTrack] = useState<Record<string, TemplateCriteriaFormState[]>>({});
 

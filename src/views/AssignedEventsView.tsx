@@ -5,29 +5,84 @@ import { Search, Filter, Zap, User } from 'lucide-react';
 import { AssignedEventsGrid, AssignedEvent } from '@/components/domain/EventAssignmentCard';
 import { useRouter } from 'next/navigation';
 
-import { useMyEvents } from '@/repositories/eventsRepository';
-
 export function AssignedEventsView() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: dbEvents = [], isLoading } = useMyEvents();
-
-  const assignedEventsList: AssignedEvent[] = dbEvents.map((e: any) => ({
-    id: e.id || e.eventId || '',
-    title: e.eventName || e.EventName || 'Sự kiện được phân công',
-    description: e.tagline || e.description || '',
-    eventDate: e.startDate ? new Date(e.startDate).toLocaleDateString('vi-VN') : '',
-    totalTeams: e.teamCount || e.teamsCount || 0,
-    scoredTeams: 0,
-    status: 'in-progress',
-    role: e.role || 'Giám Khảo / Cố Vấn',
-    deadline: e.endDate ? new Date(e.endDate).toLocaleDateString('vi-VN') : '',
-  }));
+  // Mock data - replace with API call
+  const mockEvents: AssignedEvent[] = [
+    {
+      id: '1',
+      title: 'SEAL Hackathon 2026',
+      description: 'Chấm điểm các dự án Web Development trong cuộc thi lập trình quốc gia',
+      eventDate: '01/09/2026',
+      totalTeams: 15,
+      scoredTeams: 12,
+      status: 'in-progress',
+      role: 'Judge - Web Development',
+      deadline: '05/09/2026',
+    },
+    {
+      id: '2',
+      title: 'Innovation Summit 2026',
+      description: 'Đánh giá các ý tưởng startup và mô hình kinh doanh',
+      eventDate: '15/08/2026',
+      totalTeams: 20,
+      scoredTeams: 20,
+      status: 'completed',
+      role: 'Mentor - Startup',
+      deadline: '17/08/2026',
+    },
+    {
+      id: '3',
+      title: 'Code Challenge 2026',
+      description: 'Chấm điểm bài thi lập trình thuật toán',
+      eventDate: '01/07/2026',
+      totalTeams: 25,
+      scoredTeams: 0,
+      status: 'pending',
+      role: 'Judge - Algorithm',
+      deadline: '03/07/2026',
+    },
+    {
+      id: '4',
+      title: 'AI & ML Bootcamp',
+      description: 'Kiểm tra và chấm điểm các bài tập AI/ML',
+      eventDate: '10/09/2026',
+      totalTeams: 30,
+      scoredTeams: 18,
+      status: 'in-progress',
+      role: 'Mentor - AI/ML',
+      deadline: '15/09/2026',
+    },
+    {
+      id: '5',
+      title: 'Web3 Developer Conference',
+      description: 'Đánh giá các dự án Blockchain và Web3',
+      eventDate: '20/08/2026',
+      totalTeams: 12,
+      scoredTeams: 5,
+      status: 'in-progress',
+      role: 'Judge - Blockchain',
+      deadline: '22/08/2026',
+    },
+    {
+      id: '6',
+      title: 'Cloud Computing Challenge',
+      description: 'Chấm điểm hệ thống triển khai trên Cloud',
+      eventDate: '25/08/2026',
+      totalTeams: 18,
+      scoredTeams: 18,
+      status: 'completed',
+      role: 'Judge - Cloud',
+      deadline: '28/08/2026',
+    },
+  ];
 
   // Filter events
-  const filteredEvents = assignedEventsList.filter(event => {
+  const filteredEvents = mockEvents.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          event.role.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
@@ -35,10 +90,10 @@ export function AssignedEventsView() {
   });
 
   const stats = {
-    total: assignedEventsList.length,
-    pending: assignedEventsList.filter(e => e.status === 'pending').length,
-    inProgress: assignedEventsList.filter(e => e.status === 'in-progress').length,
-    completed: assignedEventsList.filter(e => e.status === 'completed').length,
+    total: mockEvents.length,
+    pending: mockEvents.filter(e => e.status === 'pending').length,
+    inProgress: mockEvents.filter(e => e.status === 'in-progress').length,
+    completed: mockEvents.filter(e => e.status === 'completed').length,
   };
 
   const handleViewEvent = (eventId: string) => {

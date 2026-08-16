@@ -27,10 +27,10 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
 
   const activeRound = rounds.find((r) => r.id === selectedRoundId) || rounds[0] || {
     id: "rnd-default",
-    roundName: "Vòng Loại",
+    roundName: "Vòng Thi 1",
     roundNumber: 1,
-    startDate: "2026-06-01T08:00",
-    endDate: "2026-06-15T18:00",
+    startDate: "",
+    endDate: "",
     scoringStartDate: "",
     scoringEndDate: "",
     advancementRule: "top:10",

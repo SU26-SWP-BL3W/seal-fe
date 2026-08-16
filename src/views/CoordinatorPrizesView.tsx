@@ -6,6 +6,8 @@ import { useGetPrizesByEvent, useCreatePrize } from "@/repositories/results/priz
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
 
+import { useMyEvents } from "@/repositories/eventsRepository";
+
 export interface PrizeItemState {
   id: string;
   prizeName: string;
@@ -17,10 +19,21 @@ export interface PrizeItemState {
 export const CoordinatorPrizesView: React.FC = () => {
   const params = useParams();
   const searchParams = useSearchParams();
-  const eventId = (searchParams?.get("eventId") as string) || (params?.id as string) || "";
+  const urlEventId = (searchParams?.get("eventId") as string) || (params?.id as string) || "";
+  const { data: eventsList = [] } = useMyEvents();
+  const [selectedEventId, setSelectedEventId] = useState<string>(urlEventId);
 
-  const { data: dbPrizes = [] } = useGetPrizesByEvent(eventId);
-  const { data: dbTracks = [] } = useGetTracksByEvent(eventId);
+  React.useEffect(() => {
+    if (eventsList.length > 0 && !selectedEventId) {
+      setSelectedEventId(eventsList[0].id || eventsList[0].eventId || "");
+    } else if (urlEventId && urlEventId !== selectedEventId) {
+      setSelectedEventId(urlEventId);
+    }
+  }, [eventsList, urlEventId, selectedEventId]);
+
+  const activeEventId = selectedEventId || urlEventId;
+  const { data: dbPrizes = [] } = useGetPrizesByEvent(activeEventId);
+  const { data: dbTracks = [] } = useGetTracksByEvent(activeEventId);
   const createPrizeMutation = useCreatePrize();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,11 +109,11 @@ export const CoordinatorPrizesView: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      if (eventId) {
+      if (activeEventId) {
         for (const p of prizes) {
           try {
             await createPrizeMutation.mutateAsync({
-              eventId,
+              eventId: activeEventId,
               payload: {
                 prizeName: `${p.prizeName} (${p.trackName})`,
                 value: p.value,
@@ -132,12 +145,19 @@ export const CoordinatorPrizesView: React.FC = () => {
             <span className="text-[#f59e0b] font-bold uppercase tracking-wider shrink-0">SỰ KIỆN ĐANG QUẢN LÝ:</span>
             <div className="relative flex-1 max-w-xl">
               <select
-                value={eventId}
+                value={selectedEventId}
+                onChange={(e) => setSelectedEventId(e.target.value)}
                 className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#f59e0b]"
               >
-                <option value="EV-01">1. SEAL Hackathon 2026: AI &amp; Cloud Nexus (Summer 2026)</option>
-                <option value="EV-02">2. FPT Tech Innovation Challenge 2026 (Autumn 2026)</option>
-                <option value="EV-03">3. Cyber Security Student Cup 2026 (Spring 2026)</option>
+                {eventsList.length > 0 ? (
+                  eventsList.map((ev, idx) => (
+                    <option key={ev.id || idx} value={ev.id || ev.eventId}>
+                      {ev.eventName || ev.EventName} ({ev.season} {ev.year})
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Chưa có sự kiện nào trong hệ thống</option>
+                )}
               </select>
             </div>
           </div>
