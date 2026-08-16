@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { useGetUsers, useApproveUser, useRejectUser } from "@/repositories/usersRepository";
+import { useGetUsers, useApproveUser, useRejectUser, useDeleteUser } from "@/repositories/usersRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { useEvents } from "@/repositories/eventsRepository";
 import {
@@ -50,10 +50,14 @@ export const AdminUsersView: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: rawUsersData, isLoading, refetch } = useGetUsers();
-  const usersList: User[] = rawUsersData?.data ?? [];
+  const usersList: User[] = useMemo(() => {
+    const list = rawUsersData?.data ?? (Array.isArray(rawUsersData) ? rawUsersData : []);
+    return Array.isArray(list) ? list : [];
+  }, [rawUsersData]);
 
   const { mutateAsync: approveUser } = useApproveUser();
   const { mutateAsync: rejectUser } = useRejectUser();
+  const { mutateAsync: deleteUser } = useDeleteUser();
 
   // Filtered Users List
   const filteredUsers = useMemo(() => {
@@ -141,7 +145,7 @@ export const AdminUsersView: React.FC = () => {
     }
 
     try {
-      // Thực hiện xóa user
+      await deleteUser(targetId);
       setDeleteUserModal(null);
       setActionSuccess(`Đã xóa người dùng ${deleteUserModal.fullName} thành công.`);
       refetch();
@@ -183,118 +187,208 @@ export const AdminUsersView: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#ef4444] selection:text-white">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#3c494d] pb-4 gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
           <div>
-            <div className="font-mono text-[11px] text-[#ef4444] mb-1 uppercase tracking-wider flex items-center gap-2">
-              <ShieldAlert className="w-3.5 h-3.5" />
-              <span>// USER_IDENTITY_TERMINAL [ ALL RECORDS ]</span>
+            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider">
+              QUẢN TRỊ HỆ THỐNG / TÀI KHOẢN &amp; HỒ SƠ
             </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase flex items-center gap-3">
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
               QUẢN LÝ NGƯỜI DÙNG TOÀN HỆ THỐNG
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <Link href="/admin/dashboard">
+              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-amber-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
+                <span>← Bảng Điều Hành</span>
+              </button>
+            </Link>
             <button
               onClick={() => refetch()}
-              className="px-4 py-2 bg-[#161d1f] border border-[#3c494d] text-[#bbc9ce] font-mono text-xs uppercase hover:border-[#ef4444] hover:text-white transition-colors flex items-center gap-2"
+              className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 text-zinc-300 font-mono text-xs uppercase hover:border-amber-400 hover:text-white transition-colors rounded cursor-pointer flex items-center gap-1.5"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Làm Mới
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Làm Mới</span>
             </button>
           </div>
         </div>
 
         {/* Global Action Toasts */}
         {actionSuccess && (
-          <div className="p-3 bg-[#10b981]/10 border border-[#10b981] text-[#10b981] font-mono text-xs flex items-center gap-2">
+          <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 font-mono text-xs flex items-center gap-2 rounded">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{actionSuccess}</span>
           </div>
         )}
 
         {actionError && (
-          <div className="p-3 bg-[#ef4444]/10 border border-[#ef4444] text-[#ef4444] font-mono text-xs">
+          <div className="p-3 bg-red-950/40 border border-red-500/40 text-red-300 font-mono text-xs rounded">
             {actionError}
           </div>
         )}
 
-        {/* Search & Filter Bar */}
-        <div className="bg-[#080f11] border border-[#3c494d] p-4 flex flex-col md:flex-row gap-4 justify-between items-center font-mono text-xs glow-box-red">
-          <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#859398]" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm Họ tên, Email, Mã SV..."
-              className="w-full bg-[#161d1f] border border-[#3c494d] pl-9 pr-3.5 py-2 text-white font-mono placeholder:text-[#859398] focus:border-[#ef4444] outline-none"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-2">
-              <span className="text-[#859398]">VAI TRÒ:</span>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="bg-[#161d1f] border border-[#3c494d] px-3 py-2 text-white font-mono outline-none focus:border-[#ef4444]"
-              >
-                <option value="all">Tất cả vai trò</option>
-                <option value="student">Thí sinh / Sinh viên</option>
-                <option value="judge">Giám khảo [JUDGE]</option>
-                <option value="mentor">Cố vấn [MENTOR]</option>
-                <option value="coordinator">Điều phối viên [COORD]</option>
-                <option value="admin">Quản trị viên [ADM]</option>
-              </select>
+        {/* ========================================================================= */}
+        {/* BỘ LỌC TÌM KIẾM DỄ XÀI & MÀU DỊU MẮT (FILTER PILLS THAY THẾ SELECT)         */}
+        {/* ========================================================================= */}
+        <div className="bg-[#10171a] border border-zinc-800 p-4 rounded-lg space-y-3.5 shadow-sm">
+          
+          {/* Top Search Row */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm kiếm Họ tên, Email, Mã SV..."
+                className="w-full bg-[#0b1013] border border-zinc-700 pl-9 pr-3.5 py-2 text-white font-mono text-xs rounded placeholder:text-zinc-500 focus:border-amber-400 outline-none"
+              />
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-[#859398]">TRẠNG THÁI:</span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-[#161d1f] border border-[#3c494d] px-3 py-2 text-white font-mono outline-none focus:border-[#ef4444]"
+            <span className="font-mono text-xs text-zinc-400">
+              Kết quả: <strong className="text-white">{filteredUsers.length}</strong> / {usersList.length} người dùng
+            </span>
+          </div>
+
+          {/* Dải Nút Filter Trạng Thái & Vai Trò Trực Quan (1 Chạm) */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pt-2 border-t border-zinc-800/80 text-xs font-mono">
+            
+            {/* Filter Trạng Thái Hồ Sơ */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-zinc-400 font-bold mr-1">TRẠNG THÁI:</span>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("all")}
+                className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  statusFilter === "all"
+                    ? "bg-amber-500 text-black font-extrabold"
+                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                }`}
               >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="approved">Đã duyệt hồ sơ</option>
-                <option value="pending">Chờ phê duyệt</option>
-                <option value="locked">Bị khóa (Từ chối ≥2)</option>
-              </select>
+                Tất Cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("approved")}
+                className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  statusFilter === "approved"
+                    ? "bg-emerald-500 text-black font-extrabold"
+                    : "bg-[#0b1013] text-emerald-400 border border-emerald-500/20 hover:bg-emerald-950/30"
+                }`}
+              >
+                Đã Duyệt
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("pending")}
+                className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  statusFilter === "pending"
+                    ? "bg-amber-400 text-black font-extrabold"
+                    : "bg-[#0b1013] text-amber-300 border border-amber-500/20 hover:bg-amber-950/30"
+                }`}
+              >
+                Chờ Phê Duyệt
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("locked")}
+                className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  statusFilter === "locked"
+                    ? "bg-rose-500 text-white font-extrabold"
+                    : "bg-[#0b1013] text-rose-400 border border-rose-500/20 hover:bg-rose-950/30"
+                }`}
+              >
+                Tạm Khóa (≥2 lần)
+              </button>
+            </div>
+
+            {/* Filter Vai Trò */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-zinc-400 font-bold mr-1">VAI TRÒ:</span>
+              <button
+                type="button"
+                onClick={() => setRoleFilter("all")}
+                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  roleFilter === "all"
+                    ? "bg-cyan-500 text-black font-extrabold"
+                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                }`}
+              >
+                Tất Cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter("student")}
+                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  roleFilter === "student"
+                    ? "bg-cyan-400 text-black font-extrabold"
+                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                }`}
+              >
+                Sinh Viên
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter("judge")}
+                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  roleFilter === "judge"
+                    ? "bg-amber-400 text-black font-extrabold"
+                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                }`}
+              >
+                Giám Khảo
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter("mentor")}
+                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  roleFilter === "mentor"
+                    ? "bg-teal-400 text-black font-extrabold"
+                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                }`}
+              >
+                Cố Vấn
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter("coordinator")}
+                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                  roleFilter === "coordinator"
+                    ? "bg-purple-400 text-black font-extrabold"
+                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                }`}
+              >
+                Điều Phối Viên
+              </button>
             </div>
           </div>
         </div>
 
         {/* Users Table */}
-        <div className="bg-[#080f11] border border-[#3c494d] relative glow-box-red overflow-hidden">
-          <div className="corner-accent-tl text-[#ef4444]" />
-          <div className="corner-accent-tr text-[#ef4444]" />
-          <div className="corner-accent-bl text-[#ef4444]" />
-          <div className="corner-accent-br text-[#ef4444]" />
-
-          <div className="p-4 border-b border-[#3c494d] flex items-center justify-between bg-[#161d1f]/50">
-            <span className="font-mono text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 bg-[#ef4444] inline-block" />
-              [ USER_DATABASE_RECORDS: {filteredUsers.length} ]
+        <div className="bg-[#10171a] border border-zinc-800 rounded-lg overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-[#131d21]">
+            <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">
+              DANH SÁCH TÀI KHOẢN NGƯỜI DÙNG ({filteredUsers.length})
             </span>
           </div>
 
           {isLoading ? (
-            <div className="p-12 text-center font-mono text-xs text-[#859398] animate-pulse">
-              ĐANG TRUY VẤN CƠ SỞ DỮ LIỆU NGƯỜI DÙNG...
+            <div className="p-12 text-center font-mono text-xs text-zinc-400 animate-pulse">
+              Đang truy vấn cơ sở dữ liệu người dùng...
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="p-12 text-center font-mono text-xs text-[#859398]">
+            <div className="p-12 text-center font-mono text-xs text-zinc-400">
               Không tìm thấy người dùng nào phù hợp với bộ lọc tìm kiếm.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left font-mono text-xs">
-                <thead className="bg-[#161d1f] border-b border-[#3c494d] text-[#859398] uppercase text-[11px]">
+                <thead className="bg-[#0e1619] border-b border-zinc-800 text-zinc-400 uppercase text-[11px]">
                   <tr>
-                    <th className="py-3 px-4">#</th>
+                    <th className="py-3 px-4 w-12 text-center">#</th>
                     <th className="py-3 px-4">HỌ VÀ TÊN</th>
                     <th className="py-3 px-4">EMAIL</th>
                     <th className="py-3 px-4">TRƯỜNG</th>
@@ -303,7 +397,7 @@ export const AdminUsersView: React.FC = () => {
                     <th className="py-3 px-4 text-right">THAO TÁC</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#3c494d]/40">
+                <tbody className="divide-y divide-zinc-800/60">
                   {filteredUsers.map((u, idx) => {
                     const userId = u.id || (u as any).Id || u.userId || "";
                     const emailLower = (u.email || "").toLowerCase();
@@ -311,75 +405,78 @@ export const AdminUsersView: React.FC = () => {
                     const isJudge = emailLower.includes("judge");
                     const isMentor = emailLower.includes("mentor");
                     const isCoord = emailLower.includes("ec.") || emailLower.includes("coordinator");
+                    const isStaff = isAdm || isCoord || isJudge || isMentor;
 
                     const isLocked = (u.rejectionCount ?? 0) >= 2;
                     const isApproved = !!u.isApproved;
 
                     return (
-                      <tr key={userId || idx} className="hover:bg-[#161d1f]/70 transition-colors">
-                        <td className="py-3 px-4 text-[#859398]">{idx + 1}</td>
-                        <td className="py-3 px-4 font-bold text-white tracking-wider">
+                      <tr key={userId || idx} className="hover:bg-[#141e22] transition-colors">
+                        <td className="py-3.5 px-4 text-zinc-500 text-center">{idx + 1}</td>
+                        <td className="py-3.5 px-4 font-bold text-white tracking-wider">
                           <button
                             onClick={() => setDetailUserModal(u)}
-                            className="hover:text-[#ef4444] transition-colors text-left"
+                            className="hover:text-amber-300 transition-colors text-left cursor-pointer"
                           >
                             {u.fullName || "Chưa cập nhật"}
                           </button>
                         </td>
-                        <td className="py-3 px-4 text-[#bbc9ce]">{u.email}</td>
-                        <td className="py-3 px-4 text-[#859398]">{u.schoolName || (u.isFpt ? "FPT University" : "N/A")}</td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3.5 px-4 text-zinc-300">{u.email}</td>
+                        <td className="py-3.5 px-4 text-zinc-400">{u.schoolName || (u.isFpt ? "FPT University" : "N/A")}</td>
+                        <td className="py-3.5 px-4 text-center">
                           {isAdm ? (
-                            <span className="px-2 py-0.5 bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30 font-bold text-[10px]">
-                              [ADM]
+                            <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
+                              ADMIN
                             </span>
                           ) : isCoord ? (
-                            <span className="px-2 py-0.5 bg-[#c084fc]/10 text-[#c084fc] border border-[#c084fc]/30 font-bold text-[10px]">
-                              [COORD]
+                            <span className="px-2 py-0.5 bg-purple-950/40 text-purple-300 border border-purple-500/30 rounded font-bold text-[10px]">
+                              COORD
                             </span>
                           ) : isJudge ? (
-                            <span className="px-2 py-0.5 bg-[#ffbb2a]/10 text-[#ffbb2a] border border-[#ffbb2a]/30 font-bold text-[10px]">
-                              [JUDGE]
+                            <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
+                              JUDGE
                             </span>
                           ) : isMentor ? (
-                            <span className="px-2 py-0.5 bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/30 font-bold text-[10px]">
-                              [MENTOR]
+                            <span className="px-2 py-0.5 bg-teal-950/40 text-teal-300 border border-teal-500/30 rounded font-bold text-[10px]">
+                              MENTOR
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 bg-[#38bdf8]/10 text-[#38bdf8] border border-[#38bdf8]/30 font-bold text-[10px]">
-                              [STUDENT]
+                            <span className="px-2 py-0.5 bg-cyan-950/40 text-cyan-300 border border-cyan-500/30 rounded font-bold text-[10px]">
+                              STUDENT
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          {isLocked ? (
-                            <span className="px-2 py-0.5 bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30 font-bold text-[10px]">
+                        <td className="py-3.5 px-4 text-center">
+                          {isStaff ? (
+                            <span className="text-zinc-500 font-mono text-[11px] italic">— (Cán bộ / Chuyên gia)</span>
+                          ) : isLocked ? (
+                            <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
                               ✘ KHÓA ({u.rejectionCount})
                             </span>
                           ) : isApproved ? (
-                            <span className="px-2 py-0.5 bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30 font-bold text-[10px]">
+                            <span className="px-2 py-0.5 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 rounded font-bold text-[10px]">
                               ✔ ĐÃ DUYỆT
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/30 font-bold text-[10px]">
+                            <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
                               ⚠ CHỜ DUYỆT
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {!isApproved && !isAdm && (
+                            {!isApproved && !isStaff && (
                               <>
                                 <button
                                   onClick={() => handleApprove(userId)}
-                                  className="px-2 py-1 bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30 hover:bg-[#10b981] hover:text-black font-bold text-[10px] uppercase"
+                                  className="px-2.5 py-1 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black font-bold text-[11px] rounded transition-all cursor-pointer"
                                   title="Duyệt thẻ SV"
                                 >
                                   Duyệt
                                 </button>
                                 <button
                                   onClick={() => setRejectUserModal({ userId, fullName: u.fullName || u.email || "Sinh viên" })}
-                                  className="px-2 py-1 bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30 hover:bg-[#ef4444] hover:text-white font-bold text-[10px] uppercase"
+                                  className="px-2.5 py-1 bg-rose-950/40 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white font-bold text-[11px] rounded transition-all cursor-pointer"
                                   title="Từ chối thẻ SV"
                                 >
                                   Từ chối
@@ -388,18 +485,18 @@ export const AdminUsersView: React.FC = () => {
                             )}
                             <button
                               onClick={() => setDetailUserModal(u)}
-                              className="px-2 py-1 bg-[#161d1f] border border-[#3c494d] text-[#bbc9ce] hover:text-white text-[10px] uppercase"
+                              className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-300 font-mono text-xs rounded transition-all cursor-pointer"
                               title="Xem chi tiết"
                             >
-                              <Eye className="w-3 h-3 inline" />
+                              <Eye className="w-3.5 h-3.5 inline" />
                             </button>
                             {!isAdm && (
                               <button
                                 onClick={() => setDeleteUserModal(u)}
-                                className="px-2 py-1 bg-[#ef4444]/10 border border-[#ef4444]/30 text-[#ef4444] hover:bg-[#ef4444] hover:text-white text-[10px] uppercase"
+                                className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 text-rose-400 hover:bg-rose-500 hover:text-white font-mono text-xs rounded transition-all cursor-pointer"
                                 title="Xóa người dùng"
                               >
-                                <Trash2 className="w-3 h-3 inline" />
+                                <Trash2 className="w-3.5 h-3.5 inline" />
                               </button>
                             )}
                           </div>
@@ -414,92 +511,187 @@ export const AdminUsersView: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Chi tiết User */}
-      {detailUserModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="max-w-lg w-full bg-[#080f11] border border-[#ef4444] p-6 relative glow-box-red space-y-4">
-            <div className="corner-accent-tl text-[#ef4444]" />
-            <div className="corner-accent-tr text-[#ef4444]" />
-            <div className="corner-accent-bl text-[#ef4444]" />
-            <div className="corner-accent-br text-[#ef4444]" />
+      {/* Modal Chi tiết User Đầy Đủ Ảnh Thẻ, Lý Do & Nút Thao Tác Trực Tiếp */}
+      {detailUserModal && (() => {
+        const modalEmail = (detailUserModal.email || "").toLowerCase();
+        const modalIsAdm = !!detailUserModal.isAdmin || !!detailUserModal.IsAdmin || modalEmail.includes("admin");
+        const modalIsJudge = modalEmail.includes("judge");
+        const modalIsMentor = modalEmail.includes("mentor");
+        const modalIsCoord = modalEmail.includes("ec.") || modalEmail.includes("coordinator");
+        const modalIsStaff = modalIsAdm || modalIsCoord || modalIsJudge || modalIsMentor;
+        const modalUserId = detailUserModal.id || (detailUserModal as any).Id || detailUserModal.userId || "";
 
-            <div className="flex items-center justify-between border-b border-[#3c494d] pb-3">
-              <h3 className="font-display font-bold text-lg text-white uppercase flex items-center gap-2">
-                <FileText className="w-5 h-5 text-[#ef4444]" /> HỒ SƠ CHI TIẾT NGƯỜI DÙNG
-              </h3>
-              <button onClick={() => setDetailUserModal(null)} className="text-[#859398] hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        return (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
+            <div className="max-w-xl w-full bg-[#11181c] border border-zinc-700 p-6 rounded-lg space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+              
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <h3 className="font-display font-bold text-lg text-white uppercase flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-amber-400" />
+                  <span>HỒ SƠ CHI TIẾT NGƯỜI DÙNG</span>
+                </h3>
+                <button onClick={() => setDetailUserModal(null)} className="text-zinc-400 hover:text-white cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div className="grid grid-cols-2 gap-4 font-mono text-xs">
-              <div>
-                <span className="text-[#859398] block">Họ và tên:</span>
-                <span className="text-white font-bold">{detailUserModal.fullName || "N/A"}</span>
+              {/* Thông tin cốt lõi */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs bg-[#0b1013] p-4 rounded border border-zinc-800">
+                <div>
+                  <span className="text-zinc-400 block text-[11px]">HỌ VÀ TÊN:</span>
+                  <span className="text-white font-bold text-sm">{detailUserModal.fullName || "Chưa cập nhật"}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[11px]">EMAIL HỆ THỐNG:</span>
+                  <span className="text-cyan-300 font-semibold">{detailUserModal.email}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[11px]">VAI TRÒ TÀI KHOẢN:</span>
+                  <span className="font-bold text-amber-300">
+                    {modalIsAdm
+                      ? "Quản trị viên (Admin)"
+                      : modalIsCoord
+                      ? "Điều phối viên (Coordinator)"
+                      : modalIsJudge
+                      ? "Giám khảo chuyên môn (Judge)"
+                      : modalIsMentor
+                      ? "Cố vấn học thuật (Mentor)"
+                      : "Thí sinh / Sinh viên (Student)"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[11px]">TRƯỜNG ĐẠI HỌC:</span>
+                  <span className="text-white">{detailUserModal.schoolName || (detailUserModal.isFpt ? "Đại học FPT" : "N/A")}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[11px]">MÃ SỐ SINH VIÊN:</span>
+                  <span className="text-white font-mono">{detailUserModal.studentCode || (modalIsStaff ? "— (Cán bộ)" : "Chưa cập nhật")}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[11px]">TRẠNG THÁI HỒ SƠ:</span>
+                  {modalIsStaff ? (
+                    <span className="text-zinc-400 italic">Tài khoản chuyên môn (Miễn duyệt thẻ)</span>
+                  ) : detailUserModal.isApproved ? (
+                    <span className="text-emerald-400 font-bold">✔ ĐÃ PHÊ DUYỆT THẺ</span>
+                  ) : (detailUserModal.rejectionCount ?? 0) >= 2 ? (
+                    <span className="text-rose-400 font-bold">✘ TẠM KHÓA (Bị từ chối ≥2 lần)</span>
+                  ) : (
+                    <span className="text-amber-400 font-bold">⚠ CHỜ DUYỆT THẺ SV</span>
+                  )}
+                </div>
               </div>
-              <div>
-                <span className="text-[#859398] block">Email:</span>
-                <span className="text-[#00d9ff]">{detailUserModal.email}</span>
-              </div>
-              <div>
-                <span className="text-[#859398] block">Mã số sinh viên:</span>
-                <span className="text-white">{detailUserModal.studentCode || "N/A"}</span>
-              </div>
-              <div>
-                <span className="text-[#859398] block">Trường đại học:</span>
-                <span className="text-white">{detailUserModal.schoolName || (detailUserModal.isFpt ? "FPT University" : "N/A")}</span>
-              </div>
-              <div>
-                <span className="text-[#859398] block">Số lần bị từ chối:</span>
-                <span className={detailUserModal.rejectionCount ? "text-[#ef4444] font-bold" : "text-[#10b981]"}>
-                  {detailUserModal.rejectionCount || 0} lần
-                </span>
-              </div>
-              <div>
-                <span className="text-[#859398] block">Trạng thái duyệt:</span>
-                <span className={detailUserModal.isApproved ? "text-[#10b981] font-bold" : "text-[#f59e0b] font-bold"}>
-                  {detailUserModal.isApproved ? "ĐÃ PHÊ DUYỆT" : "CHƯA DUYỆT"}
-                </span>
-              </div>
-            </div>
 
-            {detailUserModal.photoStudentCardUrl && (
-              <div className="border border-[#3c494d] p-2 bg-[#161d1f] space-y-2 font-mono text-xs">
-                <span className="text-[#859398] block">Ảnh thẻ sinh viên đính kèm:</span>
-                <img
-                  src={detailUserModal.photoStudentCardUrl}
-                  alt="Thẻ sinh viên"
-                  className="w-full max-h-48 object-contain border border-[#3c494d]"
-                />
-              </div>
-            )}
+              {/* Lịch sử & Lý do từ chối (Nếu có) */}
+              {(detailUserModal.rejectionReason || (detailUserModal.rejectionCount ?? 0) > 0) && (
+                <div className="bg-rose-950/30 border border-rose-500/40 p-3 rounded space-y-1 font-mono text-xs text-rose-300">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <span>⚠ LỊCH SỬ TỪ CHỐI HỒ SƠ ({detailUserModal.rejectionCount || 1} LẦN):</span>
+                  </div>
+                  <p className="text-zinc-300 text-[11px] leading-relaxed">
+                    {detailUserModal.rejectionReason || "Ảnh thẻ sinh viên chưa đạt yêu cầu hoặc thông tin không trùng khớp."}
+                  </p>
+                </div>
+              )}
 
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={() => setDetailUserModal(null)}
-                className="px-4 py-2 border border-[#3c494d] text-white font-mono text-xs uppercase hover:bg-[#161d1f]"
-              >
-                Đóng
-              </button>
+              {/* Khung Minh Chứng & Ảnh Thẻ Sinh Viên */}
+              {!modalIsStaff && (
+                <div className="border border-zinc-800 p-3.5 bg-[#0b1013] rounded space-y-2 font-mono text-xs">
+                  <div className="flex items-center justify-between text-zinc-300 font-bold">
+                    <span>MINH CHỨNG THẺ SINH VIÊN:</span>
+                    {detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
+                      <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+                        ✓ FPT Edu Verified
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {detailUserModal.photoStudentCardUrl ? (
+                    <div className="space-y-2">
+                      <img
+                        src={detailUserModal.photoStudentCardUrl}
+                        alt="Ảnh Thẻ Sinh Viên"
+                        className="w-full max-h-56 object-contain rounded border border-zinc-800 bg-black/40"
+                      />
+                      <div className="text-right">
+                        <a
+                          href={detailUserModal.photoStudentCardUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-amber-400 text-[11px] hover:underline"
+                        >
+                          [ ↗ Mở ảnh gốc toàn màn hình ]
+                        </a>
+                      </div>
+                    </div>
+                  ) : detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
+                    <div className="p-4 bg-emerald-950/20 border border-emerald-500/20 rounded text-center space-y-1 text-emerald-300">
+                      <p className="font-bold text-xs">Tài khoản Sinh viên FPT</p>
+                      <p className="text-[11px] text-zinc-400">
+                        Đã xác thực tự động qua địa chỉ email @fpt.edu.vn. Không yêu cầu nộp ảnh thẻ sinh viên vật lý.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-zinc-900 border border-zinc-800 rounded text-center space-y-1 text-zinc-400">
+                      <p className="text-xs">Sinh viên chưa tải ảnh thẻ sinh viên đính kèm.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Nút Thao Tác Trực Tiếp Dưới Chân Modal */}
+              <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
+                <div className="flex items-center gap-2">
+                  {!modalIsStaff && !detailUserModal.isApproved && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleApprove(modalUserId);
+                          setDetailUserModal(null);
+                        }}
+                        className="px-4 py-2 bg-emerald-500 text-black hover:bg-emerald-400 font-mono text-xs font-extrabold uppercase rounded cursor-pointer transition-all flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Duyệt Hồ Sơ</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = { userId: modalUserId, fullName: detailUserModal.fullName || detailUserModal.email || "Sinh viên" };
+                          setDetailUserModal(null);
+                          setRejectUserModal(target);
+                        }}
+                        className="px-4 py-2 bg-rose-950/60 text-rose-300 border border-rose-500/40 hover:bg-rose-600 hover:text-white font-mono text-xs font-bold uppercase rounded cursor-pointer transition-all"
+                      >
+                        Từ Chối
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setDetailUserModal(null)}
+                  className="px-4 py-2 border border-zinc-700 text-zinc-300 font-mono text-xs rounded hover:text-white hover:border-zinc-500 cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal Từ Chối Hồ Sơ */}
       {rejectUserModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="max-w-md w-full bg-[#080f11] border border-[#ef4444] p-6 relative glow-box-red space-y-4">
-            <div className="corner-accent-tl text-[#ef4444]" />
-            <div className="corner-accent-tr text-[#ef4444]" />
-            <div className="corner-accent-bl text-[#ef4444]" />
-            <div className="corner-accent-br text-[#ef4444]" />
-
-            <h3 className="font-display font-bold text-lg text-[#ef4444] uppercase flex items-center gap-2">
+          <div className="max-w-md w-full bg-[#11181c] border border-zinc-700 p-6 rounded-lg space-y-4 shadow-2xl">
+            <h3 className="font-display font-bold text-lg text-rose-400 uppercase flex items-center gap-2">
               <UserX className="w-5 h-5" /> TỪ CHỐI HỒ SƠ SINH VIÊN
             </h3>
-            <p className="font-mono text-xs text-[#bbc9ce]">
-              Bạn đang từ chối hồ sơ của <strong>{rejectUserModal.fullName}</strong>. Vui lòng nhập lý do cụ thể (lý do này sẽ được ghi vào lịch sử và gửi email cho sinh viên):
+            <p className="font-mono text-xs text-zinc-300">
+              Bạn đang từ chối hồ sơ của <strong>{rejectUserModal.fullName}</strong>. Vui lòng nhập lý do cụ thể:
             </p>
 
             <form onSubmit={handleConfirmReject} className="space-y-4 font-mono text-xs">
@@ -509,22 +701,22 @@ export const AdminUsersView: React.FC = () => {
                 placeholder="VD: Ảnh thẻ sinh viên bị mờ, không rõ mã số hoặc không trùng khớp với họ tên đăng ký..."
                 required
                 rows={3}
-                className="w-full bg-[#161d1f] border border-[#3c494d] p-3 text-white focus:border-[#ef4444] outline-none resize-none"
+                className="w-full bg-[#0b1013] border border-zinc-700 p-3 text-white rounded focus:border-amber-400 outline-none resize-none"
               />
 
-              <div className="flex items-center justify-end gap-3">
+              <div className="flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setRejectUserModal(null)}
-                  className="px-4 py-2 border border-[#3c494d] text-[#859398] hover:text-white uppercase"
+                  className="px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white rounded uppercase cursor-pointer"
                 >
                   Hủy Bỏ
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#ef4444] text-white font-bold uppercase hover:bg-white hover:text-[#080f11] transition-colors hud-clipped"
+                  className="px-5 py-2 bg-rose-600 text-white font-bold uppercase hover:bg-rose-500 transition-colors rounded cursor-pointer"
                 >
-                  // XÁC NHẬN TỪ CHỐI &gt;
+                  Xác Nhận Từ Chối
                 </button>
               </div>
             </form>
@@ -535,38 +727,33 @@ export const AdminUsersView: React.FC = () => {
       {/* Modal Xóa User An Toàn */}
       {deleteUserModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="max-w-md w-full bg-[#080f11] border-2 border-[#ef4444] p-6 relative glow-box-red space-y-4">
-            <div className="corner-accent-tl text-[#ef4444]" />
-            <div className="corner-accent-tr text-[#ef4444]" />
-            <div className="corner-accent-bl text-[#ef4444]" />
-            <div className="corner-accent-br text-[#ef4444]" />
-
-            <div className="flex items-center gap-3 text-[#ef4444]">
+          <div className="max-w-md w-full bg-[#11181c] border border-rose-500/50 p-6 rounded-lg space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-400">
               <AlertTriangle className="w-8 h-8 shrink-0" />
               <div>
                 <h3 className="font-display font-bold text-lg uppercase text-white">XÓA TÀI KHOẢN NGƯỜI DÙNG</h3>
-                <span className="font-mono text-[11px] text-[#ef4444] uppercase font-bold">HÀNH ĐỘNG NGUY HIỂM — KHÔNG THỂ HOÀN TÁC</span>
+                <span className="font-mono text-[11px] text-rose-400 uppercase font-bold">HÀNH ĐỘNG NGUY HIỂM — KHÔNG THỂ HOÀN TÁC</span>
               </div>
             </div>
 
-            <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
+            <p className="font-mono text-xs text-zinc-300 leading-relaxed">
               Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản <strong>{deleteUserModal.fullName}</strong> ({deleteUserModal.email}) khỏi hệ thống không?
             </p>
 
-            <div className="flex items-center justify-end gap-3 pt-2 font-mono text-xs">
+            <div className="flex items-center justify-end gap-2.5 pt-2 font-mono text-xs">
               <button
                 type="button"
                 onClick={() => setDeleteUserModal(null)}
-                className="px-4 py-2 border border-[#3c494d] text-[#859398] hover:text-white uppercase"
+                className="px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white rounded uppercase cursor-pointer"
               >
                 Hủy Bỏ
               </button>
               <button
                 type="button"
                 onClick={handleDeleteUser}
-                className="px-5 py-2 bg-[#ef4444] text-white font-bold uppercase hover:bg-white hover:text-[#080f11] transition-colors hud-clipped"
+                className="px-5 py-2 bg-rose-600 text-white font-bold uppercase hover:bg-rose-500 transition-colors rounded cursor-pointer"
               >
-                // XÁC NHẬN XÓA VĨNH VIỄN &gt;
+                Xác Nhận Xóa
               </button>
             </div>
           </div>

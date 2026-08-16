@@ -138,7 +138,7 @@ export function MySubmissionsView() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="font-mono text-[11px] text-[#859398] mb-1 uppercase tracking-wider">
-                    MODULE // SUBMISSIONS_REGISTRY
+                    QUẢN LÝ BÀI DỰ THI
                   </div>
                   <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase flex items-center gap-3">
                     <FolderOpen className="w-8 h-8 text-[#00d9ff]" />

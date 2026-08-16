@@ -1,5 +1,10 @@
 import { AdminSchoolsView } from "@/views/AdminSchoolsView";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function AdminSchoolsPage() {
-  return <AdminSchoolsView />;
+  return (
+    <RoleGuard allowedRoles={["Admin"]}>
+      <AdminSchoolsView />
+    </RoleGuard>
+  );
 }

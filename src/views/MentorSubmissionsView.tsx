@@ -227,7 +227,7 @@ function MentorFeedbackModal({
       open={true}
       onClose={onClose}
       title={`Góp Ý Cố Vấn — ${teamName}`}
-      eyebrow="// MENTOR FEEDBACK PROTOCOL"
+      eyebrow="HƯỚNG DẪN ĐỘI THI"
       description="Gửi đánh giá và lời khuyên kỹ thuật trực tiếp đến các thành viên của đội thi."
     >
       <div className="space-y-6 pt-2">

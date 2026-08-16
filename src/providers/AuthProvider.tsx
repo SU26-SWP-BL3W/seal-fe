@@ -15,12 +15,11 @@ export interface PresetAccount {
 export const PRESET_ACCOUNTS: PresetAccount[] = [];
 
 // Trang đích sau khi đăng nhập thật, theo vai trò backend trả về.
+// Chỉ trỏ route THẬT SỰ tồn tại (có page.tsx) — EventCoordinator/Mentor/Team* trước
+// đây trỏ vào route rỗng (404 khi đăng nhập thật, xác nhận sống với tài khoản
+// ec_demo@yopmail.com). Chưa có trang Coordinator/Mentor/Team riêng nên về /events.
 const REDIRECT_BY_ROLE: Record<string, string> = {
-  EventCoordinator: "/coordinator/dashboard",
   Judge: "/judge/tracks",
-  Mentor: "/mentor/tracks",
-  TeamLeader: "/my-team",
-  TeamMember: "/my-team",
 };
 
 const ROLE_RANK = ["EventCoordinator", "Judge", "Mentor", "TeamLeader", "TeamMember"];
@@ -138,13 +137,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isApproved: true,
         isFpt: true,
       };
-      mockRole = {
-        id: "role-judge-01",
-        eventId: "demo-event-01",
-        roleName: "Judge",
-        trackId: "demo-track-01",
-        assignedEventIds: ["demo-event-01"],
-      };
+      // Không gán eventId/trackId giả — id không có thật trong DB sẽ làm mọi
+      // fetch theo sau (chi tiết event/track) trả 400. Vai trò demo chỉ đổi
+      // giao diện điều hướng, không giả lập được phân công thật.
+      mockRole = { id: "role-judge-01", roleName: "Judge" };
     } else if (role === "Coordinator") {
       mockUser = {
         id: "demo-ec-01",
@@ -156,12 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isApproved: true,
         isFpt: true,
       };
-      mockRole = {
-        id: "role-ec-01",
-        eventId: "demo-event-01",
-        roleName: "EventCoordinator",
-        assignedEventIds: ["demo-event-01"],
-      };
+      mockRole = { id: "role-ec-01", roleName: "EventCoordinator" };
     } else if (role === "Mentor") {
       mockUser = {
         id: "demo-mentor-01",
@@ -173,13 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isApproved: true,
         isFpt: true,
       };
-      mockRole = {
-        id: "role-mentor-01",
-        eventId: "demo-event-01",
-        roleName: "Mentor",
-        trackId: "demo-track-01",
-        assignedEventIds: ["demo-event-01"],
-      };
+      mockRole = { id: "role-mentor-01", roleName: "Mentor" };
     } else {
       mockUser = {
         id: "demo-student-01",
@@ -192,13 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isFpt: true,
         studentCode: "SE180001",
       };
-      mockRole = {
-        id: "role-lead-01",
-        eventId: "demo-event-01",
-        roleName: "TeamLeader",
-        teamId: "demo-team-01",
-        assignedEventIds: ["demo-event-01"],
-      };
+      mockRole = { id: "role-lead-01", roleName: "TeamLeader" };
     }
 
     saveSession(mockUser, mockRole);

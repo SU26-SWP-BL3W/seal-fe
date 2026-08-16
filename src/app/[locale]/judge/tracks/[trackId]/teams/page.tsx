@@ -1,5 +1,10 @@
 import { JudgeTrackTeamsView } from "@/views/JudgeTrackTeamsView";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function JudgeTrackTeamsPage() {
-  return <JudgeTrackTeamsView />;
+  return (
+    <RoleGuard allowedRoles={["Judge", "Admin"]}>
+      <JudgeTrackTeamsView />
+    </RoleGuard>
+  );
 }

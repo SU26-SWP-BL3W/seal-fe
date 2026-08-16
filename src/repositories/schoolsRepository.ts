@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
-import type { School, BaseResponse, PagedResult } from "@/models/entities";
+import type { School, PagedResult } from "@/models/entities";
 
 export const DEFAULT_SCHOOLS_LIST: School[] = [
   {
@@ -47,24 +47,22 @@ export const DEFAULT_SCHOOLS_LIST: School[] = [
   },
 ];
 
-/** GET /api/Schools — Lấy danh sách trường học */
+/**
+ * GET /api/Schools — Lấy danh sách trường học.
+ * apiClient đã tự bóc 1 lớp BaseResponse (xem models/apiClient.ts response
+ * interceptor), nên res.data ở đây đã LÀ PagedResult<School> — mảng thật nằm ở
+ * res.data.data (1 lớp), không phải res.data.data.data (đã từng đoán sai 1 lớp
+ * khiến trang luôn hiện "0 trường" dù DB có dữ liệu thật).
+ */
 export function useGetSchools() {
   return useQuery({
     queryKey: ["schools"],
     queryFn: async () => {
-      try {
-        const res = await apiClient.get<BaseResponse<PagedResult<School>>>("/Schools", {
-          params: { PageNumber: 1, PageSize: 100 },
-        });
-        if (res.data?.data?.data && res.data.data.data.length > 0) {
-          return res.data.data.data;
-        }
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          return res.data;
-        }
-      } catch (err: any) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/Schools error:", err?.message);
-      }
+      const res = await apiClient.get<PagedResult<School> | School[]>("/Schools", {
+        params: { PageNumber: 1, PageSize: 100 },
+      });
+      if (Array.isArray(res.data)) return res.data;
+      if (Array.isArray(res.data?.data)) return res.data.data;
       return [];
     },
     staleTime: 1000 * 60 * 10,
@@ -76,18 +74,8 @@ export function useCreateSchool() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { schoolName: string; code?: string; address?: string }) => {
-      try {
-        const res = await apiClient.post("/Schools", data);
-        return res.data;
-      } catch {
-        return {
-          id: `sch-${Date.now()}`,
-          schoolId: `sch-${Date.now()}`,
-          schoolName: data.schoolName,
-          code: data.code || data.schoolName.substring(0, 4).toUpperCase(),
-          address: data.address || "Việt Nam",
-        };
-      }
+      const res = await apiClient.post("/Schools", data);
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schools"] });

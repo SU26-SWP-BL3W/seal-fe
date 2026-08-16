@@ -26,11 +26,15 @@ export const AdminSchoolsView: React.FC = () => {
   const [newSchoolAddress, setNewSchoolAddress] = useState("");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const { data: schoolsList = [], isLoading, refetch } = useGetSchools();
+  const { data: rawSchools = [], isLoading, refetch } = useGetSchools();
+  const schoolsList = useMemo(() => {
+    const list = Array.isArray(rawSchools) ? rawSchools : [];
+    return list;
+  }, [rawSchools]);
   const { mutateAsync: createSchool, isPending: isCreating } = useCreateSchool();
 
   const filteredSchools = useMemo(() => {
-    return schoolsList.filter((sch) => {
+    return schoolsList.filter((sch: any) => {
       const sName = sch.schoolName || sch.name || "";
       const sCode = sch.code || "";
       const searchLower = searchTerm.toLowerCase().trim();
@@ -57,10 +61,8 @@ export const AdminSchoolsView: React.FC = () => {
         setShowAddModal(false);
         setSuccessMsg(null);
       }, 1500);
-    } catch {
-      alert("Đã thêm trường học thành công!");
-      setShowAddModal(false);
-      refetch();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Tạo trường học thất bại.");
     }
   };
 
@@ -189,8 +191,8 @@ export const AdminSchoolsView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#3c494d]/40">
-                  {filteredSchools.map((sch, idx) => {
-                    const schId = sch.id || (sch as any).Id || sch.schoolId;
+                  {filteredSchools.map((sch: any, idx: number) => {
+                    const schId = sch.id || sch.Id || sch.schoolId;
                     const code = sch.code || sch.schoolCode || "UNIV";
                     const name = sch.schoolName || sch.name || "Trường Đại Học";
                     const address = sch.address || "Việt Nam";

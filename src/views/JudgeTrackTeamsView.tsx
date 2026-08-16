@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetSubmitResultsByTrack } from "@/repositories/submitResultsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useGetScoresByEventRole } from "@/repositories/scoresRepository";
 import { Link } from "@/i18n/routing";
 import {
   ShieldAlert,
@@ -27,10 +28,21 @@ export function JudgeTrackTeamsView() {
 
   const { data: tracks = [] } = useGetTracksByEvent(eventId || undefined);
   const currentTrack = tracks.find((t) => (t.id || t.Id) === trackId);
-  const trackName = currentTrack?.trackName || (currentTrack as any)?.TrackName || "Hạng mục đánh giá";
+  const trackName = currentTrack?.trackName || (currentTrack as any)?.TrackName || "Hạng Mục Chuyên Môn";
 
-  const { data: submissions = [], isLoading: isLoadingSubs } = useGetSubmitResultsByTrack(trackId, eventId);
+  const { data: rawSubmissions = [], isLoading: isLoadingSubs } = useGetSubmitResultsByTrack(trackId, eventId);
+  const submissions = useMemo(() => {
+    return Array.isArray(rawSubmissions) ? rawSubmissions : [];
+  }, [rawSubmissions]);
   const eventRoleId = activeRole?.id || activeRole?.eventRoleId || "";
+
+  // "Đã chốt điểm" thật = có phiếu chấm (Score) với isSubmitted=true cho bài này,
+  // không có field isEvaluated/IsGraded nào trên SubmitResult (BE không trả field đó).
+  const { data: myScores = [] } = useGetScoresByEventRole(eventRoleId || undefined);
+  const submittedIds = useMemo(
+    () => new Set(myScores.filter((s) => s.isSubmitted).map((s) => s.submitResultId)),
+    [myScores],
+  );
 
   if (!user) {
     return (
@@ -77,37 +89,37 @@ export function JudgeTrackTeamsView() {
             </Link>
             <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider flex items-center gap-2">
               <Scale className="w-3.5 h-3.5" />
-              <span>// ANONYMIZED_SUBMISSION_STREAM / {trackName}</span>
+              <span>HẠNG MỤC / {trackName}</span>
             </div>
             <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
-              DANH SÁCH BÀI NỘP ẨN DANH (BR-12)
+              DANH SÁCH BÀI DỰ THI
             </h1>
           </div>
 
           <div className="flex items-center gap-3 font-mono text-xs">
-            <div className="bg-[#12191c] border border-zinc-800 px-3 py-1.5 text-zinc-300">
+            <div className="bg-[#12191c] border border-zinc-800 px-3 py-1.5 text-zinc-300 rounded">
               TỔNG BÀI NỘP: <span className="text-amber-300 font-bold">{submissions.length}</span>
             </div>
           </div>
         </div>
 
         {/* Security Notice Banner */}
-        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 p-4 font-mono text-xs flex items-center justify-between">
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 p-4 font-mono text-xs flex items-center justify-between rounded">
           <div className="flex items-center gap-3">
             <ShieldAlert className="w-5 h-5 shrink-0 text-amber-400" />
             <div>
               <span className="font-bold uppercase tracking-wider block">
-                ANONYMOUS EVALUATION PROTOCOL (BR-12 ACTIVE)
+                CHẾ ĐỘ CHẤM ĐIỂM ẨN DANH
               </span>
               <span className="text-[11px] text-zinc-300 opacity-90">
-                Theo quy chế thi đấu, Giám khảo chỉ được tương tác với mã định danh bài nộp ẩn danh. Tên đội thi, tên thí sinh và trường học đã được mã hóa bảo vệ.
+                Theo quy chế thi đấu, thông tin tên đội thi, thành viên và trường học được ẩn danh để đảm bảo tính khách quan và công bằng tuyệt đối.
               </span>
             </div>
           </div>
         </div>
 
         {/* Submissions Table */}
-        <div className="bg-[#0e1518] border border-zinc-800 relative shadow-sm overflow-hidden">
+        <div className="bg-[#0e1518] border border-zinc-800 relative shadow-sm overflow-hidden rounded">
           <div className="corner-accent-tl text-amber-400/40" />
           <div className="corner-accent-tr text-amber-400/40" />
           <div className="corner-accent-bl text-amber-400/40" />
@@ -116,9 +128,9 @@ export function JudgeTrackTeamsView() {
           <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-[#12191c]/80">
             <span className="font-mono text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <span className="w-2 h-2 bg-amber-400/80 inline-block" />
-              [ SUBMISSION_DATA_STREAM ]
+              <span>DANH SÁCH BÀI LÀM CẦN ĐÁNH GIÁ</span>
             </span>
-            <span className="font-mono text-[11px] text-zinc-500">
+            <span className="font-mono text-[11px] text-zinc-400">
               CẬP NHẬT THỜI GIAN THỰC
             </span>
           </div>
@@ -141,18 +153,18 @@ export function JudgeTrackTeamsView() {
                     <th className="py-3 px-4">MÃ BÀI NỘP</th>
                     <th className="py-3 px-4">VÒNG THI</th>
                     <th className="py-3 px-4">THỜI GIAN NỘP</th>
-                    <th className="py-3 px-4">TÀI NGUYÊN DỰ ÁN</th>
+                    <th className="py-3 px-4">BÀI NỘP</th>
                     <th className="py-3 px-4 text-center">TRẠNG THÁI</th>
                     <th className="py-3 px-4 text-right">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
-                  {submissions.map((sub, idx) => {
+                  {submissions.map((sub: any, idx: number) => {
                     const subId = sub.id || sub.Id || "";
                     const code = `SUB-${subId.slice(0, 8).toUpperCase()}`;
-                    const roundName = (sub as any)?.roundName || "Vòng Đánh Giá";
-                    const submitTime = (sub as any)?.submittedAt || (sub as any)?.createdAt || (sub as any)?.createdTime;
-                    const isEvaluated = (sub as any)?.isEvaluated || false;
+                    const submissionUrl = sub.submissionUrl || sub.SubmissionUrl || "";
+                    const submitTime = sub.createdTime || sub.CreatedTime;
+                    const isEvaluated = submittedIds.has(subId);
 
                     return (
                       <tr
@@ -163,46 +175,23 @@ export function JudgeTrackTeamsView() {
                         <td className="py-3 px-4 font-bold text-white tracking-wider flex items-center gap-2">
                           <span className="text-amber-300">{code}</span>
                         </td>
-                        <td className="py-3 px-4 text-zinc-300">{roundName}</td>
+                        <td className="py-3 px-4 text-zinc-300">Vòng Đánh Giá</td>
                         <td className="py-3 px-4 text-zinc-500">
                           {submitTime ? new Date(submitTime).toLocaleString("vi-VN") : "N/A"}
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            {sub.repoUrl && (
-                              <a
-                                href={sub.repoUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-2 py-0.5 bg-[#12191c] border border-zinc-700 text-cyan-400 hover:border-cyan-400 transition-colors inline-flex items-center gap-1 text-[10px]"
-                                title="Repository"
-                              >
-                                Repo <ExternalLink className="w-2.5 h-2.5" />
-                              </a>
-                            )}
-                            {sub.demoUrl && (
-                              <a
-                                href={sub.demoUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-2 py-0.5 bg-[#12191c] border border-zinc-700 text-red-400 hover:border-red-400 transition-colors inline-flex items-center gap-1 text-[10px]"
-                                title="Live Demo"
-                              >
-                                Demo <ExternalLink className="w-2.5 h-2.5" />
-                              </a>
-                            )}
-                            {sub.slideUrl && (
-                              <a
-                                href={sub.slideUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-2 py-0.5 bg-[#12191c] border border-zinc-700 text-orange-400 hover:border-orange-400 transition-colors inline-flex items-center gap-1 text-[10px]"
-                                title="Slides"
-                              >
-                                Slide <ExternalLink className="w-2.5 h-2.5" />
-                              </a>
-                            )}
-                          </div>
+                          {submissionUrl ? (
+                            <a
+                              href={submissionUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2 py-0.5 bg-[#12191c] border border-zinc-700 text-cyan-400 hover:border-cyan-400 transition-colors inline-flex items-center gap-1 text-[10px]"
+                            >
+                              Xem bài nộp <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          ) : (
+                            <span className="text-zinc-600 text-[10px]">Chưa có link</span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
                           {isEvaluated ? (
@@ -219,7 +208,7 @@ export function JudgeTrackTeamsView() {
                           <Link href={`/judge/scoring?subId=${subId}`}>
                             <button className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-600/20 text-amber-300 border border-amber-500/40 font-bold text-xs uppercase hover:bg-amber-500 hover:text-black transition-all inline-flex items-center gap-1 cursor-pointer shadow-sm">
                               <FileCheck2 className="w-3.5 h-3.5" />
-                              <span>// CHẤM ĐIỂM &gt;</span>
+                              <span>CHẤM ĐIỂM &gt;</span>
                             </button>
                           </Link>
                         </td>

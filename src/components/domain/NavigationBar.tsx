@@ -83,10 +83,10 @@ export function NavigationBar() {
   const isJudgeRole = roleName === "Judge";
   const isCandidateRole = roleName === "TeamLeader" || roleName === "TeamMember";
 
-  const showCoordinatorSidebar = isCoordinatorRoute || (isEventInnerRoute && isCoordinatorRole);
-  const showMentorSidebar = isMentorRoute || (isEventInnerRoute && isMentorRole);
-  const showJudgeSidebar = isJudgeRoute || (isEventInnerRoute && isJudgeRole);
-  const showParticipantSidebar = isEventInnerRoute && isCandidateRole;
+  const showCoordinatorSidebar = isCoordinatorRoute;
+  const showMentorSidebar = isMentorRoute;
+  const showJudgeSidebar = isJudgeRoute;
+  const showParticipantSidebar = false;
   const showAdminSidebar = isAdminRoute;
 
   // ─────────────────────────────────────────────────────────────

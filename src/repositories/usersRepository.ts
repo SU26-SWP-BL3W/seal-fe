@@ -256,7 +256,7 @@ export interface MyInvitationsResponse {
 }
 
 /** GET /api/Users/my-invitations — Lấy toàn bộ lời mời (đội + vai trò sự kiện) của user hiện tại */
-export function useMyInvitations() {
+export function useMyInvitations(enabled: boolean = true) {
   return useQuery({
     queryKey: ["my-invitations"],
     queryFn: async () => {
@@ -264,6 +264,7 @@ export function useMyInvitations() {
       const res = await apiClient.get<MyInvitationsResponse>("/Users/my-invitations");
       return res.data ?? { totalPending: 0, invitations: [] };
     },
+    enabled,
   });
 }
 
@@ -346,6 +347,20 @@ export function useRejectUser() {
       const res = await apiClient.post(`/Users/${params.userId}/reject`, {
         reason: params.reason,
       });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+}
+
+/** DELETE /api/Users/{id} — Admin xoá vĩnh viễn. */
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await apiClient.delete(`/Users/${userId}`);
       return res.data;
     },
     onSuccess: () => {

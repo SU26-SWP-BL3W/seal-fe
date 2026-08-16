@@ -43,7 +43,7 @@ export function LandingPortalView() {
           {/* Status Tag Line */}
           <div className="flex items-center gap-2 bg-[var(--bg-panel)]/90 border border-[var(--accent-primary)]/30 px-4 py-1.5 hud-clipped backdrop-blur-sm font-mono text-xs text-[var(--accent-primary)] tracking-wider">
             <span className="h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-            <span>HỆ THỐNG ĐẤU TRƯỜNG HACKATHON // SEAL PLATFORM</span>
+            <span>HỆ THỐNG ĐẤU TRƯỜNG HACKATHON SEAL</span>
           </div>
 
           {/* Main Heading */}
@@ -64,13 +64,13 @@ export function LandingPortalView() {
           {/* Symmetrical Button Group */}
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <Link href="/events">
-              <button className="hud-clipped relative px-8 py-3.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono font-bold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] focus:outline-none min-w-[200px]">
-                {"// "}KHÁM PHÁ SỰ KIỆN &gt;
+              <button className="hud-clipped relative px-8 py-3.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono font-bold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] focus:outline-none min-w-[200px] cursor-pointer">
+                KHÁM PHÁ SỰ KIỆN &gt;
               </button>
             </Link>
             <Link href="/register">
-              <button className="hud-clipped px-8 py-3.5 bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:text-white hover:border-[var(--accent-primary)] hover:bg-[rgba(45,212,191,0.08)] font-mono text-sm tracking-wider uppercase transition-all duration-200 min-w-[200px]">
-                [ ĐĂNG KÝ THAM GIA ]
+              <button className="hud-clipped px-8 py-3.5 bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:text-white hover:border-[var(--accent-primary)] hover:bg-[rgba(45,212,191,0.08)] font-mono text-sm tracking-wider uppercase transition-all duration-200 min-w-[200px] cursor-pointer">
+                ĐĂNG KÝ THAM GIA
               </button>
             </Link>
           </div>
@@ -79,13 +79,13 @@ export function LandingPortalView() {
           <div className="mt-3 flex flex-wrap items-center justify-center gap-3 font-mono text-xs border-t border-slate-800/80 pt-5 w-full max-w-xl">
             <span className="text-slate-500 font-semibold">TRUY CẬP NHANH:</span>
             <Link href="/my-team" className="border border-[var(--accent-team)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-team)] hover:bg-[var(--accent-team)]/20 transition-colors hud-clipped font-semibold">
-              [ ĐỘI THI ]
+              ĐỘI THI
             </Link>
             <Link href="/judge/scoring" className="border border-[var(--accent-judge)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-judge)] hover:bg-[var(--accent-judge)]/20 transition-colors hud-clipped font-semibold">
-              [ GIÁM KHẢO ]
+              GIÁM KHẢO
             </Link>
             <Link href="/coordinator/dashboard" className="border border-[var(--accent-coordinator)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/20 transition-colors hud-clipped font-semibold">
-              [ BAN TỔ CHỨC ]
+              BAN TỔ CHỨC
             </Link>
           </div>
         </div>
@@ -145,12 +145,12 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
           <div className="flex items-center gap-3">
             <span className="hud-live-dot h-2.5 w-2.5 rounded-full bg-[var(--accent-primary)] shadow-[0_0_10px_var(--accent-primary)]" />
             <span className="font-mono text-xs font-bold tracking-[0.2em] text-[var(--accent-primary)] uppercase">
-              [ SPOTLIGHT PROTOCOL // SỰ KIỆN HOT NHẤT ]
+              SỰ KIỆN TIÊU ĐIỂM
             </span>
           </div>
           <div className="flex items-center gap-4 font-mono text-xs text-[var(--text-muted)]">
-            <span className="hidden sm:inline-block text-[var(--accent-mentor)]">● LIVE TRACKING</span>
-            <span>SEASON: <strong className="text-[var(--text-primary)]">{event.season.toUpperCase()} {event.year}</strong></span>
+            <span className="hidden sm:inline-block text-[var(--accent-mentor)]">● ĐANG MỞ</span>
+            <span>MÙA GIẢI: <strong className="text-[var(--text-primary)]">{event.season.toUpperCase()} {event.year}</strong></span>
           </div>
         </div>
 
@@ -235,34 +235,38 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
                   </span>
                 </div>
 
-                {/* Prize Pool Highlight Box */}
-                <div className="border border-[var(--accent-judge)]/50 bg-[var(--accent-judge)]/10 p-3.5 hud-clipped flex items-center gap-3">
-                  <div className="flex px-2 py-1 shrink-0 items-center justify-center border border-[var(--accent-judge)] bg-[var(--bg-input)] font-mono text-xs font-bold text-[var(--accent-judge)] shadow-[0_0_10px_rgba(251,191,36,0.3)]">
-                    [PRIZE]
-                  </div>
+                {/* Prize Pool Highlight Box — liệt kê giải thưởng thật, ẩn nếu BTC chưa cấu hình */}
+                {event.prizes.length > 0 && (
+                  <div className="border border-[var(--accent-judge)]/50 bg-[var(--accent-judge)]/10 p-3.5 hud-clipped flex items-start gap-3">
+                    <div className="flex px-2 py-1 shrink-0 items-center justify-center border border-[var(--accent-judge)] bg-[var(--bg-input)] font-mono text-xs font-bold text-[var(--accent-judge)] shadow-[0_0_10px_rgba(251,191,36,0.3)]">
+                      [PRIZE]
+                    </div>
 
-                  <div className="flex flex-col">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--accent-judge)]">
-                      TỔNG GIÁ TRỊ GIẢI THƯỞNG
-                    </span>
-                    <span className="font-mono text-xl font-extrabold text-[var(--accent-judge)] tracking-tight">
-                      {formatVnd(event.totalPrizeVnd)}
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--accent-judge)]">
+                        GIẢI THƯỞNG
+                      </span>
+                      {event.prizes.map((p) => (
+                        <span key={p.id} className="font-mono text-sm font-bold text-[var(--accent-judge)] tracking-tight">
+                          {p.prizeName}: {p.value}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Action Button Protocol */}
               <div className="flex flex-wrap items-center gap-4 pt-3 w-full sm:w-auto">
                 <Link href={`/events/${event.id}`} className="w-full sm:w-auto">
-                  <button className="hud-clipped w-full sm:w-auto px-7 py-3.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono font-extrabold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.5)] focus:outline-none flex items-center justify-center gap-2">
-                    <span>{"// "}XEM CHI TIẾT &amp; ĐĂNG KÝ NGAY</span>
+                  <button className="hud-clipped w-full sm:w-auto px-7 py-3.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono font-extrabold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.5)] focus:outline-none flex items-center justify-center gap-2 cursor-pointer">
+                    <span>XEM CHI TIẾT &amp; ĐĂNG KÝ NGAY</span>
                     <span className="transition-transform duration-200 group-hover:translate-x-1">&gt;</span>
                   </button>
                 </Link>
                 <Link href="/events" className="w-full sm:w-auto">
-                  <button className="hud-clipped w-full sm:w-auto px-5 py-3.5 bg-transparent border border-[var(--border-muted)] text-[var(--text-primary)] hover:text-white hover:border-[var(--accent-primary)] hover:bg-[rgba(0,217,255,0.08)] font-mono text-xs tracking-wider uppercase transition-all duration-200">
-                    [ XEM THỂ LỆ SỰ KIỆN ]
+                  <button className="hud-clipped w-full sm:w-auto px-5 py-3.5 bg-transparent border border-[var(--border-muted)] text-[var(--text-primary)] hover:text-white hover:border-[var(--accent-primary)] hover:bg-[rgba(0,217,255,0.08)] font-mono text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer">
+                    XEM TẤT CẢ SỰ KIỆN
                   </button>
                 </Link>
               </div>
@@ -346,10 +350,6 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
   );
 }
 
-function formatVnd(value: number): string {
-  return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
-}
-
 function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
@@ -383,7 +383,7 @@ function PreviewSection({
           )}
         </div>
 
-        {/* Bố cục bất đối xứng Cyberpunk HUD: 1 Card Lớn bên trái + 2 Card Nhỏ xếp dọc bên phải */}
+        {/* Bố cục bất đối xứng: 1 Card Lớn bên trái + 2 Card Nhỏ xếp dọc bên phải */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-[var(--space-lg)]">
           {featuredEvent && (
             <Link
@@ -395,7 +395,7 @@ function PreviewSection({
                 <div className="flex items-center justify-between">
                   <Badge tone={STATUS_TONE[featuredEvent.status]}>{STATUS_LABEL[featuredEvent.status]}</Badge>
                   <span className="font-mono text-xs font-bold text-[var(--accent-primary)] uppercase">
-                    FEATURED HIGHLIGHT // {featuredEvent.season} {featuredEvent.year}
+                    TIÊU ĐIỂM • {featuredEvent.season} {featuredEvent.year}
                   </span>
                 </div>
 
@@ -411,7 +411,11 @@ function PreviewSection({
 
               <div className="mt-6 border-t border-[var(--border-muted)] pt-4 flex items-center justify-between font-mono text-xs text-[color:var(--text-muted)]">
                 <span>{featuredEvent.teamCount} Đội Thi Đã Đăng Ký</span>
-                <span className="font-bold text-[var(--accent-judge)] text-sm">{formatVnd(featuredEvent.totalPrizeVnd)}</span>
+                {featuredEvent.prizes.length > 0 && (
+                  <span className="font-bold text-[var(--accent-judge)] text-sm">
+                    {featuredEvent.prizes[0].prizeName}: {featuredEvent.prizes[0].value}
+                  </span>
+                )}
               </div>
             </Link>
           )}
@@ -448,14 +452,18 @@ function PreviewCard({ event }: { event: EventCardData }) {
 
       <div className="mt-3 border-t border-[var(--border-muted)] pt-2.5 flex items-center justify-between font-mono text-xs text-[color:var(--text-muted)]">
         <span>{event.teamCount} Đội thi</span>
-        <span className="font-bold text-[var(--accent-judge)]">{formatVnd(event.totalPrizeVnd)}</span>
+        {event.prizes.length > 0 && (
+          <span className="font-bold text-[var(--accent-judge)]">
+            {event.prizes[0].prizeName}: {event.prizes[0].value}
+          </span>
+        )}
       </div>
     </Link>
   );
 }
 
 {/* ────────────────────────────────────────────────────────────────
-    SECTION 7: FAQ TERMINAL LOG ACCORDION COMPONENT
+    SECTION 7: FAQ ACCORDION COMPONENT
    ──────────────────────────────────────────────────────────────── */}
 function LandingFaqSection() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
@@ -484,7 +492,7 @@ function LandingFaqSection() {
       <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-[var(--space-xl)]">
         <div className="flex flex-col items-center text-center gap-2">
           <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-primary)]">
-            KNOWLEDGE BASE // TERMINAL FAQ LOGS
+            HỎI ĐÁP PHỔ BIẾN
           </span>
           <h2 className="font-display text-2xl font-bold uppercase text-[var(--text-primary)] md:text-4xl">
             CÂU HỎI THƯỜNG GẶP
