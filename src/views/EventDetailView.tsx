@@ -12,6 +12,8 @@ import { TRACK_META, DEFAULT_TRACK_META, type TrackIconKey } from "@/viewModels/
 
 import { hasEventPermission } from "@/lib/permissions";
 import { useMyTeam } from "@/repositories/teamsRepository";
+import { usePublicPrizes, type PublicPrizeItem } from "@/repositories/eventsRepository";
+import { Trophy, Award, Gift } from "lucide-react";
 
 export function EventDetailView({ eventId }: { eventId: string }) {
   const { user, activeRole } = useAuth();
@@ -247,6 +249,9 @@ export function EventDetailView({ eventId }: { eventId: string }) {
 
         {/* ── Section Tracks ── */}
         <TracksSection tracks={tracks} />
+
+        {/* ── Section Public Prizes ── */}
+        <PublicPrizesSection eventId={eventId} />
 
       </div>
     </main>
@@ -536,4 +541,69 @@ function TrackIcon({ icon, color }: { icon: TrackIconKey; color: string }) {
         </svg>
       );
   }
+}
+
+// ─── Public Prizes Section ──────────────────────────────────────────────────
+function PublicPrizesSection({ eventId }: { eventId: string }) {
+  const { data: prizes = [], isLoading } = usePublicPrizes(eventId);
+
+  if (isLoading || prizes.length === 0) return null;
+
+  const formatMoney = (val?: number) => {
+    if (!val) return "Hiện vật / Học bổng";
+    return `${(val).toLocaleString("vi-VN")} VNĐ`;
+  };
+
+  return (
+    <section className="flex flex-col gap-6 border-t border-[var(--border-muted)] pt-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-mono text-[10px] text-[var(--accent-judge)] uppercase tracking-widest font-bold flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5" /> PRIZE STRUCTURE
+          </div>
+          <h2 className="font-display text-2xl font-bold uppercase text-[var(--text-primary)] mt-0.5">
+            Cơ Cấu Giải Thưởng
+          </h2>
+        </div>
+        <span className="font-mono text-xs text-[var(--text-muted)] border border-[var(--border-muted)] px-3 py-1 bg-[var(--bg-input)]">
+          {prizes.length} Hạng mục giải thưởng
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {prizes.map((p: PublicPrizeItem, idx: number) => (
+          <div
+            key={p.id || idx}
+            className="hud-clipped border border-[var(--border-muted)] bg-[var(--bg-panel)] p-5 flex flex-col justify-between gap-3 transition-all hover:border-[var(--accent-judge)]/50 hover:-translate-y-0.5"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded bg-[var(--accent-judge)]/10 border border-[var(--accent-judge)]/30 flex items-center justify-center text-[var(--accent-judge)]">
+                  {idx === 0 ? <Trophy className="w-4 h-4" /> : <Award className="w-4 h-4" />}
+                </div>
+                <div>
+                  <h3 className="font-mono text-sm font-bold text-[var(--text-primary)] uppercase">
+                    {p.name || "Giải Thưởng"}
+                  </h3>
+                  <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                    Số lượng: {p.quantity || 1} giải
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="font-mono text-lg font-extrabold text-[var(--accent-judge)] tracking-tight">
+              {formatMoney(p.rewardValueVnd)}
+            </div>
+
+            {p.description && (
+              <p className="font-sans text-xs text-[var(--text-muted)] border-t border-[var(--border-muted)]/50 pt-2">
+                {p.description}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }

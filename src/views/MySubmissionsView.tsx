@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
+import { useMentorFeedbacks } from "@/repositories/submitResultsRepository";
+import { Badge } from "@/components/ui";
+import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import type { SubmissionItem, DeliverableItem } from "@/viewModels/teamTypes";
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
@@ -548,6 +551,9 @@ export function MySubmissionsView() {
                       </Link>
                   </div>
                 </div>
+
+                {/* Mentor Feedback Sub-Section */}
+                <SubmissionMentorFeedbackSection submitResultId={sub.id} />
               </div>
             ))}
           </div>
@@ -568,3 +574,66 @@ export function MySubmissionsView() {
     </div>
   );
 }
+
+// ─── Mentor Feedback Section For Teams ──────────────────────────────────────
+function SubmissionMentorFeedbackSection({ submitResultId }: { submitResultId: string }) {
+  const { data: feedbacks = [] } = useMentorFeedbacks(submitResultId);
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (feedbacks.length === 0) return null;
+
+  return (
+    <div className="border-t border-[var(--border-muted)]/50 bg-[var(--bg-base)]/50 px-5 py-2.5">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full font-mono text-xs text-[var(--accent-mentor)] hover:text-white transition-colors"
+      >
+        <span className="flex items-center gap-2 font-bold">
+          <MessageSquare className="w-3.5 h-3.5" />
+          Nhận xét của Cố vấn ({feedbacks.length})
+        </span>
+        <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+          {isOpen ? "Thu gọn" : "Xem chi tiết"}
+          {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="space-y-3 pt-3 mt-2 border-t border-[var(--border-muted)]/40">
+          {feedbacks.map((fb) => (
+            <div
+              key={fb.id}
+              className="p-3 bg-[var(--bg-input)] border border-[var(--accent-mentor)]/30 hud-clipped space-y-1.5"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge tone="mentor">Mentor: {fb.mentorName || "Cố vấn"}</Badge>
+                  {fb.suggestedScore !== undefined && fb.suggestedScore !== null && (
+                    <span className="font-mono text-xs text-[var(--accent-judge)] font-bold">
+                      Điểm gợi ý: {fb.suggestedScore}/100
+                    </span>
+                  )}
+                </div>
+                <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                  {new Date(fb.createdTime).toLocaleString("vi-VN")}
+                </span>
+              </div>
+
+              <p className="font-sans text-xs text-[var(--text-primary)] leading-relaxed">
+                "{fb.feedbackContent}"
+              </p>
+
+              {fb.technicalAdvice && (
+                <div className="p-2 bg-[var(--bg-base)] border border-[var(--accent-mentor)]/20 font-mono text-[11px] text-[var(--accent-mentor)]">
+                  💡 Lời khuyên kỹ thuật: {fb.technicalAdvice}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
