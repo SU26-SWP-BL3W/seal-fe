@@ -48,10 +48,10 @@
   --space-sm: 10px;
   --space-md: 16px;
   --space-lg: 24px;
-  --space-xl: 36px;
+  --space-xl: 48px;
 
   /* ---------- Shape ---------- */
-  --clip-size: 12px;
+  --clip-size: 8px;
 
   /* ---------- Layout ---------- */
   --container-max: 1280px;

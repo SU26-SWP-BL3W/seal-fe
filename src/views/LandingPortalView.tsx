@@ -26,52 +26,37 @@ export function LandingPortalView() {
       {/* ─────────────────────────────────────────────────────────────
           SECTION 1: TACTICAL CYBER HERO & QUICK PROTOCOL BAR (SYMMETRICAL)
          ───────────────────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center gap-6 px-4 py-16 md:py-24 text-center overflow-hidden">
-        {/* Symmetrical Radial Glow Center Backdrop */}
-        <div className="hud-pulse pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] md:h-[650px] md:w-[650px] rounded-full bg-[radial-gradient(circle,rgba(0,217,255,0.18)_0%,rgba(7,11,20,0)_68%)] blur-3xl" aria-hidden="true" />
+      <section className="relative flex flex-col items-center justify-center gap-8 px-6 py-20 md:py-28 text-center overflow-hidden">
+        {/* Soft Center Radial Glow */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[450px] md:h-[600px] md:w-[600px] rounded-full bg-[radial-gradient(circle,rgba(45,212,191,0.12)_0%,rgba(10,15,29,0)_70%)] blur-3xl" aria-hidden="true" />
 
-        {/* Symmetrical Stationary Geometric Background Seal Shield */}
-        <div className="hud-pulse pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[420px] w-[420px] md:h-[560px] md:w-[560px] opacity-20 text-[var(--accent-primary)] drop-shadow-[0_0_40px_rgba(0,217,255,0.35)]">
-          <SealShield className="h-full w-full" />
-        </div>
-
-        {/* Symmetrical Hexagon Ring Frame */}
-        <svg className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[580px] w-[580px] md:h-[750px] md:w-[750px] opacity-15 text-[var(--accent-primary)]" viewBox="0 0 100 100">
-          <polygon points="50,1 95,25 95,75 50,99 5,75 5,25" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
-        </svg>
-
-        {/* Foreground Content (High Z-Index & Symmetrical Layout) */}
+        {/* Foreground Content */}
         <div className="relative z-10 flex flex-col items-center gap-6 max-w-4xl w-full">
 
-          {/* Central Shield Logo with Symmetrical Outer Ring */}
-          <div className="relative flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-[var(--accent-primary)]/10 blur-xl animate-pulse" />
-            <div className="relative border border-[var(--accent-primary)]/40 bg-[var(--bg-panel)]/90 p-4 hud-clipped shadow-[0_0_30px_rgba(0,217,255,0.3)]">
-              <SealShield className="h-20 w-20 md:h-28 md:w-28 text-[var(--accent-primary)]" />
+          {/* Central Shield Logo */}
+          <div className="relative flex items-center justify-center mb-1">
+            <div className="border border-[var(--accent-primary)]/40 bg-[var(--bg-panel)]/90 p-3.5 hud-clipped shadow-[0_0_25px_rgba(45,212,191,0.15)]">
+              <SealShield className="h-16 w-16 md:h-20 md:w-20 text-[var(--accent-primary)]" />
             </div>
           </div>
 
-          {/* Symmetrical Status Tag Line with Flanking Accent Lines */}
-          <div className="flex items-center gap-3 font-mono text-xs text-[var(--accent-primary)] tracking-widest uppercase">
-            <span className="h-px w-8 md:w-16 bg-gradient-to-r from-transparent to-[var(--accent-primary)]" />
-            <div className="flex items-center gap-2 bg-[var(--bg-panel)]/90 border border-[var(--accent-primary)]/30 px-3.5 py-1 hud-clipped backdrop-blur-sm">
-              <span className="h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-ping" />
-              <span>SYSTEM OPERATIONAL // SEAL HACKATHON PLATFORM</span>
-            </div>
-            <span className="h-px w-8 md:w-16 bg-gradient-to-l from-transparent to-[var(--accent-primary)]" />
+          {/* Status Tag Line */}
+          <div className="flex items-center gap-2 bg-[var(--bg-panel)]/90 border border-[var(--accent-primary)]/30 px-4 py-1.5 hud-clipped backdrop-blur-sm font-mono text-xs text-[var(--accent-primary)] tracking-wider">
+            <span className="h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+            <span>HỆ THỐNG ĐẤU TRƯỜNG HACKATHON // SEAL PLATFORM</span>
           </div>
 
-          {/* Main Symmetrical Heading */}
-          <h1 className="font-display text-[clamp(1.75rem,6vw,3.75rem)] font-extrabold uppercase leading-[1.1] text-[var(--text-primary)] drop-shadow-md break-words w-full text-center">
+          {/* Main Heading */}
+          <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold uppercase leading-[1.15] text-[var(--text-primary)] tracking-wide w-full text-center">
             NƠI Ý TƯỞNG CÔNG NGHỆ
             <br />
-            <span className="text-[var(--accent-primary)] drop-shadow-[0_0_20px_rgba(0,217,255,0.6)]">
+            <span className="bg-gradient-to-r from-teal-300 via-cyan-400 to-sky-400 bg-clip-text text-transparent">
               BỨT PHÁ GIỚI HẠN
             </span>
           </h1>
 
           {/* Subtitle */}
-          <p className="max-w-2xl w-full font-sans text-sm text-[var(--text-muted)] md:text-base leading-relaxed break-words text-center">
+          <p className="max-w-2xl w-full font-sans text-sm md:text-base text-slate-400 leading-relaxed text-center">
             Đấu trường hackathon dành cho sinh viên toàn quốc — tranh tài xây dựng sản phẩm thực tế,
             nhận tư vấn từ Mentor và nhận đánh giá minh bạch theo chuẩn khoa học RBL.
           </p>
@@ -79,27 +64,27 @@ export function LandingPortalView() {
           {/* Symmetrical Button Group */}
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <Link href="/events">
-              <button className="hud-clipped relative px-8 py-3.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono font-extrabold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_25px_rgba(255,255,255,0.6)] focus:outline-none min-w-[200px]">
+              <button className="hud-clipped relative px-8 py-3.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono font-bold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] focus:outline-none min-w-[200px]">
                 {"// "}KHÁM PHÁ SỰ KIỆN &gt;
               </button>
             </Link>
             <Link href="/register">
-              <button className="hud-clipped px-8 py-3.5 bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:text-white hover:border-[var(--accent-primary)] hover:bg-[rgba(0,217,255,0.12)] font-mono text-sm tracking-wider uppercase transition-all duration-200 min-w-[200px]">
+              <button className="hud-clipped px-8 py-3.5 bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:text-white hover:border-[var(--accent-primary)] hover:bg-[rgba(45,212,191,0.08)] font-mono text-sm tracking-wider uppercase transition-all duration-200 min-w-[200px]">
                 [ ĐĂNG KÝ THAM GIA ]
               </button>
             </Link>
           </div>
 
-          {/* Symmetrical Quick Access Protocol */}
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-3 font-mono text-xs border-t border-[var(--border-muted)]/60 pt-4 w-full max-w-xl">
-            <span className="text-[var(--text-muted)]">TRUY CẬP NHANH:</span>
-            <Link href="/my-team" className="border border-[var(--accent-team)]/40 bg-[var(--bg-panel)] px-3.5 py-1 text-[var(--accent-team)] hover:bg-[var(--accent-team)]/20 transition-colors hud-clipped">
+          {/* Quick Access Protocol */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-3 font-mono text-xs border-t border-slate-800/80 pt-5 w-full max-w-xl">
+            <span className="text-slate-500 font-semibold">TRUY CẬP NHANH:</span>
+            <Link href="/my-team" className="border border-[var(--accent-team)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-team)] hover:bg-[var(--accent-team)]/20 transition-colors hud-clipped font-semibold">
               [ ĐỘI THI ]
             </Link>
-            <Link href="/judge/scoring" className="border border-[var(--accent-judge)]/40 bg-[var(--bg-panel)] px-3.5 py-1 text-[var(--accent-judge)] hover:bg-[var(--accent-judge)]/20 transition-colors hud-clipped">
+            <Link href="/judge/scoring" className="border border-[var(--accent-judge)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-judge)] hover:bg-[var(--accent-judge)]/20 transition-colors hud-clipped font-semibold">
               [ GIÁM KHẢO ]
             </Link>
-            <Link href="/coordinator/dashboard" className="border border-[var(--accent-coordinator)]/40 bg-[var(--bg-panel)] px-3.5 py-1 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/20 transition-colors hud-clipped">
+            <Link href="/coordinator/dashboard" className="border border-[var(--accent-coordinator)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/20 transition-colors hud-clipped font-semibold">
               [ BAN TỔ CHỨC ]
             </Link>
           </div>
