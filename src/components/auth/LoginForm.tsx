@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Link } from '@/i18n/routing';
 
 export interface LoginFormProps {
   onSubmit?: (email: string, password: string) => Promise<void>;
@@ -115,12 +116,12 @@ export function LoginForm({
                 className="block text-xs uppercase text-[#2dd4bf] tracking-widest font-mono font-semibold flex justify-between items-center"
               >
                 <span>&gt; DECRYPTION_KEY</span>
-                <a 
+                <Link 
                   href="/forgot-password" 
                   className="text-[#94a3b8] hover:text-[#2dd4bf] transition-colors hover:underline text-xs font-normal"
                 >
                   RESET_KEY?
-                </a>
+                </Link>
               </label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#2dd4bf]/50">
@@ -194,12 +195,12 @@ export function LoginForm({
           <div className="mt-6 text-center text-xs text-[#94a3b8] font-mono">
             <p>
               Chưa có tài khoản?{' '}
-              <a 
+              <Link 
                 href="/register" 
                 className="text-[#2dd4bf] hover:text-[#38bdf8] transition-colors underline"
               >
                 ĐĂNG KÝ NGAY
-              </a>
+              </Link>
             </p>
           </div>
         </div>

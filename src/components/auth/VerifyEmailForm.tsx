@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { Mail, Check, ArrowLeft } from 'lucide-react';
+import { Link } from '@/i18n/routing';
 
 export interface VerifyEmailFormProps {
   email?: string;
@@ -113,12 +114,12 @@ export function VerifyEmailForm({
                 <h2 className="text-xl font-bold text-[#2dd4bf] uppercase">Email xác thực thành công</h2>
                 <p className="text-sm text-[#94a3b8]">Tài khoản của bạn đã được kích hoạt</p>
               </div>
-              <a
+              <Link
                 href="/login"
                 className="hud-clipped inline-block w-full bg-[#2dd4bf] hover:bg-[#26c0a8] text-[#0a0f1d] py-3 px-4 font-display font-bold uppercase tracking-wider transition-all"
               >
                 Tiếp tục đăng nhập
-              </a>
+              </Link>
             </div>
           ) : (
             <>
@@ -211,13 +212,13 @@ export function VerifyEmailForm({
 
               {/* Back Link */}
               <div className="mt-6 text-center">
-                <a
+                <Link
                   href="/login"
                   className="text-xs text-[#94a3b8] hover:text-[#2dd4bf] transition-colors flex items-center justify-center gap-2 mx-auto"
                 >
                   <ArrowLeft className="w-3 h-3" />
                   Quay lại đăng nhập
-                </a>
+                </Link>
               </div>
             </>
           )}

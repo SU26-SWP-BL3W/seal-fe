@@ -15,6 +15,7 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { DeclineInvitationModal } from '@/components/domain/DeclineInvitationModal';
+import { Link } from '@/i18n/routing';
 
 export interface Team {
   id: string;
@@ -114,13 +115,13 @@ export function EventDetailsView({ eventId }: EventDetailsViewProps) {
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
         {/* Back Button */}
-        <a
+        <Link
           href="/events"
           className="inline-flex items-center gap-2 text-[#94a3b8] hover:text-[#2dd4bf] transition-colors mb-8 font-mono text-sm uppercase tracking-wide"
         >
           <ArrowLeft className="w-4 h-4" />
           Quay lại danh sách
-        </a>
+        </Link>
 
         {/* Header Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
