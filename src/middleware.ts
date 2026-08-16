@@ -1,7 +1,9 @@
 import createMiddleware from 'next-intl/middleware';
-import {routing} from './i18n/routing';
+import { routing } from './i18n/routing';
 
-export default createMiddleware(routing);
+const middleware = createMiddleware(routing);
+
+export default middleware;
 
 export const config = {
   // Bỏ qua tất cả các đường dẫn chứa dấu chấm (vd: favicon.ico, images)

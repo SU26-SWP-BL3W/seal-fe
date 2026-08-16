@@ -369,16 +369,16 @@ export function useDeleteUser() {
   });
 }
 
-/** GET /api/FptStudents/{studentCode} — Xác minh SV FPT */
+/** GET /api/fpt-mock/students/{studentCode} — Xác minh SV FPT (FptMockController thật). */
 export function useFptStudentLookup(studentCode: string | null) {
   return useQuery({
     queryKey: ["fptStudent", studentCode],
     queryFn: async () => {
       try {
-        const res = await apiClient.get(`/FptStudents/${studentCode}`);
+        const res = await apiClient.get(`/fpt-mock/students/${studentCode}`);
         return res.data?.data ?? res.data;
       } catch (err: any) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/FptStudents/" + studentCode + " error:", err?.message);
+        console.warn("[SEAL BE-DATA MISSING] GET /api/fpt-mock/students/" + studentCode + " error:", err?.message);
         return null;
       }
     },
@@ -401,5 +401,13 @@ export const usersRepository = {
       console.warn("[SEAL BE-DATA MISSING] GET /api/Users error:", err?.message);
     }
     return null;
+  },
+  async approveUser(userId: string): Promise<any> {
+    const res = await apiClient.post(`/Users/${userId}/approve`);
+    return res.data;
+  },
+  async rejectUser(userId: string, reason: string): Promise<any> {
+    const res = await apiClient.post(`/Users/${userId}/reject`, { reason });
+    return res.data;
   },
 };

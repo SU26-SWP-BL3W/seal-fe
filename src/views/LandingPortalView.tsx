@@ -534,3 +534,4 @@ function LandingFaqSection() {
     </section>
   );
 }
+export default LandingPortalView;

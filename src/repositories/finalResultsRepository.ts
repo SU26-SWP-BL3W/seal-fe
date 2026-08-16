@@ -125,3 +125,17 @@ export function useCreatePrize() {
     },
   });
 }
+export const finalResultsRepository = {
+  async calculateRoundResults(roundId: string, topN?: number): Promise<any> {
+    const res = await apiClient.post(`/FinalResults/calculate/${roundId}?topN=${topN || 10}`);
+    return res.data;
+  },
+  async publishRoundResults(roundId: string): Promise<any> {
+    const res = await apiClient.post(`/FinalResults/publish/${roundId}`);
+    return res.data;
+  },
+  async setPublishStatus(roundId: string, isPublished: boolean): Promise<any> {
+    const res = await apiClient.put(`/FinalResults/round/${roundId}/publish-status`, { isPublished });
+    return res.data;
+  },
+};

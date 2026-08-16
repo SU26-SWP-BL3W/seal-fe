@@ -28,6 +28,8 @@ export interface MyEventModel {
   TeamCount?: number;
   description?: string;
   Description?: string;
+  status?: boolean;
+  Status?: boolean;
   rounds?: Round[];
 }
 

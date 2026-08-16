@@ -29,6 +29,17 @@ export function useGetTeamsByEvent(eventId?: string, status?: string) {
   });
 }
 
+export function useGetTeamById(id?: string) {
+  return useQuery({
+    queryKey: ["team-by-id", id],
+    queryFn: async () => {
+      const res = await apiClient.get<any>(`/Teams/${id}`);
+      return res.data;
+    },
+    enabled: !!id,
+  });
+}
+
 export interface Team {
   TeamId: string;
   EventId: string;

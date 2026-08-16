@@ -48,21 +48,25 @@ export const DEFAULT_SCHOOLS_LIST: School[] = [
 ];
 
 /**
- * GET /api/Schools — Lấy danh sách trường học.
- * apiClient đã tự bóc 1 lớp BaseResponse (xem models/apiClient.ts response
- * interceptor), nên res.data ở đây đã LÀ PagedResult<School> — mảng thật nằm ở
- * res.data.data (1 lớp), không phải res.data.data.data (đã từng đoán sai 1 lớp
- * khiến trang luôn hiện "0 trường" dù DB có dữ liệu thật).
+ * GET /api/Schools — Lấy danh sách trường học từ Database.
  */
 export function useGetSchools() {
   return useQuery({
     queryKey: ["schools"],
     queryFn: async () => {
-      const res = await apiClient.get<PagedResult<School> | School[]>("/Schools", {
-        params: { PageNumber: 1, PageSize: 100 },
-      });
-      if (Array.isArray(res.data)) return res.data;
-      if (Array.isArray(res.data?.data)) return res.data.data;
+      try {
+        const res = await apiClient.get<PagedResult<School>>("/Schools", {
+          params: { PageNumber: 1, PageSize: 100 },
+        });
+        if (Array.isArray(res.data?.data)) {
+          return res.data.data;
+        }
+        if (Array.isArray(res.data)) {
+          return res.data as unknown as School[];
+        }
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Schools error:", err?.message);
+      }
       return [];
     },
     staleTime: 1000 * 60 * 10,

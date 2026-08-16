@@ -10,6 +10,7 @@ import {
 } from "@/repositories/authRepository";
 import { useGetUserRejections } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
+import { uploadRepository } from "@/repositories/uploadRepository";
 import { Button, Input, Card, Badge } from "@/components/ui";
 import {
   User,
@@ -96,6 +97,7 @@ export function UserProfileView() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [requestUnblockSuccess, setRequestUnblockSuccess] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Change password state
@@ -106,7 +108,8 @@ export function UserProfileView() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  const { mutateAsync: updateProfile, isPending: isSubmitting } = useUpdateStudentProfile();
+  const { mutateAsync: updateProfile, isPending: isSubmittingProfile } = useUpdateStudentProfile();
+  const isSubmitting = isSubmittingProfile || isUploadingPhoto;
   const { mutateAsync: verifyFpt, isPending: isVerifying } = useFptStudentVerification();
   const { mutateAsync: requestUnblock, isPending: isUnblocking } = useRequestUnblock();
   const { mutateAsync: changePassword, isPending: isChangingPassword } = useChangePassword();
@@ -196,9 +199,12 @@ export function UserProfileView() {
     }
 
     try {
-      const photoCardUrl = photoFile
-        ? `https://storage.seal.vn/student-cards/${Date.now()}-${encodeURIComponent(photoFile.name)}`
-        : photoPreview || undefined;
+      let photoCardUrl = user?.photoStudentCardUrl || undefined;
+      if (photoFile) {
+        setIsUploadingPhoto(true);
+        const uploaded = await uploadRepository.uploadFile(photoFile);
+        photoCardUrl = uploaded.fileUrl;
+      }
 
       await updateProfile({
         fullName: fullName.trim() || undefined,
@@ -206,12 +212,14 @@ export function UserProfileView() {
         schoolId: schoolChoice === "OTHER" ? schoolId : undefined,
         studentCode: studentCode.trim(),
         photoStudentCardUrl: photoCardUrl,
-      } as any).catch((err) => console.warn("[SEAL] Profile update warning:", err?.message));
+      } as any);
 
       setSubmitSuccess(true);
       setIsEditing(false);
-    } catch {
-      setSubmitError("Không thể cập nhật hồ sơ. Vui lòng thử lại sau.");
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.message || "Không thể cập nhật hồ sơ. Vui lòng thử lại sau.");
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
