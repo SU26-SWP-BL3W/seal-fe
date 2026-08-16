@@ -40,14 +40,33 @@ sạch để KHÔNG lặp lại:
 3. **Một nguồn sự thật.** Đừng để 1 khái niệm (tiêu chí, kết quả...) có 2-3 nơi định nghĩa khác
    nhau.
 
+## Đã ráp — Auth (13 endpoint `AuthController` + 1 endpoint `UsersController`)
+
+`repositories/authRepository.ts` + `providers/AuthProvider.tsx` xây lại sạch, field/route đối
+chiếu trực tiếp source C# của BE (`SU26_SWP_BL3W_BE/backend/SEAL.Application/Features/Users/**`),
+không suy đoán từ FE cũ — FE cũ có bug thật ở đúng chỗ này (gọi `/FptStudents/{code}` không tồn
+tại; đọc `data.user`/`data.token` trong khi response thật là field phẳng
+`accessToken`/`userId`/...).
+
+- `LoginUserResponseModel` chỉ có field tối thiểu (không có `isApproved`/`isFpt`/`schoolId`) →
+  sau login/google-login, repository tự gọi thêm `GET /Users/profile` để lấy `User` đầy đủ, không
+  tự bịa giá trị mặc định cho field thiếu.
+- Không expose hook refresh-token thủ công — `apiClient.ts` đã tự làm mới token khi 401
+  (single-flight), thêm 1 đường refresh nữa dễ đua nhau.
+- **Không** còn backdoor `loginWithRole` (mock-jwt-token cho nút demo) như bản cũ.
+- **Chưa build**: trang Login/Register (`views/`) — mới có tầng data + session, chưa có UI.
+- **Chưa ráp**: xác minh sinh viên FPT (`FptMockController`, route `api/fpt-mock/students/{code}`
+  — khác controller, không phải Auth) — để lại cho đợt sau, tránh lẫn vào scope Auth.
+
 ## Chưa port cố ý
 
-- **`AuthProvider`** — repo cũ có sẵn nhưng chứa 1 backdoor đã bị audit (`loginWithRole` tạo
-  mock-jwt-token giả cho nút demo). Xây lại sạch làm feature đầu tiên, không copy nguyên.
-- **`lib/permissions.ts`** — phụ thuộc `models/entities` (kho type feature); định nghĩa lại cùng
-  lúc với entity/role model thật.
-- Toàn bộ `views/`, `viewModels/`, `repositories/` feature cụ thể — xây theo pattern ở trên khi
-  bắt đầu từng flow.
+- **`lib/permissions.ts`** — phụ thuộc entity/role đầy đủ (Team, EventRole...) chưa wiring; định
+  nghĩa lại cùng lúc với các controller đó.
+- 23/24 controller còn lại (Events, Teams, Scores, Templates, Tracks, Rounds, FinalResults,
+  Appeals, Users (ngoài `/profile`), EventRoles, Judges, Mentors, Prizes, Criterias,
+  SubmitResults, ScoreDetails, Notifications, Schools, Storage, UserRejections,
+  EventCoordinators, AuditLogs, Demo, FptMock) — ráp theo đúng pattern Auth khi bắt đầu từng flow,
+  đọc contract thật từ source C#, không copy route/field từ FE cũ.
 
 ## Chạy local
 

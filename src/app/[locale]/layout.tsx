@@ -4,6 +4,7 @@ import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
 import "@/styles/tokens.css";
 import "../globals.css";
 
@@ -38,7 +39,9 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]" suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryProvider>
         </NextIntlClientProvider>
       </body>
     </html>
