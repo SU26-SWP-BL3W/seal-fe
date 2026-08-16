@@ -121,7 +121,7 @@ export function CoordinatorCalibrationView() {
               QUẢN LÝ TIÊU CHÍ & HIỆU CHUẨN ĐIỂM (RUBRIC CENTER)
             </h1>
             <p className="text-xs font-mono text-[var(--text-muted)]">
-              // BAN TỔ CHỨC: KHO TIÊU CHÍ RBL & MA TRẬN ĐIỂM GIÁM KHẢO
+              Kho tiêu chí RBL &amp; ma trận điểm chấm của Giám khảo
             </p>
           </div>
         </div>

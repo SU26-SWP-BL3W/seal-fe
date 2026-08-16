@@ -178,9 +178,8 @@ export const AdminDashboardView: React.FC = () => {
 
           {displayEvents.length === 0 ? (
             <ApiMissingDataBadge
-              endpoint="GET /api/Events"
-              title="CHƯA CÓ SỰ KIỆN TỪ BACKEND DATABASE"
-              message="Chưa có bản ghi sự kiện nào được trả về từ Backend API. Vui lòng bấm 'Khởi Tạo Sự Kiện Mới' để tạo sự kiện."
+              title="CHƯA CÓ SỰ KIỆN NÀO"
+              message="Chưa có sự kiện nào trong hệ thống. Vui lòng bấm 'Tạo Sự Kiện Mới' để khởi tạo."
             />
           ) : (
             <div className="overflow-x-auto">
@@ -304,7 +303,7 @@ export const AdminDashboardView: React.FC = () => {
                       Hủy Bỏ
                     </Button>
                     <Button variant="primary" accent="coordinator" type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Đang xử lý..." : "// XÁC NHẬN GÁN EC >"}
+                      {isSubmitting ? "Đang xử lý..." : "Xác Nhận Gán EC"}
                     </Button>
                   </div>
                 </form>

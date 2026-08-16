@@ -310,7 +310,7 @@ export const AdminCreateEventView: React.FC = () => {
                   <span>Chỉ System Admin mới có nút bấm khởi tạo này.</span>
                 </div>
                 <Button variant="primary" type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Đang tạo event & gán EC..." : "// XÁC NHẬN TẠO SỰ KIỆN >"}
+                  {isSubmitting ? "Đang tạo event & gán EC..." : "Xác Nhận Tạo Sự Kiện"}
                 </Button>
               </div>
             </form>

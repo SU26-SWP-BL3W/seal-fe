@@ -435,9 +435,8 @@ export function MySubmissionsView() {
           <p className="font-mono text-xs text-[color:var(--text-muted)] py-10 text-center">Đang tải bài nộp...</p>
         ) : visibleSubs.length === 0 ? (
           <ApiMissingDataBadge
-            endpoint="GET /api/Teams/my-submissions"
             title="CHƯA CÓ BÀI NỘP"
-            message="Đội chưa nộp bài cho hạng mục nào. Nút nộp bài chỉ mở khi đội đã được BTC duyệt."
+            message="Đội thi chưa có bài nộp nào cho các hạng mục."
           />
         ) : (
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped overflow-hidden">

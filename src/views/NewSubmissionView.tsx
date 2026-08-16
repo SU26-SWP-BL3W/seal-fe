@@ -424,11 +424,6 @@ export function NewSubmissionView() {
   if (!isLoading && (!team || !canSubmit)) {
     return (
       <div className="hud-lattice min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-4 space-y-4">
-        <ApiMissingDataBadge
-          endpoint="GET /api/SubmitResults"
-          title="BẠN CHƯA CÓ ĐỘI THI ĐỂ NỘP BÀI TRÊN BACKEND DATABASE"
-          message="Vui lòng tạo hoặc tham gia một Đội thi chính thức trước khi thực hiện nộp bài."
-        />
         <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--color-warning)]/40 hud-clipped p-8 text-center">
           <div className="font-mono text-[10px] text-[var(--color-warning)] tracking-widest uppercase mb-3">
             CHƯA ĐỦ ĐIỀU KIỆN NỘP BÀI
@@ -514,9 +509,8 @@ export function NewSubmissionView() {
 
           {availableTracks.length === 0 ? (
             <ApiMissingDataBadge
-              endpoint="GET /api/SubmitResults"
-              title="CHƯA CÓ HẠNG MỤC NỘP BÀI TRÊN BACKEND DATABASE"
-              message="Chưa có Hạng mục thi đấu nào được khởi tạo hoặc gán mở cổng nộp bài trên Backend API."
+              title="CHƯA MỞ CỔNG NỘP BÀI"
+              message="Chưa có Hạng mục thi đấu nào được mở cổng nộp bài cho sự kiện này."
             />
           ) : (
             availableTracks.map((track) => (

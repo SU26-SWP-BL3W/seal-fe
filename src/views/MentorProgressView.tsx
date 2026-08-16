@@ -41,7 +41,7 @@ export function MentorProgressView() {
               THEO DÕI TIẾN ĐỘ ĐỘI THI (MENTOR PROGRESS)
             </h1>
             <p className="text-xs font-mono text-[var(--text-muted)]">
-              // MENTOR MONITORING & SCORE BREAKDOWN
+              Tra cứu bảng phân rã điểm số và tiến độ của các đội thi
             </p>
           </div>
         </div>

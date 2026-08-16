@@ -144,14 +144,14 @@ export function MentorSubmissionsView() {
             </h1>
             <div className="font-mono text-xs flex items-center gap-2 border border-[#00d9ff]/30 px-3 py-1 rounded bg-[#00d9ff]/5 text-[#00d9ff]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#00d9ff] animate-pulse" />
-              MODE: READ-ONLY (MENTOR ASSIST)
+              CHẾ ĐỘ XEM &amp; HỖ TRỢ CỐ VẤN
             </div>
           </div>
         </header>
 
         {isLoading ? (
           <div className="flex justify-center py-20 font-mono text-xs text-[#2dd4bf] animate-pulse">
-            LOADING SUBMISSION ARTIFACTS...
+            Đang tải chi tiết bài nộp...
           </div>
         ) : !activeSubmission ? (
           <Card className="p-12 bg-surface-container-low border border-outline-variant text-center font-mono text-xs text-on-surface-variant">
@@ -165,7 +165,7 @@ export function MentorSubmissionsView() {
               {/* HUD Panel 1: Team Info (Col span 4) */}
               <div className="col-span-12 lg:col-span-4 bg-surface-container-high border border-outline-variant rounded-lg flex flex-col overflow-hidden">
                 <div className="bg-surface-variant px-4 py-2 flex justify-between items-center border-b border-surface font-mono text-xs">
-                  <span className="text-[#00d9ff] font-bold tracking-widest uppercase">/ IDENTIFICATION</span>
+                  <span className="text-[#00d9ff] font-bold tracking-widest uppercase">THÔNG TIN ĐỘI THI</span>
                   <BadgeCheck className="w-4 h-4 text-on-surface-variant" />
                 </div>
                 <div className="p-5 flex-1 flex flex-col gap-5 font-mono text-xs">
@@ -308,7 +308,7 @@ export function MentorSubmissionsView() {
                   <div className="flex-1 bg-surface border border-outline-variant rounded flex flex-col">
                     <div className="px-3 py-2 border-b border-outline-variant flex items-center gap-2 bg-surface-variant/50 font-mono text-[11px]">
                       <FileText className="w-3.5 h-3.5 text-on-surface-variant" />
-                      <span className="text-on-surface-variant font-bold">SUBMISSION_NOTES.MD</span>
+                      <span className="text-on-surface-variant font-bold">GHI CHÚ BÀI NỘP</span>
                     </div>
                     <div className="p-4 font-mono text-xs text-on-surface-variant leading-relaxed overflow-y-auto max-h-40">
                       {description}
@@ -321,10 +321,10 @@ export function MentorSubmissionsView() {
               <div className="col-span-12 bg-surface-container-high border border-outline-variant rounded-lg flex flex-col overflow-hidden font-mono text-xs">
                 <div className="bg-surface-variant px-4 py-2 flex justify-between items-center border-b border-surface">
                   <span className="text-[#00d9ff] font-bold tracking-widest uppercase">
-                    / REPOSITORY TELEMETRY &amp; SYSTEM CHECK
+                    THÔNG TIN HỆ THỐNG &amp; TRẠNG THÁI NỘP BÀI
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[#2dd4bf]">LIVE FETCH</span>
+                    <span className="text-[10px] text-[#2dd4bf]">TRỰC TUYẾN</span>
                     <span className="w-2 h-2 rounded-full bg-[#00d9ff] animate-ping" />
                   </div>
                 </div>

@@ -184,9 +184,8 @@ export function LandingLeaderboardPodium({
         {/* ── Podium Grid: Silver | Gold | Bronze ──────────────────────────── */}
         {!gold && !silver && !bronze ? (
           <ApiMissingDataBadge
-            endpoint="GET /api/FinalResults/podium"
-            title="CHƯA CÓ DỮ LIỆU BẢNG VÀNG TỪ BACKEND"
-            message="Chưa có kết quả vinh danh Podium Quán quân/Á quân được công bố từ Backend API."
+            title="CHƯA CÓ BẢNG VÀNG KẾT QUẢ"
+            message="Kết quả vinh danh Podium Quán quân & Á quân hiện chưa được công bố."
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-end">

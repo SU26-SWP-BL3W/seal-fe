@@ -150,7 +150,7 @@ export const AdminUsersView: React.FC = () => {
         {/* Admin Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
-            <HudLabel>// SYSTEM ADMIN USER MANAGEMENT</HudLabel>
+            <HudLabel>QUẢN LÝ TÀI KHOẢN NGƯỜI DÙNG</HudLabel>
             <h1 className="font-display font-bold text-3xl text-[var(--color-danger)] uppercase tracking-wider mt-1">
               Quản Lý Danh Sách Tài Khoản
             </h1>
@@ -162,7 +162,7 @@ export const AdminUsersView: React.FC = () => {
           <div className="flex items-center gap-3">
             <Link href="/admin/events/new">
               <Button variant="primary" className="hud-clipped flex items-center gap-2 bg-[var(--color-danger)] text-white hover:bg-white hover:text-[var(--bg-base)] font-mono text-xs font-bold">
-                <Plus className="w-4 h-4" /> // TẠO EVENT MỚI &gt;
+                <Plus className="w-4 h-4" /> Tạo Sự Kiện Mới
               </Button>
             </Link>
             <Button variant="ghost" onClick={() => refetch()} className="font-mono text-xs">
@@ -352,7 +352,7 @@ export const AdminUsersView: React.FC = () => {
 
                 <div className="border-b border-[var(--border-muted)] pb-4">
                   <HudLabel>
-                    {isStaffOrAdmin ? "// SYSTEM ADMIN - STAFF & EXPERT PROFILE INSPECTION" : "// SYSTEM ADMIN - STUDENT CANDIDATE CARD INSPECTION"}
+                    {isStaffOrAdmin ? "THÔNG TIN TÀI KHOẢN NHÂN SỰ & CHUYÊN GIA" : "THÔNG TIN THẺ SINH VIÊN TÀI KHOẢN"}
                   </HudLabel>
                   <h3 className="font-display font-bold text-xl text-[var(--text-primary)] uppercase tracking-wider mt-1">
                     {detailUserModal.fullName}
@@ -469,7 +469,7 @@ export const AdminUsersView: React.FC = () => {
                           onClick={() => handleApprove(detailUserModal.id || detailUserModal.userId || "")}
                           className="font-mono text-xs bg-[var(--color-success)] text-white hover:bg-white hover:text-black font-bold"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" /> // PHÊ DUYỆT HỒ SƠ &gt;
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Phê Duyệt Hồ Sơ
                         </Button>
                       </div>
                     </div>
@@ -521,7 +521,7 @@ export const AdminUsersView: React.FC = () => {
                     Hủy Bỏ
                   </Button>
                   <Button variant="primary" type="submit" className="bg-[var(--color-danger)] text-white font-mono text-xs font-bold">
-                    // XÁC NHẬN TỪ CHỐI &gt;
+                    Xác Nhận Từ Chối
                   </Button>
                 </div>
               </form>
@@ -597,7 +597,7 @@ export const AdminUsersView: React.FC = () => {
                       Hủy Bỏ
                     </Button>
                     <Button variant="primary" accent="coordinator" type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Đang xử lý..." : "// XÁC NHẬN GÁN EC >"}
+                      {isSubmitting ? "Đang xử lý..." : "Xác Nhận Gán EC"}
                     </Button>
                   </div>
                 </form>

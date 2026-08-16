@@ -203,8 +203,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
         {/* Data Grid Table */}
         {filteredResults.length === 0 ? (
           <ApiMissingDataBadge
-            endpoint="GET /api/FinalResults/round/{roundId}"
-            title="CHƯA CÓ BẢNG XẾP HẠNG TỪ BACKEND DATABASE"
+            title="CHƯA CÓ BẢNG XẾP HẠNG"
             message="Ban Tổ Chức chưa công bố kết quả thi đấu công khai cho sự kiện / vòng thi này."
           />
         ) : (

@@ -26,7 +26,7 @@ export function MentorTracksView() {
           <div>
             <div className="font-mono text-xs text-[#2dd4bf] mb-2 flex items-center gap-2 tracking-widest">
               <Compass className="w-3.5 h-3.5" />
-              [ SYS_LOC: MENTOR_WORKSPACE / ACTIVE_TRACKS ]
+              KHÔNG GIAN CỐ VẤN / HẠNG MỤC PHỤ TRÁCH
             </div>
             <h1 className="font-display text-2xl md:text-3xl text-on-surface font-extrabold uppercase tracking-wide">
               CÁC HẠNG MỤC ĐANG HỖ TRỢ
@@ -64,7 +64,7 @@ export function MentorTracksView() {
                 strokeDashoffset="60"
               />
             </svg>
-            <span className="font-mono text-xs text-[#2dd4bf] tracking-widest animate-pulse">CONNECTING TO MENTOR DATABANK...</span>
+            <span className="font-mono text-xs text-[#2dd4bf] tracking-widest animate-pulse">Đang tải danh sách hạng mục...</span>
           </div>
         ) : myTracks.length === 0 ? (
           <Card className="p-12 bg-surface-container-low/80 border border-[#2dd4bf]/20 hud-clipped text-center flex flex-col items-center gap-3">
@@ -96,7 +96,7 @@ export function MentorTracksView() {
                   {/* Panel Header Bar */}
                   <div className="h-7 bg-[#2dd4bf]/10 border-b border-[#2dd4bf]/20 flex items-center px-4 justify-between font-mono text-xs">
                     <span className="text-[#2dd4bf] font-bold tracking-widest uppercase">
-                      TRACK // {trackName}
+                      HẠNG MỤC: {trackName}
                     </span>
                     <span className="text-on-surface-variant text-[11px]">ID: {trackId}</span>
                   </div>
@@ -140,7 +140,7 @@ export function MentorTracksView() {
                         <div className="h-full bg-[#2dd4bf] transition-all duration-500" style={{ width: `${progressPct}%` }} />
                       </div>
                       <div className="flex justify-between items-center px-1 font-mono text-[11px]">
-                        <span className="text-on-surface-variant">MENTORING PROGRESS</span>
+                        <span className="text-on-surface-variant">TIẾN ĐỘ HỖ TRỢ</span>
                         <span className="text-[#2dd4bf] font-bold">{progressPct}%</span>
                       </div>
 

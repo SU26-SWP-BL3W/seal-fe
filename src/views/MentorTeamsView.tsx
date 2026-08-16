@@ -60,12 +60,12 @@ export function MentorTeamsView() {
                 DANH SÁCH ĐỘI HỖ TRỢ
               </h1>
               <p className="font-mono text-xs text-on-surface-variant mt-1">
-                READ_ONLY: NO MODIFICATION ACCESS GRANTED
+                Danh sách các đội thi thuộc Hạng mục chuyên môn được phân công.
               </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="font-mono text-xs text-[#2dd4bf] bg-[#2dd4bf]/10 px-3 py-1 border border-[#2dd4bf]/30 rounded">
-                [ STATUS: ACTIVE_MONITORING ]
+                [ Trạng thái: Đang theo dõi ]
               </div>
               <Button variant="ghost" accent="mentor" onClick={() => refetchAll()} className="text-xs">
                 <RefreshCw className="w-3.5 h-3.5 mr-1" /> Làm mới
@@ -99,15 +99,15 @@ export function MentorTeamsView() {
         <div className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-lg flex flex-col overflow-hidden">
           {/* Panel Header */}
           <div className="h-8 bg-[#2dd4bf]/10 border-b border-[#2dd4bf]/20 flex items-center px-4 justify-between font-mono text-xs">
-            <span className="text-[#2dd4bf] font-bold tracking-wider">TEAM_ARRAY_DATABANK</span>
-            <span className="text-on-surface-variant text-[11px]">{teamsInTrack.length} TEAMS LOADED</span>
+            <span className="text-[#2dd4bf] font-bold tracking-wider">DANH SÁCH ĐỘI THI</span>
+            <span className="text-on-surface-variant text-[11px]">{teamsInTrack.length} Đội thi</span>
           </div>
 
           {/* Table Container */}
           <div className="flex-1 overflow-x-auto p-4">
             {isLoading ? (
               <div className="flex justify-center py-20 font-mono text-xs text-[#2dd4bf] animate-pulse">
-                LOADING TEAM DATABANK...
+                Đang tải danh sách đội thi...
               </div>
             ) : teamsInTrack.length === 0 ? (
               <div className="text-center py-16 font-mono text-xs text-on-surface-variant">
@@ -118,11 +118,11 @@ export function MentorTeamsView() {
               <table className="w-full text-left font-mono text-xs border-collapse">
                 <thead className="text-[11px] text-on-surface-variant uppercase border-b border-outline-variant bg-surface-container-lowest sticky top-0">
                   <tr>
-                    <th className="py-3 px-4 font-semibold">TEAM_IDENTIFIER</th>
-                    <th className="py-3 px-4 font-semibold">STATUS</th>
-                    <th className="py-3 px-4 font-semibold">PERSONNEL</th>
-                    <th className="py-3 px-4 font-semibold text-right">SUBMISSION_PROGRESS</th>
-                    <th className="py-3 px-4 font-semibold text-center">ACTION</th>
+                    <th className="py-3 px-4 font-semibold">TÊN ĐỘI THI</th>
+                    <th className="py-3 px-4 font-semibold">TRẠNG THÁI</th>
+                    <th className="py-3 px-4 font-semibold">THÀNH VIÊN</th>
+                    <th className="py-3 px-4 font-semibold text-right">TIẾN ĐỘ BÀI NỘP</th>
+                    <th className="py-3 px-4 font-semibold text-center">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/40">
@@ -195,7 +195,7 @@ export function MentorTeamsView() {
             <div className="w-2 h-1 bg-[#2dd4bf]/30" />
             <div className="w-8 h-1 bg-[#2dd4bf]/10" />
           </div>
-          <div>SYS.CONN: STABLE // ENCRYPTION: LEVEL_4</div>
+          <div>HỆ THỐNG CỐ VẤN HẠNG MỤC</div>
         </div>
       </div>
     </div>

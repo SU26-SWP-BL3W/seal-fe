@@ -384,7 +384,7 @@ export function CoordinatorProfilesView() {
                 <Badge tone="info" className="font-mono text-[10px]">SEAL AUTH CENTER</Badge>
               </h1>
               <p className="text-xs font-mono text-[var(--text-muted)] mt-0.5">
-                // Quản lý tư cách người dùng, lọc vai trò theo Hạng mục chuyên môn &amp; duyệt thẻ sinh viên toàn hệ thống
+                Quản lý tư cách người dùng, lọc vai trò theo Hạng mục chuyên môn &amp; duyệt thẻ sinh viên toàn hệ thống
               </p>
             </div>
           </div>
@@ -1162,7 +1162,7 @@ export function CoordinatorProfilesView() {
                 onClick={handleRejectConfirm}
                 className="flex-1 py-2 px-4 justify-center bg-[var(--color-danger)] hover:bg-red-600 text-white font-mono text-xs font-bold tracking-wider hud-clipped transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(239,68,68,0.4)]"
               >
-                {isRejecting ? "Đang xử lý..." : "// XÁC NHẬN TỪ CHỐI"}
+                {isRejecting ? "Đang xử lý..." : "Xác Nhận Từ Chối"}
               </button>
             </div>
           </Card>

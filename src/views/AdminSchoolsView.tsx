@@ -84,7 +84,7 @@ export const AdminSchoolsView: React.FC = () => {
         {/* Admin Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
-            <HudLabel>// SYSTEM ADMIN SCHOOLS DIRECTORY</HudLabel>
+            <HudLabel>DANH MỤC TRƯỜNG HỌC DỰ ÁN</HudLabel>
             <h1 className="font-display font-bold text-3xl text-[var(--color-danger)] uppercase tracking-wider mt-1">
               Danh Mục Trường Đại Học Đối Tác
             </h1>
@@ -256,7 +256,7 @@ export const AdminSchoolsView: React.FC = () => {
                       Hủy Bỏ
                     </Button>
                     <Button variant="primary" type="submit" disabled={isCreating} className="bg-[var(--color-danger)] text-white">
-                      {isCreating ? "Đang xử lý..." : "// TẠO TRƯỜNG HỌC MỚI >"}
+                      {isCreating ? "Đang xử lý..." : "Tạo Trường Học Mới"}
                     </Button>
                   </div>
                 </form>

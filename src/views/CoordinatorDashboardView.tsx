@@ -104,7 +104,7 @@ export const CoordinatorDashboardView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 font-mono text-xs text-[var(--accent-coordinator)] mb-1">
               <Activity className="w-3.5 h-3.5" />
-              <span>[● LIVE COMMAND DECK] // EVENT COORDINATOR HUB</span>
+              <span>TRUNG TÂM PHÂN CÔNG &amp; ĐIỀU HÀNH BAN TỔ CHỨC</span>
             </div>
             <h1 className="font-display font-bold text-2xl md:text-3xl text-[var(--text-primary)] uppercase tracking-wider">
               Trung Tâm Quản Lý Sự Kiện &amp; Vòng Thi
