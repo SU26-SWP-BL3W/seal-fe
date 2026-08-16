@@ -1,4 +1,4 @@
-
+<<<<<<< HEAD
 import {
   ArrowRight,
   Bell,
@@ -320,12 +320,7 @@ export function LandingPortalView() {
           </div>
         </section>
       </main>
-    </main>
-  );
-}
-
-export default LandingPortalView;
-
+=======
 "use client";
 
 import { useState } from "react";
@@ -452,10 +447,14 @@ export function LandingPortalView() {
           SECTION 7: FREQUENTLY ASKED QUESTIONS (FAQ HUD CONSOLE)
          ───────────────────────────────────────────────────────────── */}
       <LandingFaqSection />
+>>>>>>> 37e63b14a83e5d9a45fdd8ecc8df1ec0331a7ff0
     </main>
   );
 }
 
+<<<<<<< HEAD
+export default LandingPortalView;
+=======
 {/* ────────────────────────────────────────────────────────────────
     SPOTLIGHT SỰ KIỆN MỚI NHẤT — ADVANCED HIGH-IMPACT COMMAND DECK PANEL
    ──────────────────────────────────────────────────────────────── */}
@@ -854,4 +853,4 @@ function LandingFaqSection() {
     </section>
   );
 }
-
+>>>>>>> 37e63b14a83e5d9a45fdd8ecc8df1ec0331a7ff0
