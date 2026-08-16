@@ -69,9 +69,9 @@ export const CoordinatorDashboardView: React.FC = () => {
   const selectedEventYear = selectedEvent?.year || selectedEvent?.Year || 2026;
 
   // Dynamic Metrics linked to active event
-  const eventTeamsCount = selectedEvent ? 12 : 0;
-  const eventPendingSubmissions = selectedEvent ? 5 : 0;
-  const eventPendingAppeals = selectedEvent ? 2 : 0;
+  const eventTeamsCount = selectedEvent ? ((selectedEvent as any).teamsCount ?? (selectedEvent as any).teamCount ?? 0) : 0;
+  const eventPendingSubmissions = 0;
+  const eventPendingAppeals = appealsList.length;
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">

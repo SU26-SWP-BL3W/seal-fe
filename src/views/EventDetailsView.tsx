@@ -28,46 +28,35 @@ export interface EventDetailsViewProps {
   eventId?: string;
 }
 
+import { useMyEvents } from '@/repositories/eventsRepository';
+
 export function EventDetailsView({ eventId }: EventDetailsViewProps) {
   const [isDeclineOpen, setIsDeclineOpen] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  // Mock data - replace with API call
+  const { data: dbEvents = [] } = useMyEvents();
+  const dbEvent = dbEvents.find((e: any) => (e.id || e.eventId) === eventId) || dbEvents[0];
+
   const event = {
-    id: eventId || '1',
-    title: 'SEAL Hackathon 2026',
-    description: 'Cuộc thi lập trình quy mô toàn quốc với giải thưởng hơn 1 tỷ đồng. Là sự kiện quan trọng nhất của SEAL Platform năm nay.',
-    longDescription:
-      'SEAL Hackathon 2026 là cuộc thi lập trình lớn nhất tại Việt Nam, tập hợp các lập trình viên, thiết kế ứng dụng, và những người yêu thích công nghệ từ khắp nơi. Với tổng giải thưởng lên tới 1 tỷ đồng, đây là cơ hội tuyệt vời để thể hiện kỹ năng và ý tưởng của bạn.',
-    startDate: '2026-09-01',
-    endDate: '2026-09-03',
-    location: 'TP. Hồ Chí Minh',
-    maxTeams: 50,
-    registeredTeams: 45,
+    id: dbEvent?.id || dbEvent?.eventId || eventId || '',
+    title: dbEvent?.eventName || dbEvent?.EventName || 'Sự kiện thi đấu',
+    description: (dbEvent as any)?.tagline || (dbEvent as any)?.description || '',
+    longDescription: (dbEvent as any)?.description || (dbEvent as any)?.tagline || '',
+    startDate: dbEvent?.startDate ? new Date(dbEvent.startDate).toLocaleDateString('vi-VN') : '',
+    endDate: dbEvent?.endDate ? new Date(dbEvent.endDate).toLocaleDateString('vi-VN') : '',
+    location: (dbEvent as any)?.location || 'FPT University',
+    maxTeams: dbEvent?.maxTeams || 50,
+    registeredTeams: (dbEvent as any)?.teamCount || (dbEvent as any)?.teamsCount || 0,
     status: 'upcoming',
     prizes: {
-      first: '500M VNĐ',
-      second: '300M VNĐ',
-      third: '200M VNĐ',
+      first: (dbEvent as any)?.totalPrizeVnd ? `${new Intl.NumberFormat('vi-VN').format((dbEvent as any).totalPrizeVnd)} VNĐ` : '0 VNĐ',
+      second: '0 VNĐ',
+      third: '0 VNĐ',
     },
-    categories: ['Web Development', 'Mobile App', 'AI/ML', 'Cloud Computing'],
-    schedule: [
-      { date: '01/09/2026', time: '08:00', event: 'Đăng ký và kiểm tra' },
-      { date: '01/09/2026', time: '09:00', event: 'Khai mạc & Hướng dẫn' },
-      { date: '01/09/2026', time: '10:00', event: 'Bắt đầu hackathon' },
-      { date: '02/09/2026', time: '12:00', event: 'Nửa đêm - Giữa cuộc thi' },
-      { date: '03/09/2026', time: '10:00', event: 'Kết thúc submit' },
-      { date: '03/09/2026', time: '15:00', event: 'Hỏi đáp & Giải thích' },
-      { date: '03/09/2026', time: '18:00', event: 'Công bố kết quả & Trao giải' },
-    ],
-    teams: [
-      { id: '1', name: 'Tech Innovators', members: 5, status: 'confirmed' },
-      { id: '2', name: 'Code Warriors', members: 4, status: 'confirmed' },
-      { id: '3', name: 'Digital Pioneers', members: 5, status: 'pending' },
-      { id: '4', name: 'AI Revolution', members: 4, status: 'confirmed' },
-      { id: '5', name: 'Cloud Masters', members: 5, status: 'confirmed' },
-    ],
+    categories: ((dbEvent as any)?.tracks || []).length > 0 ? (dbEvent as any).tracks : ['Hạng mục chuyên môn'],
+    schedule: [] as Array<{ date: string; time: string; event: string }>,
+    teams: [] as Array<{ id: string; name: string; members: number; status: 'confirmed' | 'pending' }>,
   };
 
   const handleJoin = async () => {
@@ -188,7 +177,7 @@ export function EventDetailsView({ eventId }: EventDetailsViewProps) {
                 Hạng mục tham gia
               </h3>
               <div className="flex flex-wrap gap-2">
-                {event.categories.map((cat, i) => (
+                {event.categories.map((cat: any, i: number) => (
                   <div key={i} className="hud-clipped px-4 py-2 bg-[#1e293b] border border-[#2dd4bf]/30 text-sm font-mono text-[#2dd4bf]">
                     ▸ {cat}
                   </div>

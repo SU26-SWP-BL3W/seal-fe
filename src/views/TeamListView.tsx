@@ -13,39 +13,34 @@ export interface TeamScoring {
   lastUpdated?: string;
 }
 
+import { useGetPendingTeams } from '@/repositories/teamsRepository';
+
 export function TeamListView() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'scored' | 'submitted'>('all');
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data
-  const mockTeams: TeamScoring[] = [
-    { id: '1', name: 'Tech Innovators', memberCount: 5, status: 'scored', score: 92, lastUpdated: '16/08/2026 14:30' },
-    { id: '2', name: 'Code Warriors', memberCount: 4, status: 'scored', score: 87, lastUpdated: '16/08/2026 13:45' },
-    { id: '3', name: 'Digital Pioneers', memberCount: 5, status: 'pending' },
-    { id: '4', name: 'AI Revolution', memberCount: 4, status: 'scored', score: 95, lastUpdated: '16/08/2026 15:00' },
-    { id: '5', name: 'Cloud Masters', memberCount: 5, status: 'submitted', score: 88, lastUpdated: '16/08/2026 16:20' },
-    { id: '6', name: 'Data Scientists', memberCount: 5, status: 'pending' },
-    { id: '7', name: 'Mobile Apps Team', memberCount: 4, status: 'scored', score: 91, lastUpdated: '16/08/2026 11:00' },
-    { id: '8', name: 'DevOps Elite', memberCount: 5, status: 'pending' },
-  ];
+  const { data: dbTeams = [], isLoading } = useGetPendingTeams();
 
-  const filteredTeams = mockTeams.filter(team => {
+  const teamsList: TeamScoring[] = dbTeams.map((t: any) => ({
+    id: t.id || t.teamId || '',
+    name: t.teamName || t.name || 'Đội thi',
+    memberCount: t.membersCount || t.members?.length || 0,
+    status: 'pending',
+  }));
+
+  const filteredTeams = teamsList.filter(team => {
     const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || team.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
-    total: mockTeams.length,
-    pending: mockTeams.filter(t => t.status === 'pending').length,
-    scored: mockTeams.filter(t => t.status === 'scored').length,
-    submitted: mockTeams.filter(t => t.status === 'submitted').length,
-    averageScore: Math.round(
-      mockTeams.filter(t => t.score).reduce((sum, t) => sum + (t.score || 0), 0) /
-      mockTeams.filter(t => t.score).length
-    ),
+    total: teamsList.length,
+    pending: teamsList.filter(t => t.status === 'pending').length,
+    scored: teamsList.filter(t => t.status === 'scored').length,
+    submitted: teamsList.filter(t => t.status === 'submitted').length,
+    averageScore: 0,
   };
 
   const handleScoreTeam = (teamId: string) => {

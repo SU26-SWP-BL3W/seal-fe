@@ -28,6 +28,8 @@ export interface ScoringDashboardViewProps {
   teamName?: string;
 }
 
+import { useGetCriterias } from '@/repositories/templatesRepository';
+
 export function ScoringDashboardView({ teamId, teamName }: ScoringDashboardViewProps) {
   const router = useRouter();
   const [scores, setScores] = useState<Record<string, number>>({});
@@ -36,44 +38,15 @@ export function ScoringDashboardView({ teamId, teamName }: ScoringDashboardViewP
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  // Mock criteria data
-  const criteria: ScoringCriteria[] = [
-    {
-      id: '1',
-      name: 'Code Quality',
-      description: 'Đánh giá chất lượng code, cấu trúc, tính dễ bảo trì',
-      weight: 20,
-      maxScore: 100,
-    },
-    {
-      id: '2',
-      name: 'UI/UX Design',
-      description: 'Đánh giá giao diện, trải nghiệm người dùng, tính thẩm mỹ',
-      weight: 25,
-      maxScore: 100,
-    },
-    {
-      id: '3',
-      name: 'Responsive Design',
-      description: 'Đánh giá khả năng tương thích với nhiều kích thước màn hình',
-      weight: 15,
-      maxScore: 100,
-    },
-    {
-      id: '4',
-      name: 'Performance',
-      description: 'Đánh giá tốc độ load, tối ưu hóa, hiệu năng ứng dụng',
-      weight: 20,
-      maxScore: 100,
-    },
-    {
-      id: '5',
-      name: 'Accessibility',
-      description: 'Đánh giá khả năng tiếp cận cho người khuyết tật',
-      weight: 20,
-      maxScore: 100,
-    },
-  ];
+  const { data: dbCriterias = [] } = useGetCriterias();
+
+  const criteria: ScoringCriteria[] = dbCriterias.map((c: any, idx: number) => ({
+    id: c.id || c.criteriaId || `crit-${idx}`,
+    name: c.criteriaName || c.name || 'Tiêu chí',
+    description: c.description || 'Đánh giá chuyên môn',
+    weight: c.weight || 20,
+    maxScore: c.maxScore || 100,
+  }));
 
   const handleScoreChange = (criteriaId: string, value: number) => {
     const maxScore = criteria.find(c => c.id === criteriaId)?.maxScore || 100;

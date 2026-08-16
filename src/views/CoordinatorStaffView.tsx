@@ -3,30 +3,23 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { staffRepository, useGetEventRoles } from "@/repositories/staffRepository";
+import { useGetUsers } from "@/repositories/usersRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 
-export const SYSTEM_ACCOUNTS = [
-  { email: "ec.co-organizer@fpt.edu.vn", fullName: "Nguyễn Văn Điều Phối (Coordinator)" },
-  { email: "judge.ai@fpt.edu.vn", fullName: "TS. Hoàng Văn Giám Khảo (Judge AI)" },
-  { email: "tran.phuc.judge@fpt.edu.vn", fullName: "ThS. Trần Phúc (Giám Khảo RBL)" },
-  { email: "mentor.tech@fpt.edu.vn", fullName: "Lê Cố Vấn Chuyên Môn (Mentor)" },
-  { email: "hoang.nam.mentor@fpt.edu.vn", fullName: "Nguyễn Hoàng Nam (Senior Cloud Architect)" },
-  { email: "nguyenvana@fpt.edu.vn", fullName: "Nguyễn Văn A" },
-  { email: "tranthib@fpt.edu.vn", fullName: "Trần Thị B" },
-  { email: "levanc@fpt.edu.vn", fullName: "Lê Văn C" },
-];
-
-export const checkEmailInSystem = (email: string) => {
+export const checkEmailInSystem = (email: string, usersList: Array<{ email?: string }> = []) => {
   if (!email.trim()) return true;
-  return SYSTEM_ACCOUNTS.some((acc) => acc.email.toLowerCase() === email.trim().toLowerCase());
+  return usersList.some((acc) => acc.email?.toLowerCase() === email.trim().toLowerCase());
 };
 
 export const CoordinatorStaffView: React.FC = () => {
   const searchParams = useSearchParams();
   const queryEventId = searchParams.get("eventId");
+
+  const { data: usersPaged } = useGetUsers();
+  const systemAccounts = usersPaged?.data || [];
 
   const { data: myEvents = [] } = useMyEvents();
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId || "");
@@ -588,11 +581,10 @@ export const CoordinatorStaffView: React.FC = () => {
           )}
         </Card>
 
-        {/* Global Datalist for System Accounts Auto-Feed */}
         <datalist id="system-staff-accounts">
-          {SYSTEM_ACCOUNTS.map((acc) => (
-            <option key={acc.email} value={acc.email}>
-              {acc.fullName} ({acc.email})
+          {systemAccounts.map((acc: any) => (
+            <option key={acc.id || acc.email} value={acc.email}>
+              {acc.fullName || acc.email} ({acc.email})
             </option>
           ))}
         </datalist>

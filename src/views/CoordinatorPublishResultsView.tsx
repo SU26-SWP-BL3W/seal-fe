@@ -4,26 +4,33 @@ import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import { useGetFinalResultsByRound, useAssignPrize, finalResultsRepository } from "@/repositories/finalResultsRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
 import { Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle2, Award, ChevronDown, Filter, Layers } from "lucide-react";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
   const params = useParams();
 
   const { data: eventsList = [] } = useMyEvents();
-  const [selectedEventId, setSelectedEventId] = useState<string>("EV-01");
-  const [selectedRoundId, setSelectedRoundId] = useState<string>("rnd-1");
-  const [selectedTrackId, setSelectedTrackId] = useState<string>("trk-1");
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedRoundId, setSelectedRoundId] = useState<string>("");
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
 
-  const roundsList = [
-    { id: "rnd-1", name: "Vòng 1: Sơ Loại & Đánh Giá Ý Tưởng (Top 10)" },
-    { id: "rnd-2", name: "Vòng 2: Hackathon 48H & Demo Day (Chung Kết)" },
-  ];
+  React.useEffect(() => {
+    if (eventsList.length > 0 && !selectedEventId) {
+      setSelectedEventId(eventsList[0].id || eventsList[0].eventId || "");
+    }
+  }, [eventsList, selectedEventId]);
 
-  const tracksList = [
-    { id: "trk-1", name: "Advanced Cloud & Infrastructure" },
-    { id: "trk-2", name: "AI & Machine Learning Innovation" },
-    { id: "trk-3", name: "DevOps & Security Compliance" },
-  ];
+  const { data: dbTracks = [] } = useGetTracksByEvent(selectedEventId);
+  const { data: dbPrizes = [] } = useGetPrizesByEvent(selectedEventId);
+
+  const roundsList: Array<{ id: string; name: string }> = [];
+
+  const tracksList = dbTracks.map((t: any) => ({
+    id: t.id || t.Id || t.trackId,
+    name: t.trackName || t.Name || "Hạng mục",
+  }));
 
   const { data: results = [], isLoading, refetch } = useGetFinalResultsByRound(selectedRoundId);
   const assignPrizeMutation = useAssignPrize();
@@ -35,18 +42,12 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   const [isPublishedState, setIsPublishedState] = useState(false);
 
   // Local prize assignment state map
-  const [assignedPrizesMap, setAssignedPrizesMap] = useState<Record<string, string>>({
-    "res-01": "prz-1",
-    "res-02": "prz-2",
-    "res-03": "prz-3",
-  });
+  const [assignedPrizesMap, setAssignedPrizesMap] = useState<Record<string, string>>({});
 
-  const availablePrizesList = [
-    { id: "prz-1", name: "Giải Nhất (5.000.000 VNĐ)" },
-    { id: "prz-2", name: "Giải Nhì (3.000.000 VNĐ)" },
-    { id: "prz-3", name: "Giải Ba (1.000.000 VNĐ)" },
-    { id: "prz-4", name: "Giải Sáng Tạo (2.000.000 VNĐ)" },
-  ];
+  const availablePrizesList = dbPrizes.map((p: any, idx: number) => ({
+    id: p.id || p.Id || `prz-${idx}`,
+    name: `${p.prizeName || p.PrizeName || "Giải"} (${p.prizeValueVnd ? `${new Intl.NumberFormat("vi-VN").format(p.prizeValueVnd)} VNĐ` : "0 VNĐ"})`,
+  }));
 
   // Handle Prize Assignment to Team
   const handleAssignPrizeToTeam = async (resultId: string, prizeId: string, teamName: string) => {

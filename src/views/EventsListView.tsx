@@ -4,89 +4,29 @@ import { useState } from 'react';
 import { Search, Filter, Zap } from 'lucide-react';
 import { EventsGrid, Event } from '@/components/domain/EventCard';
 
+import { useMyEvents } from '@/repositories/eventsRepository';
+
 export function EventsListView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'ongoing' | 'closed'>('all');
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data - replace with API call
-  const mockEvents: Event[] = [
-    {
-      id: '1',
-      title: 'SEAL Hackathon 2026',
-      description: 'Cuộc thi lập trình quy mô toàn quốc với giải thưởng hơn 1 tỷ đồng',
-      startDate: '01/09/2026',
-      endDate: '03/09/2026',
-      location: 'TP. Hồ Chí Minh',
-      teams: 45,
-      maxTeams: 50,
-      status: 'upcoming',
-      prizes: '1 tỷ VNĐ',
-    },
-    {
-      id: '2',
-      title: 'Innovation Summit 2026',
-      description: 'Sự kiện kết nối các startup và nhà đầu tư hàng đầu',
-      startDate: '15/08/2026',
-      endDate: '17/08/2026',
-      location: 'Hà Nội',
-      teams: 32,
-      maxTeams: 40,
-      status: 'ongoing',
-      prizes: '500M VNĐ',
-    },
-    {
-      id: '3',
-      title: 'Code Challenge 2026',
-      description: 'Thách thức lập trình với các bài toán khó nhất năm',
-      startDate: '01/07/2026',
-      endDate: '05/07/2026',
-      location: 'Online',
-      teams: 150,
-      maxTeams: 150,
-      status: 'closed',
-      prizes: '300M VNĐ',
-    },
-    {
-      id: '4',
-      title: 'AI & ML Bootcamp',
-      description: 'Khóa học intensive về AI và Machine Learning',
-      startDate: '10/09/2026',
-      endDate: '15/09/2026',
-      location: 'TP. Hồ Chí Minh',
-      teams: 28,
-      maxTeams: 35,
-      status: 'upcoming',
-      prizes: '200M VNĐ',
-    },
-    {
-      id: '5',
-      title: 'Web3 Developer Conference',
-      description: 'Hội nghị về công nghệ Blockchain và Web3',
-      startDate: '20/08/2026',
-      endDate: '22/08/2026',
-      location: 'Đà Nẵng',
-      teams: 38,
-      maxTeams: 50,
-      status: 'upcoming',
-      prizes: '400M VNĐ',
-    },
-    {
-      id: '6',
-      title: 'Cloud Computing Challenge',
-      description: 'Cuộc thi thiết kế và triển khai hệ thống trên Cloud',
-      startDate: '25/08/2026',
-      endDate: '28/08/2026',
-      location: 'Online',
-      teams: 22,
-      maxTeams: 30,
-      status: 'upcoming',
-      prizes: '350M VNĐ',
-    },
-  ];
+  const { data: dbEvents = [], isLoading } = useMyEvents();
+
+  const eventsList: Event[] = dbEvents.map((e: any) => ({
+    id: e.id || e.eventId || '',
+    title: e.eventName || e.EventName || 'Sự kiện',
+    description: e.tagline || e.description || '',
+    startDate: e.startDate ? new Date(e.startDate).toLocaleDateString('vi-VN') : '',
+    endDate: e.endDate ? new Date(e.endDate).toLocaleDateString('vi-VN') : '',
+    location: e.location || 'FPT University',
+    teams: e.teamCount || e.teamsCount || 0,
+    maxTeams: e.maxTeams || 50,
+    status: e.status === 'ongoing' ? 'ongoing' : e.status === 'ended' ? 'closed' : 'upcoming',
+    prizes: e.totalPrizeVnd ? `${new Intl.NumberFormat('vi-VN').format(e.totalPrizeVnd)} VNĐ` : '0 VNĐ',
+  }));
 
   // Filter events
-  const filteredEvents = mockEvents.filter(event => {
+  const filteredEvents = eventsList.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          event.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
@@ -167,10 +107,10 @@ export function EventsListView() {
         {/* Stats Section */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           {[
-            { label: 'Tổng sự kiện', value: mockEvents.length, color: 'text-[#2dd4bf]' },
-            { label: 'Sắp tới', value: mockEvents.filter(e => e.status === 'upcoming').length, color: 'text-[#38bdf8]' },
-            { label: 'Đang diễn ra', value: mockEvents.filter(e => e.status === 'ongoing').length, color: 'text-[#34d399]' },
-            { label: 'Tổng đội tham gia', value: mockEvents.reduce((sum, e) => sum + e.teams, 0), color: 'text-[#fbbf24]' },
+            { label: 'Tổng sự kiện', value: eventsList.length, color: 'text-[#2dd4bf]' },
+            { label: 'Sắp tới', value: eventsList.filter(e => e.status === 'upcoming').length, color: 'text-[#38bdf8]' },
+            { label: 'Đang diễn ra', value: eventsList.filter(e => e.status === 'ongoing').length, color: 'text-[#34d399]' },
+            { label: 'Tổng đội tham gia', value: eventsList.reduce((sum, e) => sum + e.teams, 0), color: 'text-[#fbbf24]' },
           ].map((stat, i) => (
             <div key={i} className="hud-clipped p-[1px] bg-gradient-to-br from-[#2dd4bf] to-[#38bdf8]">
               <div className="hud-clipped bg-[#111a2e] p-4 text-center">

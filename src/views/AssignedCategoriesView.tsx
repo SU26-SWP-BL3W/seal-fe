@@ -5,96 +5,41 @@ import { ArrowLeft, Tag, Filter, Search } from 'lucide-react';
 import { AssignedCategoriesGrid, AssignedCategory } from '@/components/domain/CategoryAssignmentCard';
 import { useRouter, useParams } from 'next/navigation';
 
+import { useGetTracksByEvent } from '@/repositories/tracksRepository';
+
 export function AssignedCategoriesView() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data - replace with API call
-  const mockCategories: AssignedCategory[] = [
-    {
-      id: '1',
-      name: 'Frontend Development',
-      description: 'Đánh giá giao diện người dùng, trải nghiệm và tính responsive của ứng dụng',
-      eventTitle: 'SEAL Hackathon 2026',
-      totalTeams: 15,
-      scoredTeams: 12,
-      status: 'in-progress',
-      criteria: ['Code Quality', 'UI/UX Design', 'Responsive Design', 'Performance', 'Accessibility'],
-      scoringScale: '0-100',
-    },
-    {
-      id: '2',
-      name: 'Backend Development',
-      description: 'Kiểm tra kiến trúc server, API design, và xử lý dữ liệu',
-      eventTitle: 'SEAL Hackathon 2026',
-      totalTeams: 15,
-      scoredTeams: 8,
-      status: 'in-progress',
-      criteria: ['Database Design', 'API Structure', 'Security', 'Scalability', 'Error Handling'],
-      scoringScale: '0-100',
-    },
-    {
-      id: '3',
-      name: 'Innovation & Creativity',
-      description: 'Đánh giá tính sáng tạo, giải pháp độc đáo và khả năng giải quyết vấn đề',
-      eventTitle: 'SEAL Hackathon 2026',
-      totalTeams: 15,
-      scoredTeams: 15,
-      status: 'completed',
-      criteria: ['Originality', 'Problem Solving', 'Technical Innovation', 'Market Potential'],
-      scoringScale: '0-100',
-    },
-    {
-      id: '4',
-      name: 'Presentation & Demo',
-      description: 'Đánh giá cách trình bày, demo sản phẩm và khả năng thuyết phục',
-      eventTitle: 'SEAL Hackathon 2026',
-      totalTeams: 15,
-      scoredTeams: 10,
-      status: 'in-progress',
-      criteria: ['Clarity', 'Demo Quality', 'Engagement', 'Story Telling', 'Q&A Response'],
-      scoringScale: '0-100',
-    },
-    {
-      id: '5',
-      name: 'Business Model',
-      description: 'Đánh giá mô hình kinh doanh, khả năng tài chính và thị trường',
-      eventTitle: 'SEAL Hackathon 2026',
-      totalTeams: 15,
-      scoredTeams: 5,
-      status: 'pending',
-      criteria: ['Market Analysis', 'Revenue Stream', 'Cost Structure', 'Sustainability', 'Growth Potential'],
-      scoringScale: '0-100',
-    },
-    {
-      id: '6',
-      name: 'Teamwork & Collaboration',
-      description: 'Đánh giá sự phối hợp, chia sẻ kiến thức và năng lực nhóm',
-      eventTitle: 'SEAL Hackathon 2026',
-      totalTeams: 15,
-      scoredTeams: 7,
-      status: 'in-progress',
-      criteria: ['Communication', 'Division of Labor', 'Problem Resolution', 'Support Quality'],
-      scoringScale: '0-100',
-    },
-  ];
+  const { data: dbTracks = [], isLoading } = useGetTracksByEvent(eventId);
+
+  const categoriesList: AssignedCategory[] = dbTracks.map((t: any) => ({
+    id: t.id || t.trackId || '',
+    name: t.trackName || t.name || 'Hạng mục',
+    description: t.description || 'Hạng mục thi đấu chuyên môn',
+    eventTitle: 'Sự kiện thi đấu',
+    totalTeams: t.teamsCount || t.teamCount || 0,
+    scoredTeams: 0,
+    status: 'in-progress',
+    criteria: ['Tính đổi mới & sáng tạo', 'Kiến trúc kỹ thuật & hiệu năng', 'UI/UX', 'Thuyết trình & Q&A'],
+    scoringScale: '0-100',
+  }));
 
   // Filter categories
-  const filteredCategories = mockCategories.filter(cat => {
+  const filteredCategories = categoriesList.filter(cat => {
     const matchesSearch = cat.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || cat.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
-    total: mockCategories.length,
-    pending: mockCategories.filter(c => c.status === 'pending').length,
-    inProgress: mockCategories.filter(c => c.status === 'in-progress').length,
-    completed: mockCategories.filter(c => c.status === 'completed').length,
+    total: categoriesList.length,
+    pending: categoriesList.filter(c => c.status === 'pending').length,
+    inProgress: categoriesList.filter(c => c.status === 'in-progress').length,
+    completed: categoriesList.filter(c => c.status === 'completed').length,
   };
 
   const handleScoreCategory = (categoryId: string) => {

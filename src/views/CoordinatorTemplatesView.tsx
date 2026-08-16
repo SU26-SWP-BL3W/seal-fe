@@ -25,44 +25,40 @@ export const CoordinatorTemplatesView: React.FC = () => {
   const { data: dbTemplates = [], refetch: refetchTemplates } = useGetTemplates();
 
   // Local state for Criteria Sets (Bộ Tiêu Chí)
-  const [criteriaSets, setCriteriaSets] = useState<CriteriaSetItem[]>([
-    {
-      id: "set-01",
-      templateName: "Bộ Tiêu Chí Chuẩn: AI & Machine Learning Innovation",
-      description: "Bộ tiêu chí tổng hợp dành cho các hạng mục thi đấu về Trí tuệ nhân tạo, Xử lý ngôn ngữ tự nhiên và Học máy.",
-      createdDate: "2026-08-10",
-      criterias: [
-        { id: "c1", criterionName: "Tính Đổi Mới & Sáng Tạo AI", weight: 30, maxScore: 10, description: "Đánh giá mức độ độc đáo của mô hình AI và giải pháp thuật toán." },
-        { id: "c2", criterionName: "Kiến Trúc Kỹ Thuật & Hiệu Năng", weight: 35, maxScore: 10, description: "Kiểm tra cấu trúc mã nguồn, độ chính xác (Accuracy/F1) và thời gian phản hồi." },
-        { id: "c3", criterionName: "Giao Diện & Trải Nghiệm Người Dùng (UI/UX)", weight: 15, maxScore: 10, description: "Mức độ thân thiện, trực quan và dễ ứng dụng trong thực tế." },
-        { id: "c4", criterionName: "Kỹ Năng Thuyết Trình & Phản Bỏ Q&A", weight: 20, maxScore: 10, description: "Khả năng trình bày logic, làm rõ câu hỏi đối ứng từ Ban giám khảo." },
-      ],
-    },
-    {
-      id: "set-02",
-      templateName: "Bộ Tiêu Chí Chuẩn: Cloud & Infrastructure Architecture",
-      description: "Dành cho các bài thi về Hạ tầng Đám mây, Kubernetes, Serverless và Tối ưu chi phí Cloud.",
-      createdDate: "2026-08-12",
-      criterias: [
-        { id: "c201", criterionName: "Kiến Trúc Đám Mây & Scalability", weight: 40, maxScore: 10, description: "Khả năng mở rộng tự động (Auto-scaling) và tính sẵn sàng cao (High Availability)." },
-        { id: "c202", criterionName: "Bảo Mật & An Toàn Dữ Liệu (Security)", weight: 30, maxScore: 10, description: "Áp dụng chuẩn IAM, mã hóa dữ liệu SSL/TLS và tuân thủ Security Compliance." },
-        { id: "c203", criterionName: "Tối Ưu Chi Phí & Vận Hành (FinOps)", weight: 30, maxScore: 10, description: "Hiệu quả sử dụng tài nguyên Cloud và khả năng giám sát tự động Monitoring." },
-      ],
-    },
-  ]);
+  const [criteriaSets, setCriteriaSets] = useState<CriteriaSetItem[]>([]);
+  const [selectedSetId, setSelectedSetId] = useState<string>("");
 
-  const [selectedSetId, setSelectedSetId] = useState<string>("set-01");
+  React.useEffect(() => {
+    if (dbTemplates.length > 0) {
+      const mapped: CriteriaSetItem[] = dbTemplates.map((t: any) => ({
+        id: t.id || t.Id,
+        templateName: t.templateName || t.TemplateName || "Bộ tiêu chí",
+        description: t.description || t.Description || "",
+        createdDate: t.createdDate ? new Date(t.createdDate).toLocaleDateString("vi-VN") : "2026-08-16",
+        criterias: (t.criterias || t.TemplateCriterias || []).map((c: any) => ({
+          id: c.criteriaId || c.id || c.Id,
+          criterionName: c.criteriaName || c.criterionName || c.Name || "Tiêu chí",
+          weight: c.weight || c.Weight || 0,
+          maxScore: c.maxScore || c.MaxScore || 10,
+          description: c.description || c.Description || "",
+        })),
+      }));
+      setCriteriaSets(mapped);
+      if (!selectedSetId && mapped.length > 0) {
+        setSelectedSetId(mapped[0].id);
+      }
+    } else {
+      setCriteriaSets([]);
+      setSelectedSetId("");
+    }
+  }, [dbTemplates]);
+
   const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
 
   // New Criteria Set Form State
   const [newSetName, setNewSetName] = useState("");
   const [newSetDesc, setNewSetDesc] = useState("");
-  const [builderCriterias, setBuilderCriterias] = useState<CriteriaInsideSet[]>([
-    { id: "new-1", criterionName: "Tính Đổi Mới & Đột Phá", weight: 30, maxScore: 10, description: "Ý tưởng sản phẩm sáng tạo." },
-    { id: "new-2", criterionName: "Chất Lượng Mã Nguồn & Kỹ Thuật", weight: 40, maxScore: 10, description: "Cấu trúc source code sạch." },
-    { id: "new-3", criterionName: "Trải Nghiệm Người Dùng (UI/UX)", weight: 15, maxScore: 10, description: "Giao diện trực quan." },
-    { id: "new-4", criterionName: "Thuyết Trình & Trả Lời Giám Khảo", weight: 15, maxScore: 10, description: "Trình bày tự tin." },
-  ]);
+  const [builderCriterias, setBuilderCriterias] = useState<CriteriaInsideSet[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);

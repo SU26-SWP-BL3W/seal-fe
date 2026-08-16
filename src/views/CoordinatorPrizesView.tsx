@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useGetPrizesByEvent, useCreatePrize } from "@/repositories/results/prizesRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
 
 export interface PrizeItemState {
@@ -16,53 +17,42 @@ export interface PrizeItemState {
 export const CoordinatorPrizesView: React.FC = () => {
   const params = useParams();
   const searchParams = useSearchParams();
-  const eventId = (searchParams?.get("eventId") as string) || (params?.id as string) || "EV-01";
+  const eventId = (searchParams?.get("eventId") as string) || (params?.id as string) || "";
 
+  const { data: dbPrizes = [] } = useGetPrizesByEvent(eventId);
+  const { data: dbTracks = [] } = useGetTracksByEvent(eventId);
   const createPrizeMutation = useCreatePrize();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Available tracks list
+  // Dynamic tracks list
   const tracksList = [
     { id: "all", name: "Toàn Sự Kiện (Chung)" },
-    { id: "trk-1", name: "Advanced Cloud & Infrastructure" },
-    { id: "trk-2", name: "AI & Machine Learning Innovation" },
-    { id: "trk-3", name: "DevOps & Security Compliance" },
+    ...dbTracks.map((t: any) => ({
+      id: t.id || t.Id || t.trackId,
+      name: t.trackName || t.Name || "Hạng mục",
+    })),
   ];
 
   // Editable Prizes State
-  const [prizes, setPrizes] = useState<PrizeItemState[]>([
-    {
-      id: "prz-1",
-      prizeName: "Giải Nhất",
-      quantity: 1,
-      value: "5.000.000 VNĐ",
-      trackName: "Toàn Sự Kiện (Chung)",
-    },
-    {
-      id: "prz-2",
-      prizeName: "Giải Nhì",
-      quantity: 2,
-      value: "3.000.000 VNĐ",
-      trackName: "Toàn Sự Kiện (Chung)",
-    },
-    {
-      id: "prz-3",
-      prizeName: "Giải Ba",
-      quantity: 3,
-      value: "1.000.000 VNĐ",
-      trackName: "Toàn Sự Kiện (Chung)",
-    },
-    {
-      id: "prz-4",
-      prizeName: "Giải Sáng Tạo AI Xuất Sắc",
-      quantity: 1,
-      value: "2.000.000 VNĐ",
-      trackName: "AI & Machine Learning Innovation",
-    },
-  ]);
+  const [prizes, setPrizes] = useState<PrizeItemState[]>([]);
+
+  React.useEffect(() => {
+    if (dbPrizes.length > 0) {
+      const mapped = dbPrizes.map((p: any, idx: number) => ({
+        id: p.id || p.Id || `prz-${idx}`,
+        prizeName: p.prizeName || p.PrizeName || p.name || "Giải thưởng",
+        quantity: p.quantity || p.Quantity || 1,
+        value: p.prizeValueVnd ? `${new Intl.NumberFormat("vi-VN").format(p.prizeValueVnd)} VNĐ` : (p.value || "0 VNĐ"),
+        trackName: p.trackName || p.TrackName || "Toàn Sự Kiện (Chung)",
+      }));
+      setPrizes(mapped);
+    } else {
+      setPrizes([]);
+    }
+  }, [dbPrizes]);
 
   // Handle Add New Editable Prize Row
   const handleAddPrize = () => {
