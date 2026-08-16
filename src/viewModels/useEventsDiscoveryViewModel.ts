@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   computeEventStatus,
   STATUS_PRIORITY,
+  extractTrackNames,
   type EventDisplayStatus,
   type EventCardData,
 } from "./eventsMetadata";
@@ -19,7 +20,6 @@ export type EventSortOption = "relevant" | "soonest" | "newest" | "most_teams";
 export interface TrackSummary {
   track: string;
   eventCount: number;
-  totalPrizeVnd: number;
 }
 
 export function useEventsDiscoveryViewModel() {
@@ -78,8 +78,16 @@ export function useEventsDiscoveryViewModel() {
         registrationEndDate: eRegEnd,
         maxTeams: Number(ev.maxTeams || ev.MaxTeams || 50),
         teamCount: Number(ev.teamCount || ev.TeamCount || 0),
-        totalPrizeVnd: Number(ev.totalPrizeVnd || ev.TotalPrizeVnd || 100000000),
-        tracks: Array.isArray(ev.tracks || ev.Tracks) ? (ev.tracks || ev.Tracks) : ["RBL Project"],
+        prizes: Array.isArray(ev.prizes || ev.Prizes)
+          ? (ev.prizes || ev.Prizes).map((p: any) => ({
+              id: p.id || p.Id || "",
+              prizeName: p.prizeName || p.PrizeName || "",
+              value: p.value || p.Value || "",
+              quantity: Number(p.quantity ?? p.Quantity ?? 1),
+            }))
+          : [],
+        tracks: extractTrackNames(ev),
+        rounds: Array.isArray(ev.rounds || ev.Rounds) ? (ev.rounds || ev.Rounds) : [],
         status: "upcoming",
       };
     });
@@ -141,15 +149,12 @@ export function useEventsDiscoveryViewModel() {
         const existing = byTrack.get(track);
         if (existing) {
           existing.eventCount += 1;
-          existing.totalPrizeVnd += ev.totalPrizeVnd;
         } else {
-          byTrack.set(track, { track, eventCount: 1, totalPrizeVnd: ev.totalPrizeVnd });
+          byTrack.set(track, { track, eventCount: 1 });
         }
       }
     }
-    return Array.from(byTrack.values()).sort(
-      (a, b) => b.eventCount - a.eventCount || b.totalPrizeVnd - a.totalPrizeVnd,
-    );
+    return Array.from(byTrack.values()).sort((a, b) => b.eventCount - a.eventCount);
   }, [allEvents]);
 
   return {

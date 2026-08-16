@@ -118,7 +118,7 @@ export function VerifyEmailView() {
     <StateCard
       icon={<XCircle className="w-8 h-8 text-[var(--color-danger)]" />}
       iconColor="danger"
-      title="// XÁC THỰC THẤT BẠI"
+      title="XÁC THỰC THẤT BẠI"
       message={errorMessage}
       subContent={
         <div className="mt-4 p-3 bg-[rgba(239,68,68,0.05)] border border-[var(--color-danger)]/20 text-xs font-mono text-[var(--text-muted)] text-left">

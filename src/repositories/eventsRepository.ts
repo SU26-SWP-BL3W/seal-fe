@@ -51,21 +51,6 @@ export const eventsRepository = {
   deleteEvent,
 };
 
-export function usePublicEvents() {
-  return useQuery({
-    queryKey: ["public-events"],
-    queryFn: async () => {
-      try {
-        const res = await apiClient.get<any>("/Events/upcoming", { params: { PageSize: 50 } });
-        return res.data?.data?.data || res.data?.data || res.data || [];
-      } catch {
-        const res = await apiClient.get<any>("/Events");
-        return res.data?.data || res.data || [];
-      }
-    },
-  });
-}
-
 export interface EventDTO {
   EventId?: string;
   EventName?: string;
@@ -85,41 +70,28 @@ export interface EventDTO {
   name?: string;
 }
 
-const STORAGE_KEY = "seal_created_events";
-
-function getStoredEvents(): any[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+function unwrapEventsList(resData: any): any[] {
+  if (Array.isArray(resData)) return resData;
+  if (Array.isArray(resData?.data?.data)) return resData.data.data;
+  if (Array.isArray(resData?.data?.items)) return resData.data.items;
+  if (Array.isArray(resData?.data)) return resData.data;
+  if (Array.isArray(resData?.items)) return resData.items;
+  return [];
 }
 
-function saveStoredEvents(list: any[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  } catch {
-    // ignore
-  }
-}
-
-function mergeCreatedWithDb(dbList: any[]) {
-  const localList = getStoredEvents();
-  if (!Array.isArray(dbList) || dbList.length === 0) {
-    return localList;
-  }
-
-  const dbIds = new Set(
-    dbList.map((e) => e.id || e.Id || e.eventId || e.EventId).filter(Boolean)
-  );
-  const unpersistedLocal = localList.filter((loc) => {
-    const id = loc.id || loc.Id || loc.eventId || loc.EventId;
-    return id && !dbIds.has(id);
+export function usePublicEvents() {
+  return useQuery({
+    queryKey: ["public-events"],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>("/Events", { params: { PageSize: 100 } });
+        return unwrapEventsList(res.data);
+      } catch (err) {
+        console.error("Error fetching public events from API:", err);
+        return [];
+      }
+    },
   });
-  return [...unpersistedLocal, ...dbList];
 }
 
 export function useEvents() {
@@ -127,19 +99,12 @@ export function useEvents() {
     queryKey: ["events"],
     queryFn: async () => {
       try {
-        const res = await apiClient.get<any>("/Events");
-        const data = res.data?.data ?? res.data;
-        if (Array.isArray(data) && data.length > 0) {
-          return mergeCreatedWithDb(data) as Event[];
-        }
-      } catch (err: any) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/Events error:", err?.message);
+        const res = await apiClient.get<any>("/Events", { params: { PageSize: 100 } });
+        return unwrapEventsList(res.data) as Event[];
+      } catch (err) {
+        console.error("Error fetching events from API:", err);
+        return [] as Event[];
       }
-      const localEvents = mergeCreatedWithDb([]);
-      if (localEvents.length === 0) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/Events returned 0 items from Backend DB.");
-      }
-      return localEvents as Event[];
     },
   });
 }
@@ -150,24 +115,19 @@ export function useMyEvents() {
     queryFn: async () => {
       try {
         const res = await apiClient.get<any>("/Events/my-events");
-        const data = res.data?.data ?? res.data;
-        if (Array.isArray(data) && data.length > 0) {
-          return mergeCreatedWithDb(data) as MyEventModel[];
-        }
-      } catch (err: any) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/Events/my-events error:", err?.message);
+        const list = unwrapEventsList(res.data);
+        if (list.length > 0) return list as MyEventModel[];
+      } catch {
+        // Fallback to all events if user does not have private events endpoint
       }
 
       try {
-        const allRes = await apiClient.get<any>("/Events");
-        const allData = allRes.data?.data ?? allRes.data;
-        if (Array.isArray(allData) && allData.length > 0) {
-          return mergeCreatedWithDb(allData) as MyEventModel[];
-        }
-      } catch (err: any) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/Events error:", err?.message);
+        const allRes = await apiClient.get<any>("/Events", { params: { PageSize: 100 } });
+        return unwrapEventsList(allRes.data) as MyEventModel[];
+      } catch (err) {
+        console.error("Error fetching my events from API:", err);
+        return [] as MyEventModel[];
       }
-      return mergeCreatedWithDb([]) as MyEventModel[];
     },
   });
 }
@@ -176,20 +136,14 @@ export function useEventDetail(eventId: string) {
   return useQuery({
     queryKey: ["event-detail", eventId],
     queryFn: async () => {
+      if (!eventId) return null;
       try {
-        const res = await apiClient.get<Event>(`/Events/${eventId}`);
-        if (res.data) return res.data;
-      } catch (err: any) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/Events/" + eventId + " error:", err?.message);
+        const res = await apiClient.get<any>(`/Events/${eventId}`);
+        return (res.data?.data ?? res.data ?? null) as Event | null;
+      } catch (err) {
+        console.error("Error fetching event detail for ID:", eventId, err);
+        return null;
       }
-      const allLocal = mergeCreatedWithDb([]);
-      const cached = allLocal.find(
-        (e) => (e.id || e.Id || e.eventId || e.EventId) === eventId
-      );
-      if (!cached) {
-        console.warn("[SEAL BE-DATA MISSING] Event detail not found in Real API for ID:", eventId);
-      }
-      return cached || null;
     },
     enabled: !!eventId,
   });
@@ -211,33 +165,12 @@ export function useEventRounds(eventId: string) {
 
 export async function createEvent(data: Partial<Event>): Promise<any> {
   const response = await apiClient.post<any>("/Events", data);
-  const createdResult = response.data;
-
-  const innerData = createdResult?.data || createdResult;
-  if (innerData) {
-    const currentStored = getStoredEvents();
-    const targetId = innerData.id || innerData.Id || innerData.eventId || innerData.EventId;
-    if (targetId) {
-      const updated = [innerData, ...currentStored.filter((e) => (e.id || e.Id || e.eventId || e.EventId) !== targetId)];
-      saveStoredEvents(updated);
-    }
-  }
-
-  return createdResult;
+  return response.data;
 }
 
 export async function deleteEvent(id: string): Promise<any> {
-  try {
-    await apiClient.delete(`/Events/${id}`);
-  } catch {
-    // Ignore network error in local mode
-  }
-  const currentStored = getStoredEvents();
-  const updated = currentStored.filter(
-    (e) => (e.id || e.Id || e.eventId || e.EventId) !== id
-  );
-  saveStoredEvents(updated);
-  return { success: true };
+  const response = await apiClient.delete<any>(`/Events/${id}`);
+  return response.data ?? { success: true };
 }
 
 export async function updateEvent(id: string, data: Partial<Event>): Promise<any> {

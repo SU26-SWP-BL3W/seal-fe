@@ -48,10 +48,7 @@ export const DEFAULT_SCHOOLS_LIST: School[] = [
 ];
 
 /**
- * GET /api/Schools — Lấy danh sách trường học.
- * apiClient đã bóc vỏ BaseResponse trong interceptor, nên res.data ở đây CHÍNH LÀ
- * PagedResult<School> — chỉ bóc thêm 1 lớp .data để lấy mảng. Bóc 3 lớp (.data.data.data)
- * như bản cũ luôn ra undefined vì PagedResult không có field .data lồng thêm lần nữa.
+ * GET /api/Schools — Lấy danh sách trường học từ Database.
  */
 export function useGetSchools() {
   return useQuery({
@@ -81,18 +78,8 @@ export function useCreateSchool() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { schoolName: string; code?: string; address?: string }) => {
-      try {
-        const res = await apiClient.post("/Schools", data);
-        return res.data;
-      } catch {
-        return {
-          id: `sch-${Date.now()}`,
-          schoolId: `sch-${Date.now()}`,
-          schoolName: data.schoolName,
-          code: data.code || data.schoolName.substring(0, 4).toUpperCase(),
-          address: data.address || "Việt Nam",
-        };
-      }
+      const res = await apiClient.post("/Schools", data);
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schools"] });

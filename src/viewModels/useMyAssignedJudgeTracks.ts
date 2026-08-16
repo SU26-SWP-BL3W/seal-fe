@@ -1,4 +1,13 @@
+import { useMemo } from "react";
+import { useQueries } from "@tanstack/react-query";
+import apiClient from "@/models/apiClient";
+import { useAuth } from "@/providers/AuthProvider";
 import { useEvents } from "@/repositories/eventsRepository";
+import { fetchSubmitResultsByTrack } from "@/repositories/submitResultsRepository";
+import { fetchScoresByEventRole } from "@/repositories/scoresRepository";
+import { useGetMyEventRoles } from "@/repositories/eventRolesRepository";
+import type { TrackWithStaffModel } from "@/repositories/tracksRepository";
+import type { PagedResult } from "@/models/types";
 
 export interface JudgeTrackItem {
   eventId: string;
@@ -7,43 +16,166 @@ export interface JudgeTrackItem {
   roundName: string;
   trackName: string;
   trackId: string;
+  templateId: string;
+  /** EventRole ID THẬT của giám khảo cho ĐÚNG track này — mỗi track có 1 EventRole
+   * riêng, không dùng chung 1 ID cho mọi track (gửi nhầm sẽ gắn phiếu chấm sai vai trò). */
+  eventRoleId: string;
   totalSubmissions: number;
   scoredSubmissions: number;
   pendingSubmissions: number;
   status: string;
 }
 
+async function fetchTracksByEvent(eventId: string): Promise<TrackWithStaffModel[]> {
+  const res = await apiClient.get<PagedResult<TrackWithStaffModel>>("/Tracks/event", {
+    params: { EventId: eventId, PageSize: 100 },
+  });
+  return res.data?.data ?? [];
+}
+
 export function useMyAssignedJudgeTracks() {
-  const { data: rawEvents, isLoading } = useEvents();
+  const { user, activeRole } = useAuth();
+  const { data: rawEvents, isLoading: loadingEvents } = useEvents();
+  const assignedTrackId = activeRole?.trackId || (activeRole as any)?.TrackId || "";
+  const userId = user?.id || (user as any)?.userId || "";
+  const isAdmin = Boolean(user?.isAdmin || user?.IsAdmin);
 
   const events = (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data) || [];
   const eventsList = Array.isArray(events) ? events : [];
 
-  const assignedTracks: JudgeTrackItem[] = [];
+  // Toàn bộ EventRole thật của user này — nguồn để suy ra eventRoleId ĐÚNG theo từng track.
+  const { data: myEventRoles = [], isLoading: loadingRoles } = useGetMyEventRoles(userId || undefined);
+  const eventRoleIdByTrack = useMemo(() => {
+    const map = new Map<string, string>();
+    myEventRoles.forEach((r) => {
+      if (r.trackId) map.set(r.trackId, r.id);
+    });
+    return map;
+  }, [myEventRoles]);
+  // Vai trò cấp Event (không gắn track cụ thể) — fallback khi track không map được.
+  const fallbackEventRoleId =
+    activeRole?.id || activeRole?.eventRoleId || (activeRole as any)?.EventRoleId || "";
 
-  eventsList.forEach((ev: any) => {
-    const eId = ev.id || ev.Id || ev.eventId || ev.EventId;
-    const eName = ev.eventName || ev.EventName || "Sự kiện";
-    const eSeason = ev.season || ev.Season || "Mùa giải";
-    const tracks = ev.tracks || ev.Tracks || [];
+  const eventMeta = useMemo(() => {
+    const map = new Map<string, { name: string; season: string }>();
+    eventsList.forEach((e: any) => {
+      const id = e.id || e.Id;
+      if (id) map.set(id, { name: e.eventName || e.EventName || "Sự kiện", season: e.season || e.Season || "" });
+    });
+    return map;
+  }, [eventsList]);
 
-    if (Array.isArray(tracks)) {
-      tracks.forEach((track: string, idx: number) => {
-        assignedTracks.push({
+  // Sự kiện có khả năng liên quan tới giám khảo này (Admin xem hết để đối chiếu).
+  const candidateEventIds = useMemo(() => {
+    if (!user) return [];
+    if (isAdmin) return eventsList.map((e: any) => e.id || e.Id).filter(Boolean);
+    const ids = myEventRoles.map((r) => r.eventId).filter(Boolean);
+    const single = activeRole?.eventId || (activeRole as any)?.EventId;
+    if (single) ids.push(single);
+    return [...new Set(ids)];
+  }, [user, isAdmin, activeRole, eventsList, myEventRoles]);
+
+  // Tracks/event trả kèm judges[] thật — đây mới là nguồn xác định "track của tôi",
+  // đúng hơn activeRole.trackId (chỉ 1 track được chọn làm vai trò chính lúc đăng nhập,
+  // trong khi 1 giám khảo có thể được phân công nhiều track, thậm chí nhiều sự kiện).
+  const trackQueries = useQueries({
+    queries: candidateEventIds.map((eId) => ({
+      queryKey: ["tracks-by-event", eId],
+      queryFn: () => fetchTracksByEvent(eId),
+      enabled: !!eId,
+    })),
+  });
+
+  const baseTracks = useMemo(() => {
+    const list: Omit<JudgeTrackItem, "totalSubmissions" | "scoredSubmissions" | "pendingSubmissions" | "status">[] = [];
+
+    candidateEventIds.forEach((eId, idx) => {
+      const tracks = trackQueries[idx]?.data ?? [];
+      const meta = eventMeta.get(eId);
+
+      tracks.forEach((t: any) => {
+        const trackId = t.id || t.Id || "";
+        if (!trackId) return;
+
+        if (!isAdmin) {
+          const judges = t.judges || t.Judges;
+          const judgeIds: string[] = (judges || []).map((j: any) => j.id || j.Id).filter(Boolean);
+          const hasJudgeList = Array.isArray(judges);
+          const isRealAssigned = userId && judgeIds.includes(userId);
+          // Nếu BE không trả judges (mảng undefined) mới cần dự phòng bằng trackId đã chọn lúc login.
+          const isFallbackAssigned = !hasJudgeList && assignedTrackId === trackId;
+          if (!isRealAssigned && !isFallbackAssigned) return;
+        }
+
+        list.push({
           eventId: eId,
-          eventName: eName,
-          season: eSeason,
-          roundName: "Vòng 2: Bán Kết",
-          trackName: track,
-          trackId: `track-j-${idx + 1}`,
-          totalSubmissions: 0,
-          scoredSubmissions: 0,
-          pendingSubmissions: 0,
-          status: "PENDING",
+          eventName: meta?.name || "Sự kiện",
+          season: meta?.season || "",
+          roundName: "Vòng Chuyên Môn",
+          trackName: t.trackName || t.TrackName || "Hạng mục",
+          trackId,
+          templateId: t.templateId || t.TemplateId || "",
+          eventRoleId: eventRoleIdByTrack.get(trackId) || fallbackEventRoleId,
         });
       });
-    }
+    });
+
+    return list;
+  }, [candidateEventIds, trackQueries, eventMeta, isAdmin, userId, assignedTrackId, eventRoleIdByTrack, fallbackEventRoleId]);
+
+  // Bài nộp thật của từng track (song song — không gọi hook trong vòng lặp được nên dùng useQueries).
+  const submissionQueries = useQueries({
+    queries: baseTracks.map((t) => ({
+      queryKey: ["submit-results-by-track", t.trackId, t.eventId],
+      queryFn: () => fetchSubmitResultsByTrack(t.trackId, t.eventId),
+      enabled: !!t.trackId && !!t.eventId,
+    })),
   });
+
+  // Phiếu chấm thật theo TỪNG eventRoleId (1 giám khảo nhiều track = nhiều eventRoleId,
+  // phải gọi song song từng cái — gọi 1 lần duy nhất theo activeRole sẽ bỏ sót track khác).
+  const uniqueEventRoleIds = useMemo(
+    () => [...new Set(baseTracks.map((t) => t.eventRoleId).filter(Boolean))],
+    [baseTracks],
+  );
+  const scoreQueries = useQueries({
+    queries: uniqueEventRoleIds.map((erId) => ({
+      queryKey: ["scores-by-event-role", erId],
+      queryFn: () => fetchScoresByEventRole(erId),
+      enabled: !!erId,
+    })),
+  });
+  const submittedIds = useMemo(() => {
+    const set = new Set<string>();
+    scoreQueries.forEach((q) => {
+      (q.data ?? []).forEach((s) => {
+        if (s.isSubmitted) set.add(s.submitResultId);
+      });
+    });
+    return set;
+  }, [scoreQueries]);
+
+  const assignedTracks: JudgeTrackItem[] = useMemo(() => {
+    return baseTracks.map((t, idx) => {
+      const submissions = submissionQueries[idx]?.data ?? [];
+      const total = submissions.length;
+      const scored = submissions.filter((s) => submittedIds.has(s.id || s.Id || "")).length;
+      return {
+        ...t,
+        totalSubmissions: total,
+        scoredSubmissions: scored,
+        pendingSubmissions: total - scored,
+        status: total > 0 && scored === total ? "DONE" : "PENDING",
+      };
+    });
+  }, [baseTracks, submissionQueries, submittedIds]);
+
+  const isLoading =
+    loadingEvents ||
+    loadingRoles ||
+    trackQueries.some((q) => q.isLoading) ||
+    submissionQueries.some((q) => q.isLoading) ||
+    scoreQueries.some((q) => q.isLoading);
 
   return {
     assignedTracks,

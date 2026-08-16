@@ -30,7 +30,7 @@ import type { FptStudentResponse } from "@/models/entities";
 type Step = "choose" | "fpt" | "nonFpt" | "pending";
 
 export function OnboardingProfileView() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("choose");
@@ -49,22 +49,35 @@ export function OnboardingProfileView() {
 
   const { mutateAsync: submitProfile, isPending: isSubmittingProfile } = useSubmitStudentProfile();
   const isSubmitting = isSubmittingProfile || isUploadingPhoto;
-  const { mutateAsync: verifyFpt, isPending: isVerifying } = useFptStudentVerification();
+  const { mutateAsync: verifyFpt, isPending: isVerifyingFpt } = useFptStudentVerification();
   const { mutateAsync: requestUnblock, isPending: isUnblocking } = useRequestUnblock();
   const { data: schools = [], isLoading: loadingSchools } = useGetSchools();
 
-  // Kiểm tra Two-Strike Block
   const { data: rejections = [] } = useGetUserRejections(user?.id);
   const rejectionCount = rejections.filter((r) => r.isActive !== false).length;
   const isBlocked = rejectionCount >= 2;
 
-  // Nếu user đã approved
+  const handleVerifyFpt = async () => {
+    setFptError("");
+    setFptResult(null);
+    try {
+      const result = await verifyFpt(fptCode);
+      if (result?.isValid) {
+        setFptResult(result);
+      } else {
+        setFptError("Mã sinh viên không tồn tại trong hệ thống FPT.");
+      }
+    } catch {
+      setFptError("Không thể kết nối hệ thống. Vui lòng thử lại sau.");
+    }
+  };
+
   if (user?.isApproved) {
     return (
       <ProfileStatusCard
         icon={<CheckCircle2 className="w-8 h-8 text-[var(--color-success)]" />}
         color="success"
-        title="// HỒ SƠ ĐÃ DUYỆT"
+        title="HỒ SƠ ĐÃ ĐƯỢC DUYỆT"
         message="Hồ sơ sinh viên của bạn đã được xác thực. Bạn có thể tham gia các sự kiện hackathon."
         action={
           <Button
@@ -72,14 +85,13 @@ export function OnboardingProfileView() {
             onClick={() => router.push("/events")}
             className="justify-center flex items-center gap-2"
           >
-            // XEM SỰ KIỆN <ArrowRight className="w-4 h-4" />
+            XEM SỰ KIỆN <ArrowRight className="w-4 h-4" />
           </Button>
         }
       />
     );
   }
 
-  // Two-Strike Block
   if (isBlocked) {
     return (
       <div className="flex items-center justify-center min-h-[70vh] hud-lattice px-4">
@@ -88,10 +100,10 @@ export function OnboardingProfileView() {
             <AlertTriangle className="w-6 h-6 text-[var(--color-danger)] flex-shrink-0" />
             <div>
               <p className="font-mono text-sm font-bold text-[var(--color-danger)] tracking-wider uppercase">
-                ⚠ PROFILE LOCKED
+                ⚠ TÀI KHOẢN TẠM KHÓA
               </p>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Hồ sơ đã bị từ chối {rejectionCount} lần — tài khoản tạm khóa
+                Hồ sơ đã bị từ chối {rejectionCount} lần — tài khoản cần yêu cầu mở khóa
               </p>
             </div>
           </div>
@@ -101,66 +113,75 @@ export function OnboardingProfileView() {
           </div>
 
           <h2 className="font-display text-xl font-bold text-[var(--color-danger)] mb-4 tracking-widest uppercase text-center">
-            // TÀI KHOẢN BỊ KHÓA
+            TÀI KHOẢN BỊ KHÓA
           </h2>
 
-          <p className="text-sm text-[var(--text-muted)] text-center leading-relaxed mb-6">
-            Hồ sơ của bạn đã bị từ chối{" "}
-            <span className="text-[var(--color-danger)] font-bold">{rejectionCount} lần</span>.
-            Bạn có thể gửi yêu cầu mở khóa và chờ BTC xem xét trong vòng 24 giờ.
-          </p>
-
-          {rejections.length > 0 && (
-            <div className="mb-6 space-y-2">
-              <p className="text-xs font-mono text-[var(--text-muted)] tracking-wider uppercase mb-2">
-                Lịch sử từ chối:
-              </p>
+          <div className="space-y-3 mb-6">
+            <p className="text-xs font-mono text-[var(--text-muted)] leading-relaxed">
+              Hồ sơ của bạn đã bị từ chối tối đa 2 lần. Vui lòng gửi yêu cầu mở khóa đến Ban Tổ Chức kèm lý do để được hỗ trợ.
+            </p>
+            <div className="p-3 bg-[var(--bg-base)] border border-[var(--color-danger)]/20 space-y-2">
+              <p className="text-[11px] font-mono text-[var(--text-muted)] font-bold uppercase">Lịch sử từ chối:</p>
               {rejections.map((r, i) => (
-                <div
-                  key={r.id}
-                  className="p-3 bg-[var(--bg-base)] border border-[var(--border-muted)] text-xs font-mono"
-                >
-                  <span className="text-[var(--color-danger)] mr-2">#{i + 1}</span>
-                  <span className="text-[var(--text-muted)]">{r.reason || "Không có lý do"}</span>
+                <div key={i} className="text-xs font-mono flex items-start gap-2 text-[var(--color-danger)]">
+                  <span>•</span>
+                  <div>
+                    <span className="font-bold">Lần {i + 1}:</span> {r.reason || "Không đạt yêu cầu xác minh"}
+                    {r.rejectedTime && (
+                      <span className="text-[10px] text-[var(--text-muted)] ml-2">
+                        ({new Date(r.rejectedTime).toLocaleDateString("vi-VN")})
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          )}
+          </div>
 
-          {requestUnblockSuccess ? (
-            <div className="p-4 bg-[rgba(16,185,129,0.05)] border border-[var(--color-success)]/20 text-center">
-              <CheckCircle2 className="w-5 h-5 text-[var(--color-success)] mx-auto mb-2" />
-              <p className="text-xs font-mono text-[var(--color-success)]">
-                Yêu cầu đã được gửi. BTC sẽ xem xét trong 24 giờ.
-              </p>
-            </div>
-          ) : (
+          <div className="space-y-3">
             <Button
-              variant="primary"
-              disabled={isUnblocking}
+              variant="secondary"
+              disabled={isUnblocking || requestUnblockSuccess}
               onClick={async () => {
                 if (!user?.email) return;
-                await requestUnblock(user.email).catch(console.warn);
-                setRequestUnblockSuccess(true);
+                try {
+                  await requestUnblock(user.email).catch(console.warn);
+                  setRequestUnblockSuccess(true);
+                } catch {
+                  // ignored
+                }
               }}
+              className="w-full justify-center flex items-center gap-2 border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[rgba(239,68,68,0.1)]"
+            >
+              {requestUnblockSuccess ? (
+                <>✓ ĐÃ GỬI YÊU CẦU MỞ KHÓA</>
+              ) : isUnblocking ? (
+                <><RefreshCw className="w-4 h-4 animate-spin" /> Đang gửi yêu cầu...</>
+              ) : (
+                <>YÊU CẦU MỞ KHÓA TÀI KHOẢN <ArrowRight className="w-4 h-4" /></>
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => logout()}
               className="w-full justify-center"
             >
-              {isUnblocking ? "Đang gửi..." : "[ REQUEST UNBLOCK ]"}
+              ĐĂNG XUẤT
             </Button>
-          )}
+          </div>
         </Card>
       </div>
     );
   }
 
-  // Đang chờ duyệt (đã nộp hồ sơ)
   if (user?.studentCode && !user?.isApproved && !user?.isRejected && step !== "pending") {
     return (
       <ProfileStatusCard
         icon={<RefreshCw className="w-8 h-8 text-[var(--color-warning)] animate-spin" />}
         color="warning"
-        title="// CHỜ BTC DUYỆT"
-        message="Hồ sơ sinh viên đang trong hàng đợi xét duyệt. BTC sẽ thông báo kết quả qua email."
+        title="HỒ SƠ ĐANG CHỜ DUYỆT"
+        message="Hồ sơ sinh viên đang trong hàng đợi xét duyệt. Ban Tổ Chức sẽ thông báo kết quả qua email."
         sub={
           <div className="mt-4 p-3 bg-[var(--bg-base)] border border-[var(--border-muted)] text-xs font-mono text-left">
             <p className="text-[var(--text-muted)]">
@@ -173,7 +194,6 @@ export function OnboardingProfileView() {
     );
   }
 
-  // ── STEP: CHOOSE ──────────────────────────────────────────
   if (step === "choose") {
     return (
       <div className="flex items-center justify-center min-h-[70vh] hud-lattice px-4 py-8">
@@ -181,7 +201,7 @@ export function OnboardingProfileView() {
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-5 h-5 text-[var(--accent-primary)]" />
             <h2 className="font-display text-lg font-bold text-[var(--accent-primary)] tracking-widest uppercase">
-              ONBOARDING // HỒ SƠ SINH VIÊN
+              HOÀN THIỆN HỒ SƠ SINH VIÊN
             </h2>
           </div>
           <p className="text-xs font-mono text-[var(--text-muted)] mb-6 ml-8">
@@ -191,7 +211,7 @@ export function OnboardingProfileView() {
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setStep("fpt")}
-              className="group p-5 bg-[var(--bg-base)] border border-[var(--border-muted)] hover:border-[var(--accent-primary)]/50 transition-all duration-200 text-left hud-clipped"
+              className="group p-5 bg-[var(--bg-base)] border border-[var(--border-muted)] hover:border-[var(--accent-primary)]/50 transition-all duration-200 text-left hud-clipped cursor-pointer"
             >
               <div className="w-10 h-10 bg-[rgba(0,217,255,0.08)] border border-[var(--accent-primary)]/20 flex items-center justify-center mb-3">
                 <GraduationCap className="w-5 h-5 text-[var(--accent-primary)]" />
@@ -205,7 +225,7 @@ export function OnboardingProfileView() {
 
             <button
               onClick={() => setStep("nonFpt")}
-              className="group p-5 bg-[var(--bg-base)] border border-[var(--border-muted)] hover:border-[var(--accent-coordinator)]/50 transition-all duration-200 text-left hud-clipped"
+              className="group p-5 bg-[var(--bg-base)] border border-[var(--border-muted)] hover:border-[var(--accent-coordinator)]/50 transition-all duration-200 text-left hud-clipped cursor-pointer"
             >
               <div className="w-10 h-10 bg-[rgba(167,139,250,0.08)] border border-[var(--accent-coordinator)]/20 flex items-center justify-center mb-3">
                 <Upload className="w-5 h-5 text-[var(--accent-coordinator)]" />
@@ -222,14 +242,13 @@ export function OnboardingProfileView() {
     );
   }
 
-  // ── STEP: FPT ─────────────────────────────────────────────
   if (step === "fpt") {
     return (
       <div className="flex items-center justify-center min-h-[70vh] hud-lattice px-4 py-8">
         <Card className="w-full max-w-md p-[var(--space-xl)] bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
           <button
             onClick={() => { setStep("choose"); setFptResult(null); setFptError(""); }}
-            className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4 flex items-center gap-1"
+            className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4 flex items-center gap-1 cursor-pointer"
           >
             ← Quay lại
           </button>
@@ -238,9 +257,9 @@ export function OnboardingProfileView() {
             <GraduationCap className="w-5 h-5 text-[var(--accent-primary)]" />
             <div>
               <h2 className="font-display text-lg font-bold text-[var(--accent-primary)] tracking-widest uppercase">
-                XÁC MINH FPT
+                XÁC MINH SINH VIÊN FPT
               </h2>
-              <p className="text-xs font-mono text-[var(--text-muted)]">// VIA FPT VERIFICATION SYSTEM</p>
+              <p className="text-xs font-mono text-[var(--text-muted)]">Xác thực tự động qua mã sinh viên FPT Edu</p>
             </div>
           </div>
 
@@ -252,67 +271,46 @@ export function OnboardingProfileView() {
               <div className="flex gap-2">
                 <Input
                   type="text"
-                  placeholder="SE123456"
+                  placeholder="VD: SE170000"
                   value={fptCode}
-                  onChange={(e) => {
-                    setFptCode(e.target.value.toUpperCase());
-                    setFptError("");
-                    setFptResult(null);
-                  }}
-                  className="flex-1"
+                  onChange={(e) => setFptCode(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleVerifyFpt()}
+                  disabled={isVerifyingFpt}
                 />
                 <Button
-                  type="button"
-                  variant="primary"
-                  disabled={isVerifying || fptCode.length < 4}
-                  onClick={async () => {
-                    setFptError("");
-                    setFptResult(null);
-                    try {
-                      const result = await verifyFpt(fptCode);
-                      setFptResult(result);
-                      if (!result?.isValid) setFptError("Mã sinh viên không tồn tại trong hệ thống FPT.");
-                    } catch {
-                      setFptError("Không thể kết nối FPT system. Thử lại sau.");
-                    }
-                  }}
-                  className="flex items-center gap-1.5 px-3"
+                  variant="secondary"
+                  onClick={handleVerifyFpt}
+                  disabled={isVerifyingFpt || !fptCode.trim()}
+                  className="shrink-0 flex items-center gap-1.5"
                 >
-                  {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  {isVerifyingFpt ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  Kiểm tra
                 </Button>
               </div>
-              {fptError && <span className="text-xs text-[var(--color-danger)] font-mono">⚠ {fptError}</span>}
             </div>
 
-            {fptResult?.isValid && (
-              <div className="p-4 bg-[rgba(16,185,129,0.05)] border border-[var(--color-success)]/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-success)]" />
-                  <span className="text-xs font-mono font-bold text-[var(--color-success)] uppercase">SV ĐÃ XÁC MINH</span>
-                </div>
-                <div className="space-y-1.5 text-xs font-mono">
-                  {[
-                    ["Họ tên", fptResult.fullName],
-                    ["Mã SV", fptResult.studentCode],
-                    ["Chuyên ngành", fptResult.major],
-                    ["Năm nhập học", String(fptResult.enrollYear)],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex gap-3">
-                      <span className="text-[var(--text-muted)] w-28 flex-shrink-0">{label}:</span>
-                      <span className="text-[var(--text-primary)]">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {submitError && (
+            {fptError && (
               <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {submitError}
+                ⚠ {fptError}
               </div>
             )}
 
-            {fptResult?.isValid && (
+            {fptResult && (
+              <div className="p-4 bg-[rgba(0,217,255,0.05)] border border-[var(--accent-primary)]/30 text-xs font-mono space-y-2">
+                <div className="flex items-center gap-2 text-[var(--color-success)] font-bold">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Xác thực thành công!</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[var(--text-muted)] pt-2 border-t border-[var(--border-muted)]">
+                  <div>Họ tên: <span className="text-[var(--text-primary)] font-bold">{fptResult.fullName}</span></div>
+                  <div>Mã SV: <span className="text-[var(--text-primary)] font-bold">{fptResult.studentCode}</span></div>
+                  <div>Chuyên ngành: <span className="text-[var(--text-primary)]">{fptResult.major || "Kỹ thuật phần mềm"}</span></div>
+                  <div>Khóa: <span className="text-[var(--text-primary)]">{fptResult.enrollYear ? `K${fptResult.enrollYear - 2004}` : "K18"}</span></div>
+                </div>
+              </div>
+            )}
+
+            {fptResult && (
               <Button
                 variant="primary"
                 disabled={isSubmitting}
@@ -331,7 +329,7 @@ export function OnboardingProfileView() {
                 }}
                 className="w-full justify-center flex items-center gap-2"
               >
-                {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Đang gửi...</> : <>// XÁC NHẬN HỒ SƠ <ArrowRight className="w-4 h-4" /></>}
+                {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Đang gửi...</> : <>XÁC NHẬN HỒ SƠ <ArrowRight className="w-4 h-4" /></>}
               </Button>
             )}
           </div>
@@ -340,7 +338,6 @@ export function OnboardingProfileView() {
     );
   }
 
-  // ── STEP: NON-FPT ─────────────────────────────────────────
   if (step === "nonFpt") {
     const handleFileDrop = (file: File) => {
       if (!file.type.startsWith("image/")) { setSubmitError("Chỉ chấp nhận file ảnh (PNG, JPG)."); return; }
@@ -357,7 +354,7 @@ export function OnboardingProfileView() {
         <Card className="w-full max-w-lg p-[var(--space-xl)] bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
           <button
             onClick={() => { setStep("choose"); setPhotoFile(null); setPhotoPreview(null); }}
-            className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4 flex items-center gap-1"
+            className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4 flex items-center gap-1 cursor-pointer"
           >
             ← Quay lại
           </button>
@@ -368,7 +365,7 @@ export function OnboardingProfileView() {
               <h2 className="font-display text-lg font-bold text-[var(--accent-coordinator)] tracking-widest uppercase">
                 TRƯỜNG NGOÀI FPT
               </h2>
-              <p className="text-xs font-mono text-[var(--text-muted)]">// MANUAL REVIEW BY BTC</p>
+              <p className="text-xs font-mono text-[var(--text-muted)]">Ban tổ chức xét duyệt qua ảnh thẻ sinh viên</p>
             </div>
           </div>
 
@@ -411,12 +408,11 @@ export function OnboardingProfileView() {
               </label>
               {photoPreview ? (
                 <div className="relative border border-[var(--color-success)]/30 bg-[var(--bg-base)]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={photoPreview} alt="Thẻ sinh viên" className="w-full max-h-48 object-contain" />
                   <button
                     type="button"
                     onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
-                    className="absolute top-2 right-2 bg-[var(--color-danger)] p-1"
+                    className="absolute top-2 right-2 bg-[var(--color-danger)] p-1 cursor-pointer"
                   >
                     <XCircle className="w-4 h-4 text-white" />
                   </button>
@@ -433,7 +429,7 @@ export function OnboardingProfileView() {
                 >
                   <Upload className="w-8 h-8 text-[var(--text-muted)] mb-3" />
                   <span className="text-xs font-mono text-[var(--text-primary)] mb-1">
-                    DRAG & DROP hoặc <span className="text-[var(--accent-coordinator)] underline">BROWSE</span>
+                    KÉO & THẢ hoặc <span className="text-[var(--accent-coordinator)] underline">TẢI LÊN</span>
                   </span>
                   <span className="text-[10px] font-mono text-[var(--text-muted)]">PNG, JPG — Max 5MB</span>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
@@ -470,7 +466,7 @@ export function OnboardingProfileView() {
               }}
               className="w-full justify-center flex items-center gap-2"
             >
-              {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Đang gửi...</> : <>// NỘP HỒ SƠ <ArrowRight className="w-4 h-4" /></>}
+              {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Đang gửi...</> : <>NỘP HỒ SƠ <ArrowRight className="w-4 h-4" /></>}
             </Button>
           </div>
         </Card>
@@ -483,7 +479,7 @@ export function OnboardingProfileView() {
     <ProfileStatusCard
       icon={<RefreshCw className="w-8 h-8 text-[var(--color-warning)] animate-spin" />}
       color="warning"
-      title="// HỒ SƠ ĐANG CHỜ DUYỆT"
+      title="HỒ SƠ ĐANG CHỜ DUYỆT"
       message="Hồ sơ của bạn đã được gửi thành công. BTC sẽ xem xét và thông báo kết quả qua email trong 1-3 ngày làm việc."
       action={null}
     />

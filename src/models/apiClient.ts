@@ -95,15 +95,19 @@ async function refreshAccessToken(): Promise<string> {
   return data.accessToken;
 }
 
-/** Xóa toàn bộ phiên và điều hướng về trang đăng nhập. */
+/** Xóa toàn bộ phiên và điều hướng về trang đăng nhập nếu trước đó có phiên. */
 function forceLogout(): void {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("currentUser");
-  localStorage.removeItem("mustChangePassword");
+  const hadSession =
+    typeof window !== "undefined" &&
+    (!!localStorage.getItem("accessToken") || !!localStorage.getItem("currentUser"));
 
   if (typeof window !== "undefined") {
-    if (!window.location.pathname.includes("/login")) {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("mustChangePassword");
+
+    if (hadSession && !window.location.pathname.includes("/login")) {
       window.location.href = "/login";
     }
   }
@@ -170,13 +174,16 @@ apiClient.interceptors.response.use(
       typeof window !== "undefined" &&
       !isPublicAuthRoute(error.config?.url)
     ) {
-      console.warn("[auth] 401 tại", error.config?.url, {
-        hasRefreshToken: !!localStorage.getItem("refreshToken"),
-        alreadyRetried: !!original?._retry,
-      });
+      const hasRefreshToken = !!localStorage.getItem("refreshToken");
+      const hasAccessToken = !!localStorage.getItem("accessToken");
+
+      // Nếu là Khách (chưa từng đăng nhập, không có token), không redirect mà chỉ reject
+      if (!hasRefreshToken && !hasAccessToken) {
+        return Promise.reject(error);
+      }
 
       // Còn refresh token và chưa thử retry → làm mới access token rồi gọi lại.
-      if (original && !original._retry && localStorage.getItem("refreshToken")) {
+      if (original && !original._retry && hasRefreshToken) {
         original._retry = true;
         try {
           const newToken = await (refreshPromise ??= refreshAccessToken().finally(() => {
@@ -192,8 +199,8 @@ apiClient.interceptors.response.use(
           return Promise.reject(error);
         }
       }
-      // Không có refresh token, hoặc retry vẫn 401 → kết thúc phiên.
-      console.warn("[auth] logout: không có refresh token hoặc retry vẫn 401");
+      // Đã có token trước đó nhưng retry vẫn 401 → kết thúc phiên.
+      console.warn("[auth] logout: token hết hạn hoặc retry vẫn 401");
       forceLogout();
     }
     return Promise.reject(error);

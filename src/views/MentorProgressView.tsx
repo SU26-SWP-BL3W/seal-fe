@@ -38,10 +38,10 @@ export function MentorProgressView() {
           </div>
           <div>
             <h1 className="font-display text-2xl font-bold text-[var(--accent-mentor)] tracking-widest uppercase">
-              THEO DÕI TIẾN ĐỘ ĐỘI THI (MENTOR PROGRESS)
+              THEO DÕI TIẾN ĐỘ ĐỘI THI
             </h1>
             <p className="text-xs font-mono text-[var(--text-muted)]">
-              // MENTOR MONITORING & SCORE BREAKDOWN
+              Theo dõi tiến trình nộp bài và đánh giá của các đội được phân công
             </p>
           </div>
         </div>

@@ -46,7 +46,7 @@ function unwrapList(raw: unknown): SystemNotification[] {
   return Array.isArray(inner) ? inner : [];
 }
 
-export function useMyNotifications() {
+export function useMyNotifications(enabled: boolean = true) {
   return useQuery({
     queryKey: ["my-notifications"],
     queryFn: async () => {
@@ -54,6 +54,7 @@ export function useMyNotifications() {
       return unwrapList(res);
     },
     refetchInterval: 30_000,
+    enabled,
   });
 }
 

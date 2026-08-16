@@ -20,9 +20,6 @@ import {
 } from "@/viewModels/useEventsDiscoveryViewModel";
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
-function formatVnd(value: number): string {
-  return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
-}
 function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("vi-VN", {
     day: "2-digit",
@@ -107,9 +104,11 @@ function EventCard({ event }: { event: EventCardData }) {
 
         {/* Bottom row: prize + teams */}
         <div className="flex flex-wrap items-center gap-4">
-          <span className="font-mono text-sm font-bold text-[var(--text-primary)]">
-            {formatVnd(event.totalPrizeVnd)}
-          </span>
+          {event.prizes.length > 0 && (
+            <span className="font-mono text-sm font-bold text-[var(--text-primary)]">
+              {event.prizes[0].prizeName}: {event.prizes[0].value}
+            </span>
+          )}
           <span className="flex items-center gap-1.5 font-mono text-xs text-[var(--text-muted)]">
             <TeamIcon />
             {event.teamCount}/{event.maxTeams} đội
@@ -311,7 +310,7 @@ export function EventsDiscoveryView() {
             teamCount: 0,
             tracks: [],
             rounds: [],
-            totalPrizeVnd: 0,
+            prizes: [],
           },
           Date.now(),
         )
@@ -329,7 +328,7 @@ export function EventsDiscoveryView() {
       <section className="border-b border-[var(--border-muted)] bg-[var(--bg-panel)]/60">
         <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-8">
           <span className="font-mono text-[10px] text-[var(--accent-primary)] tracking-[0.3em] uppercase opacity-70">
-            {"// EVENT DISCOVERY"}
+            KHÁM PHÁ SỰ KIỆN
           </span>
           <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)] mt-1">
             Sự Kiện
@@ -385,7 +384,8 @@ export function EventsDiscoveryView() {
         <div className="flex-1 min-w-0 flex flex-col gap-4">
 
           {/* ── My Joined Event Banner (CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP & CÓ VAI TRÒ) ── */}
-          {user && roleName !== "Guest" && (
+          {/* Admin là vai trò toàn hệ thống, không gắn theo 1 sự kiện — không hiện banner "được phân công". */}
+          {user && roleName !== "Guest" && roleName !== "Admin" && (
             <div className="p-5 bg-[var(--bg-panel)] border border-[var(--accent-primary)]/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(0,217,255,0.08)]">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-[var(--accent-primary)] uppercase tracking-widest">
@@ -487,15 +487,14 @@ export function EventsDiscoveryView() {
           {/* Event list */}
           {events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-              <div className="font-mono text-3xl text-[var(--border-muted)]">{"[ ]"}</div>
               <p className="font-mono text-sm text-[var(--text-muted)]">
-                Không tìm thấy sự kiện phù hợp với bộ lọc.
+                Không tìm thấy sự kiện nào phù hợp với bộ lọc hiện tại.
               </p>
               <button
                 onClick={handleClear}
-                className="hud-clipped mt-2 px-4 py-2 border border-[var(--border-muted)] font-mono text-xs text-[var(--text-muted)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors"
+                className="hud-clipped mt-2 px-4 py-2 border border-[var(--border-muted)] font-mono text-xs text-[var(--text-primary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors cursor-pointer"
               >
-                [ XÓA BỘ LỌC ]
+                Xóa Bộ Lọc
               </button>
             </div>
           ) : (

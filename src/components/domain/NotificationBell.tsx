@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "@/i18n/routing";
+import { useAuth } from "@/providers/AuthProvider";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
@@ -13,9 +14,11 @@ interface NotificationBellProps {
 export function NotificationBell({ align = "left" }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const isAuthed = !!user;
 
-  const { data: invData, isLoading, refetch } = useMyInvitations();
-  const { data: systemNotifs = [], isLoading: isLoadingNotifs, refetch: refetchNotifs } = useMyNotifications();
+  const { data: invData, isLoading, refetch } = useMyInvitations(isAuthed);
+  const { data: systemNotifs = [], isLoading: isLoadingNotifs, refetch: refetchNotifs } = useMyNotifications(isAuthed);
   const { mutateAsync: markRead } = useMarkNotificationRead();
   const invitations = invData?.invitations ?? [];
   const pendingInvitations = invitations.filter((i) => i.status === "PendingAccept");
