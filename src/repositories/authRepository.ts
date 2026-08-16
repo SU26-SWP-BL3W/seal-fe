@@ -146,11 +146,13 @@ export function useUpdateStudentProfile() {
 }
 
 // ─── FPT Student Verification ──────────────────────────────────
+// GET /api/fpt-mock/students/{studentCode} — FptMockController thật (route "FptStudents"
+// không tồn tại trên BE, đã từng là bug lệch contract của FE cũ, giữ đúng ở đây).
 
 export function useFptStudentVerification() {
   return useMutation({
     mutationFn: async (studentCode: string) => {
-      const res = await apiClient.get<FptStudentResponse>(`/FptStudents/${studentCode}`);
+      const res = await apiClient.get<FptStudentResponse>(`/fpt-mock/students/${studentCode}`);
       return res.data;
     },
   });
