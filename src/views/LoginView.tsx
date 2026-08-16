@@ -1,4 +1,4 @@
-
+<<<<<<< HEAD
 'use client';
 
 import { useState } from 'react';
@@ -141,7 +141,7 @@ export function LoginView() {
 }
 
 export default LoginView;
-
+=======
 "use client";
 
 import { useState } from "react";
@@ -372,4 +372,4 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-
+>>>>>>> 37e63b14a83e5d9a45fdd8ecc8df1ec0331a7ff0

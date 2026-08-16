@@ -1,4 +1,4 @@
-
+<<<<<<< HEAD
 'use client';
 
 import { useState } from 'react';
@@ -152,7 +152,7 @@ export function VerifyEmailView() {
 }
 
 export default VerifyEmailView;
-
+=======
 "use client";
 
 import { useEffect, useState } from "react";
@@ -386,4 +386,4 @@ function StateCard({
     </div>
   );
 }
-
+>>>>>>> 37e63b14a83e5d9a45fdd8ecc8df1ec0331a7ff0

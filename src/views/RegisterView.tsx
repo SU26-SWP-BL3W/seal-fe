@@ -1,4 +1,4 @@
-
+<<<<<<< HEAD
 'use client';
 
 import { useState } from 'react';
@@ -151,7 +151,7 @@ export function RegisterView() {
 }
 
 export default RegisterView;
-
+=======
 "use client";
 
 import { useState } from "react";
@@ -432,4 +432,4 @@ export function RegisterView() {
     </div>
   );
 }
-
+>>>>>>> 37e63b14a83e5d9a45fdd8ecc8df1ec0331a7ff0
