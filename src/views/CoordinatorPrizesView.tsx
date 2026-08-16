@@ -53,7 +53,7 @@ export const CoordinatorPrizesView: React.FC = () => {
   const [prizes, setPrizes] = useState<PrizeItemState[]>([]);
 
   React.useEffect(() => {
-    if (dbPrizes.length > 0) {
+    if (Array.isArray(dbPrizes) && dbPrizes.length > 0) {
       const mapped = dbPrizes.map((p: any, idx: number) => ({
         id: p.id || p.Id || `prz-${idx}`,
         prizeName: p.prizeName || p.PrizeName || p.name || "Giải thưởng",
@@ -65,7 +65,7 @@ export const CoordinatorPrizesView: React.FC = () => {
     } else {
       setPrizes([]);
     }
-  }, [dbPrizes]);
+  }, [activeEventId, dbPrizes.length]);
 
   // Handle Add New Editable Prize Row
   const handleAddPrize = () => {
