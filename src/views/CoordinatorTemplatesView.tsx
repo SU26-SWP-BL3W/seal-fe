@@ -29,7 +29,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
   const [selectedSetId, setSelectedSetId] = useState<string>("");
 
   React.useEffect(() => {
-    if (dbTemplates.length > 0) {
+    if (Array.isArray(dbTemplates) && dbTemplates.length > 0) {
       const mapped: CriteriaSetItem[] = dbTemplates.map((t: any) => ({
         id: t.id || t.Id,
         templateName: t.templateName || t.TemplateName || "Bộ tiêu chí",
@@ -51,7 +51,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
       setCriteriaSets([]);
       setSelectedSetId("");
     }
-  }, [dbTemplates]);
+  }, [dbTemplates.length]);
 
   const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
 
@@ -243,77 +243,85 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
           {/* Right Panel: CHI TIẾT CÁC TIÊU CHÍ THÀNH PHẦN TRONG BỘ (7 cols) */}
           <div className="lg:col-span-7 bg-[#13191c] border border-[#263339] p-6 space-y-6">
-            
-            {/* Active Set Header */}
-            <div className="border-b border-[#263339] pb-4 space-y-2">
-              <div className="flex items-center justify-between font-mono text-xs">
-                <span className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#8b5cf6]" />
-                  CHI TIẾT BỘ TIÊU CHÍ ĐANG CHỌN
-                </span>
-                <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
-                  ✓ TRỌNG SỐ ĐỦ 100%
-                </span>
+            {!activeSet ? (
+              <div className="p-12 text-center text-[#8a9ba8] font-mono text-xs space-y-3">
+                <Sliders className="w-10 h-10 text-[#8b5cf6]/40 mx-auto" />
+                <p className="font-semibold text-sm text-[#e1e7ec]">Chưa có bộ tiêu chí nào trong Ngân Hàng Hệ Thống</p>
+                <p className="text-xs text-[#8a9ba8]">Nhấn nút "TẠO MỚI BỘ TIÊU CHÍ" góc trên bên phải để bắt đầu khởi tạo.</p>
               </div>
-
-              <h2 className="font-sans font-bold text-xl text-[#e1e7ec]">
-                {activeSet.templateName}
-              </h2>
-              <p className="text-xs font-sans text-[#8a9ba8] leading-relaxed">
-                {activeSet.description}
-              </p>
-            </div>
-
-            {/* Total Weight Bar */}
-            <div className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2 font-mono text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[#8a9ba8]">THANH PHÂN BỔ TRỌNG SỐ CÁC TIÊU CHÍ:</span>
-                <span className="text-[#10b981] font-bold">{activeSetTotalWeight}% / 100%</span>
-              </div>
-              <div className="w-full h-2.5 bg-[#182024] rounded-full overflow-hidden border border-[#263339]">
-                <div className="h-full bg-[#8b5cf6] rounded-full" style={{ width: `${activeSetTotalWeight}%` }}></div>
-              </div>
-            </div>
-
-            {/* List of Component Criteria inside the Set */}
-            <div className="space-y-4">
-              <h3 className="font-mono font-bold text-xs text-[#8a9ba8] uppercase tracking-wider">
-                DANH SÁCH {activeSet.criterias.length} TIÊU CHÍ THÀNH PHẦN BÊN TRONG BỘ:
-              </h3>
-
-              <div className="space-y-3">
-                {activeSet.criterias.map((crit, idx) => (
-                  <div key={crit.id} className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs font-bold flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
-                        <h4 className="font-sans font-bold text-sm text-[#e1e7ec]">
-                          {crit.criterionName}
-                        </h4>
-                      </div>
-
-                      <div className="px-3 py-1 bg-[#182024] border border-[#263339] font-mono text-xs font-bold text-[#8b5cf6] shrink-0">
-                        TRỌNG SỐ: {crit.weight}%
-                      </div>
-                    </div>
-
-                    <p className="text-xs font-sans text-[#8a9ba8] pl-8 leading-relaxed">
-                      {crit.description}
-                    </p>
-
-                    {/* Rubric level scale guide badge */}
-                    <div className="pl-8 pt-1 flex items-center gap-2 font-mono text-[10px] text-[#8a9ba8]">
-                      <span>Thang điểm: Max {crit.maxScore}đ</span>
-                      <span>•</span>
-                      <span className="text-[#10b981]">Chuẩn RBL Level 1-4 (0-100%)</span>
-                    </div>
+            ) : (
+              <>
+                {/* Active Set Header */}
+                <div className="border-b border-[#263339] pb-4 space-y-2">
+                  <div className="flex items-center justify-between font-mono text-xs">
+                    <span className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-[#8b5cf6]" />
+                      CHI TIẾT BỘ TIÊU CHÍ ĐANG CHỌN
+                    </span>
+                    <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
+                      ✓ TRỌNG SỐ ĐỦ 100%
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
 
+                  <h2 className="font-sans font-bold text-xl text-[#e1e7ec]">
+                    {activeSet.templateName}
+                  </h2>
+                  <p className="text-xs font-sans text-[#8a9ba8] leading-relaxed">
+                    {activeSet.description}
+                  </p>
+                </div>
+
+                {/* Total Weight Bar */}
+                <div className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2 font-mono text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#8a9ba8]">THANH PHÂN BỔ TRỌNG SỐ CÁC TIÊU CHÍ:</span>
+                    <span className="text-[#10b981] font-bold">{activeSetTotalWeight}% / 100%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-[#182024] rounded-full overflow-hidden border border-[#263339]">
+                    <div className="h-full bg-[#8b5cf6] rounded-full" style={{ width: `${activeSetTotalWeight}%` }}></div>
+                  </div>
+                </div>
+
+                {/* List of Component Criteria inside the Set */}
+                <div className="space-y-4">
+                  <h3 className="font-mono font-bold text-xs text-[#8a9ba8] uppercase tracking-wider">
+                    DANH SÁCH {activeSet.criterias.length} TIÊU CHÍ THÀNH PHẦN BÊN TRONG BỘ:
+                  </h3>
+
+                  <div className="space-y-3">
+                    {activeSet.criterias.map((crit, idx) => (
+                      <div key={crit.id} className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <h4 className="font-sans font-bold text-sm text-[#e1e7ec]">
+                              {crit.criterionName}
+                            </h4>
+                          </div>
+
+                          <div className="px-3 py-1 bg-[#182024] border border-[#263339] font-mono text-xs font-bold text-[#8b5cf6] shrink-0">
+                            TRỌNG SỐ: {crit.weight}%
+                          </div>
+                        </div>
+
+                        <p className="text-xs font-sans text-[#8a9ba8] pl-8 leading-relaxed">
+                          {crit.description}
+                        </p>
+
+                        {/* Rubric level scale guide badge */}
+                        <div className="pl-8 pt-1 flex items-center gap-2 font-mono text-[10px] text-[#8a9ba8]">
+                          <span>Thang điểm: Max {crit.maxScore}đ</span>
+                          <span>•</span>
+                          <span className="text-[#10b981]">Chuẩn RBL Level 1-4 (0-100%)</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
         </div>
