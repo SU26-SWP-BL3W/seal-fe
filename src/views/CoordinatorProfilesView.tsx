@@ -25,49 +25,17 @@ export const CoordinatorProfilesView: React.FC = () => {
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Fallback mock data with rejection history matching user requirements
-  const displayProfiles: StudentProfileItem[] = pendingUsers.length > 0
-    ? pendingUsers.map((u: any, idx: number) => ({
-        id: u.id || u.Id || u.userId || u.UserId || `EXT-00${idx + 1}`,
-        fullName: u.fullName || u.FullName || "Sinh viên",
-        email: u.email || u.Email || "student@external.edu.vn",
-        schoolName: u.schoolName || u.SchoolName || u.school?.schoolName || "Đại học Bách Khoa",
-        studentCode: u.studentCode || u.StudentCode || u.studentId || `201200${idx + 85}`,
-        photoStudentCardUrl: u.photoStudentCardUrl || u.PhotoStudentCardUrl || `https://placehold.co/600x400/13191c/8b5cf6?text=TH%E1%BA%BA+SINH+VI%C3%8AN+${idx + 1}`,
-        rejectionCount: u.rejectionCount ?? u.RejectionCount ?? (idx === 1 ? 2 : 0),
-        lastRejectionReason: idx === 1 ? "Ảnh thẻ chụp bị mờ không nhìn rõ MSSV và dấu mộc." : undefined,
-      }))
-    : [
-        {
-          id: "EXT-001",
-          fullName: "Nguyễn Văn A",
-          email: "nguyenvana@external.edu.vn",
-          schoolName: "Đại học Bách Khoa TPHCM",
-          studentCode: "20120089",
-          photoStudentCardUrl: "https://placehold.co/600x400/13191c/8b5cf6?text=TH%E1%BA%BA+SINH+VI%C3%8AN+BK",
-          rejectionCount: 0,
-        },
-        {
-          id: "EXT-002",
-          fullName: "Trần Thị B",
-          email: "tranthib@external.edu.vn",
-          schoolName: "Đại học Khoa học Tự nhiên",
-          studentCode: "21110342",
-          photoStudentCardUrl: "https://placehold.co/600x400/13191c/8b5cf6?text=TH%E1%BA%BA+SINH+VI%C3%8AN+KHTN",
-          rejectionCount: 2,
-          lastRejectionReason: "Ảnh chụp thẻ bị mất góc và không rõ con mộc đỏ của nhà trường.",
-        },
-        {
-          id: "EXT-003",
-          fullName: "Lê Văn C",
-          email: "levanc@external.edu.vn",
-          schoolName: "Đại học Công nghệ Thông tin (UIT)",
-          studentCode: "22520119",
-          photoStudentCardUrl: "https://placehold.co/600x400/13191c/8b5cf6?text=TH%E1%BA%BA+SINH+VI%C3%8AN+UIT",
-          rejectionCount: 1,
-          lastRejectionReason: "MSSV điền trên form không khớp với MSSV in trên thẻ.",
-        },
-      ];
+  // Real API pending users mapping
+  const displayProfiles: StudentProfileItem[] = pendingUsers.map((u: any, idx: number) => ({
+    id: u.id || u.Id || u.userId || u.UserId || "",
+    fullName: u.fullName || u.FullName || "Sinh viên",
+    email: u.email || u.Email || "",
+    schoolName: u.schoolName || u.SchoolName || u.school?.schoolName || "Trường ĐH",
+    studentCode: u.studentCode || u.StudentCode || u.studentId || "",
+    photoStudentCardUrl: u.photoStudentCardUrl || u.PhotoStudentCardUrl || "",
+    rejectionCount: u.rejectionCount ?? u.RejectionCount ?? 0,
+    lastRejectionReason: u.lastRejectionReason || u.LastRejectionReason || undefined,
+  }));
 
   // Handle Approve Profile
   const handleApprove = async () => {

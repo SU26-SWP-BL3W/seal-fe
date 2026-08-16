@@ -12,24 +12,18 @@ export const CoordinatorAssignTemplateView: React.FC = () => {
   const router = useRouter();
   const trackId = (params?.trackId as string) || "TRK-889-AC";
 
-  const { data: templatesList = [], isLoading } = useGetTemplates();
-
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("TPL-CLOUD-02");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Mock template criteria details for C5 layout
-  const mockCriteriaList = [
-    { id: "01", name: "System Architecture Design", maxScore: 20.0, weight: 25.0 },
-    { id: "02", name: "Cloud Native Patterns Implement.", maxScore: 25.0, weight: 30.0 },
-    { id: "03", name: "Security & Compliance Setup", maxScore: 15.0, weight: 15.0 },
-    { id: "04", name: "Performance Optimization Eval", maxScore: 20.0, weight: 20.0 },
-  ];
+  const { data: templatesList = [] } = useGetTemplates();
 
-  const runningTotalWeight = mockCriteriaList.reduce((acc, c) => acc + c.weight, 0); // 90.0%
-  const missingAllocation = 100.0 - runningTotalWeight; // 10.0%
-  const isWeightValid = runningTotalWeight === 100.0;
+  const selectedTemplate = templatesList.find((t: any) => (t.id || t.Id) === selectedTemplateId);
+  const activeCriteriaList: any[] = (selectedTemplate as any)?.criterias || (selectedTemplate as any)?.TemplateCriterias || [];
+  const runningTotalWeight = activeCriteriaList.reduce((acc: number, c: any) => acc + (c.weight || c.Weight || 0), 0);
+  const missingAllocation = 100.0 - runningTotalWeight;
+  const isWeightValid = activeCriteriaList.length === 0 || runningTotalWeight === 100.0;
 
   const handleAssignTemplate = async () => {
     if (!isWeightValid) {
@@ -197,12 +191,12 @@ export const CoordinatorAssignTemplateView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#3c494d]/40">
-                  {mockCriteriaList.map((crit) => (
-                    <tr key={crit.id} className="hover:bg-[#1a2123]">
-                      <td className="p-3 text-[#bbc9ce]">{crit.id}</td>
-                      <td className="p-3 text-[#dde4e6]">{crit.name}</td>
-                      <td className="p-3 text-right text-[#febb29] font-bold">{crit.maxScore.toFixed(1)}</td>
-                      <td className="p-3 text-right text-[#00d9ff] font-bold">{crit.weight.toFixed(1)}%</td>
+                  {activeCriteriaList.map((crit: any, idx: number) => (
+                    <tr key={crit.id || idx} className="hover:bg-[#1a2123]">
+                      <td className="p-3 text-[#bbc9ce]">0{idx + 1}</td>
+                      <td className="p-3 text-[#dde4e6]">{crit.criterionName || crit.name}</td>
+                      <td className="p-3 text-right text-[#febb29] font-bold">{(crit.maxScore || 10).toFixed(1)}</td>
+                      <td className="p-3 text-right text-[#00d9ff] font-bold">{(crit.weight || 0).toFixed(1)}%</td>
                     </tr>
                   ))}
                   {!isWeightValid && (

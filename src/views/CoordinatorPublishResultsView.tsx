@@ -72,17 +72,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
     }
   };
 
-  // Dynamic mock results data based on selected track & round
-  const displayResults = results.length > 0 ? results : selectedTrackId === "trk-2" ? [
-    { id: "res-21", rank: 1, teamName: "NEURAL NETWORK SQUAD", uid: "SUB-AI-9901", finalScore: 92.40, isAdvanced: true },
-    { id: "res-22", rank: 2, teamName: "DEEP LEARNING LAB", uid: "SUB-AI-8812", finalScore: 86.80, isAdvanced: true },
-    { id: "res-23", rank: 3, teamName: "VISION TRANSFORMERS", uid: "SUB-AI-5541", finalScore: 79.20, isAdvanced: false },
-  ] : [
-    { id: "res-01", rank: 1, teamName: "ALPHA STRIKE", uid: "SUB-8812-B", finalScore: 88.50, isAdvanced: true },
-    { id: "res-02", rank: 2, teamName: "OMEGA SQUAD", uid: "SUB-7644-A", finalScore: 82.10, isAdvanced: true },
-    { id: "res-03", rank: 3, teamName: "NULL VOID", uid: "SUB-1109-C", finalScore: 74.00, isAdvanced: false },
-    { id: "res-04", rank: 4, teamName: "BYTE BRAWLERS", uid: "SUB-5541-E", finalScore: 68.00, isAdvanced: false },
-  ];
+  const displayResults = results;
 
   const handleCalculate = async () => {
     setIsSubmitting(true);

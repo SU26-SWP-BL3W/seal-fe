@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import type { Event, Round } from "@/models/entities";
 import type { EventRoundItem } from "@/viewModels/eventsMetadata";
-import { mockCoordinatorEvents } from "@/mocks/coordinatorDevMockData";
 
 export interface MyEventModel {
   id?: string;
@@ -168,11 +167,7 @@ export function useMyEvents() {
       } catch (err: any) {
         console.warn("[SEAL BE-DATA MISSING] GET /api/Events error:", err?.message);
       }
-      const localEvents = mergeCreatedWithDb([]);
-      if (localEvents.length > 0) {
-        return localEvents as MyEventModel[];
-      }
-      return mockCoordinatorEvents as MyEventModel[];
+      return mergeCreatedWithDb([]) as MyEventModel[];
     },
   });
 }

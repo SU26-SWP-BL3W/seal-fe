@@ -23,33 +23,7 @@ export const CoordinatorAppealsView: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Mock appeals list matching Screenshot 5 if backend empty
-  const displayAppeals = appeals.length > 0 ? appeals : [
-    {
-      id: "APL-9204",
-      teamName: "Alpha Strike",
-      submissionRef: "SUB-8812-B",
-      primaryReason: "Disputed execution score on criterion 2 due to environment mismatch.",
-      timestamp: "2023-10-24 14:02Z",
-      status: "Pending",
-    },
-    {
-      id: "APL-9205",
-      teamName: "Byte Brawlers",
-      submissionRef: "SUB-7644-A",
-      primaryReason: "Algorithm edge case misjudged by benchmark suite.",
-      timestamp: "2023-10-24 14:15Z",
-      status: "Pending",
-    },
-    {
-      id: "APL-9208",
-      teamName: "Cyber Navigators",
-      submissionRef: "SUB-1109-C",
-      primaryReason: "Output parsing failed on valid JSON return signature.",
-      timestamp: "2023-10-24 15:40Z",
-      status: "Pending",
-    },
-  ];
+  const displayAppeals = appeals;
 
   const handleApproveAppeal = async () => {
     if (!selectedAppealId) return;
