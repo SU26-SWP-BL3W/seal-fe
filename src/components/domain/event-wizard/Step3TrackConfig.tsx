@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Input, Card } from "@/components/ui";
+import React from "react";
 import { RoundFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
 import { useGetTemplates } from "@/repositories/templatesRepository";
-import { Target, Plus, Trash2, ArrowLeft, LayoutTemplate, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { Target, Plus, Trash2, ArrowLeft, LayoutTemplate, ArrowRight } from "lucide-react";
 
 interface Step3TrackConfigProps {
   rounds: RoundFormState[];
@@ -27,50 +26,43 @@ export const Step3TrackConfig: React.FC<Step3TrackConfigProps> = ({
   isReadOnly = false,
 }) => {
   const { data: templates = [] } = useGetTemplates();
-  const [expandedScheduleTrackId, setExpandedScheduleTrackId] = useState<string | null>(null);
-
-  const toggleCustomSchedule = (id: string) => {
-    setExpandedScheduleTrackId(expandedScheduleTrackId === id ? null : id);
-  };
 
   return (
-    <Card className="hud-glow-team p-6 space-y-6">
-      <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
+    <div className="bg-[#13191c] border border-[#263339] p-6 space-y-6 text-[#e1e7ec]">
+      <div className="flex items-center justify-between border-b border-[#263339] pb-4">
         <div>
-          <h3 className="font-display font-bold text-lg text-[var(--text-primary)] tracking-wider flex items-center gap-2">
-            <Target className="w-5 h-5 text-[var(--accent-team)]" />
+          <h3 className="font-mono font-bold text-lg text-[#e1e7ec] uppercase tracking-wider flex items-center gap-2">
+            <Target className="w-5 h-5 text-[#8b5cf6]" />
             Bước 3: Tạo Hạng Mục Thi (Tracks)
           </h3>
-          <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-            Cấu hình các Hạng mục chuyên môn thuộc Sự kiện (ví dụ: AI & Machine Learning, Web & Product, Game Dev...).
+          <p className="text-xs font-mono text-[#8a9ba8] mt-1">
+            Cấu hình các Hạng mục chuyên môn thuộc Sự kiện (ví dụ: AI &amp; Machine Learning, Web &amp; Product, Cloud Architecture...).
           </p>
         </div>
         {!isReadOnly && (
-          <Button variant="ghost" onClick={onAddTrack} className="flex items-center gap-1 text-xs">
-            <Plus className="w-4 h-4 text-[var(--accent-team)]" />
-            + Thêm Hạng Mục
-          </Button>
+          <button
+            type="button"
+            onClick={onAddTrack}
+            className="px-3 py-1.5 bg-[#0a0e10] border border-[#8b5cf6]/40 text-[#8b5cf6] hover:bg-[#8b5cf6]/10 font-mono text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>THÊM HẠNG MỤC</span>
+          </button>
         )}
       </div>
-
-      {isReadOnly && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs hud-clipped flex items-center gap-2">
-          <span>⚠️ Sự kiện đang ở trạng thái <strong>Công Khai (Public)</strong>. Để thêm hoặc sửa hạng mục, vui lòng bấm <strong>[ 🔒 TẠM ẨN ĐỂ SỬA ]</strong> ở trên cùng.</span>
-        </div>
-      )}
 
       <div className="space-y-4">
         {tracks.map((track, index) => (
           <div
             key={track.id}
-            className="p-5 bg-[var(--bg-panel)] border border-[var(--border-muted)] hover:border-[var(--accent-team)]/50 transition-all hud-clipped space-y-4"
+            className="p-5 bg-[#0a0e10] border border-[#263339] space-y-4 font-mono text-xs"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-b border-[#263339] pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-[var(--accent-team)]/10 text-[var(--accent-team)] border border-[var(--accent-team)]/30 font-mono text-xs font-bold flex items-center justify-center">
+                <span className="w-6 h-6 rounded-full bg-[#8b5cf6]/10 text-[#8b5cf6] border border-[#8b5cf6]/30 text-xs font-bold flex items-center justify-center">
                   T{index + 1}
                 </span>
-                <h4 className="font-mono font-bold text-sm text-[var(--text-primary)]">
+                <h4 className="font-sans font-bold text-sm text-[#e1e7ec]">
                   {track.trackName || `Hạng mục ${index + 1}`}
                 </h4>
               </div>
@@ -78,7 +70,7 @@ export const Step3TrackConfig: React.FC<Step3TrackConfigProps> = ({
                 <button
                   type="button"
                   onClick={() => onRemoveTrack(track.id)}
-                  className="text-xs font-mono text-[var(--color-danger)] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-[#ef4444] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Gỡ Hạng Mục
                 </button>
@@ -88,98 +80,74 @@ export const Step3TrackConfig: React.FC<Step3TrackConfigProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Tên Hạng Mục */}
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[var(--text-muted)]">Tên hạng mục *</label>
-                <Input
+                <label className="text-[11px] text-[#8a9ba8] uppercase">Tên hạng mục *</label>
+                <input
                   type="text"
                   value={track.trackName}
                   onChange={(e) => onUpdateTrack(track.id, "trackName", e.target.value)}
                   placeholder="Ví dụ: AI & Machine Learning"
                   disabled={isReadOnly}
+                  className="w-full px-3 py-2 bg-[#13191c] border border-[#263339] text-[#e1e7ec] font-sans text-sm focus:outline-none focus:border-[#8b5cf6]"
                 />
               </div>
 
               {/* Mẫu tiêu chí TemplateId */}
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[var(--text-muted)] flex items-center gap-1">
-                  <LayoutTemplate className="w-3.5 h-3.5 text-[var(--accent-team)]" />
-                  Mẫu tiêu chí
+                <label className="text-[11px] text-[#8a9ba8] uppercase flex items-center gap-1">
+                  <LayoutTemplate className="w-3.5 h-3.5 text-[#8b5cf6]" />
+                  Mẫu tiêu chí chấm điểm RBL
                 </label>
                 <select
                   value={track.templateId}
                   onChange={(e) => onUpdateTrack(track.id, "templateId", e.target.value)}
                   disabled={isReadOnly}
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped disabled:opacity-50"
+                  className="w-full px-3 py-2 bg-[#13191c] border border-[#263339] text-[#e1e7ec] font-mono text-xs focus:outline-none focus:border-[#8b5cf6]"
                 >
-                  <option value="">— Chọn mẫu tiêu chí từ hệ thống —</option>
+                  <option value="">— Chọn mẫu tiêu chí từ Ngân Hàng Hệ Thống —</option>
                   {templates.map((t: any) => (
                     <option key={t.id || t.Id || t.templateId} value={t.id || t.Id || t.templateId}>
                       {t.templateName || t.TemplateName}
                     </option>
                   ))}
-                  <option value="__custom__">✨ Tự tạo mẫu tiêu chí mới ở Bước 4</option>
+                  <option value="__custom__">Soạn bộ tiêu chí riêng cho Hạng mục này ở Bước 4</option>
                 </select>
               </div>
 
               {/* Mô tả hạng mục */}
               <div className="md:col-span-2 space-y-1">
-                <label className="text-xs font-medium text-[var(--text-muted)]">Mô tả &amp; Quy định nộp bài</label>
-                <Input
+                <label className="text-[11px] text-[#8a9ba8] uppercase">Mô tả &amp; Quy định nộp bài</label>
+                <input
                   type="text"
                   value={track.description}
                   onChange={(e) => onUpdateTrack(track.id, "description", e.target.value)}
                   placeholder="Phạm vi đề bài, giới hạn công nghệ áp dụng..."
                   disabled={isReadOnly}
+                  className="w-full px-3 py-2 bg-[#13191c] border border-[#263339] text-[#e1e7ec] font-sans text-xs focus:outline-none focus:border-[#8b5cf6]"
                 />
               </div>
-            </div>
-
-            {/* Cấu hình Lịch trình Riêng cho Track (Tùy Chọn) */}
-            <div className="pt-2 border-t border-[var(--border-muted)]/50">
-              <button
-                type="button"
-                onClick={() => toggleCustomSchedule(track.id)}
-                className="text-xs font-mono text-[var(--accent-team)] hover:underline flex items-center gap-1"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                {expandedScheduleTrackId === track.id ? "Ẩn lịch trình riêng" : "+ Lịch trình nộp/chấm bài riêng cho Hạng mục này (Tùy chọn)"}
-                {expandedScheduleTrackId === track.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              </button>
-
-              {expandedScheduleTrackId === track.id && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 p-3 bg-[var(--bg-input)]/50 border border-[var(--border-muted)] rounded font-mono text-xs animate-fadeIn">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase">Bắt đầu nộp bài riêng</label>
-                    <Input
-                      type="datetime-local"
-                      value={track.startDate || ""}
-                      onChange={(e) => onUpdateTrack(track.id, "startDate", e.target.value)}
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase">Hạn chót nộp bài riêng</label>
-                    <Input
-                      type="datetime-local"
-                      value={track.endDate || ""}
-                      onChange={(e) => onUpdateTrack(track.id, "endDate", e.target.value)}
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-[var(--border-muted)] font-mono text-xs">
-        <Button variant="ghost" onClick={onPrev} className="flex items-center gap-1">
+      {/* Navigation Buttons */}
+      <div className="flex items-center justify-between pt-4 border-t border-[#263339] font-mono text-xs">
+        <button
+          type="button"
+          onClick={onPrev}
+          className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] flex items-center gap-1 cursor-pointer transition-colors"
+        >
           <ArrowLeft className="w-4 h-4" /> &lt; Bước 2: Vòng Thi
-        </Button>
-        <Button variant="primary" accent="team" onClick={onNext} className="flex items-center gap-1">
-          Tiếp Tục: Thiết Lập Tiêu Chí Chấm &gt;
-        </Button>
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
+        >
+          <span>TIẾP TỤC BƯỚC 4: TIÊU CHÍ CHẤM</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
-    </Card>
+    </div>
   );
 };

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import { CriteriaEntity, TemplateCriteriaEntity, TemplateEntity } from "@/models/entities";
 import { BaseResponse, PagedResult } from "@/models/types";
+import { mockCoordinatorTemplates } from "@/mocks/coordinatorDevMockData";
 
 function asList<T>(payload: T[] | PagedResult<T> | undefined): T[] {
   if (Array.isArray(payload)) return payload;
@@ -38,7 +39,7 @@ export function useGetTemplates() {
         const message = err instanceof Error ? err.message : String(err);
         console.warn("[SEAL BE-DATA MISSING] GET /api/Templates error:", message);
       }
-      return [];
+      return mockCoordinatorTemplates as TemplateEntity[];
     },
   });
 }

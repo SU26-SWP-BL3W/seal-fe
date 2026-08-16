@@ -55,3 +55,16 @@ export function useRespondAppeal() {
     },
   });
 }
+
+export const useAppealsByRound = useAppeals;
+
+export const appealsRepository = {
+  async respondAppeal(appealId: string, isApproved: boolean, responseReason: string, assignedJudgeId?: string): Promise<any> {
+    const res = await apiClient.post(`/Appeals/${appealId}/respond`, {
+      isApproved,
+      reason: responseReason,
+      assignedJudgeId,
+    });
+    return res.data;
+  },
+};

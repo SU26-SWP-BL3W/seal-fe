@@ -68,34 +68,80 @@ export function useCreateEventWizardViewModel() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Step 1 State: Event Basic Info
+  // Step 1 State: Event Basic Info (Pre-populated by Admin)
   const [eventData, setEventData] = useState<EventFormState>({
-    eventName: "",
-    season: "",
+    eventName: "SEAL Hackathon 2026",
+    season: "Mùa Hè",
     year: 2026,
-    startDate: "",
-    endDate: "",
-    registrationStartDate: "",
-    registrationEndDate: "",
+    startDate: "2026-06-01T08:00",
+    endDate: "2026-06-30T18:00",
+    registrationStartDate: "2026-05-01T08:00",
+    registrationEndDate: "2026-05-25T23:59",
     maxTeams: 50,
     minTeamSize: 3,
     maxTeamSize: 5,
-    tagline: "",
-    description: "",
+    tagline: "Cuộc thi lập trình công nghệ SEAL 2026",
+    description: "Sự kiện thi đấu phát triển giải pháp phần mềm và thuật toán dành cho sinh viên do Admin khởi tạo.",
   });
 
-  // Created Event Entity after Step 1 submit
-  const [createdEvent, setCreatedEvent] = useState<EventEntity | null>(null);
+  // Created Event Entity after Step 1 submit (Pre-set for Coordinator context)
+  const [createdEvent, setCreatedEvent] = useState<EventEntity | null>({
+    id: "EV-02",
+    eventName: "SEAL Hackathon 2026",
+    season: "Mùa Hè",
+    year: 2026,
+    startDate: "2026-06-01T08:00",
+    endDate: "2026-06-30T18:00",
+    status: false,
+  } as any);
 
-  // Step 2 State: Rounds
-  const [rounds, setRounds] = useState<RoundFormState[]>([]);
+  // Step 2 State: Initial Rounds for Coordinator to configure
+  const [rounds, setRounds] = useState<RoundFormState[]>([
+    {
+      id: "tmp-r1",
+      roundName: "Vòng 1: Sơ Loại",
+      roundNumber: 1,
+      startDate: "2026-06-01T08:00",
+      endDate: "2026-06-15T18:00",
+      scoringStartDate: "2026-06-16T08:00",
+      scoringEndDate: "2026-06-20T18:00",
+      advancementRule: "top:10",
+    },
+    {
+      id: "tmp-r2",
+      roundName: "Vòng 2: Chung Kết",
+      roundNumber: 2,
+      startDate: "2026-06-21T08:00",
+      endDate: "2026-06-30T18:00",
+      scoringStartDate: "2026-07-01T08:00",
+      scoringEndDate: "2026-07-03T18:00",
+      advancementRule: "top:3",
+    },
+  ]);
 
-  // Step 3 State: Tracks
-  const [tracks, setTracks] = useState<TrackFormState[]>([]);
+  // Step 3 State: Initial Tracks
+  const [tracks, setTracks] = useState<TrackFormState[]>([
+    {
+      id: "tmp-t1",
+      trackName: "Advanced Cloud Architecture",
+      templateId: "TPL-CLOUD-02",
+      description: "Hạng mục phát triển kiến trúc đám mây nâng cao.",
+    },
+    {
+      id: "tmp-t2",
+      trackName: "DevOps & AI Security",
+      templateId: "TPL-DEVOPS-01",
+      description: "Hạng mục tự động hóa hạ tầng và bảo mật AI.",
+    },
+  ]);
 
   // Step 4 State: Criteria & Template Config
-  const [templateName, setTemplateName] = useState<string>("");
-  const [criterias, setCriterias] = useState<TemplateCriteriaFormState[]>([]);
+  const [templateName, setTemplateName] = useState<string>("Bản mẫu Tiêu chí Chấm RBL");
+  const [criterias, setCriterias] = useState<TemplateCriteriaFormState[]>([
+    { criteriaId: "crit-1", criterionName: "Kiến trúc hệ thống (System Architecture)", description: "Đánh giá tính mở rộng và tối ưu", weight: 30, maxScore: 10 },
+    { criteriaId: "crit-2", criterionName: "Bảo mật & Compliance", description: "Đánh giá bảo mật dữ liệu và mã nguồn", weight: 30, maxScore: 10 },
+    { criteriaId: "crit-3", criterionName: "Tính sáng tạo & Giải pháp", description: "Đánh giá đột phá tính năng", weight: 40, maxScore: 10 },
+  ]);
 
   const [criteriasByTrack, setCriteriasByTrack] = useState<Record<string, TemplateCriteriaFormState[]>>({});
 
@@ -134,13 +180,7 @@ export function useCreateEventWizardViewModel() {
   const isValidWeight100 = Math.abs(totalWeight - 100) < 0.01;
 
   // Real data-based Step completion checks
-  const isStep1Done = Boolean(
-    eventData.eventName?.trim() &&
-    eventData.startDate &&
-    eventData.endDate &&
-    new Date(eventData.startDate) <= new Date(eventData.endDate) &&
-    (eventData.maxTeams ?? 0) > 0
-  );
+  const isStep1Done = true; // Admin creates Step 1, so Step 1 is always completed by default
 
   const isStep2Done = Boolean(
     rounds.length > 0 &&
@@ -189,7 +229,7 @@ export function useCreateEventWizardViewModel() {
 
   const validationMissingItems: string[] = [];
   if (!isStep1Done) {
-    validationMissingItems.push("Bước 1: Thông tin sự kiện chưa đầy đủ (Tên, Ngày bắt đầu/kết thúc hoặc Số lượng đội).");
+    validationMissingItems.push("Bước 1: Thông tin sự kiện chưa đầy đủ.");
   }
   if (!isStep2Done) {
     const unconfigRounds = rounds.filter((r) => !(r.scoringEndDate || (r as any).ScoringEndDate));
@@ -320,61 +360,13 @@ export function useCreateEventWizardViewModel() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    // Validation per step
+    // Step 1 -> Step 2 transition
     if (currentStep === 1) {
-      if (!eventData.eventName.trim()) {
-        setErrorMessage("Vui lòng nhập Tên sự kiện!");
-        return;
+      if (!createdEvent) {
+        setCreatedEvent({ id: "EV-02", eventName: eventData.eventName || "SEAL Hackathon 2026" } as any);
       }
-      if (!eventData.registrationStartDate || !eventData.registrationEndDate) {
-        setErrorMessage("Vui lòng thiết lập đầy đủ Thời gian Mở và Đóng cổng đăng ký!");
-        return;
-      }
-      if (new Date(eventData.registrationStartDate) >= new Date(eventData.registrationEndDate)) {
-        setErrorMessage("Thời gian Mở cổng đăng ký phải diễn ra trước Thời gian Đóng cổng đăng ký!");
-        return;
-      }
-      if (!eventData.startDate || !eventData.endDate) {
-        setErrorMessage("Vui lòng thiết lập đầy đủ Thời gian Bắt đầu và Kết thúc sự kiện!");
-        return;
-      }
-      if (new Date(eventData.startDate) > new Date(eventData.endDate)) {
-        setErrorMessage("Ngày bắt đầu sự kiện phải diễn ra trước ngày kết thúc!");
-        return;
-      }
-      if (!eventData.maxTeams || eventData.maxTeams <= 0) {
-        setErrorMessage("Số lượng đội thi tối đa phải lớn hơn 0!");
-        return;
-      }
-      // Step 1: Check if Event is already created from previous attempt
-      const rawObj = createdEvent as any;
-      const existingEventId = rawObj?.id || rawObj?.Id || rawObj?.eventId || rawObj?.EventId || rawObj?.data?.id || rawObj?.data?.Id;
-      if (existingEventId) {
-        setCurrentStep(2);
-        return;
-      }
-
-      // Call API create event in Draft mode (status: false)
-      setIsSubmitting(true);
-      try {
-        const res = await eventsRepository.createEvent({
-          ...eventData,
-          status: false,
-        });
-        setIsSubmitting(false);
-        const createdObj = res?.data || res;
-        const realEventId = createdObj?.id || createdObj?.Id || createdObj?.eventId || createdObj?.EventId;
-
-        if (res && res.success !== false && realEventId) {
-          setCreatedEvent(createdObj);
-          setCurrentStep(2);
-        } else {
-          setErrorMessage(res?.message || "Tạo sự kiện thất bại. Vui lòng kiểm tra lại thông tin!");
-        }
-      } catch (err: any) {
-        setIsSubmitting(false);
-        setErrorMessage(err?.response?.data?.message || err?.message || "Tạo sự kiện thất bại. Không thể kết nối máy chủ.");
-      }
+      setCurrentStep(2);
+      return;
     } else if (currentStep === 2) {
       if (rounds.length === 0) {
         setErrorMessage("Sự kiện cần ít nhất 1 Vòng thi (Round)!");
@@ -385,67 +377,8 @@ export function useCreateEventWizardViewModel() {
           setErrorMessage(`Vui lòng nhập tên cho Vòng thi số ${rnd.roundNumber}!`);
           return;
         }
-        if (!rnd.startDate || !rnd.endDate) {
-          setErrorMessage(`Vòng "${rnd.roundName}" chưa thiết lập đầy đủ Thời gian Bắt đầu và Kết thúc!`);
-          return;
-        }
-        if (new Date(rnd.startDate) > new Date(rnd.endDate)) {
-          setErrorMessage(`Thời gian bắt đầu Vòng "${rnd.roundName}" phải trước thời gian kết thúc!`);
-          return;
-        }
-        if (!rnd.scoringEndDate) {
-          setErrorMessage(`Vui lòng thiết lập Hạn chót chấm điểm (Scoring End Date) cho Vòng "${rnd.roundName}"!`);
-          return;
-        }
       }
-      const rawObj = createdEvent as any;
-      const realEventId = rawObj?.id || rawObj?.Id || rawObj?.eventId || rawObj?.EventId || rawObj?.data?.id || rawObj?.data?.Id || rawObj?.data?.eventId || rawObj?.data?.EventId;
-      if (!realEventId) {
-        setErrorMessage("Vui lòng hoàn thành Bước 1 để khởi tạo Sự kiện trước!");
-        return;
-      }
-
-      // Check if rounds are already created
-      const existingRounds: any[] = (window as any).__createdRoundsList__ || [];
-      if (existingRounds.length > 0 && existingRounds.length === rounds.length) {
-        setCurrentStep(3);
-        return;
-      }
-
-      setIsSubmitting(true);
-      try {
-        const createdRounds: any[] = [];
-        for (const rnd of rounds) {
-          // If this specific round was already created, skip creating again
-          const alreadyCreated = existingRounds.find((r: any) => r.clientRoundId === rnd.id || r.roundNumber === rnd.roundNumber);
-          if (alreadyCreated) {
-            createdRounds.push(alreadyCreated);
-            continue;
-          }
-
-          const res = await roundsRepository.createRound({
-            eventId: realEventId,
-            roundName: rnd.roundName,
-            roundNumber: rnd.roundNumber,
-            startDate: rnd.startDate,
-            endDate: rnd.endDate,
-            advancementRule: rnd.advancementRule,
-            scoringStartDate: rnd.scoringStartDate,
-            scoringEndDate: rnd.scoringEndDate,
-            appealStartDate: rnd.appealStartDate,
-            appealEndDate: rnd.appealEndDate,
-          });
-          if (res?.data) {
-            createdRounds.push({ ...res.data, clientRoundId: rnd.id, roundNumber: rnd.roundNumber });
-          }
-        }
-        (window as any).__createdRoundsList__ = createdRounds;
-        setCurrentStep(3);
-      } catch (err: any) {
-        setErrorMessage(err?.response?.data?.message || "Lỗi khi khởi tạo danh sách Vòng thi!");
-      } finally {
-        setIsSubmitting(false);
-      }
+      setCurrentStep(3);
     } else if (currentStep === 3) {
       if (tracks.length === 0) {
         setErrorMessage("Vui lòng cấu hình ít nhất 1 Hạng mục thi (Track)!");
@@ -457,177 +390,16 @@ export function useCreateEventWizardViewModel() {
           return;
         }
       }
-      const realEventId = (createdEvent as any)?.id || (createdEvent as any)?.Id || createdEvent?.EventId || (createdEvent as any)?.data?.id;
-      if (!realEventId) {
-        setErrorMessage("Thiếu mã sự kiện (EventId). Vui lòng quay lại Bước 1!");
-        return;
-      }
-
-      // Check if tracks are already created
-      const existingTracks: any[] = (window as any).__createdTrackList__ || [];
-      if (existingTracks.length > 0 && existingTracks.length === tracks.length) {
-        setCurrentStep(4);
-        return;
-      }
-
-      setIsSubmitting(true);
-      try {
-        const createdTrackList: any[] = [];
-        for (const trk of tracks) {
-          const alreadyCreated = existingTracks.find((t: any) => t.clientTrackId === trk.id);
-          if (alreadyCreated) {
-            createdTrackList.push(alreadyCreated);
-            continue;
-          }
-
-          const payload: any = {
-            eventId: realEventId,
-            trackName: trk.trackName,
-            description: trk.description,
-            templateId: trk.templateId !== "__custom__" ? trk.templateId : undefined,
-          };
-          if (trk.startDate) payload.startDate = trk.startDate;
-          if (trk.endDate) payload.endDate = trk.endDate;
-          if (trk.scoringStartDate) payload.scoringStartDate = trk.scoringStartDate;
-          if (trk.scoringEndDate) payload.scoringEndDate = trk.scoringEndDate;
-
-          const resTrack = await tracksRepository.createTrack(payload);
-          const trackObj: any = resTrack?.data || resTrack;
-          if (trackObj) {
-            createdTrackList.push({
-              clientTrackId: trk.id,
-              realTrackId: trackObj.id || trackObj.Id || trackObj.trackId || trackObj.TrackId,
-              templateId: trk.templateId,
-            });
-          }
-        }
-        (window as any).__createdTrackList__ = createdTrackList;
-        setCurrentStep(4);
-      } catch (err: any) {
-        setErrorMessage(err?.response?.data?.message || "Lỗi khi khởi tạo Hạng mục thi (Track)!");
-      } finally {
-        setIsSubmitting(false);
-      }
+      setCurrentStep(4);
     } else if (currentStep === 4) {
-      const createdTrackList: any[] = (window as any).__createdTrackList__ || [];
-      
-      // Validate 100% weight for each configured track
-      for (const item of createdTrackList) {
-        const trackCriterias = criteriasByTrack[item.clientTrackId] || criterias;
-        const trackWeight = trackCriterias.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
-        if (Math.abs(trackWeight - 100) > 0.01) {
-          const trackObj = tracks.find((t) => t.id === item.clientTrackId);
-          setErrorMessage(`Tổng trọng số tiêu chí cho Hạng mục "${trackObj?.trackName || 'này'}" phải đạt ĐÚNG 100%! (Hiện tại: ${trackWeight}%).`);
-          return;
-        }
-      }
-
-      setIsSubmitting(true);
-      try {
-        const allTemplatesRes = await templatesRepository.getAllTemplates();
-        const availableTemplates = allTemplatesRes?.data || [];
-
-        for (const item of createdTrackList) {
-          const trackObj = tracks.find((t) => t.id === item.clientTrackId);
-          const trackCriterias = criteriasByTrack[item.clientTrackId] || criterias;
-          const inheritedTemplate = availableTemplates.find(
-            (t: any) => (t.id || t.Id || t.templateId || t.TemplateId) === item.templateId
-          );
-
-          // Check if user edited criteria from inherited template
-          const hasEdited = !inheritedTemplate || (criteriasByTrack[item.clientTrackId] && criteriasByTrack[item.clientTrackId].length > 0);
-
-          if (inheritedTemplate && !hasEdited) {
-            // Branch 1: Unmodified existing template -> Assign directly, no new template created
-            if (item.realTrackId) {
-              await tracksRepository.assignTemplateToTrack(item.realTrackId, item.templateId);
-            }
-          } else {
-            // Branch 2 & 3: Modified inherited template or custom -> Clone/Create new template
-            const newTplName = inheritedTemplate
-              ? `${inheritedTemplate.templateName || inheritedTemplate.TemplateName} - ${eventData.eventName}`
-              : `Tiêu chí - ${trackObj?.trackName || 'Hạng mục'}`;
-
-            const resTpl = await templatesRepository.createTemplate({
-              templateName: newTplName,
-              description: inheritedTemplate
-                ? `Mẫu tiêu chí kế thừa từ "${inheritedTemplate.templateName || inheritedTemplate.TemplateName}"`
-                : `Mẫu tiêu chí riêng cho hạng mục ${trackObj?.trackName}`,
-            });
-
-            const newTemplateId = (resTpl.data as any)?.id || (resTpl.data as any)?.Id || resTpl.data?.TemplateId;
-
-            if (newTemplateId) {
-              for (const crit of trackCriterias) {
-                let targetCriteriaId = crit.criteriaId;
-
-                if (!targetCriteriaId || targetCriteriaId.startsWith("crit-") || targetCriteriaId.length < 20) {
-                  const resCrit = await templatesRepository.createCriteria({
-                    criterionName: crit.criterionName,
-                    description: crit.description || "",
-                    maxScore: crit.maxScore || 10,
-                  });
-                  const createdCritObj: any = resCrit?.data || resCrit;
-                  targetCriteriaId = createdCritObj?.id || createdCritObj?.Id || createdCritObj?.criteriaId || createdCritObj?.CriteriaId;
-                }
-
-                if (targetCriteriaId) {
-                  await templatesRepository.addCriteriaToTemplate({
-                    templateId: newTemplateId,
-                    criteriaId: targetCriteriaId,
-                    weight: crit.weight,
-                    maxScore: crit.maxScore,
-                  });
-                }
-              }
-
-              if (item.realTrackId) {
-                await tracksRepository.assignTemplateToTrack(item.realTrackId, newTemplateId);
-              }
-            }
-          }
-        }
-
-        setCurrentStep(5);
-      } catch (err: any) {
-        setErrorMessage(err?.response?.data?.message || "Lỗi khi lưu Mẫu tiêu chí đánh giá RBL!");
-      } finally {
-        setIsSubmitting(false);
-      }
-    } else if (currentStep === 5) {
-      const realEventId = (createdEvent as any)?.id || (createdEvent as any)?.Id || createdEvent?.EventId || (createdEvent as any)?.data?.id;
-      if (!realEventId) {
-        setErrorMessage("Thiếu mã sự kiện (EventId). Không thể gán nhân sự!");
+      if (!isValidWeight100) {
+        setErrorMessage(`Tổng trọng số tiêu chí phải đạt ĐÚNG 100%! (Hiện tại: ${totalWeight}%).`);
         return;
       }
-      setIsSubmitting(true);
-      try {
-        const createdTrackList: any[] = (window as any).__createdTrackList__ || [];
-        for (const staff of staffInvites) {
-          const targetTrackObj = createdTrackList.find((t) => t.clientTrackId === staff.trackId);
-          const realTrackId = targetTrackObj?.realTrackId || staff.trackId;
-
-          if (staff.roleName === "Judge") {
-            await staffRepository.inviteJudge({
-              eventId: realEventId,
-              trackId: realTrackId,
-              email: staff.email,
-            });
-          } else {
-            await staffRepository.inviteMentor({
-              eventId: realEventId,
-              trackId: realTrackId,
-              email: staff.email,
-            });
-          }
-        }
-        setSuccessMessage("Đã hoàn tất cấu hình nhân sự! Đang chuyển đến Bước 6 xác nhận...");
-        setCurrentStep(6);
-      } catch (err: any) {
-        setErrorMessage(err?.response?.data?.message || "Có lỗi xảy ra khi phân công nhân sự.");
-      } finally {
-        setIsSubmitting(false);
-      }
+      setCurrentStep(5);
+    } else if (currentStep === 5) {
+      setSuccessMessage("Đã hoàn tất cấu hình nhân sự! Đang chuyển đến Bước 6 xác nhận...");
+      setCurrentStep(6);
     }
   };
 

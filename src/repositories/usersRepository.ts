@@ -387,4 +387,12 @@ export const usersRepository = {
     }
     return null;
   },
+  async approveUser(userId: string): Promise<any> {
+    const res = await apiClient.post(`/Users/${userId}/approve`);
+    return res.data;
+  },
+  async rejectUser(userId: string, reason: string): Promise<any> {
+    const res = await apiClient.post(`/Users/${userId}/reject`, { reason });
+    return res.data;
+  },
 };

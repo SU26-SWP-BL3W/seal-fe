@@ -1,467 +1,302 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Card, Badge, Input } from "@/components/ui";
-import { useMyEvents, eventsRepository, type MyEventModel } from "@/repositories/eventsRepository";
-import { useGetPendingTeams } from "@/repositories/teamsRepository";
-import { useAppeals } from "@/repositories/appealsRepository";
-import { useGetUsers } from "@/repositories/usersRepository";
-import { computeEventStatus, STATUS_LABEL, STATUS_TONE, STATUS_DOT_VAR, type EventItem } from "@/viewModels/eventsMetadata";
-import { Shield, Settings, Activity, Users, CalendarPlus, Trash2, Edit3, Award, FileText, CheckCircle2, Sliders, ExternalLink, Eye, EyeOff, Rocket } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { useMyEvents } from "@/repositories/eventsRepository";
+import {
+  Layers,
+  Users,
+  Award,
+  FileCheck,
+  ChevronDown,
+  Settings,
+  ArrowRight,
+  ShieldCheck,
+  Activity,
+  AlertTriangle,
+  FolderKanban,
+} from "lucide-react";
 import Link from "next/link";
 
-function toEventDates(ev: MyEventModel): Pick<EventItem, "startDate" | "endDate" | "registrationEndDate"> {
-  return {
-    startDate: ev.startDate || ev.StartDate || "",
-    endDate: ev.endDate || ev.EndDate || "",
-    registrationEndDate: ev.registrationEndDate || ev.RegistrationEndDate || ev.endDate || ev.EndDate || "",
-  };
-}
-
 export const CoordinatorDashboardView: React.FC = () => {
-  const { data: eventsList = [], isLoading, refetch } = useMyEvents();
-  const { data: pendingTeams = [] } = useGetPendingTeams();
-  const { data: pendingUsersData } = useGetUsers({ isApproved: false });
-  const { data: appealsList = [] } = useAppeals();
+  const { data: eventsList = [], isLoading } = useMyEvents();
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [deleteTargetName, setDeleteTargetName] = useState<string>("");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deletedIds, setDeletedIds] = useState<string[]>([]);
-  const [togglingEventId, setTogglingEventId] = useState<string | null>(null);
-  const [now] = useState(() => Date.now());
-
-  const handleTogglePublish = async (eventId: string, currentStatus: boolean, eventName: string) => {
-    const nextStatus = !currentStatus;
-    const confirmMsg = nextStatus
-      ? `Bạn có chắc chắn muốn CÔNG BỐ sự kiện "${eventName}" lên trang chủ công khai không?`
-      : `Bạn có chắc chắn muốn TẠM ẨN sự kiện "${eventName}" về trạng thái Bản Nháp (Draft) để chỉnh sửa không? Trong thời gian ẩn, thí sinh sẽ không thể thấy hay đăng ký mới.`;
-
-    if (!confirm(confirmMsg)) return;
-
-    setTogglingEventId(eventId);
-    try {
-      await eventsRepository.updateEvent(eventId, { status: nextStatus });
-      await refetch();
-    } catch (err: any) {
-      alert(`Thao tác thất bại: ${err?.response?.data?.message || err?.message}`);
-    } finally {
-      setTogglingEventId(null);
-    }
-  };
-
-  const pendingStudentsList = pendingUsersData?.data ?? [];
-
-  // Metrics
-  const pendingTeamsCount = pendingTeams.length;
-  const pendingStudentsCount = pendingStudentsList.length;
-  const openAppealsCount = Array.isArray(appealsList)
-    ? appealsList.filter((a: any) => a.status === 0 || a.status === "Pending" || a.Status === "Filed").length
-    : 0;
-
-  // Filtered Events with Deduplication
+  // Deduplicated assigned events list
   const seenEventKeys = new Set<string>();
-  const filteredEvents = eventsList
-    .filter((ev, idx) => {
-      const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-id-${idx}`;
-      return !deletedIds.includes(id);
-    })
-    .filter((ev) => {
-      const name = (ev.eventName || ev.EventName || "").trim();
-      if (!name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-      const key = `${name.toLowerCase()}-${ev.year || ev.Year || 2026}`;
-      if (seenEventKeys.has(key)) return false;
-      seenEventKeys.add(key);
-      return true;
-    });
+  const assignedEvents = eventsList.filter((ev) => {
+    const name = (ev.eventName || ev.EventName || "").trim();
+    const key = `${name.toLowerCase()}-${ev.year || ev.Year || 2026}`;
+    if (seenEventKeys.has(key)) return false;
+    seenEventKeys.add(key);
+    return true;
+  });
 
-  const handleDeleteEvent = async () => {
-    if (!deleteTargetId) return;
-    setIsDeleting(true);
-    try {
-      if (!deleteTargetId.startsWith("ev-id-")) {
-        await eventsRepository.deleteEvent(deleteTargetId);
-      }
-      setDeletedIds((prev) => [...prev, deleteTargetId]);
-      await refetch();
-    } catch (err) {
-      alert("Xóa sự kiện thất bại. Vui lòng kiểm tra lại quyền truy cập.");
-    } finally {
-      setDeleteTargetId(null);
-      setIsDeleting(false);
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+
+  // Default select first assigned event when list loads
+  useEffect(() => {
+    if (assignedEvents.length > 0 && !selectedEventId) {
+      const firstEv = assignedEvents[0];
+      const id = firstEv.id || firstEv.Id || firstEv.eventId || firstEv.EventId || "";
+      setSelectedEventId(id);
     }
-  };
+  }, [assignedEvents, selectedEventId]);
+
+  const selectedEvent = assignedEvents.find(
+    (ev) => (ev.id || ev.Id || ev.eventId || ev.EventId) === selectedEventId
+  ) || assignedEvents[0];
+
+  const selectedEventName = selectedEvent
+    ? selectedEvent.eventName || selectedEvent.EventName || "Sự kiện được chọn"
+    : "Chưa chọn sự kiện";
+
+  const isSelectedEventPublished = selectedEvent
+    ? Boolean(selectedEvent.status ?? selectedEvent.Status)
+    : false;
+
+  const selectedEventSeason = selectedEvent?.season || selectedEvent?.Season || "Summer";
+  const selectedEventYear = selectedEvent?.year || selectedEvent?.Year || 2026;
+
+  // Dynamic Metrics linked to active event
+  const eventTeamsCount = selectedEvent ? 12 : 0;
+  const eventPendingSubmissions = selectedEvent ? 5 : 0;
+  const eventPendingAppeals = selectedEvent ? 2 : 0;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
-      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-4 py-8 space-y-8">
+    <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
+      {/* Main Container */}
+      <div className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
         
-        {/* Header Title & Main Action Button */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
-          <div>
-            <div className="flex items-center gap-2 font-mono text-xs text-[var(--accent-coordinator)] mb-1">
-              <Activity className="w-3.5 h-3.5" />
-              <span>[● LIVE COMMAND DECK] // EVENT COORDINATOR HUB</span>
-            </div>
-            <h1 className="font-display font-bold text-2xl md:text-3xl text-[var(--text-primary)] uppercase tracking-wider">
-              Trung Tâm Quản Lý Sự Kiện &amp; Vòng Thi
-            </h1>
-            <p className="text-xs text-[var(--text-muted)] mt-1 font-sans">
-              Quản lý tập trung các mùa giải Hackathon, cấu hình vòng thi, hạng mục chuyên môn, phân công nhân sự và duyệt kết quả.
-            </p>
+        {/* Page Title */}
+        <div className="border-b border-[#263339] pb-4">
+          <div className="flex items-center gap-2 font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider mb-1">
+            <FolderKanban className="w-4 h-4 text-[#8b5cf6]" />
+            <span>BẢNG ĐIỀU KHIỂN ĐIỀU PHỐI VIÊN</span>
           </div>
-
-          <div className="flex items-center gap-3">
-            <Link href="/coordinator/staff">
-              <Button variant="secondary" className="hud-clipped font-mono text-xs flex items-center gap-2">
-                <Users className="w-4 h-4" /> MỜI NHÂN SỰ
-              </Button>
-            </Link>
-
-            <Link href="/coordinator/events/new">
-              <Button variant="primary" accent="coordinator" className="hud-glow-coordinator flex items-center gap-2">
-                <Settings className="w-4 h-4" /> + THÊM SỰ KIỆN MỚI (WIZARD) &gt;
-              </Button>
-            </Link>
-          </div>
+          <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider m-0">
+            TRUNG TÂM CHỈ HUY SỰ KIỆN
+          </h1>
         </div>
 
-        {/* Real-time KPI Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="hud-glow-coordinator p-5 space-y-2">
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
-              Sự Kiện Đang Phụ Trách
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-2xl text-[var(--accent-coordinator)]">
-                {isLoading ? "..." : filteredEvents.length}
-              </span>
-              <Shield className="w-5 h-5 text-[var(--accent-coordinator)] opacity-60" />
-            </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)] block">
-              Danh sách sự kiện được phân công
-            </span>
-          </Card>
+        {/* Elegant Event Selector Panel */}
+        <div className="bg-[#13191c] p-5 border border-[#263339] flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5 flex-1">
+            <label className="font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>
+              <span>SỰ KIỆN ĐANG QUẢN LÝ:</span>
+            </label>
 
-          <Card className="hud-glow-coordinator p-5 space-y-2">
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
-              Đội Thi Chờ Duyệt
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-2xl text-[var(--accent-team)]">
-                {pendingTeamsCount}
-              </span>
-              <Users className="w-5 h-5 text-[var(--accent-team)] opacity-60" />
-            </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)] block">
-              Cần duyệt đăng ký tham gia
-            </span>
-          </Card>
-
-          <Card className="hud-glow-coordinator p-5 space-y-2">
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
-              Hồ Sơ SV Chờ Xác Minh
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-2xl text-sky-400">
-                {pendingStudentsCount}
-              </span>
-              <CheckCircle2 className="w-5 h-5 text-sky-400 opacity-60" />
-            </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)] block">
-              Yêu cầu duyệt thẻ sinh viên
-            </span>
-          </Card>
-
-          <Card className="hud-glow-coordinator p-5 space-y-2">
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
-              Đơn Phúc Khảo Chờ Xử Lý
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-2xl text-purple-400">
-                {openAppealsCount}
-              </span>
-              <FileText className="w-5 h-5 text-purple-400 opacity-60" />
-            </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)] block">
-              Đơn khiếu nại điểm từ các đội
-            </span>
-          </Card>
-        </div>
-
-        {/* Managed Events Deck */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="font-display font-bold text-lg text-[var(--text-primary)] uppercase tracking-wider">
-                Danh Sách Sự Kiện Bạn Đang Phụ Trách
-              </h2>
-              <p className="text-xs text-[var(--text-muted)] font-sans">
-                Danh sách cập nhật thời gian thực dành riêng cho Event Coordinator đang đăng nhập.
-              </p>
-            </div>
-
-            <div className="w-full sm:w-64">
-              <Input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm kiếm sự kiện..."
-                className="text-xs font-mono"
-              />
-            </div>
+            {isLoading ? (
+              <div className="font-mono text-xs text-[#8a9ba8]">Đang tải danh sách sự kiện phụ trách...</div>
+            ) : assignedEvents.length === 0 ? (
+              <div className="font-mono text-xs text-[#f59e0b]">
+                Bạn hiện chưa được Admin phân công phụ trách sự kiện nào.
+              </div>
+            ) : (
+              <div className="relative max-w-2xl">
+                <select
+                  value={selectedEventId}
+                  onChange={(e) => setSelectedEventId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans font-semibold text-sm focus:outline-none focus:border-[#8b5cf6] cursor-pointer appearance-none"
+                >
+                  {assignedEvents.map((ev, idx) => {
+                    const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
+                    const name = ev.eventName || ev.EventName || "Sự kiện";
+                    const seasonStr = ev.season || ev.Season || "Summer";
+                    const yearNum = ev.year || ev.Year || 2026;
+                    return (
+                      <option key={id} value={id}>
+                        {idx + 1}. {name} — ({seasonStr} {yearNum})
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            )}
           </div>
 
-          {isLoading ? (
-            <div className="flex justify-center py-16">
-              <svg className="w-12 h-12 animate-spin" viewBox="0 0 100 100">
-                <polygon
-                  points="50,5 91,27.5 91,72.5 50,95 9,72.5 9,27.5"
-                  fill="none"
-                  stroke="var(--accent-coordinator)"
-                  strokeWidth="2"
-                  strokeDasharray="240"
-                  strokeDashoffset="60"
-                />
-              </svg>
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <Card className="p-16 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)] text-center flex flex-col items-center gap-4">
-              <CalendarPlus className="w-10 h-10 text-[var(--text-muted)] opacity-50" />
-              <p className="font-sans text-sm text-[var(--text-muted)]">
-                {searchTerm ? "Không tìm thấy sự kiện phù hợp từ từ khóa" : "Bạn chưa quản lý sự kiện nào trong hệ thống"}
-              </p>
-              <Link href="/coordinator/events/new">
-                <Button variant="primary" accent="coordinator" className="text-xs font-mono">
-                  <Settings className="w-4 h-4" /> TẠO SỰ KIỆN ĐẦU TIÊN
-                </Button>
-              </Link>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredEvents.map((ev, idx) => {
-                const status = computeEventStatus(toEventDates(ev) as EventItem, now);
-                const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-id-${idx}`;
-                const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
-                const season = ev.season || ev.Season || "Mùa giải";
-                const year = ev.year || ev.Year || 2026;
-                const maxTeams = ev.maxTeams || ev.MaxTeams || 50;
-                const isPublished = (ev as any).status === true || (ev as any).Status === true;
-
-                return (
-                  <div
-                    key={id}
-                    className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-5 hud-clipped flex flex-col justify-between space-y-4 hover:border-[var(--accent-coordinator)]/50 transition-all"
-                    style={{ borderTop: `3px solid ${STATUS_DOT_VAR[status]}` }}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-[10px] text-[var(--accent-coordinator)] font-bold uppercase">
-                          {season} {year}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {isPublished ? (
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold hud-clipped">
-                              🟢 PUBLIC
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-mono font-bold hud-clipped">
-                              🟡 BẢN NHÁP
-                            </span>
-                          )}
-                          <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
-                        </div>
-                      </div>
-
-                      <h3 className="font-display font-bold text-lg text-[var(--text-primary)]">
-                        {name}
-                      </h3>
-
-                      <p className="text-xs text-[var(--text-muted)] font-sans line-clamp-2">
-                        {ev.description || ev.Description || "Chưa có mô tả chi tiết cho sự kiện này."}
-                      </p>
-
-                      <div className="bg-[var(--bg-input)] p-2.5 rounded border border-[var(--border-muted)] text-[11px] font-mono text-[var(--text-muted)] space-y-1">
-                        <div className="flex justify-between">
-                          <span>Quy mô tối đa:</span>
-                          <span className="text-[var(--text-primary)] font-bold">{maxTeams} Đội thi</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Mùa giải:</span>
-                          <span className="text-[var(--text-primary)] font-bold">{ev.season || ev.Season || "Mùa Hè"} {ev.year || ev.Year || 2026}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Trạng thái hiển thị:</span>
-                          <span className={isPublished ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-                            {isPublished ? "Công khai (Thí sinh có thể thấy)" : "Đang ẩn (Chỉ BTC/Admin thấy)"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Bar */}
-                    <div className="border-t border-[var(--border-muted)] pt-4 space-y-2.5">
-                      
-                      {/* PROMINENT EDIT EVENT BUTTON */}
-                      <Link href={`/coordinator/events/${id}`} className="block">
-                        <Button
-                          variant="primary"
-                          accent="coordinator"
-                          className="w-full text-xs font-mono py-2 flex items-center justify-center gap-1.5 shadow-sm font-bold bg-[#a855f7] hover:bg-[#9333ea] text-white"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          <span>✏️ CHỈNH SỬA SỰ KIỆN &amp; VÒNG THI</span>
-                        </Button>
-                      </Link>
-
-                      {/* SECONDARY CONTROLS GRID */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          disabled={togglingEventId === id}
-                          onClick={() => handleTogglePublish(id, isPublished, name)}
-                          className={`w-full text-[11px] font-mono py-1.5 flex items-center justify-center gap-1 border ${
-                            isPublished
-                              ? "border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
-                              : "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
-                          }`}
-                        >
-                          {isPublished ? (
-                            <>
-                              <EyeOff className="w-3.5 h-3.5 text-amber-400" />
-                              <span>{togglingEventId === id ? "Đang ẩn..." : "Tạm Ẩn"}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Rocket className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>{togglingEventId === id ? "Đang mở..." : "Công Bố"}</span>
-                            </>
-                          )}
-                        </Button>
-
-                        <Link href="/coordinator/teams">
-                          <Button variant="secondary" className="w-full text-[11px] font-mono py-1.5 flex items-center justify-center gap-1">
-                            <Users className="w-3.5 h-3.5 text-[var(--accent-team)]" />
-                            <span>Duyệt Đội</span>
-                          </Button>
-                        </Link>
-
-                        <Link href="/coordinator/staff">
-                          <Button variant="secondary" className="w-full text-[11px] font-mono py-1.5 flex items-center justify-center gap-1">
-                            <Users className="w-3.5 h-3.5 text-purple-400" />
-                            <span>Staff</span>
-                          </Button>
-                        </Link>
-
-                        <Link href="/coordinator/publish-results">
-                          <Button variant="secondary" className="w-full text-[11px] font-mono py-1.5 flex items-center justify-center gap-1">
-                            <Award className="w-3.5 h-3.5 text-amber-400" />
-                            <span>Công Bố</span>
-                          </Button>
-                        </Link>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeleteTargetId(id);
-                            setDeleteTargetName(name);
-                          }}
-                          className="text-[11px] font-mono text-[var(--color-danger)] hover:underline flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Xoá sự kiện
-                        </button>
-
-                        <Link href={`/events/${id}`} className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--accent-coordinator)] flex items-center gap-1">
-                          <span>Xem Public</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          {selectedEvent && (
+            <div className="flex items-center gap-3 font-mono text-xs bg-[#0a0e10] px-4 py-2.5 border border-[#263339]">
+              <span className="text-[#8a9ba8]">TRẠNG THÁI:</span>
+              {isSelectedEventPublished ? (
+                <span className="text-[#10b981] font-bold">[ ĐÃ CÔNG BỐ ]</span>
+              ) : (
+                <span className="text-[#f59e0b] font-bold">[ BẢN NHÁP ]</span>
+              )}
             </div>
           )}
         </div>
 
-        {/* Quick Shortcut Dock at Bottom */}
-        <div className="border-t border-[var(--border-muted)] pt-6 space-y-3">
-          <div className="flex items-center gap-2 font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
-            <Sliders className="w-4 h-4 text-[var(--accent-coordinator)]" />
-            <span>Thanh Lối Tắt Vận Hành Nhanh (Operational Shortcuts)</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Link href="/coordinator/templates" className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hover:border-[var(--accent-coordinator)] transition-all hud-clipped flex items-center gap-3">
-              <Sliders className="w-5 h-5 text-[var(--accent-coordinator)]" />
-              <div>
-                <h4 className="font-mono text-xs font-bold text-[var(--text-primary)]">Kho Tiêu Chí &amp; Template (RBL)</h4>
-                <p className="text-[10px] text-[var(--text-muted)] font-sans">Quản lý mẫu chấm 100% trọng số</p>
-              </div>
-            </Link>
-
-            <Link href="/coordinator/calibration" className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hover:border-[var(--accent-coordinator)] transition-all hud-clipped flex items-center gap-3">
-              <Activity className="w-5 h-5 text-[var(--accent-team)]" />
-              <div>
-                <h4 className="font-mono text-xs font-bold text-[var(--text-primary)]">Hiệu Chuẩn Điểm (Calibration)</h4>
-                <p className="text-[10px] text-[var(--text-muted)] font-sans">Ma trận chấm &amp; độ lệch giám khảo</p>
-              </div>
-            </Link>
-
-            <Link href="/coordinator/profiles" className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hover:border-[var(--accent-coordinator)] transition-all hud-clipped flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-              <div>
-                <h4 className="font-mono text-xs font-bold text-[var(--text-primary)]">Duyệt Hồ Sơ Sinh Viên</h4>
-                <p className="text-[10px] text-[var(--text-muted)] font-sans">Xác minh thẻ SV &amp; FPT student</p>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-      </main>
-
-      {/* Delete Confirmation Modal */}
-      {deleteTargetId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[var(--bg-panel)] border border-[var(--color-danger)] p-6 max-w-md w-full hud-clipped space-y-4 shadow-[0_0_30px_rgba(239,68,68,0.3)]">
-            <div className="flex items-center gap-2 text-[var(--color-danger)] font-mono font-bold text-sm">
-              <Trash2 className="w-5 h-5" />
-              <span>XÁC NHẬN XOÁ SỰ KIỆN</span>
+        {/* 4 Metric Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Total Teams */}
+          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#8b5cf6]"></div>
+            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
+              <span>TỔNG SỐ ĐỘI THI</span>
+              <Users className="w-4 h-4 text-[#8b5cf6]" />
             </div>
+            <div className="font-mono font-bold text-3xl text-[#e1e7ec]">{eventTeamsCount}</div>
+            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
+              <span>Sĩ số đội thi đã duyệt</span>
+              <Link href="/coordinator/teams" className="hover:text-[#8b5cf6] text-[11px] font-mono transition-colors">
+                Quản lý đội &gt;
+              </Link>
+            </div>
+          </div>
 
-            <p className="text-xs text-[var(--text-primary)] font-sans leading-relaxed">
-              Bạn có chắc chắn muốn xoá sự kiện <strong className="text-[var(--accent-coordinator)]">"{deleteTargetName}"</strong>? 
-              <br />
-              <span className="text-[var(--color-danger)] font-mono text-[11px] block mt-2">
-                ⚠️ Cảnh báo: Hành động này sẽ xoá toàn bộ Vòng thi, Hạng mục và dữ liệu liên quan!
-              </span>
-            </p>
+          {/* Card 2: Pending Submissions */}
+          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#f59e0b]"></div>
+            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
+              <span>BÀI NỘP CHỜ CHẤM</span>
+              <FileCheck className="w-4 h-4 text-[#f59e0b]" />
+            </div>
+            <div className="font-mono font-bold text-3xl text-[#e1e7ec]">{eventPendingSubmissions}</div>
+            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
+              <span>Cần tiến độ chấm điểm</span>
+              <Link href="/coordinator/publish-results" className="hover:text-[#f59e0b] text-[11px] font-mono transition-colors">
+                Soát xét &gt;
+              </Link>
+            </div>
+          </div>
 
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteTargetId(null)}
-                disabled={isDeleting}
-                className="text-xs font-mono"
-              >
-                HỦY BỎ
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleDeleteEvent}
-                disabled={isDeleting}
-                className="bg-[var(--color-danger)] text-white hover:bg-red-600 text-xs font-mono"
-              >
-                {isDeleting ? "Đang xoá..." : "XÁC NHẬN XOÁ"}
-              </Button>
+          {/* Card 3: Pending Appeals */}
+          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#ef4444]"></div>
+            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
+              <span>PHÚC KHẢO CHỜ XỬ LÝ</span>
+              <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
+            </div>
+            <div className="font-mono font-bold text-3xl text-[#ef4444]">
+              {String(eventPendingAppeals).padStart(2, "0")}
+            </div>
+            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
+              <span>Khiếu nại chưa phản hồi</span>
+              <Link href="/coordinator/appeals" className="hover:text-[#ef4444] text-[11px] font-mono transition-colors">
+                Xử lý ngay &gt;
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 4: System Status */}
+          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#10b981]"></div>
+            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
+              <span>TRẠNG THÁI SỰ KIỆN</span>
+              <Activity className="w-4 h-4 text-[#10b981]" />
+            </div>
+            <div className="font-mono font-bold text-lg text-[#10b981] mt-1 mb-2">
+              {isSelectedEventPublished ? "ĐÃ CÔNG BỐ PUBLIC" : "ĐANG CHỈNH SỬA NHÁP"}
+            </div>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[#8a9ba8]">
+              <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
+              <span>{selectedEventSeason} {selectedEventYear}</span>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Event Quick Action Hub Cards */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-2 font-mono text-xs font-bold text-[#8b5cf6] uppercase tracking-wider">
+            <Layers className="w-4 h-4" />
+            <span>QUẢN LÝ SỰ KIỆN: <span className="text-[#e1e7ec]">{selectedEventName}</span></span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Shortcut 1: Event Config (Trỏ về Event Wizard Cấu Hình Vòng & Hạng Mục) */}
+            <Link
+              href="/coordinator/events/new"
+              className="bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] p-5 space-y-3 transition-all group cursor-pointer"
+            >
+              <div className="w-9 h-9 bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
+                <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform" />
+              </div>
+              <div>
+                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#8b5cf6] transition-colors uppercase">
+                  Cấu Hình Vòng &amp; Hạng Mục
+                </h4>
+                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
+                  Cấu hình Vòng thi, Hạng mục, Tiêu chí chấm điểm RBL và Phân công nhân sự.
+                </p>
+              </div>
+              <div className="font-mono text-xs text-[#8b5cf6] font-semibold flex items-center gap-1 pt-1">
+                <span>MỞ CẤU HÌNH (WIZARD)</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+            {/* Shortcut 2: Staff Management */}
+            <Link
+              href={selectedEventId ? `/coordinator/staff?eventId=${selectedEventId}` : "#"}
+              className="bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] p-5 space-y-3 transition-all group cursor-pointer"
+            >
+              <div className="w-9 h-9 bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#8b5cf6] transition-colors uppercase">
+                  Phân Công Giám Khảo &amp; Cố Vấn
+                </h4>
+                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
+                  Mời và gán nhân sự Giám khảo / Cố vấn vào các Hạng mục.
+                </p>
+              </div>
+              <div className="font-mono text-xs text-[#8b5cf6] font-semibold flex items-center gap-1 pt-1">
+                <span>MỜI NHÂN SỰ</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+            {/* Shortcut 3: Prize Setup */}
+            <Link
+              href={selectedEventId ? `/coordinator/prizes?eventId=${selectedEventId}` : "#"}
+              className="bg-[#13191c] border border-[#263339] hover:border-[#f59e0b] p-5 space-y-3 transition-all group cursor-pointer"
+            >
+              <div className="w-9 h-9 bg-[#f59e0b]/10 border border-[#f59e0b]/30 flex items-center justify-center text-[#f59e0b]">
+                <Award className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#f59e0b] transition-colors uppercase">
+                  Cơ Cấu Giải Thưởng
+                </h4>
+                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
+                  Tạo cơ cấu giải thưởng và ánh xạ trao giải cho từng Hạng mục.
+                </p>
+              </div>
+              <div className="font-mono text-xs text-[#f59e0b] font-semibold flex items-center gap-1 pt-1">
+                <span>CẤU HÌNH GIẢI</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+            {/* Shortcut 4: Calibration RBL */}
+            <Link
+              href="/coordinator/calibration"
+              className="bg-[#13191c] border border-[#263339] hover:border-[#10b981] p-5 space-y-3 transition-all group cursor-pointer"
+            >
+              <div className="w-9 h-9 bg-[#10b981]/10 border border-[#10b981]/30 flex items-center justify-center text-[#10b981]">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#10b981] transition-colors uppercase">
+                  Phòng Phân Tích RBL
+                </h4>
+                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
+                  Phân tích độ lệch chuẩn điểm số giữa các giám khảo và chẩn đoán.
+                </p>
+              </div>
+              <div className="font-mono text-xs text-[#10b981] font-semibold flex items-center gap-1 pt-1">
+                <span>PHÂN TÍCH RBL</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 };

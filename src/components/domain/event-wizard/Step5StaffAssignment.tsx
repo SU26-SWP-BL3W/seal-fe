@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { Button, Input, Card, Badge } from "@/components/ui";
 import { StaffInviteFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
-import { Users, Mail, UserPlus, Trash2, ArrowLeft, CheckCircle2, ShieldCheck, Clock } from "lucide-react";
+import { Users, Mail, UserPlus, Trash2, ArrowLeft, CheckCircle2, ShieldCheck, Clock, AlertCircle } from "lucide-react";
+import { SYSTEM_ACCOUNTS, checkEmailInSystem } from "@/views/CoordinatorStaffView";
 
 interface Step5StaffAssignmentProps {
   tracks: TrackFormState[];
@@ -46,7 +47,7 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
         <div>
           <h3 className="font-display font-bold text-lg text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
             <Users className="w-5 h-5 text-[var(--accent-mentor)]" />
-            Bước 5: Phân Công Giám Khảo & Cố Vấn (Staffing)
+            Bước 5: Phân Công Giám Khảo &amp; Cố Vấn (Staffing)
           </h3>
           <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
             Gửi email mời Giám khảo &amp; Cố vấn tham gia Hội đồng chuyên môn của Sự kiện.
@@ -59,7 +60,7 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
 
       {isReadOnly && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs hud-clipped flex items-center gap-2">
-          <span>⚠️ Sự kiện đang ở trạng thái <strong>Công Khai (Public)</strong>. Để phân công thêm hoặc gỡ nhân sự, vui lòng bấm <strong>[ 🔒 TẠM ẨN ĐỂ SỬA ]</strong> ở trên cùng.</span>
+          <span>⚠️ Sự kiện đang ở trạng thái <strong>Công Khai (Public)</strong>. Để phân công thêm hoặc gỡ nhân sự, vui lòng bấm <strong>[ 🔒 TẠM ẨN ĐỂ SỬ A ]</strong> ở trên cùng.</span>
         </div>
       )}
 
@@ -75,11 +76,18 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
             <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Địa Chỉ Email Nhân Sự *</label>
             <Input
               type="email"
+              list="wizard-staff-accounts"
               placeholder="e.g. judge.phuchn@fpt.edu.vn"
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
               required
             />
+            {emailInput.trim() && !checkEmailInSystem(emailInput) && (
+              <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Email này chưa tồn tại trong hệ thống</span>
+              </p>
+            )}
           </div>
 
           <div className="space-y-1">
@@ -200,6 +208,15 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
           {isSubmitting ? "Đang gửi lời mời & tạo sự kiện..." : "// KÍCH HOẠT SỰ KIỆN & GỬI LỜI MỜI >"}
         </Button>
       </div>
+
+      {/* Datalist Auto-Feed for System Accounts */}
+      <datalist id="wizard-staff-accounts">
+        {SYSTEM_ACCOUNTS.map((acc) => (
+          <option key={acc.email} value={acc.email}>
+            {acc.fullName} ({acc.email})
+          </option>
+        ))}
+      </datalist>
     </Card>
   );
 };
