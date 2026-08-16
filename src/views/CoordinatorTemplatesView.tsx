@@ -1,343 +1,477 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Card, Input, Badge } from "@/components/ui";
-import { useGetCriterias, useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
-import { Sliders, Plus, CheckCircle2, AlertTriangle, LayoutTemplate, ArrowLeft, Trash2, Check, Lock } from "lucide-react";
+import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
+import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-interface SelectedCriteriaState {
-  criteriaId: string;
-  name: string;
+export interface CriteriaInsideSet {
+  id: string;
+  criterionName: string;
   weight: number;
   maxScore: number;
+  description: string;
+}
+
+export interface CriteriaSetItem {
+  id: string;
+  templateName: string;
+  description: string;
+  createdDate: string;
+  criterias: CriteriaInsideSet[];
 }
 
 export const CoordinatorTemplatesView: React.FC = () => {
-  const { data: criterias = [], refetch: refetchCriterias } = useGetCriterias();
-  const { data: templates = [], refetch: refetchTemplates } = useGetTemplates();
+  const { data: dbTemplates = [], refetch: refetchTemplates } = useGetTemplates();
 
-  // Create Criteria Form
-  const [newCritName, setNewCritName] = useState("");
-  const [newCritDesc, setNewCritDesc] = useState("");
-  const [newCritMaxScore, setNewCritMaxScore] = useState<number>(10);
+  // Local state for Criteria Sets (Bộ Tiêu Chí)
+  const [criteriaSets, setCriteriaSets] = useState<CriteriaSetItem[]>([
+    {
+      id: "set-01",
+      templateName: "Bộ Tiêu Chí Chuẩn: AI & Machine Learning Innovation",
+      description: "Bộ tiêu chí tổng hợp dành cho các hạng mục thi đấu về Trí tuệ nhân tạo, Xử lý ngôn ngữ tự nhiên và Học máy.",
+      createdDate: "2026-08-10",
+      criterias: [
+        { id: "c1", criterionName: "Tính Đổi Mới & Sáng Tạo AI", weight: 30, maxScore: 10, description: "Đánh giá mức độ độc đáo của mô hình AI và giải pháp thuật toán." },
+        { id: "c2", criterionName: "Kiến Trúc Kỹ Thuật & Hiệu Năng", weight: 35, maxScore: 10, description: "Kiểm tra cấu trúc mã nguồn, độ chính xác (Accuracy/F1) và thời gian phản hồi." },
+        { id: "c3", criterionName: "Giao Diện & Trải Nghiệm Người Dùng (UI/UX)", weight: 15, maxScore: 10, description: "Mức độ thân thiện, trực quan và dễ ứng dụng trong thực tế." },
+        { id: "c4", criterionName: "Kỹ Năng Thuyết Trình & Phản Bỏ Q&A", weight: 20, maxScore: 10, description: "Khả năng trình bày logic, làm rõ câu hỏi đối ứng từ Ban giám khảo." },
+      ],
+    },
+    {
+      id: "set-02",
+      templateName: "Bộ Tiêu Chí Chuẩn: Cloud & Infrastructure Architecture",
+      description: "Dành cho các bài thi về Hạ tầng Đám mây, Kubernetes, Serverless và Tối ưu chi phí Cloud.",
+      createdDate: "2026-08-12",
+      criterias: [
+        { id: "c201", criterionName: "Kiến Trúc Đám Mây & Scalability", weight: 40, maxScore: 10, description: "Khả năng mở rộng tự động (Auto-scaling) và tính sẵn sàng cao (High Availability)." },
+        { id: "c202", criterionName: "Bảo Mật & An Toàn Dữ Liệu (Security)", weight: 30, maxScore: 10, description: "Áp dụng chuẩn IAM, mã hóa dữ liệu SSL/TLS và tuân thủ Security Compliance." },
+        { id: "c203", criterionName: "Tối Ưu Chi Phí & Vận Hành (FinOps)", weight: 30, maxScore: 10, description: "Hiệu quả sử dụng tài nguyên Cloud và khả năng giám sát tự động Monitoring." },
+      ],
+    },
+  ]);
 
-  // Create Template Form
-  const [templateName, setTemplateName] = useState("");
-  const [templateDesc, setTemplateDesc] = useState("");
-  const [selectedCriterias, setSelectedCriterias] = useState<SelectedCriteriaState[]>([
-    { criteriaId: "crit-1", name: "Tính đổi mới & sáng tạo", weight: 30, maxScore: 10 },
-    { criteriaId: "crit-2", name: "Kiến trúc hệ thống & Code", weight: 40, maxScore: 10 },
-    { criteriaId: "crit-3", name: "Trải nghiệm người dùng UX/UI", weight: 15, maxScore: 10 },
-    { criteriaId: "crit-4", name: "Kỹ năng thuyết trình & Đô thị", weight: 15, maxScore: 10 },
+  const [selectedSetId, setSelectedSetId] = useState<string>("set-01");
+  const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
+
+  // New Criteria Set Form State
+  const [newSetName, setNewSetName] = useState("");
+  const [newSetDesc, setNewSetDesc] = useState("");
+  const [builderCriterias, setBuilderCriterias] = useState<CriteriaInsideSet[]>([
+    { id: "new-1", criterionName: "Tính Đổi Mới & Đột Phá", weight: 30, maxScore: 10, description: "Ý tưởng sản phẩm sáng tạo." },
+    { id: "new-2", criterionName: "Chất Lượng Mã Nguồn & Kỹ Thuật", weight: 40, maxScore: 10, description: "Cấu trúc source code sạch." },
+    { id: "new-3", criterionName: "Trải Nghiệm Người Dùng (UI/UX)", weight: 15, maxScore: 10, description: "Giao diện trực quan." },
+    { id: "new-4", criterionName: "Thuyết Trình & Trả Lời Giám Khảo", weight: 15, maxScore: 10, description: "Trình bày tự tin." },
   ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const totalWeight = selectedCriterias.reduce((acc, curr) => acc + curr.weight, 0);
-  const isValidWeight100 = totalWeight === 100;
+  // Computed weight for builder
+  const builderTotalWeight = builderCriterias.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
+  const isBuilderValid100 = builderTotalWeight === 100;
 
-  const handleCreateCriteria = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCritName.trim()) return;
-    try {
-      await templatesRepository.createCriteria({
-        criterionName: newCritName,
-        description: newCritDesc,
-        maxScore: newCritMaxScore,
-      });
-      setNewCritName("");
-      setNewCritDesc("");
-      await refetchCriterias();
-      setMessage("Tạo Tiêu chí dùng chung thành công!");
-    } catch {
-      alert("Tạo tiêu chí thất bại.");
-    }
-  };
+  // Active Selected Set
+  const activeSet = criteriaSets.find((s) => s.id === selectedSetId) || criteriaSets[0];
+  const activeSetTotalWeight = activeSet ? activeSet.criterias.reduce((acc, c) => acc + c.weight, 0) : 0;
 
-  const handleAddCriteriaToDraft = (crit: any) => {
-    const critId = crit.id || crit.Id || crit.criteriaId || crit.CriteriaId;
-    if (selectedCriterias.some((c) => c.criteriaId === critId)) return;
-    setSelectedCriterias((prev) => [
+  // Add Row inside Builder
+  const handleAddCriteriaRow = () => {
+    const nextIdx = builderCriterias.length + 1;
+    setBuilderCriterias((prev) => [
       ...prev,
       {
-        criteriaId: critId,
-        name: crit.criterionName || crit.CriterionName || crit.name || "Tiêu chí",
+        id: `new-${Date.now()}`,
+        criterionName: `Tiêu chí thành phần ${nextIdx}`,
         weight: 10,
-        maxScore: crit.maxScore || crit.MaxScore || 10,
+        maxScore: 10,
+        description: "Mô tả hướng dẫn chấm chi tiết cho Giám khảo...",
       },
     ]);
   };
 
-  const handleRemoveCriteriaFromDraft = (critId: string) => {
-    setSelectedCriterias((prev) => prev.filter((c) => c.criteriaId !== critId));
+  // Remove Row inside Builder
+  const handleRemoveCriteriaRow = (id: string) => {
+    if (builderCriterias.length <= 1) return;
+    setBuilderCriterias((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const handleUpdateWeight = (critId: string, weight: number) => {
-    setSelectedCriterias((prev) =>
-      prev.map((c) => (c.criteriaId === critId ? { ...c, weight: Number(weight) } : c))
+  // Update Criteria Row inside Builder
+  const handleUpdateCriteriaRow = (id: string, field: keyof CriteriaInsideSet, value: any) => {
+    setBuilderCriterias((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
     );
   };
 
-  const handleSaveTemplate = async (e: React.FormEvent) => {
+  // Save New Criteria Set into State & Database
+  const handleSaveCriteriaSet = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValidWeight100) {
-      alert(`Tổng trọng số phải đạt ĐÚNG 100%! Hiện tại là ${totalWeight}%.`);
+    if (!newSetName.trim()) {
+      alert("Vui lòng nhập tên cho Bộ Tiêu Chí mới!");
       return;
     }
-    if (!templateName.trim()) {
-      alert("Vui lòng nhập tên Mẫu tiêu chí (Template).");
+    if (!isBuilderValid100) {
+      alert(`Tổng trọng số của Bộ tiêu chí phải bằng ĐÚNG 100%! (Hiện tại: ${builderTotalWeight}%).`);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const resTpl = await templatesRepository.createTemplate({
-        templateName,
-        description: templateDesc,
-      });
-      const tplId = (resTpl.data as any)?.id || (resTpl.data as any)?.Id || resTpl.data?.TemplateId || "tpl-1";
-
-      for (const item of selectedCriterias) {
-        await templatesRepository.addCriteriaToTemplate({
-          templateId: tplId,
-          criteriaId: item.criteriaId,
-          weight: item.weight,
-          maxScore: item.maxScore,
+      if (templatesRepository?.createTemplate) {
+        await templatesRepository.createTemplate({
+          templateName: newSetName,
+          description: newSetDesc,
         });
       }
 
-      await refetchTemplates();
-      setTemplateName("");
-      setTemplateDesc("");
-      setMessage("Tạo và lưu Mẫu tiêu chí RBL (100%) thành công!");
+      const newSet: CriteriaSetItem = {
+        id: `set-${Date.now()}`,
+        templateName: newSetName,
+        description: newSetDesc || "Bộ tiêu chí đánh giá chuẩn cho sự kiện.",
+        createdDate: new Date().toISOString().split("T")[0],
+        criterias: builderCriterias,
+      };
+
+      setCriteriaSets((prev) => [newSet, ...prev]);
+      setSelectedSetId(newSet.id);
+      setIsBuilderModalOpen(false);
+      setNewSetName("");
+      setNewSetDesc("");
+      setSuccessMessage(`Đã tạo và lưu thành công "${newSetName}" vào Kho Bộ Tiêu Chí!`);
     } catch {
-      alert("Lưu Mẫu tiêu chí thất bại.");
+      alert("Lưu Bộ tiêu chí thất bại.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
-      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-4 py-8 space-y-6">
+    <div className="min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white flex flex-col">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 py-8 space-y-6">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#263339] pb-6">
           <div>
-            <Link href="/coordinator/dashboard" className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--accent-coordinator)] hover:underline mb-2">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>&lt; QUAY LẠI DASHBOARD</span>
-            </Link>
-            <h1 className="font-display font-bold text-2xl md:text-3xl text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-3">
-              <Sliders className="w-7 h-7 text-[var(--accent-coordinator)]" />
-              Kho Tiêu Chí &amp; Mẫu Chấm RBL (Evaluation Templates)
+            <div className="flex items-center gap-2 font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider mb-1">
+              <FolderGit2 className="w-4 h-4 text-[#8b5cf6]" />
+              <span>NGÂN HÀNG DỮ LIỆU BAN TỔ CHỨC</span>
+            </div>
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              KHO BỘ TIÊU CHÍ CHẤM ĐIỂM (TEMPLATES BANK)
             </h1>
-            <p className="text-xs text-[var(--text-muted)] mt-1 font-sans">
-              Quản lý thư viện Tiêu chí dùng chung và khởi tạo Mẫu tiêu chí (Template) chuẩn 100% trọng số lưu trực tiếp vào Database.
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1 max-w-3xl">
+              Quản lý các <strong className="text-[#8b5cf6]">Bộ Tiêu Chí</strong> (mỗi Bộ Tiêu Chí gồm nhiều Tiêu Chí thành phần với tổng trọng số 100%) để tái sử dụng nhanh khi cấu hình Sự kiện &amp; Hạng mục.
             </p>
           </div>
 
-          {message && (
-            <Badge tone="success" className="font-mono text-xs flex items-center gap-1.5 py-1.5 px-3">
-              <CheckCircle2 className="w-4 h-4" /> {message}
-            </Badge>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsBuilderModalOpen(true)}
+            className="px-5 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono text-xs font-bold uppercase flex items-center gap-2 cursor-pointer transition-colors shadow-lg shrink-0"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>TẠO BỘ TIÊU CHÍ MỚI</span>
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Success Banner */}
+        {successMessage && (
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono text-xs flex items-center gap-3">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        {/* 2 Panels: Left = Danh Sách Bộ Tiêu Chí (Sets), Right = Chi Tiết Tiêu Chí Thành Phần */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* Panel Trái: Thư viện Tiêu chí Dùng chung (Criterias) */}
-          <div className="lg:col-span-5 space-y-6">
-            <Card className="p-6 space-y-4">
-              <h3 className="font-display font-bold text-base text-[var(--text-primary)] uppercase flex items-center gap-2">
-                <Plus className="w-4 h-4 text-[var(--accent-coordinator)]" />
-                Tạo Tiêu Chí Dùng Chung Mới
-              </h3>
+          {/* Left Panel: DANH SÁCH CÁC BỘ TIÊU CHÍ (4 cols) */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-[#13191c] border border-[#263339] p-4 flex items-center justify-between font-mono text-xs">
+              <span className="font-bold text-[#8b5cf6] uppercase tracking-wider flex items-center gap-2">
+                <FolderGit2 className="w-4 h-4 text-[#8b5cf6]" />
+                CÁC BỘ TIÊU CHÍ ĐÃ LƯU ({criteriaSets.length})
+              </span>
+              <span className="text-[10px] text-[#8a9ba8]">Bấm chọn để xem tiêu chí</span>
+            </div>
 
-              <form onSubmit={handleCreateCriteria} className="space-y-3">
-                <Input type="text" value={newCritName} onChange={(e) => setNewCritName(e.target.value)} placeholder="Tên tiêu chí (VD: Tính độc đáo AI)" required />
-                <Input type="text" value={newCritDesc} onChange={(e) => setNewCritDesc(e.target.value)} placeholder="Mô tả hướng dẫn chấm cho Giám khảo..." />
-                <div className="flex items-center justify-between gap-4">
-                  <div className="w-1/2">
-                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">MaxScore</label>
-                    <Input type="number" value={newCritMaxScore} onChange={(e) => setNewCritMaxScore(Number(e.target.value))} />
-                  </div>
-                  <Button type="submit" variant="secondary" className="w-1/2 text-xs font-mono self-end">
-                    + LƯU TIÊU CHÍ
-                  </Button>
-                </div>
-              </form>
-            </Card>
+            {/* List of Criteria Sets Cards */}
+            <div className="space-y-3">
+              {criteriaSets.map((set) => {
+                const isSelected = set.id === selectedSetId;
+                const setWeight = set.criterias.reduce((acc, c) => acc + c.weight, 0);
 
-            <Card className="p-6 space-y-4">
-              <h3 className="font-display font-bold text-base text-[var(--text-primary)] uppercase">
-                Thư Viện Tiêu Chí Khả Dụng ({criterias.length})
-              </h3>
-              <p className="text-xs text-[var(--text-muted)] font-sans">Bấm [+ Thêm vào Mẫu] để đưa tiêu chí vào Mẫu đang soạn thảo.</p>
-
-              <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
-                {criterias.map((crit: any, index: number) => {
-                  const id = crit.id || crit.Id || crit.criteriaId || crit.CriteriaId || `c-${index}`;
-                  const name = crit.criterionName || crit.CriterionName || crit.criteriaName || crit.name;
-                  const desc = crit.description || crit.Description;
-                  const isAdded = selectedCriterias.some((c) => c.criteriaId === id);
-
-                  return (
-                    <div key={id} className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped flex items-start justify-between gap-3">
+                return (
+                  <div
+                    key={set.id}
+                    onClick={() => setSelectedSetId(set.id)}
+                    className={`p-4 border transition-all cursor-pointer relative space-y-3 ${
+                      isSelected
+                        ? "bg-[#8b5cf6]/15 border-2 border-[#8b5cf6] text-[#e1e7ec] shadow-lg scale-[1.01]"
+                        : "bg-[#13191c] border-[#263339] hover:border-[#8b5cf6] text-[#8a9ba8]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1">
-                        <h4 className="font-sans font-bold text-xs text-[var(--text-primary)]">{name}</h4>
-                        <p className="text-[11px] text-[var(--text-muted)] font-sans line-clamp-2">{desc || "Chưa có mô tả"}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 bg-[#8b5cf6]/20 text-[#8b5cf6] font-mono text-[10px] font-bold uppercase">
+                            BỘ TIÊU CHÍ
+                          </span>
+                          <span className="font-mono text-[10px] text-[#8a9ba8]">{set.createdDate}</span>
+                        </div>
+                        <h3 className="font-sans font-bold text-sm text-[#e1e7ec] line-clamp-2">
+                          {set.templateName}
+                        </h3>
                       </div>
-
-                      <Button
-                        type="button"
-                        variant={isAdded ? "ghost" : "secondary"}
-                        disabled={isAdded}
-                        onClick={() => handleAddCriteriaToDraft(crit)}
-                        className="text-[10px] font-mono shrink-0"
-                      >
-                        {isAdded ? "ĐÃ CHỌN ✓" : "+ THÊM VÀO MẪU"}
-                      </Button>
                     </div>
-                  );
-                })}
-              </div>
-            </Card>
+
+                    <p className="text-xs font-sans text-[#8a9ba8] line-clamp-2 leading-relaxed">
+                      {set.description}
+                    </p>
+
+                    {/* Stats Footer */}
+                    <div className="pt-2 border-t border-[#263339] flex items-center justify-between font-mono text-[11px]">
+                      <span className="text-[#e1e7ec] font-semibold flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-[#8b5cf6]" />
+                        {set.criterias.length} Tiêu Chí Thành Phần
+                      </span>
+                      <span className="text-[#10b981] font-bold">
+                        Tổng Trọng Số: {setWeight}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Panel Phải: Thiết kế & Cấu hình Mẫu Chấm (Template Builder) */}
-          <div className="lg:col-span-7 space-y-6">
-            <Card className="hud-glow-coordinator p-6 space-y-6">
-              
-              {/* Gauge Meter 100% */}
-              <div className="p-4 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-[var(--text-primary)] uppercase flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-[var(--accent-coordinator)]" />
-                    Thanh Kiểm Tra Tổng Trọng Số (Weight Progress Meter)
-                  </span>
-
-                  <Badge tone={isValidWeight100 ? "success" : "danger"} className="font-mono text-xs">
-                    {isValidWeight100 ? "✓ ĐÚNG 100% HỢP LỆ" : `⚠️ ${totalWeight}% / 100%`}
-                  </Badge>
-                </div>
-
-                {/* Progress Visual Bar */}
-                <div className="w-full h-3 bg-black/40 rounded-full overflow-hidden border border-[var(--border-muted)] p-0.5">
-                  <div
-                    className={`h-full transition-all duration-300 rounded-full ${
-                      isValidWeight100 ? "bg-[var(--accent-coordinator)] shadow-[0_0_12px_rgba(56,189,248,0.8)]" : totalWeight > 100 ? "bg-red-500" : "bg-amber-500"
-                    }`}
-                    style={{ width: `${Math.min(totalWeight, 100)}%` }}
-                  />
-                </div>
-
-                {!isValidWeight100 && (
-                  <p className="text-xs text-[var(--color-danger)] font-mono flex items-center gap-1">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                    Tổng trọng số tiêu chí phải đạt chính xác 100%. Hiện tại lệch {Math.abs(100 - totalWeight)}%.
-                  </p>
-                )}
+          {/* Right Panel: CHI TIẾT CÁC TIÊU CHÍ THÀNH PHẦN TRONG BỘ (7 cols) */}
+          <div className="lg:col-span-7 bg-[#13191c] border border-[#263339] p-6 space-y-6">
+            
+            {/* Active Set Header */}
+            <div className="border-b border-[#263339] pb-4 space-y-2">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-[#8b5cf6]" />
+                  CHI TIẾT BỘ TIÊU CHÍ ĐANG CHỌN
+                </span>
+                <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
+                  ✓ TRỌNG SỐ ĐỦ 100%
+                </span>
               </div>
 
-              {/* Form Soạn Mẫu */}
-              <form onSubmit={handleSaveTemplate} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-mono text-[var(--text-muted)]">Tên Mẫu Tiêu Chí (Template Name)</label>
-                  <Input type="text" value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="VD: Mẫu Chuẩn AI & Machine Learning 2026" required />
-                </div>
+              <h2 className="font-sans font-bold text-xl text-[#e1e7ec]">
+                {activeSet.templateName}
+              </h2>
+              <p className="text-xs font-sans text-[#8a9ba8] leading-relaxed">
+                {activeSet.description}
+              </p>
+            </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-mono text-[var(--text-muted)]">Mô Tả Ứng Dụng Mẫu Chấm</label>
-                  <Input type="text" value={templateDesc} onChange={(e) => setTemplateDesc(e.target.value)} placeholder="Áp dụng cho các hạng mục AI, Đột phá Công nghệ..." />
-                </div>
+            {/* Total Weight Bar */}
+            <div className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[#8a9ba8]">THANH PHÂN BỔ TRỌNG SỐ CÁC TIÊU CHÍ:</span>
+                <span className="text-[#10b981] font-bold">{activeSetTotalWeight}% / 100%</span>
+              </div>
+              <div className="w-full h-2.5 bg-[#182024] rounded-full overflow-hidden border border-[#263339]">
+                <div className="h-full bg-[#8b5cf6] rounded-full" style={{ width: `${activeSetTotalWeight}%` }}></div>
+              </div>
+            </div>
 
-                {/* List Selected Criteria with Weight Sliders */}
-                <div className="space-y-3 pt-2">
-                  <h4 className="font-mono font-bold text-xs text-[var(--text-primary)] uppercase">
-                    Danh Sách Tiêu Chí Trong Mẫu ({selectedCriterias.length})
-                  </h4>
-
-                  {selectedCriterias.map((item, index) => (
-                    <div key={item.criteriaId} className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-sans font-bold text-xs text-[var(--text-primary)]">
-                          {index + 1}. {item.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCriteriaFromDraft(item.criteriaId)}
-                          className="text-xs font-mono text-[var(--color-danger)] hover:underline flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Gỡ
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-4 pt-1">
-                        <div className="flex-1 space-y-1">
-                          <input
-                            type="range"
-                            min="5"
-                            max="70"
-                            step="5"
-                            value={item.weight}
-                            onChange={(e) => handleUpdateWeight(item.criteriaId, Number(e.target.value))}
-                            className="w-full accent-[var(--accent-coordinator)] cursor-pointer"
-                          />
-                        </div>
-
-                        <div className="w-24 shrink-0 flex items-center gap-1 bg-[var(--bg-input)] border border-[var(--border-muted)] px-2 py-1 rounded">
-                          <span className="text-xs font-mono text-[var(--text-muted)]">Trọng số:</span>
-                          <span className="text-xs font-mono font-bold text-[var(--accent-coordinator)]">{item.weight}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  accent="coordinator"
-                  disabled={!isValidWeight100 || isSubmitting}
-                  className="w-full hud-clipped font-mono text-xs py-3 flex items-center justify-center gap-2 disabled:opacity-40"
-                >
-                  <Lock className="w-4 h-4" />
-                  {isSubmitting ? "ĐANG LƯU MẪU..." : "LƯU MẪU TIÊU CHÍ VÀO DATABASE (SAVE TEMPLATE)"}
-                </Button>
-              </form>
-            </Card>
-
-            {/* List Existing Templates in Database */}
-            <Card className="p-6 space-y-4">
-              <h3 className="font-display font-bold text-base text-[var(--text-primary)] uppercase flex items-center gap-2">
-                <LayoutTemplate className="w-4 h-4 text-[var(--accent-coordinator)]" />
-                Mẫu Tiêu Chí Đã Lưu Trong Database ({templates.length})
+            {/* List of Component Criteria inside the Set */}
+            <div className="space-y-4">
+              <h3 className="font-mono font-bold text-xs text-[#8a9ba8] uppercase tracking-wider">
+                DANH SÁCH {activeSet.criterias.length} TIÊU CHÍ THÀNH PHẦN BÊN TRONG BỘ:
               </h3>
 
               <div className="space-y-3">
-                {templates.map((tpl: any, index: number) => {
-                  const id = tpl.id || tpl.Id || tpl.templateId || `t-${index}`;
-                  const name = tpl.templateName || tpl.TemplateName || "Mẫu Tiêu Chí";
-                  return (
-                    <div key={id} className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped flex items-center justify-between">
-                      <div>
-                        <h4 className="font-mono font-bold text-xs text-[var(--text-primary)]">{name}</h4>
-                        <p className="text-[11px] text-[var(--text-muted)] font-mono">ID: {id} | 100% Trọng số RBL</p>
+                {activeSet.criterias.map((crit, idx) => (
+                  <div key={crit.id} className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <h4 className="font-sans font-bold text-sm text-[#e1e7ec]">
+                          {crit.criterionName}
+                        </h4>
                       </div>
-                      <Badge tone="success">SẴN SÀNG ÁP DỤNG</Badge>
+
+                      <div className="px-3 py-1 bg-[#182024] border border-[#263339] font-mono text-xs font-bold text-[#8b5cf6] shrink-0">
+                        TRỌNG SỐ: {crit.weight}%
+                      </div>
                     </div>
-                  );
-                })}
+
+                    <p className="text-xs font-sans text-[#8a9ba8] pl-8 leading-relaxed">
+                      {crit.description}
+                    </p>
+
+                    {/* Rubric level scale guide badge */}
+                    <div className="pl-8 pt-1 flex items-center gap-2 font-mono text-[10px] text-[#8a9ba8]">
+                      <span>Thang điểm: Max {crit.maxScore}đ</span>
+                      <span>•</span>
+                      <span className="text-[#10b981]">Chuẩn RBL Level 1-4 (0-100%)</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </Card>
+            </div>
+
           </div>
 
         </div>
 
       </main>
+
+      {/* MODAL BUILDER: TẠO BỘ TIÊU CHÍ MỚI (CONTAINER BUILDER) */}
+      {isBuilderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-[#13191c] border border-[#263339] max-w-4xl w-full p-6 space-y-6 font-mono text-xs my-8 shadow-2xl relative">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#263339] pb-4">
+              <div className="flex items-center gap-2 text-[#8b5cf6] font-bold text-sm uppercase">
+                <Plus className="w-5 h-5 text-[#8b5cf6]" />
+                <span>TẠO BỘ TIÊU CHÍ CHẤM ĐIỂM MỚI (NEW CRITERIA SET)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBuilderModalOpen(false)}
+                className="text-[#8a9ba8] hover:text-white p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCriteriaSet} className="space-y-6">
+              {/* Form Input General Set Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0a0e10] p-4 border border-[#263339]">
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[#8a9ba8] font-bold uppercase">1. TÊN BỘ TIÊU CHÍ *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newSetName}
+                    onChange={(e) => setNewSetName(e.target.value)}
+                    placeholder="Ví dụ: Bộ Tiêu Chí Đánh Giá AI & Cloud Nexus 2026"
+                    className="w-full px-3 py-2 bg-[#182024] border border-[#263339] text-[#e1e7ec] font-sans font-bold text-sm focus:outline-none focus:border-[#8b5cf6]"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[#8a9ba8]">2. MÔ TẢ BỘ TIÊU CHÍ</label>
+                  <input
+                    type="text"
+                    value={newSetDesc}
+                    onChange={(e) => setNewSetDesc(e.target.value)}
+                    placeholder="Mô tả phạm vi ứng dụng hoặc lưu ý chấm điểm cho Bộ tiêu chí..."
+                    className="w-full px-3 py-2 bg-[#182024] border border-[#263339] text-[#e1e7ec] font-sans text-xs focus:outline-none focus:border-[#8b5cf6]"
+                  />
+                </div>
+              </div>
+
+              {/* Progress Weight Meter */}
+              <div className="p-4 bg-[#0a0e10] border border-[#263339] flex items-center justify-between">
+                <span className="font-bold text-[#e1e7ec]">
+                  TỔNG TRỌNG SỐ CÁC TIÊU CHÍ: <span className={isBuilderValid100 ? "text-[#10b981]" : "text-[#ef4444]"}>{builderTotalWeight}%</span>
+                </span>
+                <span className={`px-3 py-1 font-bold ${isBuilderValid100 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-red-500/10 text-red-400 border border-red-500/30"}`}>
+                  {isBuilderValid100 ? "ĐÚNG 100% HỢP LỆ" : `PHẢI BẰNG ĐÚNG 100% (Lệch ${Math.abs(100 - builderTotalWeight)}%)`}
+                </span>
+              </div>
+
+              {/* Criteria List Rows inside Builder */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#8b5cf6] uppercase">3. DANH SÁCH TIÊU CHÍ THÀNH PHẦN BÊN TRONG BỘ ({builderCriterias.length})</span>
+                  <button
+                    type="button"
+                    onClick={handleAddCriteriaRow}
+                    className="px-3 py-1 bg-[#0a0e10] border border-[#263339] text-[#8b5cf6] hover:border-[#8b5cf6] font-mono text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    + THÊM TIÊU CHÍ
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {builderCriterias.map((c, idx) => (
+                    <div key={c.id} className="p-4 bg-[#0a0e10] border border-[#263339] space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-bold text-[#8a9ba8]">Tiêu chí 0{idx + 1}</span>
+                        {builderCriterias.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCriteriaRow(c.id)}
+                            className="text-[#ef4444] hover:underline text-[11px] cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 inline" /> Xóa
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div className="sm:col-span-8">
+                          <input
+                            type="text"
+                            value={c.criterionName}
+                            onChange={(e) => handleUpdateCriteriaRow(c.id, "criterionName", e.target.value)}
+                            placeholder="Tên tiêu chí (VD: Ý tưởng sáng tạo)..."
+                            className="w-full px-3 py-1.5 bg-[#182024] border border-[#263339] text-[#e1e7ec] font-sans font-bold text-xs focus:outline-none focus:border-[#8b5cf6]"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-4 flex items-center gap-2">
+                          <span className="text-[#8a9ba8] text-[10px] shrink-0">Trọng số (%):</span>
+                          <input
+                            type="number"
+                            min={5}
+                            max={100}
+                            value={c.weight}
+                            onChange={(e) => handleUpdateCriteriaRow(c.id, "weight", Number(e.target.value))}
+                            className="w-full px-2 py-1.5 bg-[#182024] border border-[#263339] text-[#8b5cf6] font-mono font-bold text-xs text-center focus:outline-none focus:border-[#8b5cf6]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <input
+                          type="text"
+                          value={c.description}
+                          onChange={(e) => handleUpdateCriteriaRow(c.id, "description", e.target.value)}
+                          placeholder="Mô tả chi tiết hướng dẫn chấm RBL..."
+                          className="w-full px-3 py-1.5 bg-[#182024] border border-[#263339] text-[#8a9ba8] font-sans text-xs focus:outline-none focus:border-[#8b5cf6]"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer Save CTA */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#263339]">
+                <button
+                  type="button"
+                  onClick={() => setIsBuilderModalOpen(false)}
+                  className="px-5 py-2.5 border border-[#263339] text-[#e1e7ec] hover:bg-[#263339]/50 font-mono text-xs"
+                >
+                  HỦY BỎ
+                </button>
+                <button
+                  type="submit"
+                  disabled={!isBuilderValid100 || isSubmitting}
+                  className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono font-bold text-xs uppercase cursor-pointer disabled:opacity-40"
+                >
+                  {isSubmitting ? "ĐANG LƯU BỘ TIÊU CHÍ..." : "LƯU BỘ TIÊU CHÍ VÀO KHO"}
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

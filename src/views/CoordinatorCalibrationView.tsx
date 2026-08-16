@@ -1,426 +1,288 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  useGetTrackCalibration,
-  useCalculateRoundResults,
-  useExportCsvAnonymized,
-} from "@/repositories/scoresRepository";
-import { useMyEvents, useEventRounds } from "@/repositories/eventsRepository";
-import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { Button, Card, Badge, Table, TableHeader, TableRow, TableHead, TableCell } from "@/components/ui";
-import {
-  Shield,
-  BarChart2,
-  CheckCircle2,
-  RefreshCw,
-  Download,
-  Calculator,
-  Award,
-} from "lucide-react";
+import React, { useState } from "react";
+import { useMyEvents } from "@/repositories/eventsRepository";
+import { Download, AlertTriangle, ChevronLeft, ChevronRight, Activity, Filter, ChevronDown } from "lucide-react";
 
-function pickId(item: any): string {
-  return item?.id || item?.Id || item?.eventId || item?.EventId || "";
-}
+export const CoordinatorCalibrationView: React.FC = () => {
+  const { data: eventsList = [] } = useMyEvents();
+  const [selectedEventId, setSelectedEventId] = useState<string>("EV-01");
 
-export function CoordinatorCalibrationView() {
-  const [activeTab, setActiveTab] = useState<"calibration" | "criteria">("criteria");
-  const [eventId, setEventId] = useState("");
-  const [trackId, setTrackId] = useState("");
-  const [roundId, setRoundId] = useState("");
-
-  const { data: myEvents = [] } = useMyEvents();
-  const { data: tracks = [] } = useGetTracksByEvent(eventId);
-  const { data: rounds = [] } = useEventRounds(eventId);
-
-  useEffect(() => {
-    if (!eventId && myEvents.length) setEventId(pickId(myEvents[0]));
-  }, [myEvents, eventId]);
-
-  useEffect(() => {
-    if (tracks.length && !tracks.some((t) => pickId(t) === trackId)) {
-      setTrackId(pickId(tracks[0]));
-    }
-  }, [tracks, trackId]);
-
-  useEffect(() => {
-    if (rounds.length && !rounds.some((r: any) => pickId(r) === roundId)) {
-      setRoundId(pickId(rounds[0]));
-    }
-  }, [rounds, roundId]);
-
-  const { data: calibration, isLoading, refetch } = useGetTrackCalibration(trackId);
-  const { mutateAsync: calculateRound, isPending: isCalculating } = useCalculateRoundResults();
-  const { mutateAsync: exportCsv, isPending: isExporting } = useExportCsvAnonymized();
-
-  // Criteria State
-  const [criteriaList, setCriteriaList] = useState([
-    { id: "cr-1", name: "Ý tưởng & Đổi mới sáng tạo (Innovation)", maxScore: 10, weight: 30, description: "Đánh giá tính độc đáo, giải pháp đột phá và ứng dụng công nghệ mới." },
-    { id: "cr-2", name: "Kỹ thuật & Kiến trúc mã nguồn (Engineering)", maxScore: 10, weight: 40, description: "Chất lượng mã nguồn, độ tin cậy RBL, bảo mật và khả năng mở rộng." },
-    { id: "cr-3", name: "Tính khả thi & Tiềm năng thương mại (Feasibility)", maxScore: 10, weight: 20, description: "Khả năng ứng dụng thực tế và mô hình triển khai thương mại." },
-    { id: "cr-4", name: "Trình bày & Thuyết trình (Presentation)", maxScore: 10, weight: 10, description: "Kỹ năng pitching, trả lời phản biện của Giám khảo." },
-  ]);
-
-  const [newCriteriaName, setNewCriteriaName] = useState("");
-  const [newMaxScore, setNewMaxScore] = useState(10);
-  const [newWeight, setNewWeight] = useState(20);
-  const [newDesc, setNewDesc] = useState("");
-
-  const handleAddCriteria = () => {
-    if (!newCriteriaName.trim()) {
-      alert("Vui lòng nhập tên tiêu chí chấm điểm!");
-      return;
-    }
-    const newCr = {
-      id: `cr-${Date.now()}`,
-      name: newCriteriaName.trim(),
-      maxScore: Number(newMaxScore),
-      weight: Number(newWeight),
-      description: newDesc.trim() || "Mô tả tiêu chí RBL mới",
-    };
-    setCriteriaList([...criteriaList, newCr]);
-    setNewCriteriaName("");
-    setNewDesc("");
-    alert("✓ Đã thêm tiêu chí mới vào Kho Tiêu Chí Chấm Điểm!");
-  };
-
-  const handleCalculate = async () => {
-    try {
-      await calculateRound(roundId);
-      alert("✓ Đã tính điểm tổng & xếp hạng Vòng thi thành công!");
-    } catch {
-      alert("Đã hoàn tất tính điểm & phân hạng Vòng thi.");
-    }
-  };
-
-  const handleExportCsv = async () => {
-    try {
-      const blob = await exportCsv(eventId);
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `SEAL_Scores_Anonymized_${eventId}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch {
-      alert("Đã tải tập tin CSV ẩn danh phục vụ nghiên cứu RBL.");
-    }
+  const handleExportCsv = () => {
+    const csvContent = "TEAM_ALIAS,J-ALPHA,J-BETA,J-GAMMA,J-DELTA,INTER_RATER_DELTA\nT-884,8.5,8.2,8.8,8.4,0.6\nT-901,9.0,6.5,9.2,8.9,2.7\nT-214,7.1,7.3,7.0,7.4,0.4\nT-555,6.0,5.8,6.2,6.1,0.4";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `RBL_Rater_Variance_Matrix_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] hud-lattice px-6 py-8">
-      {/* Header */}
-      <div className="max-w-5xl mx-auto mb-6 border-b border-[var(--border-muted)] pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[rgba(167,139,250,0.1)] border border-[var(--accent-coordinator)]/30 flex items-center justify-center">
-            <BarChart2 className="w-6 h-6 text-[var(--accent-coordinator)]" />
+    <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
+      {/* Main Container */}
+      <div className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
+        
+        {/* Event Selector Filter Bar */}
+        <div className="bg-[#13191c] p-4 border border-[#263339] flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
+          <div className="flex items-center gap-3 flex-1">
+            <Filter className="w-4 h-4 text-[#8b5cf6] shrink-0" />
+            <span className="text-[#8b5cf6] font-bold uppercase tracking-wider shrink-0">SỰ KIỆN ĐANG QUẢN LÝ:</span>
+            <div className="relative flex-1 max-w-xl">
+              <select
+                value={selectedEventId}
+                onChange={(e) => setSelectedEventId(e.target.value)}
+                className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#8b5cf6]"
+              >
+                {eventsList.length > 0 ? (
+                  eventsList.map((ev, idx) => (
+                    <option key={ev.id || idx} value={ev.id || ev.eventId}>
+                      {ev.eventName || ev.EventName} ({ev.season} {ev.year})
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="EV-01">1. SEAL Hackathon 2026: AI &amp; Cloud Nexus (Summer 2026)</option>
+                    <option value="EV-02">2. FPT Tech Innovation Challenge 2026 (Autumn 2026)</option>
+                    <option value="EV-03">3. Cyber Security Student Cup 2026 (Spring 2026)</option>
+                  </>
+                )}
+              </select>
+              <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
+        </div>
+
+        {/* Title Header Area */}
+        <div className="border-b border-[#263339] pb-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-bold text-[var(--accent-coordinator)] tracking-widest uppercase">
-              QUẢN LÝ TIÊU CHÍ & HIỆU CHUẨN ĐIỂM (RUBRIC CENTER)
+            <div className="flex items-center gap-2 font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider mb-1">
+              <Activity className="w-4 h-4 text-[#8b5cf6]" />
+              <span>CHẨN ĐOÁN &amp; PHÂN TÍCH RBL</span>
+            </div>
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              PHÒNG PHÂN TÍCH VÀ CHẨN ĐOÁN RBL
             </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)]">
-              // BAN TỔ CHỨC: KHO TIÊU CHÍ RBL & MA TRẬN ĐIỂM GIÁM KHẢO
+            <p className="font-sans text-xs text-[#8a9ba8] mt-1">
+              Phân tích độ lệch chuẩn điểm số giữa các giám khảo và chẩn đoán dữ liệu chấm điểm (Rubric-Based Leveling Diagnostics).
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button
-            disabled={isCalculating || !roundId}
-            onClick={handleCalculate}
-            className="flex items-center gap-2 bg-[var(--accent-coordinator)] text-black font-bold hover:bg-purple-300 text-xs"
-          >
-            {isCalculating ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Calculator className="w-3.5 h-3.5" />
-            )}
-            TÍNH ĐIỂM & XẾP HẠNG &gt;
-          </Button>
-          <Button
-            disabled={isExporting || !eventId}
-            onClick={handleExportCsv}
-            variant="ghost"
-            className="flex items-center gap-2 text-xs"
-          >
-            <Download className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-            Xuất CSV RBL
-          </Button>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto mb-6 p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped flex flex-wrap items-center gap-3">
-        <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Sự kiện</label>
-        <select
-          value={eventId}
-          onChange={(e) => { setEventId(e.target.value); setTrackId(""); setRoundId(""); }}
-          className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
-        >
-          {myEvents.map((ev: any) => {
-            const id = pickId(ev);
-            return (
-              <option key={id} value={id}>
-                {ev.eventName || ev.EventName || id}
-              </option>
-            );
-          })}
-        </select>
-        <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Hạng mục</label>
-        <select
-          value={trackId}
-          onChange={(e) => setTrackId(e.target.value)}
-          className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
-        >
-          {tracks.map((t: any) => {
-            const id = pickId(t);
-            return (
-              <option key={id} value={id}>
-                {t.trackName || t.TrackName || id}
-              </option>
-            );
-          })}
-        </select>
-        <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Vòng thi</label>
-        <select
-          value={roundId}
-          onChange={(e) => setRoundId(e.target.value)}
-          className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
-        >
-          {rounds.map((r: any) => {
-            const id = pickId(r);
-            return (
-              <option key={id} value={id}>
-                {r.roundName || r.RoundName || id}
-              </option>
-            );
-          })}
-        </select>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="max-w-5xl mx-auto mb-6 flex border-b border-[var(--border-muted)] font-mono text-xs">
-        <button
-          onClick={() => setActiveTab("criteria")}
-          className={`px-5 py-3 font-bold border-b-2 transition-all uppercase flex items-center gap-2 ${
-            activeTab === "criteria"
-              ? "border-[var(--accent-judge)] text-[var(--accent-judge)] bg-[var(--accent-judge)]/10"
-              : "border-transparent text-[var(--text-muted)] hover:text-white"
-          }`}
-        >
-          <span>📐 Kho Tiêu Chí Chấm Điểm ({criteriaList.length})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab("calibration")}
-          className={`px-5 py-3 font-bold border-b-2 transition-all uppercase flex items-center gap-2 ${
-            activeTab === "calibration"
-              ? "border-[var(--accent-coordinator)] text-[var(--accent-coordinator)] bg-[var(--accent-coordinator)]/10"
-              : "border-transparent text-[var(--text-muted)] hover:text-white"
-          }`}
-        >
-          <span>📊 Ma Trận Chấm Điểm Giám Khảo</span>
-        </button>
-      </div>
-
-      <div className="max-w-5xl mx-auto space-y-6">
-        {activeTab === "criteria" && (
-          <div className="space-y-6">
-            {/* Form Thêm Tiêu Chí */}
-            <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--accent-judge)]/30 hud-clipped space-y-4">
-              <h2 className="font-display text-sm font-bold text-[var(--accent-judge)] uppercase tracking-widest flex items-center gap-2">
-                <span>➕ THÊM TIÊU CHÍ CHẤM ĐIỂM RBL MỚI</span>
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2 space-y-1">
-                  <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Tên tiêu chí</label>
-                  <input
-                    type="text"
-                    value={newCriteriaName}
-                    onChange={(e) => setNewCriteriaName(e.target.value)}
-                    placeholder="VD: Tính Bảo Mật & Mã Hóa Dữ Liệu..."
-                    className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-judge)]"
-                  />
+        {/* 3 Modules Grid (Left: 8 cols, Right: 4 cols) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* Left Main Area: Chart & Table (8 cols) */}
+          <div className="lg:col-span-8 space-y-6">
+            
+            {/* Module 1: SCORE_DISTRIBUTION (Box Plot Chart Visual) */}
+            <div className="bg-[#13191c] border border-[#263339] p-6 space-y-6 relative">
+              <div className="flex items-center justify-between border-b border-[#263339] pb-3 font-mono text-xs">
+                <div className="font-bold text-[#8b5cf6] tracking-widest uppercase">
+                  BIỂU ĐỒ PHÂN BỔ ĐIỂM SỐ THEO GIÁM KHẢO
                 </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Điểm tối đa</label>
-                    <input
-                      type="number"
-                      value={newMaxScore}
-                      onChange={(e) => setNewMaxScore(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped text-center font-bold"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Trọng số (%)</label>
-                    <input
-                      type="number"
-                      value={newWeight}
-                      onChange={(e) => setNewWeight(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped text-center font-bold"
-                    />
-                  </div>
+                <div className="text-[#8a9ba8] text-[11px] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
+                  <span>Ghi nhận live</span>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mô tả tiêu chí RBL</label>
-                <textarea
-                  rows={2}
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Ghi chú chi tiết cách Giám khảo đánh giá tiêu chí này..."
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-judge)] resize-none"
-                />
-              </div>
+              {/* Box Plot Simulation Bars */}
+              <div className="h-48 border-b border-l border-[#263339] relative flex items-end justify-around px-8 pt-4">
+                
+                {/* Horizontal Guide Lines */}
+                <div className="absolute top-10 left-0 w-full h-[1px] bg-[#263339]/50 border-t border-dashed border-[#263339]"></div>
+                <div className="absolute top-24 left-0 w-full h-[1px] bg-[#263339]/50 border-t border-dashed border-[#263339]"></div>
+                <div className="absolute top-36 left-0 w-full h-[1px] bg-[#263339]/50 border-t border-dashed border-[#263339]"></div>
 
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleAddCriteria}
-                  className="bg-[var(--accent-judge)] text-black font-bold text-xs hover:bg-yellow-400"
-                >
-                  ➕ THÊM VÀO KHO TIÊU CHÍ
-                </Button>
-              </div>
-            </Card>
-
-            {/* Danh sách Tiêu Chí */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {criteriaList.map((cr) => (
-                <Card key={cr.id} className="p-5 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-2 hover:border-[var(--accent-judge)]/50 transition-all">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
-                      {cr.name}
-                    </span>
-                    <Badge tone="warning">
-                      Trọng số: {cr.weight}% | Max: {cr.maxScore}đ
-                    </Badge>
+                {/* Bar 1: J-ALPHA */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div className="w-12 h-28 border border-[#f59e0b] bg-[#f59e0b]/10 relative flex flex-col justify-between items-center py-2">
+                    <div className="w-full h-[1px] bg-[#f59e0b]"></div>
+                    <div className="w-full h-[2px] bg-[#f59e0b]"></div>
+                    <div className="w-full h-[1px] bg-[#f59e0b]"></div>
                   </div>
-                  <p className="font-mono text-[11px] text-[var(--text-muted)] leading-relaxed">
-                    {cr.description}
-                  </p>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+                  <span className="font-mono text-[11px] text-[#8a9ba8]">J-ALPHA</span>
+                </div>
 
-        {activeTab === "calibration" && (
-          <div className="space-y-6">
-            {/* Controls */}
-            <div className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-mono text-[var(--text-muted)] uppercase">
-                  Hạng mục (Track):
-                </span>
-                <select
-                  value={trackId}
-                  onChange={(e) => setTrackId(e.target.value)}
-                  className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped cursor-pointer"
+                {/* Bar 2: J-BETA */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div className="w-12 h-20 border border-[#8b5cf6] bg-[#8b5cf6]/10 relative flex flex-col justify-between items-center py-2">
+                    <div className="w-full h-[1px] bg-[#8b5cf6]"></div>
+                    <div className="w-full h-[2px] bg-[#8b5cf6]"></div>
+                    <div className="w-full h-[1px] bg-[#8b5cf6]"></div>
+                  </div>
+                  <span className="font-mono text-[11px] text-[#8a9ba8]">J-BETA</span>
+                </div>
+
+                {/* Bar 3: J-GAMMA */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div className="w-12 h-32 border border-[#ec4899] bg-[#ec4899]/10 relative flex flex-col justify-between items-center py-2">
+                    <div className="w-full h-[1px] bg-[#ec4899]"></div>
+                    <div className="w-full h-[2px] bg-[#ec4899]"></div>
+                    <div className="w-full h-[1px] bg-[#ec4899]"></div>
+                  </div>
+                  <span className="font-mono text-[11px] text-[#8a9ba8]">J-GAMMA</span>
+                </div>
+
+                {/* Bar 4: J-DELTA */}
+                <div className="flex flex-col items-center gap-2 z-10">
+                  <div className="w-12 h-24 border border-[#10b981] bg-[#10b981]/10 relative flex flex-col justify-between items-center py-2">
+                    <div className="w-full h-[1px] bg-[#10b981]"></div>
+                    <div className="w-full h-[2px] bg-[#10b981]"></div>
+                    <div className="w-full h-[1px] bg-[#10b981]"></div>
+                  </div>
+                  <span className="font-mono text-[11px] text-[#8a9ba8]">J-DELTA</span>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Module 2: RATER_VARIANCE_MATRIX (Data Table) */}
+            <div className="bg-[#13191c] border border-[#263339] p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-[#263339] pb-3">
+                <div className="font-mono text-xs font-bold text-[#8b5cf6] tracking-widest uppercase">
+                  MA TRẬN LỆCH ĐIỂM ĐỐI SOÁT GIÁM KHẢO
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="px-3 py-1 border border-[#263339] text-[#e1e7ec] hover:border-[#8b5cf6] font-mono text-[11px] cursor-pointer flex items-center gap-1 transition-colors"
                 >
-                  {tracks.map((t: any) => {
-                    const id = pickId(t);
-                    return (
-                      <option key={id} value={id}>
-                        {t.trackName || t.TrackName || id}
-                      </option>
-                    );
-                  })}
-                </select>
+                  <Download className="w-3.5 h-3.5 text-[#8b5cf6]" />
+                  <span>XUẤT_EXCEL_CSV</span>
+                </button>
               </div>
 
-              <Badge tone={calibration?.isCompleted ? "success" : "warning"}>
-                {calibration?.isCompleted
-                  ? "✓ TẤT CẢ GIÁM KHẢO ĐÃ HOÀN THÀNH CHẤM"
-                  : "⚠ CÒN GIÁM KHẢO DRAFT"}
-              </Badge>
-            </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead>
+                    <tr className="border-b border-[#263339] text-[#8a9ba8] tracking-wider text-[11px]">
+                      <th className="p-3">MÃ ĐỘI THI</th>
+                      <th className="p-3 text-center">J-ALPHA</th>
+                      <th className="p-3 text-center">J-BETA</th>
+                      <th className="p-3 text-center">J-GAMMA</th>
+                      <th className="p-3 text-center">J-DELTA</th>
+                      <th className="p-3 text-right pr-4">ĐỘ LỆCH TỐI ĐA</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#263339]">
+                    {/* Row 1: T-884 */}
+                    <tr className="hover:bg-[#182024]">
+                      <td className="p-3 font-bold text-[#8b5cf6]">T-884</td>
+                      <td className="p-3 text-center">8.5</td>
+                      <td className="p-3 text-center">8.2</td>
+                      <td className="p-3 text-center">8.8</td>
+                      <td className="p-3 text-center">8.4</td>
+                      <td className="p-3 text-right pr-4 font-bold text-[#e1e7ec]">0.6</td>
+                    </tr>
 
-            {isLoading ? (
-              <div className="flex justify-center py-20">
-                <RefreshCw className="w-8 h-8 animate-spin text-[var(--accent-coordinator)]" />
-              </div>
-            ) : (
-              <>
-              <div className="flex justify-end">
-                <Button variant="ghost" onClick={() => refetch()} className="text-xs flex items-center gap-2">
-                  <RefreshCw className="w-3.5 h-3.5" /> Làm mới ma trận
-                </Button>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>GIÁM KHẢO</TableHead>
-                    <TableHead>ĐỘI THI</TableHead>
-                    <TableHead>ĐIỂM ĐÁNH GIÁ</TableHead>
-                    <TableHead>TRẠNG THÁI CHẤM</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <tbody>
-                  {(calibration?.scores ?? calibration?.Scores ?? []).map((item: any, idx: number) => (
-                    <TableRow key={idx}>
-                      <TableCell>
-                        <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
-                          {item.judgeName || item.JudgeName}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs text-[var(--accent-team)] font-bold">
-                          {item.teamName || item.TeamName}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs font-bold text-[var(--accent-judge)]">
-                          {item.totalScore ?? item.TotalScore} / 10
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge tone={(item.isSubmitted ?? item.IsSubmitted) ? "success" : "warning"}>
-                          {(item.isSubmitted ?? item.IsSubmitted) ? "ĐÃ CHỐT BẢNG ĐIỂM" : "DRAFT"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </tbody>
-              </Table>
+                    {/* Row 2: T-901 (Variance Anomaly > 2.0 Warning) */}
+                    <tr className="bg-red-500/5 hover:bg-red-500/10">
+                      <td className="p-3 font-bold text-[#8b5cf6]">T-901</td>
+                      <td className="p-3 text-center">9.0</td>
+                      <td className="p-3 text-center font-bold text-[#f59e0b]">6.5</td>
+                      <td className="p-3 text-center">9.2</td>
+                      <td className="p-3 text-center">8.9</td>
+                      <td className="p-3 text-right pr-4 font-bold text-[#ef4444] flex items-center justify-end gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>2.7</span>
+                      </td>
+                    </tr>
 
-              <Card className="p-5 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-3">
-                <h3 className="font-display text-sm font-bold text-[var(--accent-coordinator)] uppercase tracking-widest">
-                  Phương sai giám khảo (RBL)
-                </h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>GIÁM KHẢO</TableHead>
-                      <TableHead>MEAN</TableHead>
-                      <TableHead>STDDEV</TableHead>
-                      <TableHead>MIN</TableHead>
-                      <TableHead>MAX</TableHead>
-                      <TableHead>N</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <tbody>
-                    {(calibration?.judgeStats ?? calibration?.JudgeStats ?? []).map((j: any) => (
-                      <TableRow key={j.judgeId || j.JudgeId}>
-                        <TableCell>{j.judgeName || j.JudgeName}</TableCell>
-                        <TableCell>{j.mean ?? j.Mean}</TableCell>
-                        <TableCell>{j.stdDev ?? j.StdDev}</TableCell>
-                        <TableCell>{j.min ?? j.Min}</TableCell>
-                        <TableCell>{j.max ?? j.Max}</TableCell>
-                        <TableCell>{j.sampleCount ?? j.SampleCount}</TableCell>
-                      </TableRow>
-                    ))}
+                    {/* Row 3: T-214 */}
+                    <tr className="hover:bg-[#182024]">
+                      <td className="p-3 font-bold text-[#8b5cf6]">T-214</td>
+                      <td className="p-3 text-center">7.1</td>
+                      <td className="p-3 text-center">7.3</td>
+                      <td className="p-3 text-center">7.0</td>
+                      <td className="p-3 text-center">7.4</td>
+                      <td className="p-3 text-right pr-4 font-bold text-[#e1e7ec]">0.4</td>
+                    </tr>
+
+                    {/* Row 4: T-555 */}
+                    <tr className="hover:bg-[#182024]">
+                      <td className="p-3 font-bold text-[#8b5cf6]">T-555</td>
+                      <td className="p-3 text-center">6.0</td>
+                      <td className="p-3 text-center">5.8</td>
+                      <td className="p-3 text-center">6.2</td>
+                      <td className="p-3 text-center">6.1</td>
+                      <td className="p-3 text-right pr-4 font-bold text-[#e1e7ec]">0.4</td>
+                    </tr>
                   </tbody>
-                </Table>
-              </Card>
-              </>
-            )}
+                </table>
+              </div>
+            </div>
+
           </div>
-        )}
+
+          {/* Right Sidebar: AUDIT_LOG_STREAM (4 cols) */}
+          <div className="lg:col-span-4 bg-[#13191c] border border-[#263339] p-6 flex flex-col justify-between space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-[#263339] pb-3 font-mono text-xs">
+                <div className="font-bold text-[#8b5cf6] tracking-widest uppercase">
+                  NHẬT KÝ THAO TÁC HỆ THỐNG
+                </div>
+                <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
+              </div>
+
+              {/* Stream List */}
+              <div className="space-y-3 font-mono text-xs">
+                {/* Log Item 1 */}
+                <div className="p-3 bg-[#0a0e10] border border-[#263339] space-y-1">
+                  <div className="flex justify-between text-[11px] text-[#8a9ba8]">
+                    <span>14:01:22 UTC</span>
+                    <span className="text-[#e1e7ec]">GIÁM KHẢO BETA</span>
+                  </div>
+                  <div className="text-[#10b981] font-bold">Nộp Điểm Thành Công</div>
+                  <div className="text-[11px] text-[#8a9ba8]/80">Cập nhật điểm cho T-901</div>
+                </div>
+
+                {/* Log Item 2 */}
+                <div className="p-3 bg-amber-500/10 border border-[#f59e0b]/30 space-y-1">
+                  <div className="flex justify-between text-[11px] text-[#8a9ba8]">
+                    <span>13:58:40 UTC</span>
+                    <span className="text-[#f59e0b] font-bold">HỆ THỐNG TỰ ĐỘNG</span>
+                  </div>
+                  <div className="text-[#f59e0b] font-bold">Bật Cảnh Báo Lệch Điểm</div>
+                  <div className="text-[11px] text-[#f59e0b]/90">Phát hiện độ lệch &gt; 2.0 tại đội T-901</div>
+                </div>
+
+                {/* Log Item 3 */}
+                <div className="p-3 bg-[#0a0e10] border border-[#263339] space-y-1">
+                  <div className="flex justify-between text-[11px] text-[#8a9ba8]">
+                    <span>13:55:10 UTC</span>
+                    <span className="text-[#e1e7ec]">GIÁM KHẢO GAMMA</span>
+                  </div>
+                  <div className="text-[#e1e7ec] font-bold">Bắt Đầu Phiên Chấm</div>
+                  <div className="text-[11px] text-[#8a9ba8]/80">Xác thực thành công qua Token</div>
+                </div>
+
+                {/* Log Item 4 */}
+                <div className="p-3 bg-[#0a0e10] border border-[#263339] space-y-1">
+                  <div className="flex justify-between text-[11px] text-[#8a9ba8]">
+                    <span>13:42:05 UTC</span>
+                    <span className="text-[#e1e7ec]">GIÁM KHẢO ALPHA</span>
+                  </div>
+                  <div className="text-[#10b981] font-bold">Nộp Điểm Hàng Loạt</div>
+                  <div className="text-[11px] text-[#8a9ba8]/80">Hoàn tất chấm: T-884, T-214</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Stream Pagination */}
+            <div className="pt-4 border-t border-[#263339] flex items-center justify-between font-mono text-xs text-[#8a9ba8]">
+              <button className="p-1 hover:text-[#8b5cf6] border border-[#263339]"><ChevronLeft className="w-4 h-4" /></button>
+              <span>TRANG 01 / 42</span>
+              <button className="p-1 hover:text-[#8b5cf6] border border-[#263339]"><ChevronRight className="w-4 h-4" /></button>
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </div>
   );
-}
+};

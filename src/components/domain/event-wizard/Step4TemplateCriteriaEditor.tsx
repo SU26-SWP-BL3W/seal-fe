@@ -1,19 +1,17 @@
 "use client";
 
-import React from "react";
-import { Button, Input, Card } from "@/components/ui";
-import { TemplateCriteriaFormState } from "@/viewModels/useCreateEventWizardViewModel";
-import { useGetCriterias } from "@/repositories/templatesRepository";
-import { Sliders, Plus, Trash2, ArrowLeft, ArrowRight, AlertTriangle, CheckCircle2, Award } from "lucide-react";
+import React, { useState } from "react";
+import { TemplateCriteriaFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
+import { AlertTriangle, Plus, X, Sliders, ArrowLeft, ArrowRight, CheckCircle2, Save, Layers, Lock, Edit3, ShieldCheck } from "lucide-react";
 
 interface Step4TemplateCriteriaEditorProps {
-  tracks?: any[];
+  tracks?: TrackFormState[];
   templates?: any[];
   criteriasByTrack?: Record<string, TemplateCriteriaFormState[]>;
   onUpdateTrackCriterias?: (trackId: string, list: TemplateCriteriaFormState[]) => void;
   onApplyToAllTracks?: (list: TemplateCriteriaFormState[]) => void;
-  templateName: string;
-  onUpdateTemplateName: (name: string) => void;
+  templateName?: string;
+  onUpdateTemplateName?: (name: string) => void;
   criterias: TemplateCriteriaFormState[];
   totalWeight: number;
   isValidWeight100: boolean;
@@ -31,8 +29,6 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
   criteriasByTrack = {},
   onUpdateTrackCriterias,
   onApplyToAllTracks,
-  templateName,
-  onUpdateTemplateName,
   criterias,
   totalWeight,
   isValidWeight100,
@@ -43,477 +39,365 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
   onPrev,
   isReadOnly = false,
 }) => {
-  const { data: realCriteriaBank = [] } = useGetCriterias();
-  const criteriaPresetList = realCriteriaBank;
+  const [selectedTrackId, setSelectedTrackId] = useState<string>(tracks[0]?.id || "");
+  const [saveToBankToggleMap, setSaveToBankToggleMap] = useState<Record<string, boolean>>({});
 
-  const [syncMessage, setSyncMessage] = React.useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = React.useState<Record<string, boolean>>({});
+  const activeTrack = tracks.find((t) => t.id === selectedTrackId) || tracks[0];
 
-  // Render per-track cards if tracks exist
-  const hasMultipleTracks = tracks.length > 0;
+  // Check if active track is using an existing system template vs custom
+  const selectedTemplate = templates.find(
+    (t: any) => (t.id || t.Id || t.templateId || t.TemplateId) === activeTrack?.templateId
+  );
 
-  // Calculate overall validity across all tracks
-  const isAllTracksValid = hasMultipleTracks
-    ? tracks.every((trk) => {
-        const inheritedTpl = templates.find((t: any) => (t.id || t.Id || t.templateId || t.TemplateId) === trk.templateId);
-        const defaultInitial = trk.templateId === "__custom__" ? [] : (inheritedTpl?.criterias ?? criterias);
-        const list = criteriasByTrack[trk.id] ?? defaultInitial;
-        const w = list.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
-        return Math.abs(w - 100) < 0.01;
-      })
-    : isValidWeight100;
+  const isInheritedTemplate = Boolean(selectedTemplate && activeTrack?.templateId !== "__custom__");
+
+  // Toggle state for saving custom rubric to template bank
+  const saveToBank = activeTrack ? (saveToBankToggleMap[activeTrack.id] ?? true) : true;
+  const toggleSaveToBank = () => {
+    if (activeTrack) {
+      setSaveToBankToggleMap((prev) => ({ ...prev, [activeTrack.id]: !saveToBank }));
+    }
+  };
+
+  // Active track's criteria list
+  const activeCriteriaList = isInheritedTemplate && selectedTemplate?.criterias?.length
+    ? selectedTemplate.criterias.map((c: any, idx: number) => ({
+        criteriaId: c.criteriaId || c.CriteriaId || `crit-sys-${idx}`,
+        criterionName: c.criterionName || c.CriterionName || c.name || "Tiêu chí hệ thống",
+        description: c.description || c.Description || "",
+        weight: c.weight || c.Weight || 30,
+        maxScore: c.maxScore || c.MaxScore || 10,
+      }))
+    : activeTrack && criteriasByTrack[activeTrack.id]
+    ? criteriasByTrack[activeTrack.id]
+    : criterias;
+
+  const activeTotalWeight = activeCriteriaList.reduce((acc: number, c: any) => acc + (Number(c.weight) || 0), 0);
+  const activeIsValidWeight100 = Math.abs(activeTotalWeight - 100) < 0.01;
+  const missingWeight = 100 - activeTotalWeight;
+
+  const handleUpdateActiveCriteria = (index: number, field: keyof TemplateCriteriaFormState, value: any) => {
+    if (activeTrack && onUpdateTrackCriterias) {
+      const nextList = [...activeCriteriaList];
+      nextList[index] = { ...nextList[index], [field]: field === "weight" || field === "maxScore" ? Number(value) : value };
+      onUpdateTrackCriterias(activeTrack.id, nextList);
+    } else {
+      onUpdateCriteria(index, field, value);
+    }
+  };
+
+  const handleAddActiveCriteria = () => {
+    const newItem: TemplateCriteriaFormState = {
+      criteriaId: `crit-${Date.now()}`,
+      criterionName: "Tiêu chí chấm mới",
+      description: "",
+      weight: 10,
+      maxScore: 10,
+    };
+    if (activeTrack && onUpdateTrackCriterias) {
+      onUpdateTrackCriterias(activeTrack.id, [...activeCriteriaList, newItem]);
+    } else {
+      onAddCriteria(newItem);
+    }
+  };
+
+  const handleRemoveActiveCriteria = (index: number) => {
+    if (activeTrack && onUpdateTrackCriterias) {
+      const nextList = activeCriteriaList.filter((_: any, i: number) => i !== index);
+      onUpdateTrackCriterias(activeTrack.id, nextList);
+    } else {
+      onRemoveCriteria(index);
+    }
+  };
 
   return (
-    <Card className="hud-glow-amber p-6 space-y-6">
-      <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
+    <div className="space-y-6 bg-[#13191c] border border-[#263339] p-6 text-[#e1e7ec]">
+      
+      {/* Header */}
+      <div className="border-b border-[#263339] pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="font-display font-bold text-lg text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-            <Sliders className="w-5 h-5 text-[var(--accent-judge)]" />
-            Bước 4: Thiết Lập Tiêu Chí & Trọng Số Chấm Điểm
+          <h3 className="font-mono font-bold text-lg text-[#e1e7ec] uppercase tracking-wider flex items-center gap-2">
+            <Sliders className="w-5 h-5 text-[#8b5cf6]" />
+            Bước 4: Soạn Thảo Tiêu Chí Chấm Điểm (Rubric RBL)
           </h3>
-          <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-            Thiết lập bảng tiêu chí đánh giá RBL theo từng Hạng mục. Tổng trọng số mỗi hạng mục bắt buộc đạt ĐÚNG 100%.
+          <p className="text-xs font-mono text-[#8a9ba8] mt-1">
+            Hạng mục dùng **Mẫu Ngân Hàng** được hiển thị xem trước. Hạng mục **Tự Tạo** cho phép chỉnh sửa trọng số trực quan.
           </p>
         </div>
-
-        {/* Dynamic Weight Status Badge */}
-        <div
-          className={`px-4 py-2 border hud-clipped flex items-center gap-2 font-mono text-xs font-bold ${
-            isAllTracksValid
-              ? "bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border-[var(--color-success)]"
-              : "bg-[rgba(239,68,68,0.15)] text-[var(--color-danger)] border-[var(--color-danger)]"
-          }`}
-        >
-          {isAllTracksValid ? (
-            <>
-              <CheckCircle2 className="w-4 h-4 text-[var(--color-success)]" />
-              <span>TỔNG TRỌNG SỐ: 100% (ĐẠT CHUẨN)</span>
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="w-4 h-4 text-[var(--color-danger)] animate-pulse" />
-              <span>CHƯA CÂN BẰNG ĐỦ 100% TRỌNG SỐ CHO MỌI HẠNG MỤC</span>
-            </>
-          )}
-        </div>
       </div>
 
-      {syncMessage && (
-        <div className="p-3 bg-[rgba(6,182,212,0.1)] border border-cyan-500/40 text-cyan-300 font-mono text-xs rounded flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-          <span>{syncMessage}</span>
+      {/* Multi-Track Switcher Tabs */}
+      {tracks.length > 1 && (
+        <div className="space-y-2">
+          <label className="font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider block flex items-center gap-2">
+            <Layers className="w-4 h-4 text-[#8b5cf6]" />
+            <span>CHỌN HẠNG MỤC XEM / SOẠN TIÊU CHÍ ({tracks.length} Hạng Mục):</span>
+          </label>
+
+          <div className="flex flex-wrap gap-2 font-mono text-xs">
+            {tracks.map((trk, idx) => {
+              const trkTemplate = templates.find(
+                (t: any) => (t.id || t.Id || t.templateId || t.TemplateId) === trk.templateId
+              );
+              const isTrkInherited = Boolean(trkTemplate && trk.templateId !== "__custom__");
+              const isSelected = trk.id === (activeTrack?.id || selectedTrackId);
+
+              return (
+                <button
+                  key={trk.id}
+                  type="button"
+                  onClick={() => setSelectedTrackId(trk.id)}
+                  className={`px-4 py-2 border transition-all cursor-pointer font-bold flex items-center gap-2 ${
+                    isSelected
+                      ? "bg-[#8b5cf6] text-white border-[#8b5cf6]"
+                      : "bg-[#0a0e10] text-[#8a9ba8] border-[#263339] hover:border-[#8b5cf6]"
+                  }`}
+                >
+                  <span>T{idx + 1}: {trk.trackName}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Preset Pickers */}
-      <div className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-2">
-        <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase block">
-          Ngân hàng tiêu chí chuẩn từ SEAL (Bấm để thêm nhanh):
-        </span>
-        <div className="flex flex-wrap gap-2">
-          {criteriaPresetList.map((item: any, idx: number) => {
-            const cId = item.id || item.Id || item.criteriaId || item.CriteriaId || `crit-bank-${idx}`;
-            const cName = item.criterionName || item.CriterionName || item.criteriaName || item.CriteriaName || "Tiêu chí";
-            const cDesc = item.description || item.Description;
-            const cWeight = item.weight || item.Weight || 20;
-            const cMaxScore = item.maxScore || item.MaxScore || 10;
-
-            return (
-              <button
-                key={cId}
-                type="button"
-                onClick={() => {
-                  const newObj = {
-                    criteriaId: cId,
-                    criterionName: cName,
-                    description: cDesc || "",
-                    weight: cWeight,
-                    maxScore: cMaxScore,
-                  };
-                  if (hasMultipleTracks && onUpdateTrackCriterias) {
-                    tracks.forEach((trk) => {
-                      const inheritedTpl = templates.find((t: any) => (t.id || t.Id || t.templateId || t.TemplateId) === trk.templateId);
-                      const defaultInitial = trk.templateId === "__custom__" ? [] : (inheritedTpl?.criterias ?? criterias);
-                      const cur = criteriasByTrack[trk.id] ?? defaultInitial;
-                      onUpdateTrackCriterias(trk.id, [...cur, newObj]);
-                    });
-                  } else {
-                    onAddCriteria(newObj);
-                  }
-                }}
-                className="px-3 py-1 bg-[var(--bg-input)] hover:bg-[var(--accent-judge)]/10 text-[var(--text-primary)] hover:text-[var(--accent-judge)] border border-[var(--border-muted)] hover:border-[var(--accent-judge)] font-mono text-xs transition-colors hud-clipped flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3 text-[var(--accent-judge)]" />
-                + {cName} ({cWeight}%)
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Per-Track Cards */}
-      {hasMultipleTracks ? (
+      {/* CASE 1: INHERITED SYSTEM TEMPLATE MODE */}
+      {isInheritedTemplate ? (
         <div className="space-y-6">
-          {tracks.map((trk, trkIdx) => {
-            const inheritedTpl = templates.find((t: any) => (t.id || t.Id || t.templateId || t.TemplateId) === trk.templateId);
-            const defaultInitial = trk.templateId === "__custom__" ? [] : (inheritedTpl?.criterias ?? criterias);
-            const trackCriterias = criteriasByTrack[trk.id] ?? defaultInitial;
-            const trackWeight = trackCriterias.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
-            const isTrackValid = Math.abs(trackWeight - 100) < 0.01;
-
-            return (
-              <div key={trk.id} className="p-5 bg-[var(--bg-panel)] border border-[var(--border-muted)] space-y-4 hud-clipped">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-muted)] pb-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 bg-[var(--accent-judge)]/10 text-[var(--accent-judge)] border border-[var(--accent-judge)]/30 font-mono text-xs font-bold">
-                        Hạng mục #{trkIdx + 1}
-                      </span>
-                      <h4 className="font-mono font-bold text-sm text-[var(--text-primary)]">
-                        {trk.trackName}
-                      </h4>
-                    </div>
-                    {inheritedTpl ? (
-                      <p className="text-xs font-mono text-[var(--color-success)] flex items-center gap-1">
-                        <Award className="w-3.5 h-3.5" />
-                        Kế thừa từ mẫu: <strong>{inheritedTpl.templateName || inheritedTpl.TemplateName}</strong>
-                      </p>
-                    ) : (
-                      <p className="text-xs font-mono text-[var(--text-muted)] italic">
-                        Cấu hình tiêu chí tùy chỉnh (Custom Template)
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className={`font-mono text-xs font-bold px-3 py-1 border hud-clipped ${
-                        isTrackValid
-                          ? "text-[var(--color-success)] border-[var(--color-success)] bg-[rgba(16,185,129,0.1)]"
-                          : trackWeight > 100
-                          ? "text-[var(--color-danger)] border-[var(--color-danger)] bg-[rgba(239,68,68,0.15)]"
-                          : "text-[var(--color-warning)] border-[var(--color-warning)] bg-[rgba(245,158,11,0.15)]"
-                      }`}
-                    >
-                      Trọng số: {trackWeight}% / 100%{" "}
-                      {isTrackValid
-                        ? "✅ (Đạt chuẩn 100%)"
-                        : trackWeight > 100
-                        ? `🔴 (Vượt quá ${trackWeight - 100}%)`
-                        : `⚠️ (Còn thiếu ${100 - trackWeight}%)`}
-                    </span>
-
-                    {trackCriterias.length > 0 && !isTrackValid && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          const count = trackCriterias.length;
-                          const avg = Math.floor(100 / count);
-                          const remainder = 100 - avg * count;
-                          const autoBalanced = trackCriterias.map((item, i) => ({
-                            ...item,
-                            weight: i === 0 ? avg + remainder : avg,
-                          }));
-                          onUpdateTrackCriterias?.(trk.id, autoBalanced);
-                        }}
-                        className="text-xs font-mono text-amber-400 hover:text-amber-300 border border-amber-500/30"
-                      >
-                        ⚡ Tự động cân bằng 100%
-                      </Button>
-                    )}
-
-                    {onApplyToAllTracks && tracks.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          if (!isTrackValid) return;
-                          onApplyToAllTracks(trackCriterias);
-                          setSyncMessage(`Đã sao chép toàn bộ tiêu chí của "${trk.trackName}" sang ${tracks.length - 1} Hạng mục còn lại!`);
-                          setTimeout(() => setSyncMessage(null), 4000);
-                        }}
-                        disabled={!isTrackValid}
-                        className="text-xs font-mono text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
-                        title={!isTrackValid ? "Cần đạt đúng 100% trọng số mới có thể đồng bộ sang hạng mục khác" : "Tự động sao chép bộ tiêu chí đang thiết lập này sang cho tất cả các Hạng mục còn lại trong sự kiện"}
-                      >
-                        📋 Đồng bộ cho mọi Hạng mục
-                      </Button>
-                    )}
-
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        if (!isTrackValid) return;
-                        onUpdateTrackCriterias?.(trk.id, trackCriterias);
-                        setSaveStatus((prev) => ({ ...prev, [trk.id]: true }));
-                        setTimeout(() => {
-                          setSaveStatus((prev) => ({ ...prev, [trk.id]: false }));
-                        }, 3000);
-                      }}
-                      disabled={!isTrackValid}
-                      className={`text-xs font-mono border transition-all ${
-                        isTrackValid
-                          ? "text-[var(--color-success)] border-[var(--color-success)]/40 hover:bg-[var(--color-success)]/10 cursor-pointer"
-                          : "text-[var(--text-muted)] border-[var(--border-muted)] opacity-50 cursor-not-allowed"
-                      }`}
-                      title={!isTrackValid ? "Yêu cầu tổng trọng số phải đạt ĐÚNG 100% mới được phép lưu!" : "Lưu bộ tiêu chí cho hạng mục này"}
-                    >
-                      {saveStatus[trk.id] ? "✅ Đã lưu cấu hình!" : isTrackValid ? "💾 Lưu tiêu chí hạng mục" : "⚠️ Cần đủ 100% để lưu"}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Empty State Prompt if custom template has 0 criteria */}
-                {trackCriterias.length === 0 && (
-                  <div className="p-6 bg-[var(--bg-base)] border border-dashed border-[var(--border-muted)] rounded text-center space-y-3">
-                    <p className="text-xs font-mono text-[var(--text-muted)]">
-                      Hạng mục này đang chọn <strong>"Tự tạo mẫu tiêu chí mới"</strong> và chưa có tiêu chí nào.
-                    </p>
-                    <div className="flex justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          const updated = [
-                            { criterionName: "Tính đổi mới & sáng tạo", description: "Độ độc đáo của giải pháp", weight: 50, maxScore: 10, criteriaId: `crit-${Date.now()}` },
-                            { criterionName: "Chất lượng sản phẩm & Đô thị thực chiến", description: "Mã nguồn và tính khả thi", weight: 50, maxScore: 10, criteriaId: `crit-${Date.now() + 1}` },
-                          ];
-                          onUpdateTrackCriterias?.(trk.id, updated);
-                        }}
-                        className="text-xs font-mono text-[var(--accent-judge)]"
-                      >
-                        + Tạo nhanh 2 tiêu chí mẫu (50% - 50%)
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* List of criterias for this track */}
-                <div className="space-y-3">
-                  {trackCriterias.map((item, index) => (
-                    <div
-                      key={index}
-                      className="p-4 bg-[var(--bg-base)] border-l-2 border-[var(--accent-judge)] border border-[var(--border-muted)] space-y-3 hud-clipped"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <Input
-                          type="text"
-                          value={item.criterionName}
-                          onChange={(e) => {
-                            const updated = [...trackCriterias];
-                            updated[index] = { ...updated[index], criterionName: e.target.value };
-                            onUpdateTrackCriterias?.(trk.id, updated);
-                          }}
-                          placeholder="Tên tiêu chí..."
-                          className="font-mono font-bold text-sm text-[var(--accent-judge)] flex-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = trackCriterias.filter((_, i) => i !== index);
-                            onUpdateTrackCriterias?.(trk.id, updated);
-                          }}
-                          className="text-xs font-mono text-[var(--color-danger)] hover:underline flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Xóa
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="md:col-span-2 space-y-1">
-                          <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mô Tả Tiêu Chí</label>
-                          <Input
-                            type="text"
-                            value={item.description}
-                            onChange={(e) => {
-                              const updated = [...trackCriterias];
-                              updated[index] = { ...updated[index], description: e.target.value };
-                              onUpdateTrackCriterias?.(trk.id, updated);
-                            }}
-                            placeholder="Mô tả chi tiết cách thức giám khảo chấm..."
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Trọng Số (%)</label>
-                            <Input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={item.weight}
-                              onChange={(e) => {
-                                const updated = [...trackCriterias];
-                                updated[index] = { ...updated[index], weight: Number(e.target.value) || 0 };
-                                onUpdateTrackCriterias?.(trk.id, updated);
-                              }}
-                              className="font-mono font-bold text-center text-[var(--accent-judge)]"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Điểm Tối Đa</label>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={100}
-                              value={item.maxScore}
-                              onChange={(e) => {
-                                const updated = [...trackCriterias];
-                                updated[index] = { ...updated[index], maxScore: Number(e.target.value) || 10 };
-                                onUpdateTrackCriterias?.(trk.id, updated);
-                              }}
-                              className="font-mono font-bold text-center text-[var(--text-primary)]"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      const updated = [
-                        ...trackCriterias,
-                        { criterionName: "Tiêu chí chấm điểm mới", description: "", weight: 10, maxScore: 10, criteriaId: `crit-${Date.now()}` },
-                      ];
-                      onUpdateTrackCriterias?.(trk.id, updated);
-                    }}
-                    className="flex items-center gap-1 text-xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> + Thêm tiêu chí cho {trk.trackName}
-                  </Button>
-                </div>
+          <div className="p-4 bg-[#0a0e10] border border-[#8b5cf6]/40 flex flex-col md:flex-row md:items-center justify-between gap-4 font-mono text-xs">
+            <div className="space-y-1">
+              <div className="text-[#8b5cf6] font-bold uppercase flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#8b5cf6]" />
+                HẠNG MỤC [{activeTrack?.trackName}] ĐANG SỬ DỤNG MẪU HỆ THỐNG:
               </div>
-            );
-          })}
+              <div className="text-[#e1e7ec] font-sans font-bold text-sm">
+                {selectedTemplate?.templateName || selectedTemplate?.TemplateName}
+              </div>
+              <div className="text-[#8a9ba8] text-[11px]">
+                {selectedTemplate?.description || selectedTemplate?.Description || "Bộ tiêu chí chuẩn RBL đã được thẩm định 100% trọng số."}
+              </div>
+            </div>
+          </div>
+
+          {/* Clean READ-ONLY Table View */}
+          <div className="bg-[#0a0e10] border border-[#263339] p-6 space-y-4">
+            <div className="font-mono text-xs font-bold text-[#8b5cf6] tracking-widest uppercase flex items-between justify-between">
+              <span>BẢNG TIÊU CHÍ NGUYÊN BẢN ({activeCriteriaList.length} Tiêu chí)</span>
+              <span className="text-[#10b981] font-mono">[ TỔNG TRỌNG SỐ: 100% ]</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left font-mono text-xs">
+                <thead>
+                  <tr className="border-b border-[#263339] text-[#8a9ba8] tracking-wider text-[11px] bg-[#182024]">
+                    <th className="p-3 w-16">STT</th>
+                    <th className="p-3">TÊN TIÊU CHÍ CHẤM ĐIỂM</th>
+                    <th className="p-3 w-32 text-center">TRỌNG SỐ (%)</th>
+                    <th className="p-3 w-28 text-center">MAX SCORE</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#263339]">
+                  {activeCriteriaList.map((c: any, idx: number) => (
+                    <tr key={c.id || idx} className="hover:bg-[#182024]">
+                      <td className="p-3 font-bold text-[#8b5cf6]">0{idx + 1}</td>
+                      <td className="p-3 font-sans font-bold text-sm text-[#e1e7ec]">
+                        {c.criterionName || c.name}
+                      </td>
+                      <td className="p-3 text-center font-bold text-[#10b981]">{c.weight}%</td>
+                      <td className="p-3 text-center font-bold text-[#e1e7ec]">{c.maxScore || 10}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       ) : (
-        /* Single template fallback */
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-              Tên Mẫu Tiêu Chí (Template Name)
-            </label>
-            <Input
-              type="text"
-              value={templateName}
-              onChange={(e) => onUpdateTemplateName(e.target.value)}
-              placeholder="e.g. Mẫu Đánh Giá Hackathon SEAL 2026"
-              className="w-full"
-            />
-          </div>
+        /* CASE 2: CUSTOM RUBRIC MODE */
+        <div className="space-y-6">
+          
+          {/* Red Weight Warning Banner */}
+          {!activeIsValidWeight100 && (
+            <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs space-y-1">
+              <div className="flex items-center gap-2 font-bold uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
+                <span>CẢNH BÁO TRỌNG SỐ TIÊU CHÍ [ {activeTrack?.trackName || "HẠNG MỤC"} ]</span>
+              </div>
+              <div>
+                TỔNG TRỌNG SỐ HIỆN TẠI: <strong className="text-white">{activeTotalWeight}%</strong>. Tổng phải bằng đúng **100%** mới có thể xuất bản. (Đang thiếu: <strong className="text-white">{missingWeight}%</strong>).
+              </div>
+            </div>
+          )}
 
-          <div className="flex items-center justify-between">
-            <h4 className="font-mono text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
-              Danh Sách Tiêu Chí Chấm Điểm ({criterias.length})
-            </h4>
-            <Button
-              variant="ghost"
-              onClick={() =>
-                onAddCriteria({
-                  criterionName: "Tiêu chí chấm điểm mới",
-                  weight: 10,
-                  maxScore: 10,
-                })
-              }
-              className="flex items-center gap-1 text-xs"
-            >
-              <Plus className="w-3.5 h-3.5" /> + Thêm Tiêu Chí Tùy Chỉnh
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            {criterias.map((item, index) => (
-              <div
-                key={index}
-                className="p-4 bg-[var(--bg-panel)] border-l-2 border-[var(--accent-judge)] border border-[var(--border-muted)] space-y-3 hud-clipped"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <Input
-                    type="text"
-                    value={item.criterionName}
-                    onChange={(e) => onUpdateCriteria(index, "criterionName", e.target.value)}
-                    placeholder="Tên tiêu chí..."
-                    className="font-mono font-bold text-sm text-[var(--accent-judge)] flex-1"
-                  />
+          {/* 2-Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Left Column: Criteria Custom Table (8 cols) */}
+            <div className="lg:col-span-8 bg-[#0a0e10] border border-[#263339] p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-[#263339] pb-3">
+                <div className="font-mono text-xs font-bold text-[#8b5cf6] tracking-widest uppercase">
+                  SOẠN TIÊU CHÍ - HẠNG MỤC: [{activeTrack?.trackName}]
+                </div>
+                {!isReadOnly && (
                   <button
                     type="button"
-                    onClick={() => onRemoveCriteria(index)}
-                    className="text-xs font-mono text-[var(--color-danger)] hover:underline flex items-center gap-1"
+                    onClick={handleAddActiveCriteria}
+                    className="px-3 py-1 bg-[#13191c] border border-[#8b5cf6]/40 text-[#8b5cf6] hover:bg-[#8b5cf6]/10 font-mono text-xs font-semibold cursor-pointer transition-colors"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> Xóa
+                    + THÊM TIÊU CHÍ
                   </button>
+                )}
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead>
+                    <tr className="border-b border-[#263339] text-[#8a9ba8] tracking-wider text-[11px] bg-[#13191c]">
+                      <th className="p-3 w-14">STT</th>
+                      <th className="p-3">TÊN TIÊU CHÍ CHẤM</th>
+                      <th className="p-3 w-28 text-center">THANG ĐIỂM</th>
+                      <th className="p-3 w-28 text-center">TRỌNG SỐ (%)</th>
+                      <th className="p-3 w-12 text-center">XÓA</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#263339]">
+                    {activeCriteriaList.map((crit: any, idx: number) => (
+                      <tr key={crit.criteriaId || idx} className="hover:bg-[#182024]">
+                        <td className="p-3 text-[#8a9ba8] font-bold">0{idx + 1}</td>
+                        <td className="p-3 space-y-1">
+                          <input
+                            type="text"
+                            value={crit.criterionName}
+                            onChange={(e) => handleUpdateActiveCriteria(idx, "criterionName", e.target.value)}
+                            disabled={isReadOnly}
+                            className="w-full px-3 py-1.5 bg-[#13191c] border border-[#263339] text-[#e1e7ec] font-sans text-sm focus:outline-none focus:border-[#8b5cf6]"
+                          />
+                        </td>
+                        <td className="p-3 text-center text-[#8a9ba8]">Thang 1-10</td>
+                        <td className="p-3 text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={crit.weight}
+                            onChange={(e) => handleUpdateActiveCriteria(idx, "weight", Number(e.target.value))}
+                            disabled={isReadOnly}
+                            className="w-20 px-2 py-1 bg-[#13191c] border border-[#263339] text-[#00d9ff] font-mono text-xs text-center font-bold focus:outline-none focus:border-[#8b5cf6]"
+                          />
+                        </td>
+                        <td className="p-3 text-center">
+                          {!isReadOnly && activeCriteriaList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveActiveCriteria(idx)}
+                              className="text-[#8a9ba8] hover:text-[#ef4444] p-1 cursor-pointer"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Right Column: Weight Progress & TOGGLE SAVE TO TEMPLATE BANK (4 cols) */}
+            <div className="lg:col-span-4 space-y-6">
+              
+              {/* Card 1: Total Weight Gauge */}
+              <div className="bg-[#0a0e10] border border-[#263339] p-6 space-y-4 font-mono text-xs">
+                <div className="font-bold text-[#8a9ba8] tracking-widest uppercase">
+                  TỔNG TRỌNG SỐ [{activeTrack?.trackName}]
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="md:col-span-2 space-y-1">
-                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mô Tả Tiêu Chí</label>
-                    <Input
-                      type="text"
-                      value={item.description}
-                      onChange={(e) => onUpdateCriteria(index, "description", e.target.value)}
-                      placeholder="Mô tả chi tiết cách thức giám khảo chấm..."
-                    />
+                <div className="text-4xl font-bold flex items-baseline gap-2">
+                  <span className={activeIsValidWeight100 ? "text-[#10b981]" : "text-[#ef4444]"}>
+                    {activeTotalWeight}
+                  </span>
+                  <span className="text-xl text-[#8a9ba8]">/ 100%</span>
+                </div>
+
+                {/* Custom Visual Weight Bar */}
+                <div className="space-y-1.5">
+                  <div className="w-full h-3 bg-[#13191c] border border-[#263339] flex overflow-hidden">
+                    <div
+                      className="h-full bg-[#8b5cf6] transition-all"
+                      style={{ width: `${Math.min(activeTotalWeight, 100)}%` }}
+                    ></div>
+                    {missingWeight > 0 && (
+                      <div
+                        className="h-full bg-red-500/40 animate-pulse"
+                        style={{ width: `${missingWeight}%` }}
+                      ></div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Trọng Số (Weight %)</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={item.weight}
-                        onChange={(e) => onUpdateCriteria(index, "weight", e.target.value)}
-                        className="font-mono font-bold text-center text-[var(--accent-judge)]"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Điểm Tối Đa (MaxScore)</label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={item.maxScore}
-                        onChange={(e) => onUpdateCriteria(index, "maxScore", e.target.value)}
-                        className="font-mono font-bold text-center text-[var(--text-primary)]"
-                      />
-                    </div>
+                  <div className="flex justify-between text-[10px] text-[#8a9ba8]">
+                    <span>0%</span>
+                    {!activeIsValidWeight100 && (
+                      <span className="text-[#ef4444] font-bold uppercase">
+                        CẦN THÊM {missingWeight}%
+                      </span>
+                    )}
+                    <span>100%</span>
                   </div>
                 </div>
               </div>
-            ))}
+
+              {/* Card 2: TOGGLE CHECKBOX SAVE TO TEMPLATE BANK (CÔNG TẮC BẬT/TẮT LƯU KHO) */}
+              <div className="bg-[#0a0e10] border border-[#263339] p-6 space-y-4 font-mono text-xs">
+                <div className="border-b border-[#263339] pb-2 font-bold text-[#8b5cf6] tracking-widest uppercase flex items-center gap-1.5">
+                  <Save className="w-4 h-4" />
+                  CẤU HÌNH LƯU KHO TIÊU CHÍ
+                </div>
+
+                <label className="flex items-start gap-3 p-3 bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={saveToBank}
+                    onChange={toggleSaveToBank}
+                    className="w-4 h-4 mt-0.5 accent-[#8b5cf6] cursor-pointer"
+                  />
+                  <div className="space-y-1 text-xs">
+                    <div className="font-bold text-[#e1e7ec]">
+                      {saveToBank ? "✓ ĐỒNG Ý LƯU VÀO KHO TIÊU CHÍ" : "✕ KHÔNG LƯU VÀO KHO TIÊU CHÍ"}
+                    </div>
+                    <p className="text-[11px] text-[#8a9ba8] leading-relaxed">
+                      {saveToBank
+                        ? "Bộ tiêu chí custom này sẽ được lưu thành bản mẫu chung để tái sử dụng cho các sự kiện sau."
+                        : "Bộ tiêu chí custom này chỉ áp dụng riêng cho sự kiện hiện tại, không lưu vào kho hệ thống."}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+            </div>
+
           </div>
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border-muted)]">
-        <Button variant="ghost" onClick={onPrev} className="flex items-center gap-2 text-xs font-mono">
-          <ArrowLeft className="w-4 h-4" /> &lt; Quay Lại Bước 3
-        </Button>
+      {/* Bottom Actions Bar */}
+      <div className="flex items-center justify-between pt-4 border-t border-[#263339] font-mono text-xs">
+        <button
+          type="button"
+          onClick={onPrev}
+          className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] flex items-center gap-1 cursor-pointer transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> &lt; Bước 3: Hạng Mục
+        </button>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setSyncMessage("✅ Đã lưu tạm cấu hình Mẫu tiêu chí thành công!");
-              setTimeout(() => setSyncMessage(null), 4000);
-            }}
-            disabled={!isAllTracksValid}
-            className="text-xs font-mono flex items-center gap-1.5"
-          >
-            💾 Lưu Tạm Cấu Hình
-          </Button>
-
-          <Button
-            variant="primary"
-            onClick={onNext}
-            disabled={!isAllTracksValid}
-            className="flex items-center gap-2 text-xs font-mono"
-          >
-            {!isAllTracksValid ? "Yêu Cầu Đủ 100% Cho Mọi Hạng Mục" : "💾 Lưu & Sang Bước 5: Phân Công Nhân Sự >"}
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={onNext}
+          className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
+        >
+          <span>TIẾP TỤC BƯỚC 5: PHÂN CÔNG NHÂN SỰ &gt;</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
-    </Card>
+    </div>
   );
 };

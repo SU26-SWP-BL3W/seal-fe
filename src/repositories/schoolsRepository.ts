@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
-import type { School, BaseResponse, PagedResult } from "@/models/entities";
+import type { School, PagedResult } from "@/models/entities";
 
 export const DEFAULT_SCHOOLS_LIST: School[] = [
   {
@@ -47,20 +47,25 @@ export const DEFAULT_SCHOOLS_LIST: School[] = [
   },
 ];
 
-/** GET /api/Schools — Lấy danh sách trường học */
+/**
+ * GET /api/Schools — Lấy danh sách trường học.
+ * apiClient đã bóc vỏ BaseResponse trong interceptor, nên res.data ở đây CHÍNH LÀ
+ * PagedResult<School> — chỉ bóc thêm 1 lớp .data để lấy mảng. Bóc 3 lớp (.data.data.data)
+ * như bản cũ luôn ra undefined vì PagedResult không có field .data lồng thêm lần nữa.
+ */
 export function useGetSchools() {
   return useQuery({
     queryKey: ["schools"],
     queryFn: async () => {
       try {
-        const res = await apiClient.get<BaseResponse<PagedResult<School>>>("/Schools", {
+        const res = await apiClient.get<PagedResult<School>>("/Schools", {
           params: { PageNumber: 1, PageSize: 100 },
         });
-        if (res.data?.data?.data && res.data.data.data.length > 0) {
-          return res.data.data.data;
+        if (Array.isArray(res.data?.data)) {
+          return res.data.data;
         }
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          return res.data;
+        if (Array.isArray(res.data)) {
+          return res.data as unknown as School[];
         }
       } catch (err: any) {
         console.warn("[SEAL BE-DATA MISSING] GET /api/Schools error:", err?.message);

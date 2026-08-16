@@ -1,197 +1,84 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useMyAssignedTracks } from "@/viewModels/useMyAssignedTracks";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useMentorWorkspaceViewModel, useMentorSubmissionDetailViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
+import { Card, Button, Badge } from "@/components/ui";
 import {
-  useGetSubmitResultsByTrack,
-  useMentorFeedbacks,
-  useCreateMentorFeedback,
-  useDeleteMentorFeedback,
-  type SubmitResultListItem,
-} from "@/repositories/submitResultsRepository";
-import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
-import { Card, Button, Modal, Badge } from "@/components/ui";
-import { RefreshCw, Compass, Info, ExternalLink, MessageSquare, Plus, Trash2 } from "lucide-react";
+  ChevronRight,
+  Code,
+  PlayCircle,
+  Presentation,
+  Copy,
+  Check,
+  BadgeCheck,
+  Target,
+  FolderGit2,
+  FileText,
+  GitFork,
+  GitCommit,
+  Clock,
+  MessageSquare,
+  Plus,
+  Trash2,
+  ExternalLink,
+  Info,
+  Send,
+} from "lucide-react";
 
 export function MentorSubmissionsView() {
-  const { myTracks, eventId, isLoading: isLoadingTracks } = useMyAssignedTracks();
-  const [explicitTrackId, setExplicitTrackId] = useState<string>("");
-  const selectedTrackId = explicitTrackId || myTracks[0]?.id || myTracks[0]?.Id || "";
+  const searchParams = useSearchParams();
+  const teamIdParam = searchParams.get("teamId") || "";
+  const trackIdParam = searchParams.get("trackId") || "";
 
-  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useGetSubmitResultsByTrack(
+  const {
+    myTracks,
     selectedTrackId,
-    eventId
-  );
-  const { data: teams = [] } = useGetTeamsByEvent(eventId);
+    submissions,
+    teamNameById,
+    isLoading,
+  } = useMentorWorkspaceViewModel();
 
-  // Modal states for Mentor Feedback
-  const [selectedSub, setSelectedSub] = useState<SubmitResultListItem | null>(null);
+  const currentTrackId = trackIdParam || selectedTrackId || (myTracks[0]?.id || myTracks[0]?.Id || "");
+  const currentTrack = myTracks.find((t) => (t.id || t.Id) === currentTrackId);
 
-  const teamNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    teams.forEach((t) => map.set((t.id || t.Id) as string, t.name || t.Name || "Đội thi"));
-    return map;
-  }, [teams]);
+  // Filter submissions by current team / track
+  const filteredSubmissions = submissions.filter((s) => {
+    const sTeamId = (s.teamId || s.TeamId || "") as string;
+    if (teamIdParam) return sTeamId === teamIdParam;
+    return true;
+  });
 
-  const sortedSubmissions = useMemo(() => {
-    return [...submissions].sort((a, b) => {
-      const da = a.createdTime || a.CreatedTime || "";
-      const db = b.createdTime || b.CreatedTime || "";
-      return db.localeCompare(da);
-    });
-  }, [submissions]);
+  const [selectedSubId] = useState<string>("");
+  const activeSubmission =
+    filteredSubmissions.find((s) => (s.id || s.Id) === selectedSubId) || filteredSubmissions[0];
 
-  const isLoading = isLoadingTracks || (!!selectedTrackId && isLoadingSubs);
+  const activeTeamId = (activeSubmission?.teamId || activeSubmission?.TeamId || teamIdParam) as string;
+  const activeTeamName = teamNameById.get(activeTeamId) || `Đội #${activeTeamId || "---"}`;
 
-  return (
-    <div className="hud-lattice min-h-[calc(100vh-4rem)]">
-      {/* Mentor Feedback Modal */}
-      {selectedSub && (
-        <MentorFeedbackModal
-          submission={selectedSub}
-          teamName={teamNameById.get((selectedSub.teamId || selectedSub.TeamId || "") as string) || "Đội thi"}
-          onClose={() => setSelectedSub(null)}
-        />
-      )}
+  // Feedback ViewModel for active submission
+  const { feedbacks, isLoading: isLoadingFeedbacks, createFeedback, deleteFeedback } =
+    useMentorSubmissionDetailViewModel((activeSubmission?.id || activeSubmission?.Id) as string, activeTeamId);
 
-      <div className="max-w-[var(--container-max)] mx-auto px-6 py-8 flex flex-col gap-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--border-muted)]">
-          <div>
-            <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--accent-mentor)] tracking-widest uppercase font-bold">
-              <Compass className="w-3.5 h-3.5" />
-              MENTOR WORKSPACE
-            </div>
-            <h1 className="font-display text-3xl font-extrabold uppercase tracking-wide text-[var(--text-primary)] mt-1">
-              Tiến Độ Bài Nộp &amp; Cố Vấn
-            </h1>
-            <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
-              Toàn bộ bài nộp trong Hạng mục bạn phụ trách — hỗ trợ, đánh giá chuyên môn và gửi phản hồi cho đội thi.
-            </p>
-          </div>
-          <Button variant="ghost" accent="mentor" onClick={() => refetch()} className="text-xs">
-            <RefreshCw className="w-3.5 h-3.5" /> Làm mới
-          </Button>
-        </div>
-
-        {myTracks.length === 0 && !isLoadingTracks ? (
-          <Card className="p-10 bg-[var(--bg-panel)] border-[var(--border-muted)] hud-clipped text-center flex flex-col items-center gap-3">
-            <Info className="w-8 h-8 text-[var(--text-muted)] opacity-60" />
-            <p className="font-mono text-sm text-[var(--text-muted)] tracking-wide">
-              Bạn chưa được phân công Cố vấn cho Hạng mục nào — chưa có bài nộp để hiển thị.
-            </p>
-          </Card>
-        ) : (
-          <>
-            <div className="flex items-center gap-3 font-mono text-xs">
-              <span className="text-[var(--text-muted)] uppercase">Hạng mục:</span>
-              <select
-                value={selectedTrackId}
-                onChange={(e) => setExplicitTrackId(e.target.value)}
-                className="bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-mentor)]"
-              >
-                {myTracks.map((t) => (
-                  <option key={t.id || t.Id} value={t.id || t.Id}>
-                    {t.trackName || t.TrackName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {isLoading ? (
-              <div className="flex justify-center py-16 font-mono text-xs text-[var(--text-muted)]">
-                Đang tải danh sách bài nộp...
-              </div>
-            ) : sortedSubmissions.length === 0 ? (
-              <Card className="p-10 bg-[var(--bg-panel)] border-[var(--border-muted)] hud-clipped text-center">
-                <p className="font-mono text-sm text-[var(--text-muted)]">
-                  Chưa có bài nộp nào trong Hạng mục này.
-                </p>
-              </Card>
-            ) : (
-              <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-panel)] hud-clipped">
-                <table className="w-full text-left border-collapse font-mono text-xs">
-                  <thead>
-                    <tr className="border-b border-[var(--border-muted)] bg-[var(--bg-base)] text-[var(--text-muted)]">
-                      <th className="p-3 uppercase">Đội thi</th>
-                      <th className="p-3 uppercase">Liên kết bài nộp</th>
-                      <th className="p-3 uppercase">Thời gian nộp</th>
-                      <th className="p-3 uppercase text-right">Cố vấn chuyên môn</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--border-muted)]/60">
-                    {sortedSubmissions.map((s) => {
-                      const id = (s.id || s.Id) as string;
-                      const teamId = (s.teamId || s.TeamId || "") as string;
-                      const url = s.submissionUrl || s.SubmissionUrl || s.repoUrl || s.RepoUrl;
-                      const createdAt = s.createdTime || s.CreatedTime;
-                      return (
-                        <tr key={id} className="hover:bg-[var(--accent-mentor)]/5 transition-colors">
-                          <td className="p-3 font-bold text-[var(--text-primary)]">
-                            {teamNameById.get(teamId) || `Đội #${teamId}`}
-                          </td>
-                          <td className="p-3">
-                            {url ? (
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[var(--accent-mentor)] hover:underline inline-flex items-center gap-1"
-                              >
-                                Xem bài nộp <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span className="text-[var(--text-muted)]/50 italic">Không có liên kết</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-[var(--text-muted)]">
-                            {createdAt ? new Date(createdAt).toLocaleString("vi-VN") : "—"}
-                          </td>
-                          <td className="p-3 text-right">
-                            <Button
-                              variant="secondary"
-                              accent="mentor"
-                              onClick={() => setSelectedSub(s)}
-                              className="text-[11px] py-1 px-2.5 inline-flex items-center gap-1.5"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" /> Góp ý bài thi
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Modal Gửi Nhận Xét Của Cố Vấn ──────────────────────────────────────────
-function MentorFeedbackModal({
-  submission,
-  teamName,
-  onClose,
-}: {
-  submission: SubmitResultListItem;
-  teamName: string;
-  onClose: () => void;
-}) {
-  const submitResultId = (submission.id || submission.Id) as string;
-  const { data: feedbacks = [], isLoading } = useMentorFeedbacks(submitResultId);
-  const createFeedback = useCreateMentorFeedback();
-  const deleteFeedback = useDeleteMentorFeedback();
-
+  // Feedback form states
   const [feedbackContent, setFeedbackContent] = useState("");
   const [technicalAdvice, setTechnicalAdvice] = useState("");
   const [suggestedScore, setSuggestedScore] = useState<number | "">("");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const copyToClipboard = (text: string, field: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const handleSendFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeSubmission) return;
+    const subId = (activeSubmission.id || activeSubmission.Id) as string;
     if (!feedbackContent.trim()) {
       setErrorMsg("Vui lòng nhập nội dung nhận xét chuyên môn.");
       return;
@@ -199,7 +86,7 @@ function MentorFeedbackModal({
     setErrorMsg("");
     try {
       await createFeedback.mutateAsync({
-        submitResultId,
+        submitResultId: subId,
         data: {
           feedbackContent: feedbackContent.trim(),
           technicalAdvice: technicalAdvice.trim() || undefined,
@@ -215,143 +102,395 @@ function MentorFeedbackModal({
   };
 
   const handleDeleteFeedback = async (feedbackId: string) => {
+    if (!activeSubmission) return;
+    const subId = (activeSubmission.id || activeSubmission.Id) as string;
     try {
-      await deleteFeedback.mutateAsync({ submitResultId, feedbackId });
+      await deleteFeedback.mutateAsync({ submitResultId: subId, feedbackId });
     } catch (err: any) {
       setErrorMsg(err?.response?.data?.message || err?.message || "Xóa nhận xét thất bại.");
     }
   };
 
+  const repoUrl = activeSubmission?.repoUrl || activeSubmission?.RepoUrl || activeSubmission?.submissionUrl || activeSubmission?.SubmissionUrl || "";
+  const demoUrl = activeSubmission?.demoUrl || activeSubmission?.DemoUrl || "";
+  const slideUrl = activeSubmission?.slideUrl || activeSubmission?.SlideUrl || "";
+  const description = activeSubmission?.description || activeSubmission?.Description || "Chưa có mô tả chi tiết bài nộp.";
+
   return (
-    <Modal
-      open={true}
-      onClose={onClose}
-      title={`Góp Ý Cố Vấn — ${teamName}`}
-      eyebrow="// MENTOR FEEDBACK PROTOCOL"
-      description="Gửi đánh giá và lời khuyên kỹ thuật trực tiếp đến các thành viên của đội thi."
-    >
-      <div className="space-y-6 pt-2">
-        {/* Form Gửi Nhận Xét Mới */}
-        <form onSubmit={handleSendFeedback} className="space-y-4 bg-[var(--bg-base)] p-4 border border-[var(--accent-mentor)]/30 hud-clipped">
-          <div className="font-mono text-xs font-bold text-[var(--accent-mentor)] flex items-center gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> THÊM NHẬN XÉT MỚI
+    <div className="bg-surface text-on-surface font-sans min-h-screen p-6 flex flex-col">
+      <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6">
+        {/* Top Context Header */}
+        <header className="w-full bg-surface-container-low border border-outline-variant p-5 rounded-lg">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant mb-2">
+            <span className="text-[#00d9ff] font-bold">[</span>
+            <Link href="/mentor/tracks" className="hover:text-on-surface transition-colors">
+              Bàn Làm Việc Cố Vấn
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span>{currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span>{activeTeamName}</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-on-surface font-bold">Chi tiết bài nộp</span>
+            <span className="text-[#00d9ff] font-bold">]</span>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="font-mono text-xs text-[var(--text-primary)]">
-              Nội dung nhận xét &amp; định hướng <span className="text-[var(--color-danger)]">*</span>
-            </label>
-            <textarea
-              value={feedbackContent}
-              onChange={(e) => setFeedbackContent(e.target.value)}
-              placeholder="Nhận xét về ý tưởng, tính khả thi, tiến độ..."
-              rows={3}
-              className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] p-2.5 font-sans text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/50 focus:outline-none focus:border-[var(--accent-mentor)]"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="font-mono text-xs text-[var(--text-primary)]">
-                Lời khuyên kỹ thuật / Công nghệ (Optional)
-              </label>
-              <input
-                type="text"
-                value={technicalAdvice}
-                onChange={(e) => setTechnicalAdvice(e.target.value)}
-                placeholder="VD: Sử dụng Redis để cache, tối ưu token API..."
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-1.5 font-sans text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-mentor)]"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="font-mono text-xs text-[var(--text-primary)]">
-                Điểm tham khảo (0-100)
-              </label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={suggestedScore}
-                onChange={(e) => setSuggestedScore(e.target.value ? Number(e.target.value) : "")}
-                placeholder="VD: 85"
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-1.5 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-mentor)]"
-              />
+          {/* Title Row */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-outline-variant pb-3">
+            <h1 className="font-display text-2xl md:text-3xl text-[#00d9ff] font-extrabold tracking-wider uppercase flex items-center gap-3">
+              <span className="w-2 h-6 bg-[#00d9ff] inline-block rounded-xs" />
+              CHI TIẾT BÀI NỘP CỦA ĐỘI
+            </h1>
+            <div className="font-mono text-xs flex items-center gap-2 border border-[#00d9ff]/30 px-3 py-1 rounded bg-[#00d9ff]/5 text-[#00d9ff]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00d9ff] animate-pulse" />
+              MODE: READ-ONLY (MENTOR ASSIST)
             </div>
           </div>
+        </header>
 
-          {errorMsg && <p className="font-mono text-xs text-[var(--color-danger)]">{errorMsg}</p>}
-
-          <div className="flex justify-end pt-1">
-            <Button
-              type="submit"
-              variant="primary"
-              accent="mentor"
-              disabled={createFeedback.isPending}
-              className="text-xs py-1.5 px-4"
-            >
-              {createFeedback.isPending ? "Đang gửi..." : "Gửi góp ý cho đội"}
-            </Button>
+        {isLoading ? (
+          <div className="flex justify-center py-20 font-mono text-xs text-[#2dd4bf] animate-pulse">
+            LOADING SUBMISSION ARTIFACTS...
           </div>
-        </form>
+        ) : !activeSubmission ? (
+          <Card className="p-12 bg-surface-container-low border border-outline-variant text-center font-mono text-xs text-on-surface-variant">
+            <Info className="w-8 h-8 mx-auto mb-2 text-on-surface-variant/60" />
+            Chưa tìm thấy bài nộp cho đội thi này trong Hạng mục hiện tại.
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {/* Bento Grid Canvas */}
+            <div className="grid grid-cols-12 gap-4">
+              {/* HUD Panel 1: Team Info (Col span 4) */}
+              <div className="col-span-12 lg:col-span-4 bg-surface-container-high border border-outline-variant rounded-lg flex flex-col overflow-hidden">
+                <div className="bg-surface-variant px-4 py-2 flex justify-between items-center border-b border-surface font-mono text-xs">
+                  <span className="text-[#00d9ff] font-bold tracking-widest uppercase">/ IDENTIFICATION</span>
+                  <BadgeCheck className="w-4 h-4 text-on-surface-variant" />
+                </div>
+                <div className="p-5 flex-1 flex flex-col gap-5 font-mono text-xs">
+                  <div>
+                    <div className="text-[10px] text-on-surface-variant uppercase mb-1">Team Designation</div>
+                    <div className="font-display text-xl font-bold text-on-surface">{activeTeamName}</div>
+                  </div>
 
-        {/* Lịch Sử Các Lần Góp Ý */}
-        <div className="space-y-3">
-          <div className="font-mono text-xs font-bold text-[var(--text-muted)] uppercase">
-            Lịch sử góp ý ({feedbacks.length})
-          </div>
-
-          {isLoading ? (
-            <p className="font-mono text-xs text-[var(--text-muted)] italic">Đang tải lịch sử...</p>
-          ) : feedbacks.length === 0 ? (
-            <p className="font-mono text-xs text-[var(--text-muted)] italic">Chưa có góp ý nào cho bài nộp này.</p>
-          ) : (
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-              {feedbacks.map((fb) => (
-                <div
-                  key={fb.id}
-                  className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge tone="mentor">Mentor: {fb.mentorName || "Cố vấn"}</Badge>
-                      {fb.suggestedScore !== undefined && fb.suggestedScore !== null && (
-                        <span className="font-mono text-xs text-[var(--accent-judge)] font-bold">
-                          Điểm gợi ý: {fb.suggestedScore}/100
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] text-[var(--text-muted)]">
-                        {new Date(fb.createdTime).toLocaleString("vi-VN")}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteFeedback(fb.id)}
-                        disabled={deleteFeedback.isPending}
-                        className="text-[var(--text-muted)] hover:text-[var(--color-danger)] transition-colors p-1"
-                        title="Xóa nhận xét này"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                  <div>
+                    <div className="text-[10px] text-on-surface-variant uppercase mb-1">Track Assignment</div>
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-tertiary-container/10 border border-tertiary-container/30 text-tertiary-container rounded">
+                      <Target className="w-3.5 h-3.5" />
+                      {currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}
                     </div>
                   </div>
 
-                  <p className="font-sans text-xs text-[var(--text-primary)] leading-relaxed">
-                    {fb.feedbackContent}
-                  </p>
+                  <div className="flex-1">
+                    <div className="text-[10px] text-on-surface-variant uppercase mb-2">Project Abstract</div>
+                    <p className="font-sans text-xs text-on-surface-variant leading-relaxed bg-surface p-3 border border-outline-variant rounded">
+                      {description}
+                    </p>
+                  </div>
 
-                  {fb.technicalAdvice && (
-                    <div className="p-2 bg-[var(--bg-base)] border border-[var(--accent-mentor)]/20 font-mono text-[11px] text-[var(--accent-mentor)]">
-                      💡 Khuyên dùng: {fb.technicalAdvice}
-                    </div>
-                  )}
+                  <div className="pt-3 border-t border-outline-variant flex justify-between items-center text-[11px]">
+                    <span className="text-on-surface-variant">SUBMISSION ID:</span>
+                    <span className="px-2 py-0.5 bg-surface border border-outline-variant rounded text-on-surface font-bold">
+                      {(activeSubmission.id || activeSubmission.Id || "SUB").substring(0, 10)}
+                    </span>
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              {/* HUD Panel 2: Submission URLs & Content (Col span 8) */}
+              <div className="col-span-12 lg:col-span-8 bg-surface-container-high border border-outline-variant rounded-lg flex flex-col overflow-hidden">
+                <div className="bg-surface-variant px-4 py-2 flex justify-between items-center border-b border-surface font-mono text-xs">
+                  <span className="text-[#00d9ff] font-bold tracking-widest uppercase">/ SUBMISSION ARTIFACTS</span>
+                  <FolderGit2 className="w-4 h-4 text-on-surface-variant" />
+                </div>
+
+                <div className="p-5 flex flex-col gap-4 flex-1">
+                  {/* Artifact Links */}
+                  <div className="flex flex-col gap-3 font-mono text-xs">
+                    {/* Repository URL */}
+                    <div className="flex items-stretch bg-surface border border-outline-variant rounded overflow-hidden group">
+                      <div className="w-12 bg-surface-variant flex items-center justify-center border-r border-outline-variant">
+                        <Code className="w-4 h-4 text-on-surface-variant group-hover:text-[#00d9ff] transition-colors" />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-center px-4 py-2">
+                        <span className="text-[9px] text-on-surface-variant uppercase font-bold">Source Repository</span>
+                        <span className="text-[12px] text-on-surface truncate font-bold">
+                          {repoUrl || "Chưa cung cấp repository URL"}
+                        </span>
+                      </div>
+                      {repoUrl && (
+                        <>
+                          <button
+                            onClick={() => copyToClipboard(repoUrl, "repo")}
+                            className="w-10 flex items-center justify-center hover:bg-surface-variant text-on-surface-variant border-l border-outline-variant"
+                            title="Sao chép liên kết"
+                          >
+                            {copiedField === "repo" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                          <a
+                            href={repoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-10 flex items-center justify-center hover:bg-[#00d9ff] hover:text-[#080f11] text-on-surface-variant border-l border-outline-variant transition-colors"
+                            title="Mở liên kết"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Live Demo URL */}
+                    <div className="flex items-stretch bg-surface border border-outline-variant rounded overflow-hidden group">
+                      <div className="w-12 bg-surface-variant flex items-center justify-center border-r border-outline-variant">
+                        <PlayCircle className="w-4 h-4 text-on-surface-variant group-hover:text-[#00d9ff] transition-colors" />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-center px-4 py-2">
+                        <span className="text-[9px] text-on-surface-variant uppercase font-bold">Live Demo Endpoint</span>
+                        <span className="text-[12px] text-on-surface truncate font-bold">
+                          {demoUrl || "Chưa cung cấp demo URL"}
+                        </span>
+                      </div>
+                      {demoUrl && (
+                        <>
+                          <button
+                            onClick={() => copyToClipboard(demoUrl, "demo")}
+                            className="w-10 flex items-center justify-center hover:bg-surface-variant text-on-surface-variant border-l border-outline-variant"
+                          >
+                            {copiedField === "demo" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                          <a
+                            href={demoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-10 flex items-center justify-center hover:bg-[#00d9ff] hover:text-[#080f11] text-on-surface-variant border-l border-outline-variant transition-colors"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Pitch Deck / Slide URL */}
+                    <div className="flex items-stretch bg-surface border border-outline-variant rounded overflow-hidden group">
+                      <div className="w-12 bg-surface-variant flex items-center justify-center border-r border-outline-variant">
+                        <Presentation className="w-4 h-4 text-on-surface-variant group-hover:text-[#00d9ff] transition-colors" />
+                      </div>
+                      <div className="flex-1 flex flex-col justify-center px-4 py-2">
+                        <span className="text-[9px] text-on-surface-variant uppercase font-bold">Pitch Deck / Slides</span>
+                        <span className="text-[12px] text-on-surface truncate font-bold">
+                          {slideUrl || "Chưa cung cấp slide URL"}
+                        </span>
+                      </div>
+                      {slideUrl && (
+                        <>
+                          <button
+                            onClick={() => copyToClipboard(slideUrl, "slide")}
+                            className="w-10 flex items-center justify-center hover:bg-surface-variant text-on-surface-variant border-l border-outline-variant"
+                          >
+                            {copiedField === "slide" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                          <a
+                            href={slideUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-10 flex items-center justify-center hover:bg-[#00d9ff] hover:text-[#080f11] text-on-surface-variant border-l border-outline-variant transition-colors"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Submission Notes Box */}
+                  <div className="flex-1 bg-surface border border-outline-variant rounded flex flex-col">
+                    <div className="px-3 py-2 border-b border-outline-variant flex items-center gap-2 bg-surface-variant/50 font-mono text-[11px]">
+                      <FileText className="w-3.5 h-3.5 text-on-surface-variant" />
+                      <span className="text-on-surface-variant font-bold">SUBMISSION_NOTES.MD</span>
+                    </div>
+                    <div className="p-4 font-mono text-xs text-on-surface-variant leading-relaxed overflow-y-auto max-h-40">
+                      {description}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* HUD Panel 3: System Status & Telemetry (Col span 12) */}
+              <div className="col-span-12 bg-surface-container-high border border-outline-variant rounded-lg flex flex-col overflow-hidden font-mono text-xs">
+                <div className="bg-surface-variant px-4 py-2 flex justify-between items-center border-b border-surface">
+                  <span className="text-[#00d9ff] font-bold tracking-widest uppercase">
+                    / REPOSITORY TELEMETRY &amp; SYSTEM CHECK
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-[#2dd4bf]">LIVE FETCH</span>
+                    <span className="w-2 h-2 rounded-full bg-[#00d9ff] animate-ping" />
+                  </div>
+                </div>
+
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col gap-1">
+                    <div className="text-[9px] text-on-surface-variant uppercase">Host Provider</div>
+                    <div className="text-sm font-bold text-on-surface flex items-center gap-2">
+                      <GitFork className="w-4 h-4 text-[#2dd4bf]" /> GITHUB
+                    </div>
+                  </div>
+
+                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col gap-1">
+                    <div className="text-[9px] text-on-surface-variant uppercase">Submission Code</div>
+                    <div className="text-sm font-bold text-on-surface flex items-center gap-2">
+                      <GitCommit className="w-4 h-4 text-amber-400" />
+                      {(activeSubmission.id || activeSubmission.Id || "N/A").substring(0, 12)}
+                    </div>
+                  </div>
+
+                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col gap-1">
+                    <div className="text-[9px] text-on-surface-variant uppercase">Submission Timestamp</div>
+                    <div className="text-sm font-bold text-on-surface flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#00d9ff]" />
+                      {activeSubmission.createdTime || activeSubmission.CreatedTime
+                        ? new Date(activeSubmission.createdTime || activeSubmission.CreatedTime!).toLocaleString("vi-VN")
+                        : "---"}
+                    </div>
+                  </div>
+
+                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col justify-center items-center gap-1">
+                    <span className="text-[#00d9ff] font-bold text-xs">[ STATUS: NOMINAL ]</span>
+                    <span className="text-[9px] text-on-surface-variant">API_CONN_ESTABLISHED</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Mentor Feedback Protocol Panel */}
+            <div className="bg-surface-container-high border border-outline-variant rounded-lg p-5 font-mono text-xs space-y-6">
+              <div className="flex items-center justify-between border-b border-outline-variant pb-3">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#2dd4bf]" />
+                  <h3 className="font-display text-base font-bold text-on-surface uppercase tracking-wider">
+                    GÓP Ý &amp; PHẢN HỒI CỐ VẤN (MENTOR FEEDBACK PROTOCOL)
+                  </h3>
+                </div>
+                <Badge tone="mentor">TOTAL: {feedbacks.length}</Badge>
+              </div>
+
+              {/* Feedback Form */}
+              <form onSubmit={handleSendFeedback} className="bg-surface p-4 border border-[#2dd4bf]/30 rounded space-y-4">
+                <div className="text-xs font-bold text-[#2dd4bf] flex items-center gap-1.5">
+                  <Plus className="w-4 h-4" /> THÊM GÓP Ý CHUYÊN MÔN CHO ĐỘI THI
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-on-surface font-semibold">
+                    Nội dung nhận xét &amp; định hướng <span className="text-red-400">*</span>
+                  </label>
+                  <textarea
+                    value={feedbackContent}
+                    onChange={(e) => setFeedbackContent(e.target.value)}
+                    placeholder="Nhận xét về kiến trúc kĩ thuật, giải pháp, khả năng áp dụng thực tế..."
+                    rows={3}
+                    className="w-full bg-surface-container border border-outline-variant p-3 font-sans text-xs text-on-surface placeholder:text-on-surface-variant/50 rounded focus:outline-none focus:border-[#2dd4bf]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-on-surface font-semibold">Lời khuyên kỹ thuật / Công nghệ (Khuyên dùng)</label>
+                    <input
+                      type="text"
+                      value={technicalAdvice}
+                      onChange={(e) => setTechnicalAdvice(e.target.value)}
+                      placeholder="VD: Nên dùng Redis cache, tối ưu Docker multi-stage..."
+                      className="w-full bg-surface-container border border-outline-variant px-3 py-2 font-sans text-xs text-on-surface rounded focus:outline-none focus:border-[#2dd4bf]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-on-surface font-semibold">Điểm tham khảo (0-100)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={suggestedScore}
+                      onChange={(e) => setSuggestedScore(e.target.value ? Number(e.target.value) : "")}
+                      placeholder="VD: 85"
+                      className="w-full bg-surface-container border border-outline-variant px-3 py-2 font-mono text-xs text-on-surface rounded focus:outline-none focus:border-[#2dd4bf]"
+                    />
+                  </div>
+                </div>
+
+                {errorMsg && <p className="text-red-400 text-xs font-bold">{errorMsg}</p>}
+
+                <div className="flex justify-end pt-1">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    accent="mentor"
+                    disabled={createFeedback.isPending}
+                    className="text-xs py-2 px-5 font-bold"
+                  >
+                    <Send className="w-3.5 h-3.5 mr-1.5" />
+                    {createFeedback.isPending ? "Đang gửi..." : "Gửi góp ý cho đội thi"}
+                  </Button>
+                </div>
+              </form>
+
+              {/* Feedback History List */}
+              <div className="space-y-3">
+                <div className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  Lịch sử góp ý của Cố vấn ({feedbacks.length})
+                </div>
+
+                {isLoadingFeedbacks ? (
+                  <p className="text-on-surface-variant italic">Đang tải lịch sử góp ý...</p>
+                ) : feedbacks.length === 0 ? (
+                  <p className="text-on-surface-variant/70 italic">Chưa có nhận xét nào từ Cố vấn cho bài nộp này.</p>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    {feedbacks.map((fb) => (
+                      <div key={fb.id} className="p-4 bg-surface border border-outline-variant rounded space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge tone="mentor">Mentor: {fb.mentorName || "Cố vấn"}</Badge>
+                            {fb.suggestedScore !== undefined && fb.suggestedScore !== null && (
+                              <span className="text-[#00d9ff] font-bold">
+                                Điểm gợi ý: {fb.suggestedScore}/100
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-on-surface-variant">
+                              {new Date(fb.createdTime).toLocaleString("vi-VN")}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteFeedback(fb.id)}
+                              disabled={deleteFeedback.isPending}
+                              className="text-on-surface-variant hover:text-red-400 transition-colors p-1"
+                              title="Xóa nhận xét này"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="font-sans text-xs text-on-surface leading-relaxed">{fb.feedbackContent}</p>
+
+                        {fb.technicalAdvice && (
+                          <div className="p-2.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 text-[#2dd4bf] text-[11px] rounded">
+                            💡 Khuyên dùng: {fb.technicalAdvice}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </Modal>
+    </div>
   );
 }
