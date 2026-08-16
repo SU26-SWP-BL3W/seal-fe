@@ -6,7 +6,7 @@ import { Link } from "@/i18n/routing";
 import { SealShield } from "./SealShield";
 import { NotificationBell } from "./NotificationBell";
 import { hasEventPermission } from "@/lib/permissions";
-import { useEventDetail } from "@/repositories/eventsRepository";
+import { useEventDetail } from "@/repositories/events";
 import {
   Globe,
   Users,
@@ -27,6 +27,8 @@ import {
   UserPlus,
   Compass,
   User,
+  Calendar,
+  Award,
 } from "lucide-react";
 
 export function NavigationBar() {
@@ -504,14 +506,36 @@ export function NavigationBar() {
             {isAuthorizedJudge ? (
               <>
                 <Link
-                  href="/judge/scoring"
+                  href="/judge/events"
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                    pathname.includes("/judge")
+                    pathname === "/judge/events"
                       ? "bg-[var(--accent-judge)] text-[var(--bg-base)] shadow-sm"
                       : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Scale className="w-4 h-4 shrink-0" /> Bàn Chấm Điểm Giám Khảo
+                  <Calendar className="w-4 h-4 shrink-0" /> Sự Kiện Phân Công
+                </Link>
+
+                <Link
+                  href="/judge/tracks"
+                  className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
+                    pathname.includes("/judge/tracks")
+                      ? "bg-[var(--accent-judge)] text-[var(--bg-base)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                  }`}
+                >
+                  <Award className="w-4 h-4 shrink-0" /> Hạng Mục Chấm Thi
+                </Link>
+
+                <Link
+                  href="/judge/scoring"
+                  className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
+                    pathname.includes("/judge/scoring")
+                      ? "bg-[var(--accent-judge)] text-[var(--bg-base)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                  }`}
+                >
+                  <Scale className="w-4 h-4 shrink-0" /> Bàn Chấm Điểm RBL
                 </Link>
 
                 <Link

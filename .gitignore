@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# stitch wireframe artifacts & zip files
+stitch_extracted/
+*.zip
+BUSINESS_LOGIC.md
+
