@@ -21,7 +21,7 @@ src/
 │   ├── events/                   Sự kiện/vòng/hạng mục/tiêu chí/mời nhân sự
 │   ├── teams/                     Đội thi
 │   ├── scoring/                     Nộp bài + chấm điểm ✅ đã ráp
-│   ├── results/                       Kết quả cuối + giải thưởng + phúc khảo
+│   ├── results/                       Kết quả cuối + giải thưởng + phúc khảo ✅ đã ráp
 │   └── shared/                         Dùng chung nhiều luồng (thông báo, audit log)
 ├── models/                   Model/type dùng chung — entities.ts, apiClient.ts, types.ts
 ├── components/ui/             Design-system thuần, KHÔNG biết gì về nghiệp vụ
@@ -72,19 +72,33 @@ FE cũ (FE cũ có bug lệch contract thật ở đúng việc này, xem ví d�
   thô) — ghi rõ cảnh báo trong file để component không giả định `err.response.data.message`.
 - **Chưa build**: UI nộp bài/chấm điểm (`views/`).
 
+**`repositories/results/`** — `FinalResultsController` (11), `PrizesController` (4),
+`AppealsController` (5) — 20 endpoint.
+- ⚠️ **2 hành động dễ nhầm** trong `finalResultsRepository.ts`: `useUnpublishRoundResults` (DELETE)
+  **XOÁ SẠCH** kết quả, phải tính lại từ đầu; `useSetRoundResultsPublishStatus` (PUT) chỉ đổi cờ
+  công bố, **giữ nguyên** điểm đã tính, đảo 2 chiều thoải mái — dùng cái này cho nút "Công bố/Thu
+  hồi", không phải `usePublishRoundResults` (chỉ 1 chiều, tự nó không thu hồi lại được).
+- `PrizesController` dùng **route ngược**: GET/POST gắn dưới `/Events/{eventId}/Prizes`
+  (`~` override trong C#), chỉ PUT/DELETE mới thật sự ở `/Prizes/{id}` — copy nhầm base route là
+  lỗi 404 chắc chắn.
+- `AppealStatus` (Pending/Approved/Rejected) serialize dạng **số** (0/1/2), không phải chuỗi —
+  export sẵn `AppealStatus` const trong `appealsRepository.ts` để không ai tự hardcode số rời rạc.
+- **Chưa build**: UI công bố kết quả/trao giải/xử phúc khảo (`views/`).
+
 ## Chưa port cố ý
 
 - **`lib/permissions.ts`** — phụ thuộc entity/role đầy đủ (Team, EventRole...) chưa wiring; định
   nghĩa lại cùng lúc với các controller đó.
 
-## Còn lại — 22/25 controller
+## Còn lại — 3 luồng của teammate (Gia Bảo & Phúc), 15/25 controller
 
 Events, Rounds, Tracks, Templates, Criterias, EventRoles, EventCoordinators, Judges, Mentors
-(→ `repositories/events/`) · Teams (→ `repositories/teams/`) · FinalResults, Prizes, Appeals
-(→ `repositories/results/`) · Users (ngoài `/profile`), UserRejections, Schools, FptMock
-(→ `repositories/auth/`) · Notifications, AuditLogs, Demo (→ `repositories/shared/`).
+(→ `repositories/events/`) · Teams (→ `repositories/teams/`) · Users (ngoài `/profile`),
+UserRejections, Schools, FptMock (→ `repositories/auth/`) · Notifications, AuditLogs, Demo
+(→ `repositories/shared/`).
 
-Ráp theo đúng pattern Auth/Scoring khi bắt đầu từng luồng — đọc contract thật từ source C#, không
+Cả 3 luồng của mình (Auth, Scoring, Results) đã ráp xong. Phần còn lại thuộc luồng
+Event/Team — ráp theo đúng pattern đã dùng khi bắt đầu, đọc contract thật từ source C#, không
 copy route/field từ FE cũ.
 
 ## Chạy local
@@ -101,6 +115,10 @@ npm run dev
 push/PR vào `main`/`dev`.
 
 **⚠️ Đang bị chặn ở tài khoản, không phải ở workflow:** mọi run hiện fail sau 2s với annotation
-*"account is locked due to a billing issue"* — khoá cấp tài khoản GitHub `h1e3su` (billing/Actions
-minutes), không phải lỗi cấu hình. Build + lint local đã xanh (`npm run build`, `npm run lint`).
-Cần chủ tài khoản vào `github.com/settings/billing` gỡ khoá thì CI mới chạy được.
+*"account is locked due to a billing issue"*. Repo này **public** (Actions không tính phút cho
+public repo) và trang billing của `h1e3su` xác nhận $0/không nợ gì — nên nhiều khả năng đây là
+**anti-abuse hold** GitHub tự áp cho tài khoản mới/ít hoạt động (chặn CI để ngừa crypto-mining
+qua Actions), không phải thật sự thiếu tiền. Build + lint local đã xanh
+(`npm run build`, `npm run lint`). Cách gỡ: chủ tài khoản thêm 1 phương thức thanh toán ở
+Settings → Billing (dù $0), hoặc gửi yêu cầu tại `support.github.com/contact` xin kích hoạt
+GitHub Actions cho tài khoản.
