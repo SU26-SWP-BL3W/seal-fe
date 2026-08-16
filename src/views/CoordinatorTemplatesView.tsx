@@ -258,16 +258,22 @@ export const CoordinatorTemplatesView: React.FC = () => {
                       <Sparkles className="w-4 h-4 text-[#8b5cf6]" />
                       CHI TIẾT BỘ TIÊU CHÍ ĐANG CHỌN
                     </span>
-                    <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
-                      ✓ TRỌNG SỐ ĐỦ 100%
-                    </span>
+                    {activeSetTotalWeight === 100 ? (
+                      <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
+                        ✓ TRỌNG SỐ ĐỦ 100%
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold">
+                        ⚠️ TRỌNG SỐ: {activeSetTotalWeight}% (CHƯA ĐỦ 100%)
+                      </span>
+                    )}
                   </div>
 
                   <h2 className="font-sans font-bold text-xl text-[#e1e7ec]">
                     {activeSet.templateName}
                   </h2>
                   <p className="text-xs font-sans text-[#8a9ba8] leading-relaxed">
-                    {activeSet.description}
+                    {activeSet.description || "Chưa có mô tả chi tiết cho bộ tiêu chí này."}
                   </p>
                 </div>
 
@@ -275,10 +281,15 @@ export const CoordinatorTemplatesView: React.FC = () => {
                 <div className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-[#8a9ba8]">THANH PHÂN BỔ TRỌNG SỐ CÁC TIÊU CHÍ:</span>
-                    <span className="text-[#10b981] font-bold">{activeSetTotalWeight}% / 100%</span>
+                    <span className={activeSetTotalWeight === 100 ? "text-[#10b981] font-bold" : "text-[#f59e0b] font-bold"}>
+                      {activeSetTotalWeight}% / 100%
+                    </span>
                   </div>
                   <div className="w-full h-2.5 bg-[#182024] rounded-full overflow-hidden border border-[#263339]">
-                    <div className="h-full bg-[#8b5cf6] rounded-full" style={{ width: `${activeSetTotalWeight}%` }}></div>
+                    <div
+                      className={activeSetTotalWeight === 100 ? "h-full bg-[#10b981] rounded-full" : "h-full bg-[#f59e0b] rounded-full"}
+                      style={{ width: `${Math.min(activeSetTotalWeight, 100)}%` }}
+                    ></div>
                   </div>
                 </div>
 
@@ -289,35 +300,42 @@ export const CoordinatorTemplatesView: React.FC = () => {
                   </h3>
 
                   <div className="space-y-3">
-                    {activeSet.criterias.map((crit, idx) => (
-                      <div key={crit.id} className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs font-bold flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                            <h4 className="font-sans font-bold text-sm text-[#e1e7ec]">
-                              {crit.criterionName}
-                            </h4>
-                          </div>
-
-                          <div className="px-3 py-1 bg-[#182024] border border-[#263339] font-mono text-xs font-bold text-[#8b5cf6] shrink-0">
-                            TRỌNG SỐ: {crit.weight}%
-                          </div>
-                        </div>
-
-                        <p className="text-xs font-sans text-[#8a9ba8] pl-8 leading-relaxed">
-                          {crit.description}
-                        </p>
-
-                        {/* Rubric level scale guide badge */}
-                        <div className="pl-8 pt-1 flex items-center gap-2 font-mono text-[10px] text-[#8a9ba8]">
-                          <span>Thang điểm: Max {crit.maxScore}đ</span>
-                          <span>•</span>
-                          <span className="text-[#10b981]">Chuẩn RBL Level 1-4 (0-100%)</span>
-                        </div>
+                    {activeSet.criterias.length === 0 ? (
+                      <div className="p-6 bg-[#0a0e10] border border-[#263339] text-center text-[#8a9ba8] font-mono text-xs space-y-1">
+                        <p className="font-semibold text-amber-400">⚠️ Bộ tiêu chí này chưa có tiêu chí thành phần nào</p>
+                        <p className="text-[11px] text-[#8a9ba8]/70">Dữ liệu hiện tại trên hệ thống chưa tạo các tiêu chí nhỏ cho bộ này.</p>
                       </div>
-                    ))}
+                    ) : (
+                      activeSet.criterias.map((crit, idx) => (
+                        <div key={crit.id} className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                                {idx + 1}
+                              </span>
+                              <h4 className="font-sans font-bold text-sm text-[#e1e7ec]">
+                                {crit.criterionName}
+                              </h4>
+                            </div>
+
+                            <div className="px-3 py-1 bg-[#182024] border border-[#263339] font-mono text-xs font-bold text-[#8b5cf6] shrink-0">
+                              TRỌNG SỐ: {crit.weight}%
+                            </div>
+                          </div>
+
+                          <p className="text-xs font-sans text-[#8a9ba8] pl-8 leading-relaxed">
+                            {crit.description}
+                          </p>
+
+                          {/* Rubric level scale guide badge */}
+                          <div className="pl-8 pt-1 flex items-center gap-2 font-mono text-[10px] text-[#8a9ba8]">
+                            <span>Thang điểm: Max {crit.maxScore}đ</span>
+                            <span>•</span>
+                            <span className="text-[#10b981]">Chuẩn RBL Level 1-4 (0-100%)</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </>
