@@ -1,29 +1,25 @@
 import apiClient from "@/models/apiClient";
-import type { BaseResponse } from "@/models/entities";
 
+// StorageController.Upload thật chỉ trả { fileUrl }, KHÔNG có fileName/fileSize.
+// apiClient đã bóc vỏ BaseResponse trong interceptor nên res.data ở đây CHÍNH LÀ
+// UploadFileResponse, không phải BaseResponse<UploadFileResponse> — bản cũ đọc
+// res.data như còn nguyên vỏ, khiến mọi nơi gọi .data.fileUrl luôn undefined.
 export interface UploadFileResponse {
   fileUrl: string;
-  fileName: string;
-  fileSize: number;
 }
 
 export const uploadRepository = {
-  /** Upload single image/document file to backend cloud storage */
-  async uploadFile(file: File): Promise<BaseResponse<UploadFileResponse>> {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
+  /** POST /api/Storage/upload — multipart/form-data, field "file". */
+  async uploadFile(file: File): Promise<UploadFileResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const res = await apiClient.post<BaseResponse<UploadFileResponse>>("/Storage/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+    const res = await apiClient.post<UploadFileResponse>("/Storage/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
-      return res.data;
-    } catch (error: any) {
-      console.warn("[SEAL BE-DATA MISSING] POST /api/Storage/upload error:", error?.message);
-      throw error;
-    }
+    return res.data;
   },
 };

@@ -10,6 +10,7 @@ import {
 } from "@/repositories/authRepository";
 import { useGetUserRejections } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
+import { uploadRepository } from "@/repositories/uploadRepository";
 import { Button, Input, Card, Badge } from "@/components/ui";
 import {
   Shield,
@@ -43,9 +44,11 @@ export function OnboardingProfileView() {
   const [isDragging, setIsDragging] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [requestUnblockSuccess, setRequestUnblockSuccess] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { mutateAsync: submitProfile, isPending: isSubmitting } = useSubmitStudentProfile();
+  const { mutateAsync: submitProfile, isPending: isSubmittingProfile } = useSubmitStudentProfile();
+  const isSubmitting = isSubmittingProfile || isUploadingPhoto;
   const { mutateAsync: verifyFpt, isPending: isVerifying } = useFptStudentVerification();
   const { mutateAsync: requestUnblock, isPending: isUnblocking } = useRequestUnblock();
   const { data: schools = [], isLoading: loadingSchools } = useGetSchools();
@@ -320,10 +323,10 @@ export function OnboardingProfileView() {
                       isFpt: true,
                       studentCode: fptResult.studentCode ?? fptCode,
                       fullName: fptResult.fullName ?? undefined,
-                    } as any).catch((err) => console.warn("[SEAL] FPT submit warning:", err?.message));
+                    } as any);
                     setStep("pending");
-                  } catch {
-                    setSubmitError("Không thể gửi hồ sơ. Vui lòng thử lại.");
+                  } catch (err: any) {
+                    setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
                   }
                 }}
                 className="w-full justify-center flex items-center gap-2"
@@ -451,12 +454,18 @@ export function OnboardingProfileView() {
               onClick={async () => {
                 setSubmitError("");
                 try {
-                  const photoCardUrl = photoFile ? `https://storage.seal.vn/${Date.now()}-${encodeURIComponent(photoFile.name)}` : undefined;
-                  await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl })
-                    .catch((err) => console.warn("[SEAL] Non-FPT submit warning:", err?.message));
+                  let photoCardUrl: string | undefined;
+                  if (photoFile) {
+                    setIsUploadingPhoto(true);
+                    const uploaded = await uploadRepository.uploadFile(photoFile);
+                    photoCardUrl = uploaded.fileUrl;
+                  }
+                  await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl });
                   setStep("pending");
-                } catch {
-                  setSubmitError("Không thể gửi hồ sơ. Vui lòng thử lại.");
+                } catch (err: any) {
+                  setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
+                } finally {
+                  setIsUploadingPhoto(false);
                 }
               }}
               className="w-full justify-center flex items-center gap-2"
