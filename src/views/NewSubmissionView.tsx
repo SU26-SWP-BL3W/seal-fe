@@ -7,485 +7,349 @@ import { useCreateSubmission, readApiError, type SubmitResultRequest } from "@/r
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
-import { ApiMissingDataBadge } from "@/components/ui";
+import { Code, Globe, Presentation, FileText, Lock, PlusSquare, AlertCircle, ArrowLeft, Send, CheckCircle2 } from "lucide-react";
 
-import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
+export function NewSubmissionView() {
+  const { user } = useAuth();
+  const { data: teamResponse, isLoading: isLoadingTeam } = useMyTeam();
+  const team = (teamResponse as any)?.team ?? teamResponse;
 
-// ─── Deliverable Icon Metadata ────────────────────────────────────────────────
-const DELIVERABLE_ICONS: Record<DeliverableType, { label: string; icon: string; badgeColor: string }> = {
-  github:       { label: "GITHUB REPO",     icon: "⌥", badgeColor: "text-[var(--text-primary)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
-  slides:       { label: "SLIDES / PPT",    icon: "▦", badgeColor: "text-[#fb923c] border-[#fb923c]/30 bg-[#fb923c]/10" },
-  demo_video:   { label: "DEMO VIDEO",      icon: "▶", badgeColor: "text-[#f87171] border-[#f87171]/30 bg-[#f87171]/10" },
-  deployed_url: { label: "LIVE DEMO URL",   icon: "⬡", badgeColor: "text-[var(--color-success)] border-[var(--color-success)]/30 bg-[var(--color-success)]/10" },
-  report:       { label: "BÁO CÁO PDF",     icon: "▤", badgeColor: "text-[#facc15] border-[#facc15]/30 bg-[#facc15]/10" },
-  figma:        { label: "FIGMA DESIGN",    icon: "◈", badgeColor: "text-[#c084fc] border-[#c084fc]/30 bg-[#c084fc]/10" },
-  other:        { label: "LINK BỔ SUNG",    icon: "⊕", badgeColor: "text-[var(--text-muted)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
-};
+  const eventId = team?.eventId || team?.EventId || "";
+  const teamId = team?.id || team?.Id || "";
+  const trackId = team?.trackId || team?.TrackId || "";
 
-// ─── Single Track Submission Card Component ──────────────────────────────────
-function TrackSubmissionCard({
-  track,
-  existingSubmission,
-  onSubmitSuccess,
-  teamId,
-  roundId,
-}: {
-  track: TrackItem;
-  existingSubmission?: SubmissionItem;
-  onSubmitSuccess: (trackId: string, updatedSub: SubmissionItem) => void;
-  teamId: string;
-  roundId: string;
-}) {
-  const deliverables: DeliverableItem[] = [
-    { id: "github", type: "github", label: "GitHub / GitLab repo", placeholder: "https://github.com/org/repo", required: true, trackId: track.id },
-    { id: "deployed_url", type: "deployed_url", label: "Live demo", placeholder: "https://demo.example.com", required: true, trackId: track.id },
-    { id: "slides", type: "slides", label: "Slides", placeholder: "https://docs.google.com/presentation/...", required: true, trackId: track.id },
-  ];
+  const { data: rounds = [], isLoading: isLoadingRounds } = useEventRounds(eventId || undefined);
+  const { data: tracks = [] } = useGetTracksByEvent(eventId || undefined);
+
+  const currentTrack = useMemo(() => {
+    return tracks.find((t) => (t.id || t.Id) === trackId) || null;
+  }, [tracks, trackId]);
+
+  // Vong thi dang mo nop bai (submissionDeadline > now)
+  const openRounds = useMemo(() => {
+    return rounds.filter((r) => {
+      const deadline = r.submissionDeadline || r.endDate;
+      return !deadline || new Date(deadline) > new Date();
+    });
+  }, [rounds]);
+
+  const [selectedRoundId, setSelectedRoundId] = useState<string>("");
+  const activeRoundId = selectedRoundId || openRounds[0]?.id || rounds[0]?.id || "";
+  const activeRound = rounds.find((r) => r.id === activeRoundId) || openRounds[0] || rounds[0];
+
+  // 3 URLs bat buoc theo quy chuan Backend
+  const [repoUrl, setRepoUrl] = useState("");
+  const [demoUrl, setDemoUrl] = useState("");
+  const [slideUrl, setSlideUrl] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
   const createSubmission = useCreateSubmission();
 
-  // Parse existing submission links if available
-  const parsedExisting = useMemo(() => {
-    if (!existingSubmission) return { links: {}, notes: "" };
-    try {
-      const parsed = JSON.parse(existingSubmission.description);
-      const linkMap: Record<string, string> = {};
-      if (Array.isArray(parsed?.links)) {
-        parsed.links.forEach((l: { type: string; url: string }) => {
-          if (l.type && l.url) linkMap[l.type] = l.url;
-        });
-      }
-      return { links: linkMap, notes: parsed?.notes || "" };
-    } catch {
-      return { links: {}, notes: existingSubmission.description || "" };
-    }
-  }, [existingSubmission]);
+  const isLeader = team?.leaderId === user?.id || team?.LeaderId === user?.id;
+  const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
-  const [linkValues, setLinkValues] = useState<Record<string, string>>(parsedExisting.links);
-  const [notes, setNotes] = useState(parsedExisting.notes);
-  const [isSaved, setIsSaved] = useState(!!existingSubmission);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState("");
-
-  // Check completion
-  const { filledCount, requiredFilled, requiredTotal } = useMemo(() => {
-    let filled = 0;
-    let reqFilled = 0;
-    let reqTotal = 0;
-    for (const d of deliverables) {
-      const val = (linkValues[d.type] || linkValues[d.id] || "").trim();
-      const valid = val.startsWith("http://") || val.startsWith("https://");
-      if (valid) filled++;
-      if (d.required) {
-        reqTotal++;
-        if (valid) reqFilled++;
-      }
-    }
-    return { filledCount: filled, requiredFilled: reqFilled, requiredTotal: reqTotal };
-  }, [deliverables, linkValues]);
-
-  const allRequiredDone = requiredTotal > 0 ? requiredFilled === requiredTotal : true;
-
-  const handleLinkChange = (key: string, val: string) => {
-    setLinkValues((prev) => ({ ...prev, [key]: val }));
-    setIsSaved(false);
-  };
-
-  const handleCardSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!allRequiredDone) return;
+    if (!teamId || !activeRoundId || !trackId) {
+      setSubmitError("Thiếu thông tin Đội thi, Hạng mục hoặc Vòng thi.");
+      return;
+    }
 
-    setIsSubmitting(true);
-    const primaryDeliverable = deliverables.find((d) => d.required);
-    const primaryUrl = primaryDeliverable
-      ? (linkValues[primaryDeliverable.type] || linkValues[primaryDeliverable.id] || "").trim()
-      : Object.values(linkValues).find((v) => v.trim().length > 0) || "";
+    if (!repoUrl.trim() || !demoUrl.trim() || !slideUrl.trim()) {
+      setSubmitError("Vui lòng điền đủ 3 đường dẫn bắt buộc: Repo URL, Demo URL và Slide URL.");
+      return;
+    }
 
-    const allLinks = deliverables.map((d) => ({
-      type: d.type,
-      label: d.label,
-      url: (linkValues[d.type] || linkValues[d.id] || "").trim(),
-      required: d.required,
-    }));
+    setSubmitError("");
 
-    const payload = {
+    const payload: SubmitResultRequest = {
       TeamId: teamId,
-      TrackId: track.id,
-      RoundId: roundId,
-      RepoUrl: (linkValues.github || "").trim(),
-      DemoUrl: (linkValues.deployed_url || "").trim(),
-      SlideUrl: (linkValues.slides || "").trim(),
-      SubmissionUrl: (linkValues.github || primaryUrl).trim(),
-      Description: JSON.stringify({ links: allLinks, notes }),
+      TrackId: trackId,
+      RoundId: activeRoundId,
+      RepoUrl: repoUrl.trim(),
+      DemoUrl: demoUrl.trim(),
+      SlideUrl: slideUrl.trim(),
+      SubmissionUrl: repoUrl.trim(),
+      Description: description.trim(),
     };
 
     try {
-      const created = await createSubmission.mutateAsync(payload as SubmitResultRequest);
-      const updatedItem: SubmissionItem = {
-        id: (created as { id?: string })?.id || existingSubmission?.id || `sub-${Date.now()}`,
-        teamId,
-        roundId,
-        roundName: "Vòng hiện tại",
-        trackId: track.id,
-        trackName: track.trackName,
-        submissionUrl: primaryUrl,
-        description: JSON.stringify({ links: allLinks, notes }),
-        teamName: "",
-        createdTime: new Date().toISOString(),
-        isActive: true,
-        isEliminated: false,
-      };
-      setIsSaved(true);
-      setFormError("");
-      onSubmitSuccess(track.id, updatedItem);
+      await createSubmission.mutateAsync(payload);
+      setSubmitSuccess(true);
     } catch (err) {
-      setFormError(readApiError(err));
-    } finally {
-      setIsSubmitting(false);
+      setSubmitError(readApiError(err));
     }
   };
 
-  return (
-    <div
-      id={`track-card-${track.id}`}
-      className={`bg-[var(--bg-panel)] border hud-clipped transition-all duration-200 overflow-hidden ${
-        isSaved
-          ? "border-[var(--color-success)]/40 shadow-[0_0_20px_rgba(52,211,153,0.06)]"
-          : allRequiredDone
-          ? "border-[var(--accent-team)]/50 shadow-[0_0_20px_rgba(103,200,240,0.06)]"
-          : "border-[var(--border-muted)]"
-      }`}
-    >
-      {/* ── Card Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 border-b border-[var(--border-muted)] bg-[var(--bg-base)]/50">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] text-[var(--accent-team)] uppercase tracking-widest font-bold">
-              HẠNG MỤC THI THẤU
-            </span>
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">·</span>
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">#{track.id}</span>
-          </div>
-          <h2 className="font-display text-xl font-bold text-[var(--text-primary)] mt-0.5">
-            {track.trackName}
-          </h2>
-          <p className="font-mono text-xs text-[var(--text-muted)] mt-1 max-w-xl">
-            {track.description}
-          </p>
-        </div>
-
-        {/* Status Indicator Badge */}
-        <div className="shrink-0 flex items-center gap-2">
-          {isSaved ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 border border-[var(--color-success)]/40 bg-[var(--color-success)]/10 font-mono text-xs font-bold text-[var(--color-success)] uppercase tracking-wider hud-clipped">
-              <span className="w-2 h-2 rounded-full bg-[var(--color-success)] animate-pulse" />
-              ĐÃ NỘP BÀI
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 px-3 py-1.5 border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 font-mono text-xs font-bold text-[var(--color-warning)] uppercase tracking-wider hud-clipped">
-              <span className="w-2 h-2 rounded-full bg-[var(--color-warning)] animate-ping" />
-              CHƯA NỘP
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Deliverables Form ── */}
-      <form onSubmit={handleCardSubmit} className="p-6 flex flex-col gap-5">
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
-              DANH SÁCH TÀI LIỆU CẦN NỘP ({filledCount}/{deliverables.length})
-            </span>
-            <span className="font-mono text-[11px] text-[var(--text-muted)]">
-              Bắt buộc: <strong className={requiredFilled === requiredTotal ? "text-[var(--color-success)]" : "text-[var(--color-warning)]"}>{requiredFilled}/{requiredTotal}</strong>
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {deliverables.map((dlv: any) => {
-              const meta = (DELIVERABLE_ICONS as any)[dlv.type] || DELIVERABLE_ICONS.other;
-              const val = linkValues[dlv.type] || linkValues[dlv.id] || "";
-              const isFilled = val.trim().length > 0;
-              const isValidUrl = isFilled && (val.startsWith("http://") || val.startsWith("https://"));
-
-              return (
-                <div
-                  key={dlv.id}
-                  className={`p-4 border transition-all duration-150 flex flex-col md:flex-row md:items-center justify-between gap-3 ${
-                    isValidUrl
-                      ? "border-[var(--color-success)]/40 bg-[var(--color-success)]/[0.02]"
-                      : isFilled
-                      ? "border-[var(--color-danger)]/40 bg-[var(--color-danger)]/[0.02]"
-                      : "border-[var(--border-muted)] bg-[var(--bg-base)]/40 hover:border-[var(--border-muted)]/80"
-                  }`}
-                >
-                  {/* Left: Icon & Label */}
-                  <div className="flex items-center gap-3 min-w-[200px]">
-                    <span className={`px-2 py-1 font-mono text-[10px] font-bold border ${meta.badgeColor}`}>
-                      {meta.label}
-                    </span>
-                    <div className="flex flex-col">
-                      <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
-                        {dlv.label}
-                      </span>
-                      {dlv.required ? (
-                        <span className="font-mono text-[9px] text-[var(--color-danger)] uppercase font-semibold">
-                          * Bắt buộc
-                        </span>
-                      ) : (
-                        <span className="font-mono text-[9px] text-[var(--text-muted)] uppercase">
-                          Tuỳ chọn
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Input field */}
-                  <div className="flex-1 min-w-0">
-                    <input
-                      type="url"
-                      placeholder={dlv.placeholder || "https://..."}
-                      value={val}
-                      onChange={(e) => handleLinkChange(dlv.type, e.target.value)}
-                      className={`w-full px-3 py-2 bg-[var(--bg-input)] border font-mono text-xs focus:outline-none transition-colors ${
-                        isValidUrl
-                          ? "border-[var(--color-success)]/40 focus:border-[var(--color-success)] text-[var(--text-primary)]"
-                          : isFilled
-                          ? "border-[var(--color-danger)]/50 text-[var(--color-danger)]"
-                          : "border-[var(--border-muted)] focus:border-[var(--accent-team)] text-[var(--text-primary)]"
-                      }`}
-                    />
-                  </div>
-
-                  {/* Right Status */}
-                  <div className="shrink-0 flex items-center gap-2">
-                    {isValidUrl ? (
-                      <span className="font-mono text-[10px] font-bold text-[var(--color-success)] flex items-center gap-1 border border-[var(--color-success)]/30 px-2 py-1 bg-[var(--color-success)]/10">
-                        ĐÃ ĐIỀN
-                      </span>
-                    ) : dlv.required ? (
-                      <span className="font-mono text-[10px] font-bold text-[var(--color-danger)] flex items-center gap-1 border border-[var(--color-danger)]/30 px-2 py-1 bg-[var(--color-danger)]/10">
-                        CHƯA ĐIỀN
-                      </span>
-                    ) : (
-                      <span className="font-mono text-[10px] text-[var(--text-muted)] border border-[var(--border-muted)] px-2 py-1">
-                        TUỲ Ý
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Note Area */}
-        <div className="flex flex-col gap-1.5 mt-1">
-          <label className="font-mono text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
-            GHI CHÚ THÊM BÀI NỘP HẠNG MỤC NÀY
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => {
-              setNotes(e.target.value);
-              setIsSaved(false);
-            }}
-            rows={2}
-            placeholder="Ghi chú chi tiết về giải pháp, tài khoản demo, v.v..."
-            className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-xs text-[var(--text-primary)] focus:outline-none transition-colors resize-none placeholder:text-[var(--text-muted)]/40"
-          />
-        </div>
-
-        {/* Card Footer Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[var(--border-muted)]/60">
-          <div className="font-mono text-xs text-[var(--text-muted)]">
-            {formError ? (
-              <span role="alert" className="text-[color:var(--color-danger)]">{formError}</span>
-            ) : isSaved ? (
-              <span className="text-[var(--color-success)] font-semibold">
-                Đã lưu bài nộp cho hạng mục {track.trackName}
-              </span>
-            ) : (
-              <span>Vui lòng kiểm tra kỹ các đường link trước khi xác nhận.</span>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={!allRequiredDone || isSubmitting}
-            className={`hud-clipped px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-wider transition-all focus:outline-none ${
-              isSaved
-                ? "bg-transparent border border-[var(--accent-team)] text-[var(--accent-team)] hover:bg-[var(--accent-team)]/10"
-                : allRequiredDone
-                ? "bg-[var(--accent-team)] text-[var(--bg-base)] hover:bg-white hover:shadow-[0_0_15px_rgba(103,200,240,0.4)]"
-                : "bg-[var(--bg-input)] text-[var(--text-muted)] border border-[var(--border-muted)] opacity-50 cursor-not-allowed"
-            }`}
-          >
-            {isSubmitting
-              ? "ĐANG XỬ LÝ..."
-              : isSaved
-              ? "CẬP NHẬT BÀI NỘP"
-              : "XÁC NHẬN NỘP BÀI"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-// ─── Main NewSubmissionView Component ──────────────────────────────────────────
-export function NewSubmissionView() {
-  const { activeRole } = useAuth();
-  const eventIdFromRole =
-    (activeRole as { eventId?: string; EventId?: string } | null)?.eventId ||
-    (activeRole as { EventId?: string } | null)?.EventId ||
-    "";
-  const { data: realTeam, isLoading } = useMyTeam(eventIdFromRole || undefined);
-  const team = realTeam;
-  const eventId = (team as any)?.EventId || (team as any)?.eventId || eventIdFromRole;
-  const teamId = (team as any)?.TeamId || (team as any)?.id || "";
-  const teamTrackId = (team as any)?.TrackId || (team as any)?.trackId || "";
-  const { data: tracks = [] } = useGetTracksByEvent(eventId);
-  const { data: rounds = [] } = useEventRounds(eventId);
-  const roundId = rounds.length
-    ? (rounds[rounds.length - 1].id || rounds[rounds.length - 1].Id || "")
-    : "";
-
-  const availableTracks: TrackItem[] = (tracks as any[])
-    .filter((t) => !teamTrackId || (t.id || t.Id) === teamTrackId)
-    .map((t: any) => ({
-      id: t.id || t.Id,
-      trackName: t.trackName || t.TrackName || "",
-      description: t.description || t.Description || "",
-      roundId,
-      templateId: t.templateId || t.TemplateId || null,
-    }));
-
-  const [submissions, setSubmissions] = useState<Record<string, SubmissionItem>>({});
-
-  const handleTrackSubmitSuccess = (trackId: string, updatedSub: SubmissionItem) => {
-    setSubmissions((prev) => ({
-      ...prev,
-      [trackId]: updatedSub,
-    }));
-  };
-
-  const teamStatus = String((team as { status?: string; Status?: string } | undefined)?.status
-    || (team as { Status?: string } | undefined)?.Status || "");
-  const canSubmit = teamStatus === "Registered";
-
-  // Guard: chưa có đội hoặc đội chưa được duyệt
-  if (!isLoading && (!team || !canSubmit)) {
+  if (!user) {
     return (
-      <div className="hud-lattice min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-4 space-y-4">
-        <ApiMissingDataBadge
-          endpoint="GET /api/SubmitResults"
-          title="BẠN CHƯA CÓ ĐỘI THI ĐỂ NỘP BÀI TRÊN BACKEND DATABASE"
-          message="Vui lòng tạo hoặc tham gia một Đội thi chính thức trước khi thực hiện nộp bài."
-        />
-        <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--color-warning)]/40 hud-clipped p-8 text-center">
-          <div className="font-mono text-[10px] text-[var(--color-warning)] tracking-widest uppercase mb-3">
-            CHƯA ĐỦ ĐIỀU KIỆN NỘP BÀI
-          </div>
-          <p className="font-mono text-sm text-[var(--text-primary)] mb-4 leading-relaxed">
-            {!team ? "Bạn chưa có đội thi." : `Trạng thái đội thi hiện tại: `}
-            {team && <span className="font-bold text-[var(--color-warning)]">{(team as any)?.status || (team as any)?.Status}</span>}
-            <br />
-            <span className="text-xs text-[var(--text-muted)] mt-1 block">
-              Đội cần được BTC phê duyệt ghi danh trước khi thực hiện nộp bài.
-            </span>
-          </p>
-          <Link href="/my-team">
-            <button className="hud-clipped px-5 py-2.5 border border-[var(--accent-team)] text-[var(--accent-team)] font-mono text-xs tracking-wider uppercase hover:bg-[var(--accent-team)]/10 transition-colors">
-              ← VỀ TRANG ĐỘI THI
-            </button>
-          </Link>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh] font-mono text-xs text-[#bbc9ce]">
+        Vui lòng đăng nhập để nộp bài thi.
+      </div>
+    );
+  }
+
+  if (isLoadingTeam || isLoadingRounds) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] font-mono text-xs text-[#00d9ff] animate-pulse">
+        [ SYSTEM_LOG: LOADING_SUBMISSION_DECK... ]
+      </div>
+    );
+  }
+
+  if (!teamId) {
+    return (
+      <div className="max-w-xl mx-auto my-16 p-8 bg-[#080f11] border border-[#3c494d] text-center glow-box">
+        <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff] mb-2">CHƯA THAM GIA ĐỘI THI</h2>
+        <p className="font-mono text-xs text-[#bbc9ce] mb-6">
+          Bạn cần tạo hoặc gia nhập một đội thi trước khi có thể nộp bài.
+        </p>
+        <Link href="/my-team">
+          <button className="bg-[#00d9ff] text-[#080f11] font-mono font-bold text-xs px-6 py-2.5 rounded uppercase hover:bg-white transition-colors">
+            [ Đến Không Gian Đội Thi ]
+          </button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="hud-lattice min-h-[calc(100vh-4rem)] pb-16">
-      <div className="max-w-[var(--container-max)] mx-auto px-6 py-8">
-        
-        {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--text-muted)] mb-6">
-          <Link href="/my-team" className="hover:text-[var(--accent-team)] transition-colors">
-            ĐỘI THI
-          </Link>
-          <span>›</span>
-          <Link href="/my-submissions" className="hover:text-[var(--accent-team)] transition-colors">
-            DANH SÁCH BÀI NỘP
-          </Link>
-          <span>›</span>
-          <span className="text-[var(--accent-team)] font-bold">NỘP BÀI THEO HẠNG MỤC</span>
-        </div>
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#00d9ff] selection:text-[#003641]">
+      {/* Ambient Scanlines */}
+      <div className="fixed inset-0 pointer-events-none opacity-5 bg-[linear-gradient(transparent_50%,rgba(0,0,0,1)_50%)] bg-[length:100%_4px] z-0" />
 
-        {/* ── Page Header Banner ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 mb-8 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped shadow-sm">
+      <div className="max-w-6xl mx-auto relative z-10 space-y-6">
+        {/* Header (Stitch T7) */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/10 pb-4 gap-4">
           <div>
-            <span className="font-mono text-[10px] text-[var(--accent-team)] tracking-[0.25em] uppercase font-bold">
-              CỔNG NỘP BÀI THI CHÍNH THỨC
-            </span>
-            <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)] mt-1">
-              Nộp Bài Thi Hackathon
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 mt-2 font-mono text-xs text-[var(--text-muted)]">
-              <span>Đội: <strong className="text-[var(--accent-team)]">{(team as any)?.teamName || (team as any)?.TeamName || (team as any)?.name || (team as any)?.Name || "Đội Thi"}</strong></span>
-              <span>·</span>
-              <span>Sự kiện:</span>
-              <Link
-                href={`/events/${(team as any)?.eventId || (team as any)?.EventId || ""}`}
-                className="text-[var(--accent-primary)] hover:underline flex items-center gap-1 border border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 px-2 py-0.5 rounded-none font-bold"
-              >
-                <span>{(team as any)?.eventName || (team as any)?.EventName || "Sự kiện"}</span>
-                <span className="text-[10px]">↗ XEM CHI TIẾT SỰ KIỆN</span>
-              </Link>
+            <div className="font-mono text-[11px] text-[#859398] mb-1 tracking-wider uppercase">
+              MODULE // SUBMISSION_CREATION
             </div>
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white flex items-center gap-3 uppercase tracking-wide">
+              <PlusSquare className="w-8 h-8 text-[#00d9ff]" />
+              Khởi Tạo Bài Nộp Mới
+            </h1>
           </div>
-
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3">
             <Link href="/my-submissions">
-              <button className="hud-clipped px-5 py-2.5 border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs tracking-wider uppercase hover:border-[var(--accent-team)] hover:text-[var(--accent-team)] transition-colors">
-                XEM QUẢN LÝ BÀI NỘP
+              <button className="font-mono text-xs text-[#bbc9ce] hover:text-[#00d9ff] border border-[#3c494d] bg-[#080f11] px-3.5 py-1.5 flex items-center gap-1.5 transition-colors uppercase">
+                <ArrowLeft className="w-3.5 h-3.5" /> Danh sách bài nộp
               </button>
             </Link>
+            <div className="font-mono text-xs text-[#38bdf8] bg-[#38bdf8]/10 px-3 py-1.5 border border-[#38bdf8]/30 uppercase font-bold">
+              [ MODE: WRITE ]
+            </div>
           </div>
         </div>
 
-        {/* ── Scrollable Track Submissions Section List ── */}
-        <div className="flex flex-col gap-8">
-          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
-            <h2 className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--text-primary)] flex items-center gap-2">
-              <span>HẠNG MỤC CẦN NỘP BÀI</span>
-              <span className="text-xs text-[var(--text-muted)] font-normal">({availableTracks.length} hạng mục)</span>
-            </h2>
-            <span className="font-mono text-xs text-[var(--text-muted)]">
-              Cuộn xuống để xem và nộp bài cho từng hạng mục
-            </span>
+        {submitSuccess ? (
+          <div className="bg-[#080f11] border border-[#00d9ff] p-10 text-center glow-box max-w-2xl mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-full bg-[#00d9ff]/10 border border-[#00d9ff] flex items-center justify-center mx-auto text-[#00d9ff]">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <h2 className="font-display text-2xl font-bold uppercase text-[#00d9ff]">NỘP BÀI THI THÀNH CÔNG!</h2>
+            <p className="font-mono text-xs text-[#bbc9ce] max-w-md mx-auto leading-relaxed">
+              Bài nộp của đội <strong className="text-white">{team?.name || team?.Name}</strong> đã được ghi nhận trên hệ thống và chuyển vào hàng đợi chấm điểm của Hội đồng Giám khảo.
+            </p>
+            <div className="pt-4 flex justify-center gap-4 font-mono text-xs">
+              <Link href="/my-submissions">
+                <button className="bg-[#00d9ff] text-[#080f11] font-bold px-6 py-2.5 uppercase hover:bg-white transition-colors">
+                  [ Xem Bảng Bài Nộp ]
+                </button>
+              </Link>
+              <button
+                onClick={() => {
+                  setSubmitSuccess(false);
+                  setRepoUrl("");
+                  setDemoUrl("");
+                  setSlideUrl("");
+                  setDescription("");
+                }}
+                className="border border-[#3c494d] text-[#bbc9ce] px-6 py-2.5 uppercase hover:border-[#00d9ff] hover:text-white transition-colors"
+              >
+                Nộp bài khác
+              </button>
+            </div>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-[1px] bg-white/10 border border-white/10 glow-box">
+            {/* Left Column (Info & Meta) */}
+            <div className="lg:col-span-4 bg-[#242b2d] p-6 relative group border border-white/5 space-y-6">
+              {/* 4 Cyber Corners */}
+              <div className="corner-accent-tl opacity-70 group-hover:opacity-100" />
+              <div className="corner-accent-tr opacity-70 group-hover:opacity-100" />
+              <div className="corner-accent-bl opacity-70 group-hover:opacity-100" />
+              <div className="corner-accent-br opacity-70 group-hover:opacity-100" />
 
-          {availableTracks.length === 0 ? (
-            <ApiMissingDataBadge
-              endpoint="GET /api/SubmitResults"
-              title="CHƯA CÓ HẠNG MỤC NỘP BÀI TRÊN BACKEND DATABASE"
-              message="Chưa có Hạng mục thi đấu nào được khởi tạo hoặc gán mở cổng nộp bài trên Backend API."
-            />
-          ) : (
-            availableTracks.map((track) => (
-              <TrackSubmissionCard
-                key={track.id}
-                track={track}
-                existingSubmission={submissions[track.id]}
-                onSubmitSuccess={handleTrackSubmitSuccess}
-                teamId={teamId}
-                roundId={roundId || track.roundId}
-              />
-            ))
-          )}
-        </div>
+              <div className="bg-[#00d9ff]/10 h-7 -mx-6 -mt-6 mb-6 flex items-center px-6 border-b border-[#00d9ff]/20">
+                <span className="font-mono text-[11px] font-bold text-[#00d9ff] uppercase tracking-widest">
+                  META_DATA
+                </span>
+              </div>
 
+              {/* Đội thi */}
+              <div>
+                <label className="block font-mono text-[11px] text-[#859398] uppercase tracking-wider mb-1.5">
+                  ĐỘI THI
+                </label>
+                <div className="font-mono text-xs text-white bg-[#0e1417] p-3 border border-[#3c494d] flex items-center justify-between">
+                  <span>{team?.name || team?.Name || "Đội thi"}</span>
+                  <span className="text-[10px] text-[#38bdf8] border border-[#38bdf8]/30 px-1.5 py-0.5 bg-[#38bdf8]/10 font-bold">
+                    {team?.status || "Registered"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Hạng mục */}
+              <div>
+                <label className="block font-mono text-[11px] text-[#859398] uppercase tracking-wider mb-1.5">
+                  HẠNG MỤC (READ-ONLY)
+                </label>
+                <div className="font-mono text-xs text-white bg-[#0e1417] p-3 border border-[#3c494d] flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-[#859398]" />
+                  <span>{currentTrack?.trackName || currentTrack?.TrackName || "Advanced Tech Track"}</span>
+                </div>
+              </div>
+
+              {/* Vòng thi */}
+              <div>
+                <label className="block font-mono text-[11px] text-[#00d9ff] uppercase tracking-wider mb-1.5 font-bold">
+                  VÒNG THI HIỆN TẠI
+                </label>
+                <select
+                  value={activeRoundId}
+                  onChange={(e) => setSelectedRoundId(e.target.value)}
+                  className="w-full input-cyber text-white font-mono text-xs p-3 focus:outline-none focus:border-[#00d9ff] bg-[#152238] border-b-2 border-[#3c494d]"
+                >
+                  {rounds.map((r) => (
+                    <option key={r.id} value={r.id} className="bg-[#0e1417] text-white">
+                      {r.roundName} {r.submissionDeadline ? `(Hạn: ${new Date(r.submissionDeadline).toLocaleDateString("vi-VN")})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="font-mono text-[10px] text-[#859398] mt-1.5">
+                  {openRounds.length > 0 ? "Vòng thi đang mở tiếp nhận hồ sơ." : "Hệ thống vòng thi sự kiện."}
+                </p>
+              </div>
+
+              {/* Thông số hệ thống */}
+              <div className="pt-4 border-t border-[#3c494d]/50 font-mono text-[11px] text-[#859398] space-y-2">
+                <div className="flex justify-between">
+                  <span>TRẠNG THÁI:</span>
+                  <span className="text-[#38bdf8] font-bold">CỔNG NỘP MỞ</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ĐỊNH DẠNG:</span>
+                  <span className="text-white">GITHUB, LIVE URL, SLIDE</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>KIỂM TOÁN:</span>
+                  <span className="text-[#00d9ff]">AUTO API AUDIT</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column (Data Input Form) */}
+            <div className="lg:col-span-8 bg-[#1a2123] p-6 relative border border-white/5">
+              <div className="bg-[#38bdf8]/10 h-7 -mx-6 -mt-6 mb-6 flex items-center px-6 border-b border-[#38bdf8]/20">
+                <span className="font-mono text-[11px] font-bold text-[#38bdf8] uppercase tracking-widest">
+                  DATA_INPUT (3 URLS BẮT BUỘC)
+                </span>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* 1. Repo URL */}
+                <div>
+                  <label className="block font-mono text-xs text-white uppercase tracking-wider mb-2 flex items-center gap-1.5 font-bold">
+                    <Code className="w-4 h-4 text-[#00d9ff]" />
+                    Repository URL <span className="text-[#ffb4ab] font-bold">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://github.com/organization/project-repo"
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
+                    className="w-full input-cyber text-white font-mono text-xs p-3.5 pl-4 focus:outline-none focus:border-[#00d9ff] bg-[#152238] border-b-2 border-[#3c494d]"
+                  />
+                  <p className="font-mono text-[11px] text-[#859398] mt-1.5 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-[#febb29]" />
+                    Repo mã nguồn (GitHub/GitLab) — tự động kiểm tra sao lưu và commit lịch sử.
+                  </p>
+                </div>
+
+                {/* 2. Demo URL */}
+                <div>
+                  <label className="block font-mono text-xs text-white uppercase tracking-wider mb-2 flex items-center gap-1.5 font-bold">
+                    <Globe className="w-4 h-4 text-[#38bdf8]" />
+                    Demo Video / Live App URL <span className="text-[#ffb4ab] font-bold">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://demo.project.app hoặc https://youtube.com/watch?v=..."
+                    value={demoUrl}
+                    onChange={(e) => setDemoUrl(e.target.value)}
+                    className="w-full input-cyber text-white font-mono text-xs p-3.5 pl-4 focus:outline-none focus:border-[#00d9ff] bg-[#152238] border-b-2 border-[#3c494d]"
+                  />
+                </div>
+
+                {/* 3. Slide URL */}
+                <div>
+                  <label className="block font-mono text-xs text-white uppercase tracking-wider mb-2 flex items-center gap-1.5 font-bold">
+                    <Presentation className="w-4 h-4 text-[#ffdea9]" />
+                    Slide Thuyết Trình / Báo Cáo URL <span className="text-[#ffb4ab] font-bold">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://docs.google.com/presentation/d/... hoặc https://canva.com/..."
+                    value={slideUrl}
+                    onChange={(e) => setSlideUrl(e.target.value)}
+                    className="w-full input-cyber text-white font-mono text-xs p-3.5 pl-4 focus:outline-none focus:border-[#00d9ff] bg-[#152238] border-b-2 border-[#3c494d]"
+                  />
+                </div>
+
+                {/* Ghi chú */}
+                <div>
+                  <label className="block font-mono text-xs text-[#859398] uppercase tracking-wider mb-2 flex items-center gap-1.5 font-bold">
+                    <FileText className="w-4 h-4 text-[#859398]" />
+                    Tóm Tắt Đột Phá Kỹ Thuật (Project Summary)
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Mô tả ngắn gọn về giải pháp, kiến trúc và công nghệ nổi bật..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full input-cyber text-white font-mono text-xs p-3.5 focus:outline-none focus:border-[#00d9ff] bg-[#152238] border-b-2 border-[#3c494d]"
+                  />
+                </div>
+
+                {submitError && (
+                  <div className="p-3 bg-[#ffb4ab]/10 border border-[#ffb4ab]/30 text-[#ffb4ab] font-mono text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{submitError}</span>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-4">
+                  <button
+                    type="submit"
+                    disabled={createSubmission.isPending}
+                    className="bg-[#00d9ff] text-[#080f11] font-display text-base font-bold py-3.5 px-8 rounded-[12px] rounded-br-none hover:bg-white transition-all flex items-center justify-center gap-2 uppercase tracking-wider relative overflow-hidden group shadow-[0_0_20px_rgba(0,217,255,0.3)] cursor-pointer"
+                  >
+                    <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+                    <Send className="w-4 h-4" />
+                    {createSubmission.isPending ? "Đang truyền tải dữ liệu..." : "// GỬI BÀI NỘP (TRANSMIT_DATA) >"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
