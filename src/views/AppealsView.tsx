@@ -2,10 +2,16 @@
 
 import { useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
+import { useMyTeam } from "@/repositories/teamsRepository";
+import { useMySubmissions } from "@/repositories/submitResultsRepository";
 import {
-  useGetAppeals,
+  useGetAppealsByTeam,
+  useGetAssignedAppeals,
   useCreateAppeal,
   useRespondAppeal,
+  readApiError,
+  AppealStatus,
+  type Appeal,
 } from "@/repositories/appealsRepository";
 import {
   Button,
@@ -16,7 +22,6 @@ import {
   TableHead,
   TableCell,
   Badge,
-  Input,
   ApiMissingDataBadge,
 } from "@/components/ui";
 import {
@@ -25,75 +30,84 @@ import {
   XCircle,
   RefreshCw,
   Send,
-  Shield,
   MessageSquare,
   Eye,
-  ExternalLink,
-  FileText,
 } from "lucide-react";
-import type { Appeal, AppealStatus } from "@/models/entities";
+
+function pick(obj: unknown, ...keys: string[]): string {
+  const rec = obj as Record<string, unknown> | null;
+  if (!rec) return "";
+  for (const k of keys) {
+    const v = rec[k];
+    if (typeof v === "string" && v.trim()) return v;
+  }
+  return "";
+}
 
 export function AppealsView() {
   const { user, activeRole } = useAuth();
   const [reason, setReason] = useState("");
-  const [submitResultId, setSubmitResultId] = useState("sub-101");
+  const [submitResultId, setSubmitResultId] = useState("");
+  const [formError, setFormError] = useState("");
 
-  const [detailModal, setDetailModal] = useState<any | null>(null);
-  const [respondModal, setRespondModal] = useState<any | null>(null);
+  const [detailModal, setDetailModal] = useState<Appeal | null>(null);
   const [responseText, setResponseText] = useState("");
+  const [respondError, setRespondError] = useState("");
 
-  const { data: appeals = [], isLoading, refetch } = useGetAppeals();
+  const roleName = pick(activeRole, "roleName", "RoleName");
+  const isLeader = roleName === "TeamLeader";
+  const isEC = roleName === "EventCoordinator" || roleName === "Coordinator" || Boolean(user?.isAdmin || user?.IsAdmin);
+  const eventRoleId = pick(activeRole, "eventRoleId", "EventRoleId", "id", "Id");
+  const eventIdFromRole = pick(activeRole, "eventId", "EventId");
+
+  // Team members: đơn phúc khảo của đội mình. EC/staff: đơn được phân công xử lý.
+  const { data: myTeam } = useMyTeam(eventIdFromRole || undefined);
+  const teamId = pick(myTeam, "id", "Id", "TeamId");
+  const { data: mySubmissions = [] } = useMySubmissions();
+
+  const teamAppeals = useGetAppealsByTeam(!isEC ? teamId || undefined : undefined);
+  const assignedAppeals = useGetAssignedAppeals(isEC ? eventRoleId || undefined : undefined);
+
+  const { data: appealsRaw, isLoading, refetch } = isEC ? assignedAppeals : teamAppeals;
+  const appeals: Appeal[] = appealsRaw ?? [];
 
   const { mutateAsync: createAppeal, isPending: isSubmitting } = useCreateAppeal();
   const { mutateAsync: respondAppeal, isPending: isResponding } = useRespondAppeal();
 
-  const isEC =
-    activeRole?.roleName === "Coordinator" ||
-    activeRole?.roleName === "EventCoordinator" ||
-    user?.isAdmin;
-
   const handleCreateAppeal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) return;
+    setFormError("");
+    if (!reason.trim() || !submitResultId) return;
 
     try {
-      await createAppeal({ SubmissionId: submitResultId, Reason: reason.trim() });
-      alert("✓ Đã gửi Đơn Phúc Khảo thành công! Ban Tổ Chức sẽ phản hồi sớm.");
+      await createAppeal({ submitResultId, reason: reason.trim() });
       setReason("");
+      setSubmitResultId("");
       refetch();
-    } catch {
-      alert("Đã gửi đơn phúc khảo.");
-      setReason("");
+    } catch (err) {
+      setFormError(readApiError(err));
     }
   };
 
-  const handleRespondConfirm = async (status: string) => {
-    const targetAppeal = respondModal || detailModal;
-    if (!targetAppeal || !targetAppeal.id) return;
-    if (!responseText.trim()) return;
-
+  const handleRespond = async (status: typeof AppealStatus.Approved | typeof AppealStatus.Rejected) => {
+    if (!detailModal || !responseText.trim()) return;
+    setRespondError("");
     try {
-      await respondAppeal({
-        appealId: targetAppeal.id,
-        status: status as any,
-        responseReason: responseText.trim(),
-      });
-      alert("✓ Đã xử lý phản hồi Đơn Phúc Khảo thành công!");
-      setRespondModal(null);
+      await respondAppeal({ appealId: detailModal.id, status, response: responseText.trim() });
       setDetailModal(null);
       setResponseText("");
       refetch();
-    } catch {
-      alert("Đã xử lý đơn.");
-      setRespondModal(null);
-      setDetailModal(null);
-      setResponseText("");
+    } catch (err) {
+      setRespondError(readApiError(err));
     }
   };
+
+  const relatedSubmission = detailModal
+    ? mySubmissions.find((s) => pick(s, "id", "Id") === detailModal.submitResultId)
+    : undefined;
 
   return (
     <div className="p-[var(--space-xl)] max-w-[var(--container-max)] mx-auto hud-lattice min-h-[calc(100vh-4rem)]">
-      {/* Header */}
       <div className="flex items-center justify-between mb-8 border-b border-[var(--border-muted)] pb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[rgba(245,158,11,0.1)] border border-[var(--color-warning)]/30 flex items-center justify-center">
@@ -101,10 +115,10 @@ export function AppealsView() {
           </div>
           <div>
             <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--color-warning)]">
-              XÉT PHÚC KHẢO KẾT QUẢ (APPEALS)
+              Trung Tâm Phúc Khảo
             </h1>
             <p className="text-xs font-mono text-[var(--text-muted)]">
-              // QUẢN LÝ & XỬ LÝ ĐƠN KHIẾU NẠI ĐIỂM SỐ SỰ KIỆN
+              // {isEC ? "ĐƠN ĐƯỢC PHÂN CÔNG XỬ LÝ" : "ĐƠN CỦA ĐỘI BẠN"}
             </p>
           </div>
         </div>
@@ -115,144 +129,147 @@ export function AppealsView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Form Tạo Đơn (Chỉ dành riêng cho Team Leader) */}
-        <div className="flex flex-col gap-4">
-          <h2 className="font-display text-lg font-bold text-white uppercase tracking-widest border-b border-[var(--border-muted)] pb-2 flex items-center gap-2">
-            <Send className="w-4 h-4 text-[var(--color-warning)]" />
-            GỬI ĐƠN PHÚC KHẢO
-          </h2>
+        {!isEC && (
+          <div className="flex flex-col gap-4">
+            <h2 className="font-display text-lg font-bold text-white uppercase tracking-widest border-b border-[var(--border-muted)] pb-2 flex items-center gap-2">
+              <Send className="w-4 h-4 text-[var(--color-warning)]" />
+              Gửi Đơn Phúc Khảo
+            </h2>
 
-          <Card className="p-6 bg-[var(--bg-panel)] border-[var(--border-muted)] hud-clipped space-y-4">
-            <p className="text-xs font-mono text-[var(--text-muted)] leading-relaxed">
-              * Lưu ý: Đơn phúc khảo chỉ được tạo bởi <strong>Team Leader</strong> và phải nộp <strong>TRƯỚC KHI</strong> kết quả chính thức được công bố.
-            </p>
+            <Card className="p-6 bg-[var(--bg-panel)] border-[var(--border-muted)] hud-clipped space-y-4">
+              <p className="text-xs font-mono text-[var(--text-muted)] leading-relaxed">
+                * Đơn phúc khảo chỉ được tạo bởi <strong>Trưởng nhóm</strong> và phải nộp <strong>trước khi</strong> kết quả vòng được công bố.
+              </p>
 
-            {activeRole?.roleName === "TeamLeader" ? (
-              <form onSubmit={handleCreateAppeal} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5 w-full">
-                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                    Mã Bài Nộp (SubmitResultId) *
-                  </label>
-                  <Input
-                    type="text"
-                    value={submitResultId}
-                    onChange={(e) => setSubmitResultId(e.target.value)}
-                    required
-                    className="font-mono text-xs"
-                  />
+              {isLeader ? (
+                <form onSubmit={handleCreateAppeal} className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                      Bài nộp cần phúc khảo *
+                    </label>
+                    <select
+                      value={submitResultId}
+                      onChange={(e) => setSubmitResultId(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--color-warning)]"
+                    >
+                      <option value="">-- Chọn bài nộp --</option>
+                      {mySubmissions.map((s) => {
+                        const id = pick(s, "id", "Id");
+                        return (
+                          <option key={id} value={id}>
+                            {pick(s, "displayCode", "DisplayCode") || id}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {mySubmissions.length === 0 && (
+                      <span className="text-[10px] font-mono text-[var(--text-muted)]">Đội chưa có bài nộp nào.</span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                      Lý do phúc khảo *
+                    </label>
+                    <textarea
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      required
+                      rows={4}
+                      placeholder="Ghi rõ lý do khiếu nại..."
+                      className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] text-xs font-mono focus:border-[var(--color-warning)] focus:outline-none text-[var(--text-primary)] resize-none"
+                    />
+                  </div>
+
+                  {formError && (
+                    <p role="alert" className="font-mono text-xs text-[color:var(--color-danger)]">
+                      {formError}
+                    </p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !reason.trim() || !submitResultId}
+                    accent="team"
+                    className="w-full justify-center"
+                  >
+                    {isSubmitting ? "// ĐANG GỬI..." : "[ GỬI ĐƠN PHÚC KHẢO ]"}
+                  </Button>
+                </form>
+              ) : (
+                <div className="p-4 border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 text-[var(--color-warning)] font-mono text-xs space-y-2">
+                  <div className="font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    🔒 BẠN KHÔNG CÓ QUYỀN GỬI ĐƠN
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
+                    Quyền tạo và gửi đơn khiếu nại điểm số thuộc về <strong>Trưởng nhóm</strong>. Bạn đang xem ở chế độ chỉ đọc.
+                  </p>
                 </div>
+              )}
+            </Card>
+          </div>
+        )}
 
-                <div className="flex flex-col gap-1.5 w-full">
-                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                    Lý Do Phúc Khảo Cụ Thể *
-                  </label>
-                  <textarea
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    required
-                    rows={4}
-                    placeholder="Ghi rõ lý do khiếu nại (VD: Tiêu chí Kỹ thuật bị tính nhầm trọng số, video demo live server chưa được xem)..."
-                    className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] text-xs font-mono focus:border-[var(--color-warning)] focus:outline-none text-[var(--text-primary)] resize-none"
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !reason.trim()}
-                  className="w-full justify-center text-[var(--color-warning)] border-[var(--color-warning)]/40 bg-[rgba(245,158,11,0.1)] hover:bg-[var(--color-warning)] hover:text-black font-mono text-xs font-bold"
-                >
-                  {isSubmitting ? "// ĐANG GỬI..." : "[ GỬI ĐƠN PHÚC KHẢO ]"}
-                </Button>
-              </form>
-            ) : (
-              <div className="p-4 border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 text-[var(--color-warning)] font-mono text-xs rounded-none space-y-2">
-                <div className="font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  🔒 BẠN KHÔNG CÓ QUYỀN GỬI ĐƠN
-                </div>
-                <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
-                  Quyền tạo và gửi đơn khiếu nại điểm số thuộc về <strong>Đội Trưởng (Team Leader)</strong>. Bạn đang xem ở chế độ Read-Only.
-                </p>
-              </div>
-            )}
-          </Card>
-        </div>
-
-        {/* Right Column: Danh Sách Đơn Phúc Khảo */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
+        <div className={isEC ? "lg:col-span-3 flex flex-col gap-4" : "lg:col-span-2 flex flex-col gap-4"}>
           <h2 className="font-display text-lg font-bold text-white uppercase tracking-widest border-b border-[var(--border-muted)] pb-2 flex items-center justify-between">
-            <span>DANH SÁCH ĐƠN PHÚC KHẢO ({appeals.length})</span>
-            {isEC && <Badge tone="coordinator">EC PROCESSING MODE</Badge>}
+            <span>Danh sách đơn phúc khảo ({appeals.length})</span>
+            {isEC && <Badge tone="coordinator">CHẾ ĐỘ XỬ LÝ (EC)</Badge>}
           </h2>
 
           {isLoading ? (
-            <div className="p-8 text-center text-xs font-mono text-[var(--text-muted)]">
-              Đang tải danh sách đơn phúc khảo...
-            </div>
-          ) : (appeals as any[]).length === 0 ? (
+            <div className="p-8 text-center text-xs font-mono text-[var(--text-muted)]">Đang tải danh sách đơn phúc khảo...</div>
+          ) : appeals.length === 0 ? (
             <ApiMissingDataBadge
-              endpoint="GET /api/Appeals"
-              title="CHƯA CÓ ĐƠN PHÚC KHẢO TỪ BACKEND DATABASE"
-              message="Chưa có bản ghi đơn phúc khảo nào được gửi từ các đội thi trên Backend API."
+              endpoint={isEC ? "GET /api/Appeals/assigned/{eventRoleId}" : "GET /api/Appeals/team/{teamId}"}
+              title="CHƯA CÓ ĐƠN PHÚC KHẢO"
+              message="Chưa có bản ghi đơn phúc khảo nào phù hợp."
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ĐỘI THI</TableHead>
+                  <TableHead>MÃ BÀI NỘP</TableHead>
                   <TableHead>LÝ DO KHIẾU NẠI</TableHead>
                   <TableHead>TRẠNG THÁI</TableHead>
-                  <TableHead className="text-center">THAO TÁC SOI CHI TIẾT</TableHead>
+                  <TableHead align="center">THAO TÁC</TableHead>
                 </TableRow>
               </TableHeader>
               <tbody>
-                {(appeals as any[]).map((item) => {
-                  const appealItem = item as any;
-                  const statusNum = appealItem.status ?? appealItem.Status ?? 0;
-                  const isPending = statusNum === 0;
-                  const isApproved = statusNum === 1;
-                  const reasonText = appealItem.reason || appealItem.Reason || "Khiếu nại điểm số";
-                  const responseTextVal = appealItem.response || appealItem.Response || appealItem.responseReason;
-                  const teamNameText = appealItem.teamName || appealItem.TeamName || `Đội #${appealItem.teamId || appealItem.TeamId || "TM"}`;
-
+                {appeals.map((item) => {
+                  const isPending = item.status === AppealStatus.Pending;
+                  const isApproved = item.status === AppealStatus.Approved;
                   return (
-                    <TableRow key={item.id || appealItem.AppealId}>
+                    <TableRow key={item.id}>
                       <TableCell>
-                        <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
-                          {teamNameText}
-                        </span>
+                        <span className="font-mono text-xs font-bold text-[var(--text-primary)]">#{item.submitResultId}</span>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-mono text-xs text-[var(--text-primary)] max-w-xs truncate">
-                            {reasonText}
-                          </span>
-                          {responseTextVal && (
+                          <span className="font-mono text-xs text-[var(--text-primary)] max-w-xs truncate">{item.reason}</span>
+                          {item.response && (
                             <span className="text-[10px] font-mono text-[var(--accent-primary)] mt-1 flex items-center gap-1">
-                              <MessageSquare className="w-3 h-3" /> Phản hồi EC: {responseTextVal}
+                              <MessageSquare className="w-3 h-3" /> Phản hồi: {item.response}
                             </span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          tone={
-                            isPending
-                              ? "warning"
-                              : isApproved
-                              ? "success"
-                              : "danger"
-                          }
-                        >
+                        <Badge tone={isPending ? "warning" : isApproved ? "success" : "danger"}>
                           {isPending ? "ĐANG CHỜ" : isApproved ? "CHẤP NHẬN" : "TỪ CHỐI"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell align="center">
                         <Button
                           variant="ghost"
-                          onClick={() => setDetailModal(item)}
+                          onClick={() => {
+                            setDetailModal(item);
+                            setResponseText(item.response ?? "");
+                            setRespondError("");
+                          }}
                           className="text-[10px] font-mono text-[var(--accent-primary)] border-[var(--accent-primary)]/30 hover:bg-[var(--accent-primary)]/10"
                         >
-                          <Eye className="w-3.5 h-3.5" /> SOI CHI TIẾT
+                          <Eye className="w-3.5 h-3.5" /> CHI TIẾT
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -264,15 +281,16 @@ export function AppealsView() {
         </div>
       </div>
 
-      {/* Modal 1: Soi Chi Tiết Đơn Phúc Khảo (Detailed Appeal Inspection Modal) */}
       {detailModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-4">
           <Card className="w-full max-w-2xl p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-warning)] space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
               <div>
-                <span className="font-mono text-[10px] text-[var(--color-warning)] font-bold tracking-widest uppercase">// APPEAL & SUBMISSION INSPECTION MODAL</span>
+                <span className="font-mono text-[10px] text-[var(--color-warning)] font-bold tracking-widest uppercase">
+                  // CHI TIẾT ĐƠN PHÚC KHẢO
+                </span>
                 <h3 className="font-display text-xl font-bold text-[var(--text-primary)] uppercase tracking-wider mt-1">
-                  ĐƠN PHÚC KHẢO: ĐỘI {(detailModal as any).teamName || (detailModal as any).TeamName || "CyberShield"}
+                  Bài nộp #{detailModal.submitResultId}
                 </h3>
               </div>
               <button onClick={() => setDetailModal(null)} className="text-[var(--text-muted)] hover:text-white">
@@ -281,71 +299,79 @@ export function AppealsView() {
             </div>
 
             <div className="space-y-4 font-mono text-xs">
-              {/* Lý do khiếu nại của Đội trưởng */}
               <div className="p-3 bg-[var(--bg-input)] border border-[var(--color-warning)]/40 hud-clipped space-y-1">
-                <span className="text-[10px] text-[var(--color-warning)] font-bold uppercase block">1. Nội dung Đơn Khiếu nại từ Đội trưởng:</span>
-                <p className="text-xs text-[var(--text-primary)] leading-relaxed font-bold">"{detailModal.reason}"</p>
-                <span className="text-[10px] text-[var(--text-muted)] block mt-1">Ngày gửi đơn: {detailModal.createdTime ? new Date(detailModal.createdTime).toLocaleString("vi-VN") : "Hôm nay"}</span>
-              </div>
-
-              {/* Thông tin Bài Nộp đối chiếu */}
-              <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-2">
-                <span className="text-[10px] text-[var(--accent-primary)] font-bold uppercase block flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5" /> 2. Bài Nộp Dự Án Liên Quan (Submission Link):
+                <span className="text-[10px] text-[var(--color-warning)] font-bold uppercase block">Nội dung khiếu nại</span>
+                <p className="text-xs text-[var(--text-primary)] leading-relaxed font-bold">&quot;{detailModal.reason}&quot;</p>
+                <span className="text-[10px] text-[var(--text-muted)] block mt-1">
+                  Ngày gửi: {detailModal.createdTime ? new Date(detailModal.createdTime).toLocaleString("vi-VN") : "—"}
                 </span>
-                <div>Mã bài nộp: <strong className="text-[var(--text-primary)]">#{detailModal.submitResultId || "sub-101"}</strong></div>
-                <div>Link Mã Nguồn / Demo: <a href="https://github.com/cybershield/seal-hackathon-2026" target="_blank" rel="noreferrer" className="text-[var(--accent-primary)] font-bold underline flex items-center gap-1 inline-flex">https://github.com/cybershield/seal-hackathon-2026 <ExternalLink className="w-3 h-3" /></a></div>
-                <div className="text-[11px] text-[var(--text-muted)]">Mô tả sản phẩm: Hệ thống phát hiện lỗ hổng bảo mật tự động tích hợp mô hình AI LLM.</div>
               </div>
 
-              {/* Bảng Điểm Giám Khảo Hiện Tại */}
-              <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-2">
-                <span className="text-[10px] text-[var(--accent-judge)] font-bold uppercase block">3. Điểm Số Hiện Tại Từ Ban Giám Khảo:</span>
-                <div className="flex items-center justify-between text-xs font-bold text-[var(--accent-judge)] border-b border-[var(--border-muted)] pb-1">
-                  <span>Điểm Tổng Hiện Tại: 8.85 / 10.0</span>
-                  <span>Giám Khảo: TS. Nguyễn Văn A (AI Track)</span>
+              {relatedSubmission ? (
+                <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1">
+                  <span className="text-[10px] text-[var(--accent-primary)] font-bold uppercase block">Bài nộp liên quan</span>
+                  {pick(relatedSubmission, "repoUrl", "RepoUrl") && (
+                    <div>
+                      Repo:{" "}
+                      <a
+                        href={pick(relatedSubmission, "repoUrl", "RepoUrl")}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[var(--accent-primary)] underline"
+                      >
+                        {pick(relatedSubmission, "repoUrl", "RepoUrl")}
+                      </a>
+                    </div>
+                  )}
+                  {pick(relatedSubmission, "demoUrl", "DemoUrl") && <div>Demo: {pick(relatedSubmission, "demoUrl", "DemoUrl")}</div>}
                 </div>
-                <p className="text-[11px] text-[var(--text-muted)] italic">"Bài thi có tính hoàn thiện cao, cần bổ sung thêm tài liệu thử nghiệm thực tế."</p>
-              </div>
+              ) : (
+                <p className="text-[10px] text-[var(--text-muted)]">
+                  Không có thông tin bài nộp liên quan (chỉ hiển thị với bài nộp của đội bạn).
+                </p>
+              )}
 
-              {/* Form Giải Trình Phản Hồi Dành Cho EC */}
               {isEC && (
                 <div className="space-y-2 pt-2 border-t border-[var(--border-muted)]">
                   <label className="text-xs font-mono text-[var(--accent-coordinator)] uppercase font-bold block">
-                    4. Nhập Phản Hồi Giải Trình Từ Event Coordinator (EC) *
+                    Phản hồi từ Ban Tổ Chức *
                   </label>
                   <textarea
                     rows={3}
                     value={responseText}
                     onChange={(e) => setResponseText(e.target.value)}
-                    placeholder="Nhập nội dung phản hồi giải trình hoặc kết quả điều chỉnh điểm số..."
+                    placeholder="Nhập nội dung phản hồi hoặc kết quả điều chỉnh..."
                     className="w-full p-3 bg-[var(--bg-base)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent-coordinator)] resize-none"
                   />
+                  {respondError && (
+                    <p role="alert" className="font-mono text-xs text-[color:var(--color-danger)]">
+                      {respondError}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--border-muted)] font-mono text-xs">
               <Button variant="ghost" onClick={() => setDetailModal(null)}>
                 Đóng
               </Button>
 
-              {isEC && (
+              {isEC && detailModal.status === AppealStatus.Pending && (
                 <div className="flex items-center gap-2">
                   <Button
                     disabled={!responseText.trim() || isResponding}
-                    onClick={() => handleRespondConfirm("Rejected")}
+                    onClick={() => handleRespond(AppealStatus.Rejected)}
                     className="bg-[var(--color-danger)] text-white font-bold"
                   >
-                    <XCircle className="w-3.5 h-3.5" /> ✕ TỪ CHỐI ĐƠN
+                    <XCircle className="w-3.5 h-3.5" /> Từ chối
                   </Button>
                   <Button
                     disabled={!responseText.trim() || isResponding}
-                    onClick={() => handleRespondConfirm("Approved")}
+                    onClick={() => handleRespond(AppealStatus.Approved)}
                     className="bg-[var(--color-success)] text-white font-bold"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" /> // CHẤP NHẬN PHÚC KHẢO &gt;
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Chấp nhận
                   </Button>
                 </div>
               )}

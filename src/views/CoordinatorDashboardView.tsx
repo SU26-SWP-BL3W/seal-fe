@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useMyEvents } from "@/repositories/eventsRepository";
+import { useMyEvents, eventsRepository, type MyEventModel } from "@/repositories/eventsRepository";
+import { useGetPendingTeams } from "@/repositories/teamsRepository";
+import { useGetUsers } from "@/repositories/usersRepository";
 import {
   Layers,
   Users,
@@ -14,11 +16,21 @@ import {
   Activity,
   AlertTriangle,
   FolderKanban,
+  FileText,
+  CheckCircle2,
+  Sliders,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Rocket,
 } from "lucide-react";
 import Link from "next/link";
 
 export const CoordinatorDashboardView: React.FC = () => {
-  const { data: eventsList = [], isLoading } = useMyEvents();
+  const { data: eventsList = [], isLoading, refetch } = useMyEvents();
+  const { data: pendingTeams = [] } = useGetPendingTeams();
+  const { data: pendingUsersData } = useGetUsers({ isApproved: false });
+  const appealsList: { status?: number | string; Status?: string }[] = [];
 
   // Deduplicated assigned events list
   const seenEventKeys = new Set<string>();

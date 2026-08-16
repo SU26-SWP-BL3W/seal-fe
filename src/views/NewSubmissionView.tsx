@@ -3,7 +3,13 @@
 import { useState, useMemo } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
-import { useCreateSubmission, readApiError, type SubmitResultRequest } from "@/repositories/submitResultsRepository";
+import {
+  useCreateSubmission,
+  useMySubmissions,
+  useUpdateSubmission,
+  readApiError,
+  type SubmitResultRequest,
+} from "@/repositories/submitResultsRepository";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
@@ -42,6 +48,7 @@ function TrackSubmissionCard({
     { id: "slides", type: "slides", label: "Slides", placeholder: "https://docs.google.com/presentation/...", required: true, trackId: track.id },
   ];
   const createSubmission = useCreateSubmission();
+  const updateSubmission = useUpdateSubmission();
 
   // Parse existing submission links if available
   const parsedExisting = useMemo(() => {
@@ -119,7 +126,9 @@ function TrackSubmissionCard({
     };
 
     try {
-      const created = await createSubmission.mutateAsync(payload as SubmitResultRequest);
+      const created = existingSubmission?.id
+        ? await updateSubmission.mutateAsync({ id: existingSubmission.id, data: payload as Partial<SubmitResultRequest> })
+        : await createSubmission.mutateAsync(payload as SubmitResultRequest);
       const updatedItem: SubmissionItem = {
         id: (created as { id?: string })?.id || existingSubmission?.id || `sub-${Date.now()}`,
         teamId,
@@ -347,6 +356,7 @@ export function NewSubmissionView() {
   const teamTrackId = (team as any)?.TrackId || (team as any)?.trackId || "";
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
   const { data: rounds = [] } = useEventRounds(eventId);
+  const { data: existingSubs = [] } = useMySubmissions();
   const roundId = rounds.length
     ? (rounds[rounds.length - 1].id || rounds[rounds.length - 1].Id || "")
     : "";
@@ -361,10 +371,46 @@ export function NewSubmissionView() {
       templateId: t.templateId || t.TemplateId || null,
     }));
 
-  const [submissions, setSubmissions] = useState<Record<string, SubmissionItem>>({});
+  // Bài nộp đã có sẵn trên server, khớp theo trackId — để mở lại trang vẫn thấy đúng
+  // trạng thái "đã nộp" thay vì luôn coi là nộp mới (tránh gọi nhầm create thay vì update).
+  const submissionsFromServer: Record<string, SubmissionItem> = useMemo(() => {
+    const map: Record<string, SubmissionItem> = {};
+    for (const raw of existingSubs as any[]) {
+      const trackId = raw.trackId || raw.TrackId;
+      if (!trackId) continue;
+      const repo = raw.repoUrl || raw.RepoUrl || raw.submissionUrl || raw.SubmissionUrl || "";
+      const demo = raw.demoUrl || raw.DemoUrl || "";
+      const slide = raw.slideUrl || raw.SlideUrl || "";
+      map[trackId] = {
+        id: raw.id || raw.Id || "",
+        teamId: raw.teamId || raw.TeamId || "",
+        roundId: "",
+        roundName: "Vòng hiện tại",
+        trackId,
+        trackName: raw.trackName || raw.TrackName || "",
+        submissionUrl: repo,
+        description: JSON.stringify({
+          links: [
+            { type: "github", label: "GitHub / GitLab repo", url: repo, required: true },
+            { type: "deployed_url", label: "Live demo", url: demo, required: true },
+            { type: "slides", label: "Slides", url: slide, required: true },
+          ],
+          notes: "",
+        }),
+        teamName: raw.teamName || raw.TeamName || "",
+        createdTime: raw.createdTime || raw.CreatedTime || "",
+        isActive: raw.isActive !== false && raw.IsActive !== false,
+        isEliminated: false,
+      };
+    }
+    return map;
+  }, [existingSubs]);
+
+  const [localOverrides, setLocalOverrides] = useState<Record<string, SubmissionItem>>({});
+  const submissions = { ...submissionsFromServer, ...localOverrides };
 
   const handleTrackSubmitSuccess = (trackId: string, updatedSub: SubmissionItem) => {
-    setSubmissions((prev) => ({
+    setLocalOverrides((prev) => ({
       ...prev,
       [trackId]: updatedSub,
     }));

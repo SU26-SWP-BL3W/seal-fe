@@ -128,9 +128,6 @@ export function LandingPortalView() {
   );
 }
 
-{/* ────────────────────────────────────────────────────────────────
-    SPOTLIGHT SỰ KIỆN MỚI NHẤT — ADVANCED HIGH-IMPACT COMMAND DECK PANEL
-   ──────────────────────────────────────────────────────────────── */}
 function LatestEventSpotlight({ event }: { event: EventCardData }) {
   const countdownTarget = event.status === "ongoing" ? event.endDate : event.registrationEndDate;
   const countdown = useCountdown(event.status === "ended" ? null : countdownTarget);
@@ -526,3 +523,5 @@ function LandingFaqSection() {
     </section>
   );
 }
+
+export default LandingPortalView;
