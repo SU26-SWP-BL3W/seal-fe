@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { useGoogleLogin, useLogin, useLogout } from "@/repositories/authRepository";
+import { useGoogleLogin, useLogin, useLogout } from "@/repositories/auth/authRepository";
 import type { User } from "@/models/entities";
 
 interface AuthContextValue {
