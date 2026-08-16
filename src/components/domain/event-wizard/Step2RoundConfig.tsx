@@ -1,10 +1,8 @@
 "use client";
 
-import React from "react";
-import { Button, Input, Card } from "@/components/ui";
+import React, { useState } from "react";
 import { RoundFormState } from "@/viewModels/useCreateEventWizardViewModel";
-import { Layers, Plus, Trash2, Calendar, ArrowLeft, ArrowRight } from "lucide-react";
-import { RoundTimelinePicker } from "./RoundTimelinePicker";
+import { Layers, Plus, Trash2, AlertTriangle, ArrowLeft, ArrowRight, Award } from "lucide-react";
 
 interface Step2RoundConfigProps {
   rounds: RoundFormState[];
@@ -25,141 +23,285 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
   onPrev,
   isReadOnly = false,
 }) => {
+  const [selectedRoundId, setSelectedRoundId] = useState<string>(rounds[0]?.id || "");
+
+  const activeRound = rounds.find((r) => r.id === selectedRoundId) || rounds[0] || {
+    id: "rnd-default",
+    roundName: "Vòng Loại",
+    roundNumber: 1,
+    startDate: "2026-06-01T08:00",
+    endDate: "2026-06-15T18:00",
+    scoringStartDate: "",
+    scoringEndDate: "",
+    advancementRule: "top:10",
+  };
+
+  // Helper to parse advancementRule string (e.g. "top:10" => mode "top", num 10)
+  const parseRule = (ruleStr?: string) => {
+    const raw = (ruleStr || "top:10").trim();
+    if (raw.startsWith("percent:")) {
+      return { mode: "percent", value: Number(raw.replace("percent:", "")) || 50 };
+    }
+    if (raw.startsWith("minScore:")) {
+      return { mode: "minScore", value: Number(raw.replace("minScore:", "")) || 7 };
+    }
+    return { mode: "top", value: Number(raw.replace("top:", "")) || 10 };
+  };
+
+  const { mode: currentRuleMode, value: currentRuleValue } = parseRule(activeRound.advancementRule);
+
+  const handleRuleModeChange = (newMode: string) => {
+    const defaultVal = newMode === "percent" ? 50 : newMode === "minScore" ? 7 : 10;
+    onUpdateRound(activeRound.id, "advancementRule", `${newMode}:${defaultVal}`);
+  };
+
+  const handleRuleValueChange = (newVal: number) => {
+    onUpdateRound(activeRound.id, "advancementRule", `${currentRuleMode}:${newVal}`);
+  };
+
+  // Date validation check
+  const hasDateError =
+    activeRound.startDate &&
+    activeRound.endDate &&
+    new Date(activeRound.startDate) > new Date(activeRound.endDate);
+
   return (
-    <Card className="hud-glow-coordinator p-6 space-y-6">
-      <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
-        <div>
-          <h3 className="font-display font-bold text-lg text-[var(--text-primary)] tracking-wider flex items-center gap-2">
-            <Layers className="w-5 h-5 text-[var(--accent-coordinator)]" />
-            Bước 2: Cấu Hình Vòng Thi &amp; Mốc Thời Gian
-          </h3>
-          <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-            Thiết lập danh sách các vòng thi, mốc nộp bài, thời gian chấm điểm, phúc khảo và quy tắc chuyển vòng.
-          </p>
-        </div>
-        {!isReadOnly && (
-          <Button variant="ghost" onClick={onAddRound} className="flex items-center gap-1 text-xs">
-            <Plus className="w-4 h-4 text-[var(--accent-coordinator)]" />
-            + Thêm Vòng Thi
-          </Button>
-        )}
-      </div>
+    <div className="space-y-6 text-[#e1e7ec]">
+      {/* 2-Column Builder Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Column: Form Editor (7 cols) */}
+        <div className="lg:col-span-7 bg-[#13191c] border border-[#263339] p-6 space-y-5">
+          <div className="border-b border-[#263339] pb-3 font-mono text-xs font-bold text-[#8b5cf6] tracking-widest uppercase flex items-center gap-2">
+            <Layers className="w-4 h-4 text-[#8b5cf6]" />
+            <span>CẤU HÌNH CHI TIẾT VÒNG THI</span>
+          </div>
 
-      {isReadOnly && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs hud-clipped flex items-center gap-2">
-          <span>⚠️ Sự kiện đang ở trạng thái <strong>Công Khai (Public)</strong>. Để thêm hoặc sửa vòng thi, vui lòng bấm <strong>[ 🔒 TẠM ẨN ĐỂ SỬA ]</strong> ở trên cùng.</span>
-        </div>
-      )}
-
-      <div className="space-y-6">
-        {rounds.map((round, index) => {
-          const isLastRound = index === rounds.length - 1;
-          const ruleParts = round.advancementRule.split(/[:\s]/);
-          const currentType = (ruleParts[0] || "top").toLowerCase();
-          const currentValue = ruleParts[1] || "10";
-
-          return (
-            <div
-              key={round.id}
-              className="p-5 bg-[var(--bg-panel)] border border-[var(--border-muted)] hover:border-[var(--accent-coordinator)]/50 transition-all hud-clipped space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-[var(--accent-coordinator)]/10 text-[var(--accent-coordinator)] border border-[var(--accent-coordinator)]/30 font-mono text-xs font-bold flex items-center justify-center">
-                    #{round.roundNumber}
-                  </span>
-                  <h4 className="font-mono font-bold text-sm text-[var(--text-primary)]">
-                    Vòng {round.roundNumber}: {round.roundName}
-                  </h4>
-                </div>
-                {rounds.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => onRemoveRound(round.id)}
-                    className="text-xs font-mono text-[var(--color-danger)] hover:underline flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Gỡ Vòng
-                  </button>
-                )}
-              </div>
-
-              {/* Tên vòng & Quy tắc thăng vòng */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-[var(--text-muted)]">Tên vòng thi *</label>
-                  <Input
-                    type="text"
-                    value={round.roundName}
-                    onChange={(e) => onUpdateRound(round.id, "roundName", e.target.value)}
-                    placeholder="Ví dụ: Vòng Sơ Loại / Vòng Bán Kết"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-[var(--text-muted)]">Điều kiện qua vòng *</label>
-                  {!isLastRound ? (
-                    <div className="flex gap-2">
-                      <select
-                        value={currentType === "percent" || currentType === "minscore" ? currentType : "top"}
-                        onChange={(e) => {
-                          const prefix = e.target.value;
-                          const defaultVal = prefix === "top" ? "10" : prefix === "percent" ? "50" : "7.0";
-                          onUpdateRound(round.id, "advancementRule", `${prefix}:${defaultVal}`);
-                        }}
-                        className="px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
-                      >
-                        <option value="top">Top N đội cao điểm nhất</option>
-                        <option value="percent">Top N% số đội</option>
-                        <option value="minscore">Điểm tối thiểu N</option>
-                      </select>
-                      <div className="flex items-center gap-1 flex-1">
-                        <Input
-                          type="number"
-                          step={currentType === "minscore" ? "0.1" : "1"}
-                          min={currentType === "minscore" ? "0" : "1"}
-                          max={currentType === "minscore" ? "10" : "100"}
-                          value={currentValue}
-                          onChange={(e) => onUpdateRound(round.id, "advancementRule", `${currentType}:${e.target.value}`)}
-                          className="flex-1 font-mono text-xs"
-                        />
-                        <span className="px-2 py-1.5 bg-[var(--bg-base)] border border-[var(--border-muted)] text-xs font-mono font-bold text-[var(--accent-coordinator)]">
-                          {currentType === "top" ? "đội" : currentType === "percent" ? "%" : "điểm"}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-2.5 bg-[var(--bg-base)] border border-[var(--border-muted)] text-xs text-[var(--text-muted)] rounded font-sans italic">
-                      Vòng cuối — kết quả dùng để xếp hạng và trao giải, không thăng vòng.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Modern Timeline Picker */}
-              <RoundTimelinePicker
-                values={{
-                  startDate: round.startDate,
-                  endDate: round.endDate,
-                  scoringStartDate: round.scoringStartDate,
-                  scoringEndDate: round.scoringEndDate,
-                  appealStartDate: round.appealStartDate,
-                  appealEndDate: round.appealEndDate,
-                }}
-                onChange={(field, val) => onUpdateRound(round.id, field as any, val)}
+          <div className="space-y-4 font-mono text-xs">
+            <div className="space-y-1.5">
+              <label className="text-[#8a9ba8] tracking-wider block uppercase text-[11px]">TÊN VÒNG THI *</label>
+              <input
+                type="text"
+                value={activeRound.roundName}
+                onChange={(e) => onUpdateRound(activeRound.id, "roundName", e.target.value)}
+                disabled={isReadOnly}
+                className="w-full px-4 py-2.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans text-sm focus:outline-none focus:border-[#8b5cf6]"
               />
             </div>
-          );
-        })}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[#8a9ba8] tracking-wider block uppercase text-[11px]">NGÀY BẮT ĐẦU NỘP BÀI *</label>
+                <input
+                  type="datetime-local"
+                  value={activeRound.startDate ? activeRound.startDate.substring(0, 16) : ""}
+                  onChange={(e) => onUpdateRound(activeRound.id, "startDate", e.target.value)}
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs focus:outline-none ${
+                    hasDateError ? "border-[#ef4444]" : "border-[#263339] focus:border-[#8b5cf6]"
+                  }`}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[#8a9ba8] tracking-wider block uppercase text-[11px]">HẠN CHÓT NỘP BÀI *</label>
+                <input
+                  type="datetime-local"
+                  value={activeRound.endDate ? activeRound.endDate.substring(0, 16) : ""}
+                  onChange={(e) => onUpdateRound(activeRound.id, "endDate", e.target.value)}
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs focus:outline-none ${
+                    hasDateError ? "border-[#ef4444]" : "border-[#263339] focus:border-[#8b5cf6]"
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[#8a9ba8] tracking-wider block uppercase text-[11px]">BẮT ĐẦU CHẤM ĐIỂM</label>
+                <input
+                  type="datetime-local"
+                  value={activeRound.scoringStartDate ? activeRound.scoringStartDate.substring(0, 16) : ""}
+                  onChange={(e) => onUpdateRound(activeRound.id, "scoringStartDate", e.target.value)}
+                  disabled={isReadOnly}
+                  className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] text-xs focus:outline-none focus:border-[#8b5cf6]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[#8a9ba8] tracking-wider block uppercase text-[11px]">HẠN CHÓT CHẤM ĐIỂM *</label>
+                <input
+                  type="datetime-local"
+                  value={activeRound.scoringEndDate ? activeRound.scoringEndDate.substring(0, 16) : ""}
+                  onChange={(e) => onUpdateRound(activeRound.id, "scoringEndDate", e.target.value)}
+                  disabled={isReadOnly}
+                  className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] text-xs focus:outline-none focus:border-[#8b5cf6]"
+                />
+              </div>
+            </div>
+
+            {/* Red Error Banner if End Date < Start Date */}
+            {hasDateError && (
+              <div className="p-2.5 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] text-[11px] font-mono flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>LỖI: NGÀY KẾT THÚC KHÔNG ĐƯỢC TRƯỚC NGÀY BẮT ĐẦU</span>
+              </div>
+            )}
+
+            {/* Intuitive Advancement Rule Selection (LUẬT THĂNG HẠNG CHUẨN ĐẸP) */}
+            <div className="space-y-2 pt-2 border-t border-[#263339]">
+              <label className="text-[#8b5cf6] tracking-wider block uppercase font-bold text-[11px] flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-[#8b5cf6]" />
+                LUẬT THĂNG HẠNG VÒNG THI (ADVANCEMENT RULE)
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Option 1: Top N Teams */}
+                <button
+                  type="button"
+                  onClick={() => handleRuleModeChange("top")}
+                  disabled={isReadOnly}
+                  className={`p-3 border text-left flex flex-col justify-between space-y-1 transition-all cursor-pointer ${
+                    currentRuleMode === "top"
+                      ? "bg-[#8b5cf6]/15 border-[#8b5cf6] text-[#e1e7ec]"
+                      : "bg-[#0a0e10] border-[#263339] text-[#8a9ba8] hover:border-[#8b5cf6]/50"
+                  }`}
+                >
+                  <span className="font-bold text-xs uppercase">Top Số Lượng Đội</span>
+                  <span className="text-[10px] text-[#8a9ba8]">Lấy N đội điểm cao nhất</span>
+                </button>
+
+                {/* Option 2: Top N Percent */}
+                <button
+                  type="button"
+                  onClick={() => handleRuleModeChange("percent")}
+                  disabled={isReadOnly}
+                  className={`p-3 border text-left flex flex-col justify-between space-y-1 transition-all cursor-pointer ${
+                    currentRuleMode === "percent"
+                      ? "bg-[#8b5cf6]/15 border-[#8b5cf6] text-[#e1e7ec]"
+                      : "bg-[#0a0e10] border-[#263339] text-[#8a9ba8] hover:border-[#8b5cf6]/50"
+                  }`}
+                >
+                  <span className="font-bold text-xs uppercase">Top % Tỷ Lệ</span>
+                  <span className="text-[10px] text-[#8a9ba8]">Lấy N% đội điểm cao nhất</span>
+                </button>
+
+                {/* Option 3: Min Score Threshold */}
+                <button
+                  type="button"
+                  onClick={() => handleRuleModeChange("minScore")}
+                  disabled={isReadOnly}
+                  className={`p-3 border text-left flex flex-col justify-between space-y-1 transition-all cursor-pointer ${
+                    currentRuleMode === "minScore"
+                      ? "bg-[#8b5cf6]/15 border-[#8b5cf6] text-[#e1e7ec]"
+                      : "bg-[#0a0e10] border-[#263339] text-[#8a9ba8] hover:border-[#8b5cf6]/50"
+                  }`}
+                >
+                  <span className="font-bold text-xs uppercase">Điểm Sàn Tối Thiểu</span>
+                  <span className="text-[10px] text-[#8a9ba8]">Đạt từ N điểm trở lên</span>
+                </button>
+              </div>
+
+              {/* Number Value Input */}
+              <div className="flex items-center gap-3 p-3 bg-[#0a0e10] border border-[#263339]">
+                <span className="text-xs text-[#8a9ba8]">
+                  {currentRuleMode === "top" && "Số lượng đội thăng hạng (N):"}
+                  {currentRuleMode === "percent" && "Tỷ lệ thăng hạng % (N):"}
+                  {currentRuleMode === "minScore" && "Điểm sàn tối thiểu (N):"}
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={currentRuleMode === "percent" ? 100 : 500}
+                  value={currentRuleValue}
+                  onChange={(e) => handleRuleValueChange(Number(e.target.value))}
+                  disabled={isReadOnly}
+                  className="w-24 px-3 py-1 bg-[#13191c] border border-[#263339] text-[#00d9ff] font-mono text-sm font-bold focus:outline-none focus:border-[#8b5cf6]"
+                />
+                <span className="text-[11px] text-[#8b5cf6] font-bold">
+                  MÃ HỆ THỐNG: [{activeRound.advancementRule}]
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Round List (5 cols) */}
+        <div className="lg:col-span-5 bg-[#13191c] border border-[#263339] p-6 space-y-4 flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="border-b border-[#263339] pb-3 font-mono text-xs font-bold text-[#8a9ba8] tracking-widest uppercase">
+              DANH SÁCH VÒNG THI ({rounds.length})
+            </div>
+
+            <div className="space-y-3">
+              {rounds.map((rnd, idx) => {
+                const isSelected = rnd.id === activeRound.id;
+                const rndDateErr =
+                  rnd.startDate && rnd.endDate && new Date(rnd.startDate) > new Date(rnd.endDate);
+
+                return (
+                  <div
+                    key={rnd.id}
+                    onClick={() => setSelectedRoundId(rnd.id)}
+                    className={`p-4 border transition-all cursor-pointer flex items-center justify-between ${
+                      isSelected
+                        ? "bg-[#182024] border-[#8b5cf6]"
+                        : "bg-[#0a0e10] border-[#263339] hover:border-[#8a9ba8]"
+                    }`}
+                  >
+                    <div>
+                      <div className="font-sans font-bold text-sm text-[#e1e7ec] flex items-center gap-2">
+                        <span>{rnd.roundName}</span>
+                        {rndDateErr && <span className="text-[#ef4444] text-[10px] font-mono">(LỖI NGÀY)</span>}
+                      </div>
+                      <div className="font-mono text-[11px] text-[#8a9ba8] mt-1">
+                        {rnd.startDate ? rnd.startDate.substring(0, 10) : "01/06/2026"} - {rnd.endDate ? rnd.endDate.substring(0, 10) : "15/06/2026"}
+                      </div>
+                    </div>
+
+                    <div className="font-mono text-xs border border-[#263339] px-2.5 py-1 bg-[#0a0e10] text-[#8b5cf6] font-bold">
+                      {rnd.advancementRule || "top:10"}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {!isReadOnly && (
+                <button
+                  type="button"
+                  onClick={onAddRound}
+                  className="w-full py-2.5 border border-dashed border-[#263339] hover:border-[#8b5cf6] text-[#8a9ba8] hover:text-[#8b5cf6] font-mono text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>THÊM VÒNG THI MỚI</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-[var(--border-muted)]">
-        <Button variant="ghost" onClick={onPrev} className="flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" /> Quay Lại
-        </Button>
-        <Button variant="primary" onClick={onNext} className="flex items-center gap-2">
-          Tiếp Theo: Cấu Hình Hạng Mục &gt; <ArrowRight className="w-4 h-4" />
-        </Button>
+      {/* Bottom Actions Bar */}
+      <div className="flex items-center justify-between pt-4 border-t border-[#263339] font-mono text-xs">
+        <button
+          type="button"
+          onClick={onPrev}
+          className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] flex items-center gap-1 cursor-pointer transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> &lt; Quay lại Bước 1
+        </button>
+
+        <button
+          type="button"
+          onClick={onNext}
+          className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
+        >
+          <span>TIẾP TỤC BƯỚC 3: HẠNG MỤC THI &gt;</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
-    </Card>
+    </div>
   );
 };

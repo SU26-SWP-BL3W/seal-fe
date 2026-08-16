@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { LogIn, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Link } from '@/i18n/routing';
 
 export interface RegisterFormProps {
   onSubmit?: (userData: RegisterData) => Promise<void>;
@@ -295,12 +296,12 @@ export function RegisterForm({
           <div className="mt-6 text-center text-xs text-[#94a3b8] font-mono">
             <p>
               Đã có tài khoản?{' '}
-              <a 
+              <Link 
                 href="/login" 
                 className="text-[#2dd4bf] hover:text-[#38bdf8] transition-colors underline"
               >
                 ĐĂNG NHẬP
-              </a>
+              </Link>
             </p>
           </div>
         </div>

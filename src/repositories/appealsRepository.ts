@@ -119,3 +119,16 @@ export function readApiError(err: unknown): string {
   const e = err as { response?: { data?: { message?: string } }; message?: string };
   return e.response?.data?.message || e.message || "Thao tác thất bại.";
 }
+
+export const useAppealsByRound = useGetAppealsByRound;
+
+export const appealsRepository = {
+  async respondAppeal(appealId: string, isApproved: boolean, responseReason: string, assignedJudgeId?: string): Promise<any> {
+    const res = await apiClient.put(`/Appeals/${appealId}/respond`, {
+      Status: isApproved ? AppealStatus.Approved : AppealStatus.Rejected,
+      Response: responseReason,
+      AssignedJudgeId: assignedJudgeId,
+    });
+    return res.data;
+  },
+};

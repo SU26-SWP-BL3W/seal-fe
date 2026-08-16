@@ -6,9 +6,8 @@ import { Step1EventBasicInfo } from "@/components/domain/event-wizard/Step1Event
 import { Step2RoundConfig } from "@/components/domain/event-wizard/Step2RoundConfig";
 import { Step3TrackConfig } from "@/components/domain/event-wizard/Step3TrackConfig";
 import { Step4TemplateCriteriaEditor } from "@/components/domain/event-wizard/Step4TemplateCriteriaEditor";
-import { Step5StaffAssignment } from "@/components/domain/event-wizard/Step5StaffAssignment";
 import { Step6EventConfirmation } from "@/components/domain/event-wizard/Step6EventConfirmation";
-import { Shield, Layers, Target, Sliders, Users, AlertCircle, ArrowLeft, CheckCircle2, Check, Lock, Rocket } from "lucide-react";
+import { Shield, Layers, Target, Sliders, AlertCircle, ArrowLeft, CheckCircle2, Rocket } from "lucide-react";
 import Link from "next/link";
 
 import { useGetTemplates } from "@/repositories/templatesRepository";
@@ -17,46 +16,50 @@ export const CreateEventWizardView: React.FC = () => {
   const wizard = useCreateEventWizardViewModel();
   const { data: templates = [] } = useGetTemplates();
 
+  // Streamlined 5-Step Event Config Wizard (Staff Assignment managed in dedicated view C8)
   const steps = [
-    { number: 1, label: "Tạo Event", icon: Shield },
+    { number: 1, label: "Info (Admin)", icon: Shield },
     { number: 2, label: "Vòng Thi", icon: Layers },
     { number: 3, label: "Hạng Mục", icon: Target },
     { number: 4, label: "Tiêu Chí", icon: Sliders },
-    { number: 5, label: "Nhân Sự", icon: Users },
-    { number: 6, label: "Công Bố", icon: Rocket },
+    { number: 5, label: "Công Bố", icon: Rocket },
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
-      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-4 py-8 space-y-8">
+    <div className="min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans flex flex-col">
+      <main className="flex-1 max-w-[1500px] w-full mx-auto px-4 py-8 space-y-6">
+        
         {/* Header Breadcrumb & Title */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#263339] pb-6">
           <div>
-            <div className="flex items-center gap-2 font-mono text-xs text-[var(--text-muted)] mb-2">
-              <Link href="/coordinator/dashboard" className="hover:text-[var(--accent-primary)] flex items-center gap-1">
-                <ArrowLeft className="w-3.5 h-3.5" /> Coordinator Control Center
+            <div className="flex items-center gap-2 font-mono text-xs text-[#8a9ba8] mb-2">
+              <Link href="/coordinator/dashboard" className="hover:text-[#8b5cf6] flex items-center gap-1">
+                <ArrowLeft className="w-3.5 h-3.5" /> Bảng Điều Khiển Coordinator
               </Link>
               <span>/</span>
-              <span className="text-[var(--accent-primary)] font-bold">Cấu Hình Chi Tiết Sự Kiện</span>
+              <span className="text-[#8b5cf6] font-bold">Cấu Hình Sự Kiện Phụ Trách</span>
             </div>
-            <h1 className="font-display font-bold text-2xl md:text-3xl text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-3">
-              <Shield className="w-8 h-8 text-[var(--accent-primary)]" />
-              Thiết Lập Vòng Thi, Bảng Đấu & Tiêu Chí Chấm
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider flex items-center gap-3">
+              <Shield className="w-7 h-7 text-[#8b5cf6]" />
+              CẤU HÌNH NGHIỆP VỤ SỰ KIỆN PHỤ TRÁCH
             </h1>
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1">
+              Hoàn tất cấu hình các Vòng thi, Hạng mục và Tiêu chí chấm điểm cho sự kiện.
+            </p>
           </div>
 
-          <div className="px-4 py-2 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped font-mono text-xs">
-            <span className="text-[var(--text-muted)] block uppercase text-[10px]">Trạng Thái Nghiệp Vụ:</span>
-            <span className="text-[var(--accent-primary)] font-bold">CẤU HÌNH BAN TỔ CHỨC</span>
+          <div className="px-4 py-2 bg-[#13191c] border border-[#263339] font-mono text-xs">
+            <span className="text-[#8a9ba8] block uppercase text-[10px]">Quyền Hạn Nghiệp Vụ:</span>
+            <span className="text-[#8b5cf6] font-bold">CẤU HÌNH BAN TỔ CHỨC (COORDINATOR)</span>
           </div>
         </div>
 
-        {/* HUD Step Indicator Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        {/* HUD Step Indicator Bar (5 Steps) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 font-mono text-xs">
           {steps.map((step) => {
             const isActive = wizard.currentStep === step.number;
-            const isCompleted = step.number === 6 ? wizard.canPublishEvent : Boolean(wizard.stepDoneMap[step.number]);
-            const isClickable = step.number <= wizard.currentStep || Boolean(wizard.stepDoneMap[step.number - 1]);
+            const isCompleted = step.number < wizard.currentStep || (step.number === 5 && wizard.canPublishEvent);
+            const isClickable = true;
 
             return (
               <button
@@ -66,24 +69,24 @@ export const CreateEventWizardView: React.FC = () => {
                 onClick={() => {
                   if (isClickable) wizard.setCurrentStep(step.number);
                 }}
-                className={`p-3 border text-left transition-all duration-200 hud-clipped flex items-center gap-2.5 relative group ${
+                className={`p-3 border text-left transition-all duration-200 flex items-center gap-2.5 relative group ${
                   !isClickable
-                    ? "opacity-40 cursor-not-allowed bg-[var(--bg-panel)]/20 border-[var(--border-muted)]/50 text-[var(--text-muted)]"
+                    ? "opacity-40 cursor-not-allowed bg-[#13191c]/20 border-[#263339] text-[#8a9ba8]"
                     : isActive
-                    ? "bg-[rgba(6,182,212,0.15)] border-2 border-cyan-400 shadow-[0_0_16px_rgba(6,182,212,0.35)] text-cyan-300 scale-[1.02] z-10 cursor-pointer"
+                    ? "bg-[#8b5cf6]/15 border-2 border-[#8b5cf6] text-[#e1e7ec] scale-[1.02] z-10 cursor-pointer"
                     : isCompleted
-                    ? "bg-[rgba(16,185,129,0.1)] border-[var(--color-success)] text-[var(--color-success)] hover:bg-[rgba(16,185,129,0.2)] cursor-pointer"
-                    : "bg-[var(--bg-panel)]/40 border-[var(--border-muted)] text-[var(--text-muted)] hover:border-slate-500 hover:text-[var(--text-primary)] cursor-pointer"
+                    ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 cursor-pointer"
+                    : "bg-[#13191c] border-[#263339] text-[#8a9ba8] hover:border-[#8b5cf6] hover:text-[#e1e7ec] cursor-pointer"
                 }`}
               >
                 {/* Status Icon / Number Badge */}
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 transition-all ${
                     isActive
-                      ? "bg-cyan-400 text-black shadow-[0_0_8px_#22d3ee] font-black"
+                      ? "bg-[#8b5cf6] text-white font-black"
                       : isCompleted
-                      ? "bg-[var(--color-success)] text-black"
-                      : "bg-[var(--bg-input)] text-[var(--text-muted)] border border-[var(--border-muted)]"
+                      ? "bg-emerald-500 text-black"
+                      : "bg-[#0a0e10] text-[#8a9ba8] border border-[#263339]"
                   }`}
                 >
                   {isCompleted ? (
@@ -95,41 +98,21 @@ export const CreateEventWizardView: React.FC = () => {
 
                 <div className="overflow-hidden flex-1">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="font-mono text-[9px] uppercase tracking-widest block text-[var(--text-muted)]">
+                    <span className="font-mono text-[9px] uppercase tracking-widest block text-[#8a9ba8]">
                       Bước {step.number}
                     </span>
-
-                    {/* Step Status Badge */}
-                    <span
-                      className={`font-mono text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
-                        isActive
-                          ? "bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 animate-pulse"
-                          : isCompleted
-                          ? "bg-[var(--color-success)]/20 text-[var(--color-success)]"
-                          : "bg-slate-800 text-slate-400"
-                      }`}
-                    >
-                      {isActive ? "⚡ Đang làm" : isCompleted ? "✓ Xong" : "Chờ"}
-                    </span>
                   </div>
-
-                  <span
-                    className={`font-mono font-bold text-xs truncate block mt-0.5 ${
-                      isActive ? "text-cyan-200" : isCompleted ? "text-[var(--color-success)]" : "text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {step.label}
-                  </span>
+                  <div className="font-bold truncate text-xs">{step.label}</div>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* Error Banner */}
+        {/* Global Error Banner */}
         {wizard.errorMessage && (
-          <div className="p-4 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)] text-[var(--color-danger)] font-mono text-xs hud-clipped flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 text-[var(--color-danger)]" />
+          <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 text-[#ef4444]" />
             <span>{wizard.errorMessage}</span>
           </div>
         )}
@@ -139,9 +122,9 @@ export const CreateEventWizardView: React.FC = () => {
           {wizard.currentStep === 1 && (
             <Step1EventBasicInfo
               eventData={wizard.eventData}
-              onUpdateField={wizard.handleUpdateEventField}
               onNext={wizard.handleNextStep}
               isSubmitting={wizard.isSubmitting}
+              isReadOnly={true}
             />
           )}
 
@@ -189,19 +172,6 @@ export const CreateEventWizardView: React.FC = () => {
           )}
 
           {wizard.currentStep === 5 && (
-            <Step5StaffAssignment
-              tracks={wizard.tracks}
-              staffInvites={wizard.staffInvites}
-              onAddStaffInvite={wizard.handleAddStaffInvite}
-              onRemoveStaffInvite={wizard.handleRemoveStaffInvite}
-              onFinish={wizard.handleNextStep}
-              onPrev={wizard.handlePrevStep}
-              isSubmitting={wizard.isSubmitting}
-              successMessage={wizard.successMessage}
-            />
-          )}
-
-          {wizard.currentStep === 6 && (
             <Step6EventConfirmation
               eventId={(wizard.createdEvent as any)?.id || (wizard.createdEvent as any)?.Id}
               eventData={wizard.eventData}

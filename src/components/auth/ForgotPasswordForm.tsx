@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { LogIn, Mail, ArrowLeft, Check } from 'lucide-react';
+import { Link } from '@/i18n/routing';
 
 export interface ForgotPasswordFormProps {
   onSubmit?: (email: string) => Promise<void>;
@@ -334,12 +335,12 @@ export function ForgotPasswordForm({
                 <h2 className="text-xl font-bold text-[#2dd4bf] uppercase">Mật khẩu đã được cập nhật</h2>
                 <p className="text-sm text-[#94a3b8]">Bạn có thể đăng nhập với mật khẩu mới</p>
               </div>
-              <a
+              <Link
                 href="/login"
                 className="hud-clipped inline-block w-full bg-[#2dd4bf] hover:bg-[#26c0a8] text-[#0a0f1d] py-3 px-4 font-display font-bold uppercase tracking-wider transition-all"
               >
                 Quay về Đăng nhập
-              </a>
+              </Link>
             </div>
           )}
 

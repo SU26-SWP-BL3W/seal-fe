@@ -8,6 +8,22 @@ import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 
+export const SYSTEM_ACCOUNTS = [
+  { email: "ec.co-organizer@fpt.edu.vn", fullName: "Nguyễn Văn Điều Phối (Coordinator)" },
+  { email: "judge.ai@fpt.edu.vn", fullName: "TS. Hoàng Văn Giám Khảo (Judge AI)" },
+  { email: "tran.phuc.judge@fpt.edu.vn", fullName: "ThS. Trần Phúc (Giám Khảo RBL)" },
+  { email: "mentor.tech@fpt.edu.vn", fullName: "Lê Cố Vấn Chuyên Môn (Mentor)" },
+  { email: "hoang.nam.mentor@fpt.edu.vn", fullName: "Nguyễn Hoàng Nam (Senior Cloud Architect)" },
+  { email: "nguyenvana@fpt.edu.vn", fullName: "Nguyễn Văn A" },
+  { email: "tranthib@fpt.edu.vn", fullName: "Trần Thị B" },
+  { email: "levanc@fpt.edu.vn", fullName: "Lê Văn C" },
+];
+
+export const checkEmailInSystem = (email: string) => {
+  if (!email.trim()) return true;
+  return SYSTEM_ACCOUNTS.some((acc) => acc.email.toLowerCase() === email.trim().toLowerCase());
+};
+
 export const CoordinatorStaffView: React.FC = () => {
   const searchParams = useSearchParams();
   const queryEventId = searchParams.get("eventId");
@@ -292,24 +308,18 @@ export const CoordinatorStaffView: React.FC = () => {
                   <input
                     type="email"
                     required
+                    list="system-staff-accounts"
                     value={coordinatorEmail}
                     onChange={(e) => setCoordinatorEmail(e.target.value)}
                     placeholder="ec.co-organizer@fpt.edu.vn"
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-coordinator)]"
                   />
-                </div>
-
-                <div>
-                  <label className="block font-mono text-xs text-[var(--text-muted)] uppercase mb-1">
-                    Họ Và Tên (Tùy chọn)
-                  </label>
-                  <input
-                    type="text"
-                    value={coordinatorFullName}
-                    onChange={(e) => setCoordinatorFullName(e.target.value)}
-                    placeholder="Nguyễn Văn A"
-                    className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-coordinator)]"
-                  />
+                  {coordinatorEmail.trim() && !checkEmailInSystem(coordinatorEmail) && (
+                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    </p>
+                  )}
                 </div>
 
                 {coordinatorMessage && (
@@ -361,11 +371,18 @@ export const CoordinatorStaffView: React.FC = () => {
                   <input
                     type="email"
                     required
+                    list="system-staff-accounts"
                     value={judgeEmail}
                     onChange={(e) => setJudgeEmail(e.target.value)}
                     placeholder="judge.ai@fpt.edu.vn"
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
                   />
+                  {judgeEmail.trim() && !checkEmailInSystem(judgeEmail) && (
+                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -436,11 +453,18 @@ export const CoordinatorStaffView: React.FC = () => {
                   <input
                     type="email"
                     required
+                    list="system-staff-accounts"
                     value={mentorEmail}
                     onChange={(e) => setMentorEmail(e.target.value)}
                     placeholder="mentor.tech@fpt.edu.vn"
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[#2dd4bf]"
                   />
+                  {mentorEmail.trim() && !checkEmailInSystem(mentorEmail) && (
+                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -563,6 +587,15 @@ export const CoordinatorStaffView: React.FC = () => {
             </div>
           )}
         </Card>
+
+        {/* Global Datalist for System Accounts Auto-Feed */}
+        <datalist id="system-staff-accounts">
+          {SYSTEM_ACCOUNTS.map((acc) => (
+            <option key={acc.email} value={acc.email}>
+              {acc.fullName} ({acc.email})
+            </option>
+          ))}
+        </datalist>
 
       </main>
     </div>

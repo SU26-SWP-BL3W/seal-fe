@@ -175,7 +175,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
             ))}
           </ul>
           <p className="text-[11px] text-gray-400 italic pt-1 border-t border-red-500/30">
-            💡 Bạn có thể bấm <strong>"Lưu Bản Nháp"</strong> để lưu lại tiến trình đã làm và quay lại hoàn thiện sau.
+            Bạn có thể bấm <strong>"Lưu Bản Nháp"</strong> để lưu lại tiến trình đã làm và quay lại hoàn thiện sau.
           </p>
         </div>
       )}
@@ -183,7 +183,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
       {/* Published Feedback Alert */}
       {publishSuccess && (
         <div className="p-4 bg-[rgba(16,185,129,0.15)] border border-[var(--color-success)] text-[var(--color-success)] font-mono text-xs text-center font-bold rounded animate-fadeIn">
-          🎉 ĐÃ LƯU TRẠNG THÁI SỰ KIỆN THÀNH CÔNG! Đang chuyển về Trang quản lý Điều phối viên...
+          ĐÃ LƯU TRẠNG THÁI SỰ KIỆN THÀNH CÔNG! Đang chuyển về Trang quản lý Điều phối viên...
         </div>
       )}
 
@@ -219,8 +219,8 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
               {isPublishing
                 ? "Đang Công Bố..."
                 : canPublishEvent
-                ? "🚀 CÔNG BỐ SỰ KIỆN NGAY"
-                : "⚠️ Chưa Đủ Điều Kiện Công Bố"}
+                ? "CÔNG BỐ SỰ KIỆN NGAY"
+                : "Chưa Đủ Điều Kiện Công Bố"}
             </span>
           </Button>
         </div>
