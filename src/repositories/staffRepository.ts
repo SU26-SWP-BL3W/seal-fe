@@ -5,8 +5,11 @@ import { BaseResponse } from "@/models/types";
 
 export interface InviteStaffPayload {
   eventId: string;
-  trackId?: string;
+  /** Bắt buộc — InviteJudgeToTrackCommandValidator/InviteMentorToTrackCommandValidator đều NotEmpty. */
+  trackId: string;
   email: string;
+  /** Bắt buộc — JudgeFullName/MentorFullName đều NotEmpty bên BE. */
+  fullName: string;
 }
 
 export interface AssignRolePayload {
@@ -58,19 +61,32 @@ export const staffRepository = {
   },
 
   /**
-   * Mời Giám khảo (Judge) tham gia Track/Event qua Email (POST /api/Judges/invite)
+   * Mời Giám khảo (Judge) tham gia 1 Track qua Email (POST /api/Judges/invite).
    * Tự động tạo tài khoản tạm nếu chưa có + gửi email xác thực kèm token 24h.
+   * InviteJudgeToTrackRequestModel yêu cầu JudgeEmail/JudgeFullName (không phải email/fullName trần) —
+   * gửi sai tên field khiến validator luôn báo "không được để trống" dù người dùng đã điền.
    */
   async inviteJudge(payload: InviteStaffPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Judges/invite", payload);
+    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Judges/invite", {
+      EventId: payload.eventId,
+      TrackId: payload.trackId,
+      JudgeEmail: payload.email,
+      JudgeFullName: payload.fullName,
+    });
     return res.data;
   },
 
   /**
-   * Mời Cố vấn (Mentor) tham gia Track/Event qua Email (POST /api/Mentors/invite)
+   * Mời Cố vấn (Mentor) tham gia 1 Track qua Email (POST /api/Mentors/invite).
+   * InviteMentorToTrackRequestModel yêu cầu MentorEmail/MentorFullName — xem ghi chú ở inviteJudge.
    */
   async inviteMentor(payload: InviteStaffPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Mentors/invite", payload);
+    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Mentors/invite", {
+      EventId: payload.eventId,
+      TrackId: payload.trackId,
+      MentorEmail: payload.email,
+      MentorFullName: payload.fullName,
+    });
     return res.data;
   },
 
