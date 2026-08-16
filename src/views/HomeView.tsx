@@ -1,22 +1,25 @@
-import { Card, Badge } from "@/components/ui";
+"use client";
 
-/**
- * Placeholder — chứng minh khung MVVM build/chạy được end-to-end
- * (i18n, design tokens, API client, React Query provider đã sẵn sàng).
- * Thay bằng View thật đầu tiên khi bắt đầu build feature.
- */
+import { Badge, Card } from "@/components/ui";
+import { useBackendHealthViewModel } from "@/viewModels/useBackendHealthViewModel";
+
+// View — chỉ render, không tự gọi API hay giữ state riêng. Toàn bộ dữ liệu
+// và logic lấy từ ViewModel.
 export function HomeView() {
+  const { apiUrl, status, isLoading, isError } = useBackendHealthViewModel();
+
   return (
-    <main className="hud-lattice min-h-screen flex items-center justify-center p-6">
-      <Card className="max-w-lg p-8 space-y-4 text-center">
-        <Badge tone="success">KHUNG MVVM SẴN SÀNG</Badge>
-        <h1 className="font-display text-2xl font-bold text-[var(--text-primary)]">
-          SEAL FE
-        </h1>
-        <p className="text-sm text-[var(--text-muted)] font-sans">
-          Skeleton dựng xong: i18n, design tokens, API client (circuit breaker + refresh-token),
-          React Query, UI primitives. Xem <code>README.md</code> để biết quy ước thêm feature.
-        </p>
+    <main className="mx-auto flex max-w-[var(--container-max)] flex-1 flex-col items-start gap-[var(--space-lg)] p-[var(--space-xl)]">
+      <h1 className="font-display text-[length:var(--fs-heading-lg)] font-semibold uppercase tracking-wide text-[color:var(--text-primary)]">
+        SEAL — Command Deck
+      </h1>
+      <Card className="flex items-center gap-[var(--space-md)]">
+        <span className="font-mono text-[length:var(--fs-body-md)] text-[color:var(--text-muted)]">
+          Kết nối tới backend ({apiUrl}):
+        </span>
+        {isLoading && <Badge tone="neutral">đang kiểm tra…</Badge>}
+        {isError && <Badge tone="danger">không kết nối được</Badge>}
+        {status && <Badge tone="success">{status}</Badge>}
       </Card>
     </main>
   );
