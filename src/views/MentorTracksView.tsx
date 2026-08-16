@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useMyAssignedTracks } from "@/viewModels/useMyAssignedTracks";
 import { Card, Button } from "@/components/ui";
 import { Target, Users, RefreshCw, Compass, Info } from "lucide-react";

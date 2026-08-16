@@ -4,7 +4,7 @@ import React from "react";
 import { Button, Card, Badge } from "@/components/ui";
 import { useMyAssignedJudgeTracks } from "@/viewModels/useMyAssignedJudgeTracks";
 import { Award, CheckCircle2, Clock, ArrowRight, ShieldCheck, FileCheck2 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 export const JudgeTracksView: React.FC = () => {
   const { assignedTracks, isLoading } = useMyAssignedJudgeTracks();

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import {
   useGetAppeals,
@@ -34,9 +35,18 @@ import {
 import type { Appeal, AppealStatus } from "@/models/entities";
 
 export function AppealsView() {
+  const searchParams = useSearchParams();
+  const initialSubId = searchParams.get("subId") || "";
+
   const { user, activeRole } = useAuth();
   const [reason, setReason] = useState("");
-  const [submitResultId, setSubmitResultId] = useState("sub-101");
+  const [submitResultId, setSubmitResultId] = useState(initialSubId);
+
+  useEffect(() => {
+    if (initialSubId) {
+      setSubmitResultId(initialSubId);
+    }
+  }, [initialSubId]);
 
   const [detailModal, setDetailModal] = useState<any | null>(null);
   const [respondModal, setRespondModal] = useState<any | null>(null);

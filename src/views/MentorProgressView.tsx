@@ -3,15 +3,23 @@
 import { useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetTeamScoreBreakdown } from "@/repositories/scoresRepository";
-import { Button, Card, Badge, Input } from "@/components/ui";
-import { Search, Shield, RefreshCw, BarChart2, CheckCircle2 } from "lucide-react";
+import { Button, Card, Input } from "@/components/ui";
+import { Search, Shield, RefreshCw, BarChart2 } from "lucide-react";
+
+interface ScoreDetailBreakdownItem {
+  criteriaId: string;
+  criteriaName: string;
+  scoreValue: number;
+  maxScore: number;
+  weight: number;
+}
 
 export function MentorProgressView() {
   const { user } = useAuth();
   const [inputTeamId, setInputTeamId] = useState("team-1");
   const [activeTeamId, setActiveTeamId] = useState("team-1");
 
-  const { data: scoreBreakdown, isLoading, refetch } = useGetTeamScoreBreakdown(activeTeamId);
+  const { data: scoreBreakdown, isLoading } = useGetTeamScoreBreakdown(activeTeamId);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +110,7 @@ export function MentorProgressView() {
                 PHÂN RÃ ĐIỂM SỐ THEO TIÊU CHÍ (CRITERIA BREAKDOWN)
               </h3>
 
-              {scoreBreakdown.details?.map((item: any) => (
+              {scoreBreakdown.details?.map((item: ScoreDetailBreakdownItem) => (
                 <div
                   key={item.criteriaId}
                   className="p-4 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-2"

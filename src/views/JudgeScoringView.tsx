@@ -209,23 +209,50 @@ export function JudgeScoringView() {
             </Card>
           ) : (
             <Card className="p-6 bg-[var(--bg-panel)] border-[var(--border-muted)] hud-clipped space-y-6">
-              <div className="p-4 bg-[var(--bg-base)] border border-[var(--accent-judge)]/30 flex items-center justify-between hud-clipped">
+              {/* Thông tin bài nộp ẩn danh & Điểm tạm tính RBL */}
+              <div className="p-4 bg-[var(--bg-base)] border border-[var(--accent-judge)]/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hud-clipped">
                 <div>
                   <span className="text-[10px] font-mono text-[var(--accent-judge)] uppercase font-bold block mb-1">
-                    Bài nộp ẩn danh
+                    Bài nộp ẩn danh (RBL Blind Scoring)
                   </span>
-                  <a
-                    href={selectedSubmission.repoUrl || selectedSubmission.RepoUrl || selectedSubmission.submissionUrl || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-mono text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-bold"
-                  >
-                    {selectedSubmission.repoUrl || selectedSubmission.submissionUrl || "Mở repo"}
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    {(selectedSubmission.repoUrl || selectedSubmission.RepoUrl || selectedSubmission.submissionUrl) && (
+                      <a
+                        href={selectedSubmission.repoUrl || selectedSubmission.RepoUrl || selectedSubmission.submissionUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-mono text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-bold bg-[var(--bg-input)] px-2.5 py-1 border border-[var(--accent-primary)]/30"
+                      >
+                        ⌥ Source Repo
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {(selectedSubmission.demoUrl || selectedSubmission.DemoUrl) && (
+                      <a
+                        href={selectedSubmission.demoUrl || selectedSubmission.DemoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-mono text-[#f87171] hover:underline flex items-center gap-1 font-bold bg-[var(--bg-input)] px-2.5 py-1 border border-[#f87171]/30"
+                      >
+                        ▶ Live Demo / Video
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {(selectedSubmission.slideUrl || selectedSubmission.SlideUrl) && (
+                      <a
+                        href={selectedSubmission.slideUrl || selectedSubmission.SlideUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-mono text-[#fb923c] hover:underline flex items-center gap-1 font-bold bg-[var(--bg-input)] px-2.5 py-1 border border-[#fb923c]/30"
+                      >
+                        ▦ Slides / Docs
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase block">Điểm tạm tính</span>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase block">Điểm chuẩn RBL (Thang 10)</span>
                   <span className="font-mono text-2xl font-bold text-[var(--accent-judge)]">{calculatedTotalScore} / 10</span>
                 </div>
               </div>
