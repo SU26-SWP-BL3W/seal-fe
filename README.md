@@ -16,17 +16,24 @@ src/
 ├── app/[locale]/        Route MỎNG — chỉ render 1 View, không chứa logic
 ├── views/                 View — component trang, ghép UI + gọi viewModel
 ├── viewModels/             ViewModel — hook use<Feature>ViewModel, gọi repository + state UI cục bộ
-├── repositories/            Model/data access — 1 file/nhóm entity, hook React Query bọc apiClient
-├── models/                   Model/type — entities.ts (type dùng chung), apiClient.ts, types.ts
+├── repositories/            Model/data access — chia theo LUỒNG NGHIỆP VỤ (xem repositories/README.md)
+│   ├── auth/                   Đăng nhập/đăng ký/hồ sơ danh tính
+│   ├── events/                   Sự kiện/vòng/hạng mục/tiêu chí/mời nhân sự
+│   ├── teams/                     Đội thi
+│   ├── scoring/                     Nộp bài + chấm điểm ✅ đã ráp
+│   ├── results/                       Kết quả cuối + giải thưởng + phúc khảo
+│   └── shared/                         Dùng chung nhiều luồng (thông báo, audit log)
+├── models/                   Model/type dùng chung — entities.ts, apiClient.ts, types.ts
 ├── components/ui/             Design-system thuần, KHÔNG biết gì về nghiệp vụ
 ├── components/domain/          Component nghiệp vụ dùng lại nhiều feature
 ├── components/auth/             Guard theo quyền
-├── providers/                    QueryProvider...
+├── providers/                    QueryProvider, AuthProvider
 ├── i18n/, styles/, lib/            Plumbing chung
 ```
 
 Luồng 1 chiều: `app/` → `views/` → `viewModels/` → `repositories/` → `apiClient`. Không nhảy tầng
-(view không tự gọi apiClient; repository không chứa state UI).
+(view không tự gọi apiClient; repository không chứa state UI). `views/` và `viewModels/` nên đi
+theo cùng cách chia thư mục con của `repositories/` khi bắt đầu build UI thật cho từng luồng.
 
 ## Quy tắc bắt buộc — rút từ audit repo cũ
 
@@ -40,33 +47,45 @@ sạch để KHÔNG lặp lại:
 3. **Một nguồn sự thật.** Đừng để 1 khái niệm (tiêu chí, kết quả...) có 2-3 nơi định nghĩa khác
    nhau.
 
-## Đã ráp — Auth (13 endpoint `AuthController` + 1 endpoint `UsersController`)
+## Đã ráp
 
-`repositories/authRepository.ts` + `providers/AuthProvider.tsx` xây lại sạch, field/route đối
-chiếu trực tiếp source C# của BE (`SU26_SWP_BL3W_BE/backend/SEAL.Application/Features/Users/**`),
-không suy đoán từ FE cũ — FE cũ có bug thật ở đúng chỗ này (gọi `/FptStudents/{code}` không tồn
-tại; đọc `data.user`/`data.token` trong khi response thật là field phẳng
-`accessToken`/`userId`/...).
+Field/route mọi repository dưới đây đối chiếu TRỰC TIẾP source C# của BE
+(`SU26_SWP_BL3W_BE/backend/SEAL.Application/Features/**/Models`) — không suy đoán, không copy từ
+FE cũ (FE cũ có bug lệch contract thật ở đúng việc này, xem ví dụ trong `repositories/README.md`).
 
-- `LoginUserResponseModel` chỉ có field tối thiểu (không có `isApproved`/`isFpt`/`schoolId`) →
-  sau login/google-login, repository tự gọi thêm `GET /Users/profile` để lấy `User` đầy đủ, không
-  tự bịa giá trị mặc định cho field thiếu.
+**`repositories/auth/`** — 13 endpoint `AuthController` + `GET /Users/profile`.
+- `LoginUserResponseModel` chỉ có field tối thiểu (không `isApproved`/`isFpt`/`schoolId`) → sau
+  login/google-login, repository tự gọi thêm `/Users/profile` lấy `User` đầy đủ, không bịa field.
 - Không expose hook refresh-token thủ công — `apiClient.ts` đã tự làm mới token khi 401
-  (single-flight), thêm 1 đường refresh nữa dễ đua nhau.
-- **Không** còn backdoor `loginWithRole` (mock-jwt-token cho nút demo) như bản cũ.
+  (single-flight), thêm đường refresh thứ 2 dễ đua nhau.
+- **Không** còn backdoor `loginWithRole` (mock-jwt-token) như bản cũ.
 - **Chưa build**: trang Login/Register (`views/`) — mới có tầng data + session, chưa có UI.
-- **Chưa ráp**: xác minh sinh viên FPT (`FptMockController`, route `api/fpt-mock/students/{code}`
-  — khác controller, không phải Auth) — để lại cho đợt sau, tránh lẫn vào scope Auth.
+
+**`repositories/scoring/`** — `SubmitResultsController` (5), `ScoresController` (9),
+`ScoreDetailsController` (5), `StorageController` (2) — 21 endpoint.
+- `useSaveScore` (API gộp `/Scores/save`) là đường chính để giám khảo lưu cả phiếu chấm nhiều tiêu
+  chí 1 lần — `scoreDetailsRepository.ts` chỉ dùng khi cần sửa/xoá TỪNG điểm chi tiết riêng lẻ.
+- `exportScoresCsv`/`downloadFile` dùng `responseType: "blob"` + tự soi `content-type` để phân
+  biệt file thật vs JSON lỗi bị blob-hoá — 2 endpoint này KHÔNG trả `BaseResponse` khi thành công
+  (trả file thô), khác mọi endpoint khác trong dự án.
+- `StorageController` phát hiện KHÔNG theo convention `BaseResponse` khi lỗi (`BadRequest(string)`
+  thô) — ghi rõ cảnh báo trong file để component không giả định `err.response.data.message`.
+- **Chưa build**: UI nộp bài/chấm điểm (`views/`).
 
 ## Chưa port cố ý
 
 - **`lib/permissions.ts`** — phụ thuộc entity/role đầy đủ (Team, EventRole...) chưa wiring; định
   nghĩa lại cùng lúc với các controller đó.
-- 23/24 controller còn lại (Events, Teams, Scores, Templates, Tracks, Rounds, FinalResults,
-  Appeals, Users (ngoài `/profile`), EventRoles, Judges, Mentors, Prizes, Criterias,
-  SubmitResults, ScoreDetails, Notifications, Schools, Storage, UserRejections,
-  EventCoordinators, AuditLogs, Demo, FptMock) — ráp theo đúng pattern Auth khi bắt đầu từng flow,
-  đọc contract thật từ source C#, không copy route/field từ FE cũ.
+
+## Còn lại — 22/25 controller
+
+Events, Rounds, Tracks, Templates, Criterias, EventRoles, EventCoordinators, Judges, Mentors
+(→ `repositories/events/`) · Teams (→ `repositories/teams/`) · FinalResults, Prizes, Appeals
+(→ `repositories/results/`) · Users (ngoài `/profile`), UserRejections, Schools, FptMock
+(→ `repositories/auth/`) · Notifications, AuditLogs, Demo (→ `repositories/shared/`).
+
+Ráp theo đúng pattern Auth/Scoring khi bắt đầu từng luồng — đọc contract thật từ source C#, không
+copy route/field từ FE cũ.
 
 ## Chạy local
 
@@ -80,3 +99,8 @@ npm run dev
 
 `.github/workflows/ci.yml` — lint (chặn, không `continue-on-error`) + build trên mọi
 push/PR vào `main`/`dev`.
+
+**⚠️ Đang bị chặn ở tài khoản, không phải ở workflow:** mọi run hiện fail sau 2s với annotation
+*"account is locked due to a billing issue"* — khoá cấp tài khoản GitHub `h1e3su` (billing/Actions
+minutes), không phải lỗi cấu hình. Build + lint local đã xanh (`npm run build`, `npm run lint`).
+Cần chủ tài khoản vào `github.com/settings/billing` gỡ khoá thì CI mới chạy được.
