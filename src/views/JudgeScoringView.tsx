@@ -2,10 +2,10 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { useGetSubmitResultsByTrack, readApiError } from "@/repositories/scoring";
-import { useGetTracksByEvent } from "@/repositories/events";
-import { useGetTemplate } from "@/repositories/events";
-import { useSaveScore } from "@/repositories/scoring";
+import { useGetSubmitResultsByTrack, readApiError } from "@/repositories/submitResultsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useGetTemplate } from "@/repositories/templatesRepository";
+import { useSaveScore } from "@/repositories/scoresRepository";
 import {
   Award,
   AlertTriangle,

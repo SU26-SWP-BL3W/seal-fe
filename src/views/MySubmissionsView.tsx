@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
-import { useMyTeam } from "@/repositories/teams";
+import { useMyTeam } from "@/repositories/teamsRepository";
 import {
   useMySubmissions,
   useDeleteSubmission,
@@ -11,7 +11,7 @@ import {
   useMentorFeedbacks,
   readApiError,
   type SubmitResultListItem,
-} from "@/repositories/scoring";
+} from "@/repositories/submitResultsRepository";
 import {
   FolderOpen,
   Code,

@@ -6,7 +6,7 @@ import { Link } from "@/i18n/routing";
 import { SealShield } from "./SealShield";
 import { NotificationBell } from "./NotificationBell";
 import { hasEventPermission } from "@/lib/permissions";
-import { useEventDetail } from "@/repositories/events";
+import { useEventDetail } from "@/repositories/eventsRepository";
 import {
   Globe,
   Users,

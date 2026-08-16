@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { useGetSchools, useCreateSchool } from "@/repositories/auth";
+import { useGetSchools, useCreateSchool } from "@/repositories/schoolsRepository";
 import {
   School as SchoolIcon,
   Plus,

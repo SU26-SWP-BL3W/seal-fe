@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { useEvents } from "@/repositories/events";
-import { useGetUsers } from "@/repositories/auth";
+import { useEvents } from "@/repositories/eventsRepository";
+import { useGetUsers, usersRepository } from "@/repositories/usersRepository";
 import { Link } from "@/i18n/routing";
 import {
   ShieldAlert,
@@ -22,9 +22,8 @@ import {
   Lock,
   Radio,
 } from "lucide-react";
-import { staffRepository } from "@/repositories/events";
-import { usersRepository } from "@/repositories/auth";
-import { readApiError } from "@/repositories/scoring";
+import { staffRepository } from "@/repositories/staffRepository";
+import { readApiError } from "@/repositories/submitResultsRepository";
 
 export function AdminDashboardView() {
   const { user, loginAsDemoRole } = useAuth();

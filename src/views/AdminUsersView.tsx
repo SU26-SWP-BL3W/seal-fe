@@ -2,9 +2,9 @@
 
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { useGetUsers, useApproveUser, useRejectUser } from "@/repositories/auth";
-import { staffRepository } from "@/repositories/events";
-import { useEvents } from "@/repositories/events";
+import { useGetUsers, useApproveUser, useRejectUser } from "@/repositories/usersRepository";
+import { staffRepository } from "@/repositories/staffRepository";
+import { useEvents } from "@/repositories/eventsRepository";
 import {
   Users,
   Search,
@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import type { User } from "@/models/entities";
-import { readApiError } from "@/repositories/scoring";
+import { readApiError } from "@/repositories/submitResultsRepository";
 
 export const AdminUsersView: React.FC = () => {
   const { user: currentUser, loginAsDemoRole } = useAuth();

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { useEvents } from "@/repositories/events";
+import { useEvents } from "@/repositories/eventsRepository";
 import { Link } from "@/i18n/routing";
 import {
   Scale,

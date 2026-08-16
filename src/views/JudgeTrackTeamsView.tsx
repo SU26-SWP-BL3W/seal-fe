@@ -3,8 +3,8 @@
 import React, { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
-import { useGetSubmitResultsByTrack } from "@/repositories/scoring";
-import { useGetTracksByEvent } from "@/repositories/events";
+import { useGetSubmitResultsByTrack } from "@/repositories/submitResultsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Link } from "@/i18n/routing";
 import {
   ShieldAlert,

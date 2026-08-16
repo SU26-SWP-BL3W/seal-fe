@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Button, Input, Card } from "@/components/ui";
-import { eventsRepository } from "@/repositories/events";
-import { staffRepository } from "@/repositories/events";
-import { usersRepository } from "@/repositories/auth";
+import { eventsRepository } from "@/repositories/eventsRepository";
+import { staffRepository } from "@/repositories/staffRepository";
+import { usersRepository } from "@/repositories/usersRepository";
 import { Shield, Calendar, Info, ArrowLeft, CheckCircle2, UserCheck } from "lucide-react";
 import Link from "next/link";
 

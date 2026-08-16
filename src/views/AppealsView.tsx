@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
-import { useMyTeam } from "@/repositories/teams";
+import { useMyTeam } from "@/repositories/teamsRepository";
 import {
   useAppeals,
   useCreateAppeal,
   type AppealDTO,
-} from "@/repositories/results";
-import { useMySubmissions, readApiError } from "@/repositories/scoring";
+} from "@/repositories/appealsRepository";
+import { useMySubmissions, readApiError } from "@/repositories/submitResultsRepository";
 import {
   Scale,
   Send,
