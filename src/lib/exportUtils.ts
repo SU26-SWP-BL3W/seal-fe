@@ -2,7 +2,7 @@
  * SEAL Hackathon Utility - Export Data to CSV / Excel File
  */
 
-export function exportToCsv<T extends Record<string, any>>(
+export function exportToCsv<T extends Record<string, unknown>>(
   filename: string,
   rows: T[],
   headers?: { key: keyof T; label: string }[]

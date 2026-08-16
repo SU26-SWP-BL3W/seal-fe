@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, Database, Server, RefreshCw } from "lucide-react";
+import { AlertTriangle, Server } from "lucide-react";
 
 interface ApiMissingDataBadgeProps {
   endpoint: string;
