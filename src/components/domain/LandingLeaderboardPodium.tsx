@@ -1,6 +1,6 @@
 "use client";
 
-import { ApiMissingDataBadge } from "@/components/ui";
+import { Link } from "@/i18n/routing";
 
 function formatVnd(val: number): string {
   return `${new Intl.NumberFormat("vi-VN").format(val)} ₫`;
@@ -195,12 +195,12 @@ export function LandingLeaderboardPodium({
                 Bảng vàng vinh danh Top 3 Quán quân &amp; Á quân sẽ được mở công khai ngay sau khi Hội đồng Giám khảo hoàn tất chấm điểm vòng Chung kết.
               </p>
             </div>
-            <a
+            <Link
               href="/events"
               className="mt-2 font-mono text-xs text-[var(--accent-primary)] hover:underline border border-[var(--accent-primary)]/40 bg-[var(--bg-panel)] px-4 py-1.5 hud-clipped"
             >
               [ KHÁM PHÁ CÁC ĐỘI ĐANG TRANH TÀI → ]
-            </a>
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-end">
