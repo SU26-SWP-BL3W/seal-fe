@@ -1,130 +1,120 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useGetPrizesByEvent, useCreatePrize } from "@/repositories/results/prizesRepository";
-import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
+import {
+  useGetPrizesByEvent,
+  useCreatePrize,
+  useUpdatePrize,
+  useDeletePrize,
+  type Prize,
+} from "@/repositories/results/prizesRepository";
+import { useMyEvents } from "@/repositories/eventsRepository";
+import { Award, CheckCircle2, AlertCircle, Plus, Trash2, DollarSign, Save, ChevronDown } from "lucide-react";
 
-export interface PrizeItemState {
+// Bản trước ở view này: danh sách sự kiện + hạng mục (track) đều là mảng bịa
+// cứng ("EV-01"/"trk-1"...), state giải thưởng khởi tạo sẵn 4 giải giả và
+// KHÔNG BAO GIỜ tải giải thật đã lưu (useGetPrizesByEvent bị import nhưng
+// không dùng), Save nuốt mọi lỗi API ("catch { // Ignore }") nên luôn báo
+// "thành công" dù request thất bại. Đối chiếu Prize.cs (Domain) xác nhận
+// Prize KHÔNG có TrackId — việc gán giải theo Hạng mục chỉ xảy ra ở
+// FinalResult lúc công bố kết quả, không phải lúc khai báo giải, nên bỏ hẳn
+// tính năng "phân bổ theo hạng mục" bịa ở đây và viết lại thành CRUD thật.
+
+interface DraftPrize {
+  /** id thật từ server nếu đã tồn tại, hoặc id tạm "new-..." nếu vừa thêm ở FE */
   id: string;
+  isNew: boolean;
   prizeName: string;
   quantity: number;
   value: string;
-  trackName: string;
+}
+
+function toDraft(p: Prize): DraftPrize {
+  return { id: p.id, isNew: false, prizeName: p.prizeName, quantity: p.quantity, value: p.value };
 }
 
 export const CoordinatorPrizesView: React.FC = () => {
   const params = useParams();
   const searchParams = useSearchParams();
-  const eventId = (searchParams?.get("eventId") as string) || (params?.id as string) || "EV-01";
+  const { data: eventsList = [] } = useMyEvents();
 
+  const [selectedEventId, setSelectedEventId] = useState<string>(
+    (searchParams?.get("eventId") as string) || (params?.id as string) || ""
+  );
+  const eventId =
+    selectedEventId ||
+    (eventsList[0]
+      ? String((eventsList[0] as any).id || (eventsList[0] as any).Id || (eventsList[0] as any).eventId || (eventsList[0] as any).EventId || "")
+      : "");
+
+  const { data: serverPrizes = [], isLoading: isLoadingPrizes } = useGetPrizesByEvent(eventId);
   const createPrizeMutation = useCreatePrize();
+  const updatePrizeMutation = useUpdatePrize();
+  const deletePrizeMutation = useDeletePrize();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Available tracks list
-  const tracksList = [
-    { id: "all", name: "Toàn Sự Kiện (Chung)" },
-    { id: "trk-1", name: "Advanced Cloud & Infrastructure" },
-    { id: "trk-2", name: "AI & Machine Learning Innovation" },
-    { id: "trk-3", name: "DevOps & Security Compliance" },
-  ];
+  const [prizes, setPrizes] = useState<DraftPrize[]>([]);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
 
-  // Editable Prizes State
-  const [prizes, setPrizes] = useState<PrizeItemState[]>([
-    {
-      id: "prz-1",
-      prizeName: "Giải Nhất",
-      quantity: 1,
-      value: "5.000.000 VNĐ",
-      trackName: "Toàn Sự Kiện (Chung)",
-    },
-    {
-      id: "prz-2",
-      prizeName: "Giải Nhì",
-      quantity: 2,
-      value: "3.000.000 VNĐ",
-      trackName: "Toàn Sự Kiện (Chung)",
-    },
-    {
-      id: "prz-3",
-      prizeName: "Giải Ba",
-      quantity: 3,
-      value: "1.000.000 VNĐ",
-      trackName: "Toàn Sự Kiện (Chung)",
-    },
-    {
-      id: "prz-4",
-      prizeName: "Giải Sáng Tạo AI Xuất Sắc",
-      quantity: 1,
-      value: "2.000.000 VNĐ",
-      trackName: "AI & Machine Learning Innovation",
-    },
-  ]);
+  // Nạp lại state khi đổi sự kiện hoặc dữ liệu server thay đổi
+  useEffect(() => {
+    setPrizes((serverPrizes as Prize[]).map(toDraft));
+    setRemovedIds([]);
+  }, [serverPrizes]);
 
-  // Handle Add New Editable Prize Row
   const handleAddPrize = () => {
-    const nextNum = prizes.length + 1;
     setPrizes((prev) => [
       ...prev,
-      {
-        id: `prz-${Date.now()}`,
-        prizeName: `Giải Thưởng Mới ${nextNum}`,
-        quantity: 1,
-        value: "1.000.000 VNĐ",
-        trackName: "Toàn Sự Kiện (Chung)",
-      },
+      { id: `new-${Date.now()}`, isNew: true, prizeName: "", quantity: 1, value: "" },
     ]);
   };
 
-  // Handle Remove Prize Row
-  const handleRemovePrize = (id: string) => {
-    if (prizes.length <= 1) return;
+  const handleRemovePrize = (id: string, isNew: boolean) => {
     setPrizes((prev) => prev.filter((p) => p.id !== id));
+    if (!isNew) setRemovedIds((prev) => [...prev, id]);
   };
 
-  // Handle Update Prize Field
-  const handleUpdatePrize = (id: string, field: keyof PrizeItemState, value: any) => {
-    setPrizes((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
-    );
+  const handleUpdatePrize = (id: string, field: keyof DraftPrize, value: any) => {
+    setPrizes((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
   };
 
-  // Calculate live total prize budget in VNĐ
   const totalPrizeBudget = prizes.reduce((acc, p) => {
-    const numericStr = p.value.replace(/[^0-9]/g, "");
-    const val = Number(numericStr) || 0;
+    const val = Number(p.value.replace(/[^0-9]/g, "")) || 0;
     return acc + val * (p.quantity || 1);
   }, 0);
 
-  // Save All Prizes Configuration
   const handleSaveConfig = async () => {
+    if (!eventId) return;
+    const invalid = prizes.some((p) => !p.prizeName.trim() || !p.value.trim());
+    if (invalid) {
+      setErrorMessage("Vui lòng nhập đầy đủ Tên giải thưởng và Giá trị cho tất cả các dòng.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSuccessMessage(null);
     setErrorMessage(null);
 
     try {
-      if (eventId) {
-        for (const p of prizes) {
-          try {
-            await createPrizeMutation.mutateAsync({
-              eventId,
-              payload: {
-                prizeName: `${p.prizeName} (${p.trackName})`,
-                value: p.value,
-                quantity: p.quantity,
-              },
-            });
-          } catch (e) {
-            // Ignore API network errors in dev preview
-          }
+      for (const id of removedIds) {
+        await deletePrizeMutation.mutateAsync(id);
+      }
+      for (const p of prizes) {
+        const payload = { prizeName: p.prizeName.trim(), value: p.value.trim(), quantity: p.quantity };
+        if (p.isNew) {
+          await createPrizeMutation.mutateAsync({ eventId, payload });
+        } else {
+          await updatePrizeMutation.mutateAsync({ id: p.id, payload });
         }
       }
-      setSuccessMessage(`Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
+      setRemovedIds([]);
+      setSuccessMessage(`Đã lưu thành công ${prizes.length} giải thưởng — Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ.`);
     } catch (err: any) {
-      setErrorMessage(`Lưu cấu hình thất bại: ${err?.message}`);
+      setErrorMessage(`Lưu cấu hình thất bại: ${err?.response?.data?.message || err?.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -132,9 +122,8 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
-      {/* Main Content */}
       <div className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
-        
+
         {/* Event Selector Filter Bar */}
         <div className="bg-[#13191c] p-4 border border-[#263339] flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
           <div className="flex items-center gap-3 flex-1">
@@ -143,12 +132,20 @@ export const CoordinatorPrizesView: React.FC = () => {
             <div className="relative flex-1 max-w-xl">
               <select
                 value={eventId}
+                onChange={(e) => setSelectedEventId(e.target.value)}
                 className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#f59e0b]"
               >
-                <option value="EV-01">1. SEAL Hackathon 2026: AI &amp; Cloud Nexus (Summer 2026)</option>
-                <option value="EV-02">2. FPT Tech Innovation Challenge 2026 (Autumn 2026)</option>
-                <option value="EV-03">3. Cyber Security Student Cup 2026 (Spring 2026)</option>
+                <option value="">-- Chọn sự kiện --</option>
+                {eventsList.map((ev: any, idx: number) => {
+                  const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
+                  return (
+                    <option key={id} value={id}>
+                      {ev.eventName || ev.EventName} ({ev.season || ev.Season} {ev.year || ev.Year})
+                    </option>
+                  );
+                })}
               </select>
+              <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -168,7 +165,8 @@ export const CoordinatorPrizesView: React.FC = () => {
           <button
             type="button"
             onClick={handleAddPrize}
-            className="px-4 py-2 bg-[#f59e0b] hover:bg-amber-400 text-[#0a0e10] font-mono text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+            disabled={!eventId}
+            className="px-4 py-2 bg-[#f59e0b] hover:bg-amber-400 text-[#0a0e10] font-mono text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>THÊM GIẢI THƯỞNG MỚI</span>
@@ -192,20 +190,16 @@ export const CoordinatorPrizesView: React.FC = () => {
 
         {/* 2 Main Panels Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Left Panel: INTERACTIVE PRIZE FORM BUILDER (8 cols) */}
+
+          {/* Left Panel: Prize table (8 cols) */}
           <div className="lg:col-span-8 bg-[#13191c] border border-[#263339] p-6 space-y-4 font-mono text-xs">
             <div className="flex items-center justify-between border-b border-[#263339] pb-3">
               <div className="font-bold text-[#f59e0b] tracking-widest uppercase flex items-center gap-2">
                 <Award className="w-4 h-4 text-[#f59e0b]" />
                 <span>DANH SÁCH GIẢI THƯỞNG VÀ GIÁ TRỊ ({prizes.length} Giải)</span>
               </div>
-              <span className="text-[#8a9ba8] text-[11px]">
-                Nhập tên giải, số lượng &amp; gán Hạng mục trực tiếp bên dưới
-              </span>
             </div>
 
-            {/* Interactive Editable Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-left font-mono text-xs">
                 <thead>
@@ -213,88 +207,80 @@ export const CoordinatorPrizesView: React.FC = () => {
                     <th className="p-3 w-12 text-center">STT</th>
                     <th className="p-3">TÊN GIẢI THƯỞNG *</th>
                     <th className="p-3 w-24 text-center">SỐ LƯỢNG</th>
-                    <th className="p-3 w-40">GIÁ TRỊ (VNĐ) *</th>
-                    <th className="p-3">HẠNG MỤC ÁP DỤNG</th>
+                    <th className="p-3 w-48">GIÁ TRỊ *</th>
                     <th className="p-3 w-12 text-center">XÓA</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#263339]">
-                  {prizes.map((p, idx) => (
-                    <tr key={p.id} className="hover:bg-[#182024]">
-                      <td className="p-3 text-center text-[#8a9ba8] font-bold">0{idx + 1}</td>
-                      
-                      {/* Tên giải thưởng editable input */}
-                      <td className="p-3">
-                        <input
-                          type="text"
-                          value={p.prizeName}
-                          onChange={(e) => handleUpdatePrize(p.id, "prizeName", e.target.value)}
-                          placeholder="Ví dụ: Giải Nhất, Giải Sáng Tạo..."
-                          className="w-full px-3 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans font-bold text-sm focus:outline-none focus:border-[#f59e0b]"
-                        />
+                  {!eventId ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-[#8a9ba8]">
+                        Chọn một sự kiện để xem/cấu hình giải thưởng.
                       </td>
-
-                      {/* Số lượng editable input */}
-                      <td className="p-3 text-center">
-                        <input
-                          type="number"
-                          min={1}
-                          max={50}
-                          value={p.quantity}
-                          onChange={(e) => handleUpdatePrize(p.id, "quantity", Number(e.target.value))}
-                          className="w-16 px-2 py-1 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-xs text-center font-bold focus:outline-none focus:border-[#f59e0b]"
-                        />
+                    </tr>
+                  ) : isLoadingPrizes ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-[#8a9ba8]">
+                        Đang tải danh sách giải thưởng...
                       </td>
-
-                      {/* Giá trị VNĐ editable input */}
-                      <td className="p-3">
-                        <input
-                          type="text"
-                          value={p.value}
-                          onChange={(e) => handleUpdatePrize(p.id, "value", e.target.value)}
-                          placeholder="5.000.000 VNĐ"
-                          className="w-full px-3 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono font-bold text-xs focus:outline-none focus:border-[#f59e0b]"
-                        />
+                    </tr>
+                  ) : prizes.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-[#8a9ba8]">
+                        Chưa có giải thưởng nào cho sự kiện này. Bấm &quot;Thêm giải thưởng mới&quot; để bắt đầu.
                       </td>
-
-                      {/* Hạng mục áp dụng dropdown */}
-                      <td className="p-3">
-                        <select
-                          value={p.trackName}
-                          onChange={(e) => handleUpdatePrize(p.id, "trackName", e.target.value)}
-                          className="w-full px-2 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-[11px] focus:outline-none focus:border-[#f59e0b]"
-                        >
-                          {tracksList.map((t) => (
-                            <option key={t.id} value={t.name}>
-                              {t.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-
-                      {/* Xóa giải thưởng */}
-                      <td className="p-3 text-center">
-                        {prizes.length > 1 && (
+                    </tr>
+                  ) : (
+                    prizes.map((p, idx) => (
+                      <tr key={p.id} className="hover:bg-[#182024]">
+                        <td className="p-3 text-center text-[#8a9ba8] font-bold">0{idx + 1}</td>
+                        <td className="p-3">
+                          <input
+                            type="text"
+                            value={p.prizeName}
+                            onChange={(e) => handleUpdatePrize(p.id, "prizeName", e.target.value)}
+                            placeholder="Ví dụ: Giải Nhất, Giải Sáng Tạo..."
+                            className="w-full px-3 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans font-bold text-sm focus:outline-none focus:border-[#f59e0b]"
+                          />
+                        </td>
+                        <td className="p-3 text-center">
+                          <input
+                            type="number"
+                            min={1}
+                            max={50}
+                            value={p.quantity}
+                            onChange={(e) => handleUpdatePrize(p.id, "quantity", Number(e.target.value))}
+                            className="w-16 px-2 py-1 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-xs text-center font-bold focus:outline-none focus:border-[#f59e0b]"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <input
+                            type="text"
+                            value={p.value}
+                            onChange={(e) => handleUpdatePrize(p.id, "value", e.target.value)}
+                            placeholder="5.000.000 VNĐ"
+                            className="w-full px-3 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono font-bold text-xs focus:outline-none focus:border-[#f59e0b]"
+                          />
+                        </td>
+                        <td className="p-3 text-center">
                           <button
                             type="button"
-                            onClick={() => handleRemovePrize(p.id)}
+                            onClick={() => handleRemovePrize(p.id, p.isNew)}
                             className="text-[#8a9ba8] hover:text-[#ef4444] p-1 cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Right Panel: LIVE BUDGET SUMMARY & TRACK ALLOCATION BREAKDOWN (4 cols) */}
+          {/* Right Panel: Live Budget Summary (4 cols) */}
           <div className="lg:col-span-4 space-y-6">
-            
-            {/* Card 1: Live Total Budget Summary */}
             <div className="bg-[#13191c] border border-[#263339] p-6 space-y-4 font-mono text-xs">
               <div className="border-b border-[#263339] pb-3 font-bold text-[#f59e0b] tracking-widest uppercase flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-[#f59e0b]" />
@@ -306,54 +292,20 @@ export const CoordinatorPrizesView: React.FC = () => {
               </div>
 
               <p className="text-[11px] text-[#8a9ba8] leading-relaxed">
-                Tự động tính tổng ngân sách dựa trên số lượng x giá trị của tất cả giải thưởng.
+                Tự động tính tổng ngân sách dựa trên số lượng x giá trị của tất cả giải thưởng
+                (chỉ áp dụng khi giá trị nhập là số tiền VNĐ thuần).
               </p>
             </div>
 
-            {/* Card 2: Track Allocation Summary */}
-            <div className="bg-[#13191c] border border-[#263339] p-6 space-y-4 font-mono text-xs">
-              <div className="border-b border-[#263339] pb-3 font-bold text-[#8b5cf6] tracking-widest uppercase flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[#8b5cf6]" />
-                <span>PHÂN BỔ GIẢI THƯỞNG THEO HẠNG MỤC</span>
-              </div>
-
-              <div className="space-y-3">
-                {tracksList.map((trk) => {
-                  const assignedPrizes = prizes.filter((p) => p.trackName === trk.name);
-                  return (
-                    <div key={trk.id} className="p-3 bg-[#0a0e10] border border-[#263339] space-y-1.5">
-                      <div className="font-bold text-[#e1e7ec] text-[11px] flex items-center justify-between">
-                        <span>{trk.name}</span>
-                        <span className="text-[#f59e0b]">({assignedPrizes.length} Giải)</span>
-                      </div>
-                      {assignedPrizes.length === 0 ? (
-                        <div className="text-[10px] text-[#8a9ba8] italic">Chưa phân bổ giải nào</div>
-                      ) : (
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {assignedPrizes.map((ap) => (
-                            <span key={ap.id} className="px-2 py-0.5 bg-[#8b5cf6]/15 border border-[#8b5cf6]/40 text-[#8b5cf6] text-[10px] font-bold">
-                              {ap.prizeName} ({ap.value})
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* CTA Save Button */}
             <button
               type="button"
               onClick={handleSaveConfig}
-              disabled={isSubmitting}
-              className="w-full py-3 bg-[#f59e0b] hover:bg-amber-400 text-[#0a0e10] font-mono font-bold text-xs uppercase flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-lg"
+              disabled={isSubmitting || !eventId || prizes.length === 0}
+              className="w-full py-3 bg-[#f59e0b] hover:bg-amber-400 text-[#0a0e10] font-mono font-bold text-xs uppercase flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4" />
               <span>{isSubmitting ? "ĐANG GHI NHẬN..." : "GHI NHẬN CẤU HÌNH GIẢI THƯỞNG"}</span>
             </button>
-
           </div>
 
         </div>
