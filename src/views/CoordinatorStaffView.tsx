@@ -9,9 +9,13 @@ import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 
-export const checkEmailInSystem = (email: string, usersList: Array<{ email?: string }> = []) => {
+export const checkEmailInSystem = (email: string, usersList: Array<any> = []) => {
   if (!email.trim()) return true;
-  return usersList.some((acc) => acc.email?.toLowerCase() === email.trim().toLowerCase());
+  const target = email.trim().toLowerCase();
+  return usersList.some((acc: any) => {
+    const e = (acc?.email || acc?.Email || acc?.userEmail || acc?.UserEmail || "").trim().toLowerCase();
+    return e === target;
+  });
 };
 
 export const CoordinatorStaffView: React.FC = () => {
@@ -582,11 +586,15 @@ export const CoordinatorStaffView: React.FC = () => {
         </Card>
 
         <datalist id="system-staff-accounts">
-          {systemAccounts.map((acc: any) => (
-            <option key={acc.id || acc.email} value={acc.email}>
-              {acc.fullName || acc.email} ({acc.email})
-            </option>
-          ))}
+          {systemAccounts.map((acc: any, idx: number) => {
+            const emailVal = acc.email || acc.Email || acc.userEmail || "";
+            const nameVal = acc.fullName || acc.FullName || emailVal;
+            return (
+              <option key={acc.id || acc.Id || idx} value={emailVal}>
+                {nameVal} ({emailVal})
+              </option>
+            );
+          })}
         </datalist>
 
       </main>

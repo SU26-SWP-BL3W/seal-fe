@@ -214,11 +214,15 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
       </div>
 
       <datalist id="wizard-staff-accounts">
-        {systemAccounts.map((acc: any) => (
-          <option key={acc.id || acc.email} value={acc.email}>
-            {acc.fullName || acc.email} ({acc.email})
-          </option>
-        ))}
+        {systemAccounts.map((acc: any, idx: number) => {
+          const emailVal = acc.email || acc.Email || acc.userEmail || "";
+          const nameVal = acc.fullName || acc.FullName || emailVal;
+          return (
+            <option key={acc.id || acc.Id || idx} value={emailVal}>
+              {nameVal} ({emailVal})
+            </option>
+          );
+        })}
       </datalist>
     </Card>
   );
