@@ -256,3 +256,32 @@ export async function updateEvent(id: string, data: Partial<Event>): Promise<any
     };
   }
 }
+
+// ─── Public Prizes Extension ───────────────────────────────────────────────
+
+export interface PublicPrizeItem {
+  id?: string;
+  eventId?: string;
+  name?: string;
+  description?: string;
+  rewardValueVnd?: number;
+  quantity?: number;
+  trackId?: string;
+}
+
+export function usePublicPrizes(eventId?: string) {
+  return useQuery({
+    queryKey: ["public-prizes", eventId],
+    queryFn: async () => {
+      if (!eventId) return [];
+      try {
+        const res = await apiClient.get<any>(`/Prizes/public/event/${eventId}`);
+        return res.data?.data || res.data || [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!eventId,
+  });
+}
+

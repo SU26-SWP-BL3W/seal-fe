@@ -115,3 +115,62 @@ export function useDeleteSubmission() {
     },
   });
 }
+
+// ─── Mentor Feedback Extensions ───────────────────────────────────────────
+
+export interface MentorFeedbackItem {
+  id: string;
+  submitResultId: string;
+  mentorId: string;
+  mentorName?: string;
+  feedbackContent: string;
+  technicalAdvice?: string;
+  suggestedScore?: number;
+  createdTime: string;
+}
+
+export interface CreateMentorFeedbackRequest {
+  feedbackContent: string;
+  technicalAdvice?: string;
+  suggestedScore?: number;
+}
+
+export function useMentorFeedbacks(submitResultId?: string) {
+  return useQuery({
+    queryKey: ["mentor-feedbacks", submitResultId],
+    queryFn: async () => {
+      if (!submitResultId) return [];
+      const res = await apiClient.get<{ data: MentorFeedbackItem[] }>(`/SubmitResults/${submitResultId}/feedbacks`);
+      return res.data?.data ?? [];
+    },
+    enabled: !!submitResultId,
+  });
+}
+
+export function useCreateMentorFeedback() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ submitResultId, data }: { submitResultId: string; data: CreateMentorFeedbackRequest }) => {
+      const res = await apiClient.post(`/SubmitResults/${submitResultId}/feedback`, data);
+      return res.data;
+    },
+    onSuccess: (_, { submitResultId }) => {
+      queryClient.invalidateQueries({ queryKey: ["mentor-feedbacks", submitResultId] });
+      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
+    },
+  });
+}
+
+export function useDeleteMentorFeedback() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ submitResultId, feedbackId }: { submitResultId: string; feedbackId: string }) => {
+      const res = await apiClient.delete(`/SubmitResults/feedback/${feedbackId}`);
+      return res.data;
+    },
+    onSuccess: (_, { submitResultId }) => {
+      queryClient.invalidateQueries({ queryKey: ["mentor-feedbacks", submitResultId] });
+    },
+  });
+}
+
