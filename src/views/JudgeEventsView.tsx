@@ -35,31 +35,31 @@ export function JudgeEventsView() {
 
   if (!user) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#080f11] border border-[#ffbb2a] p-8 text-center glow-box-amber relative space-y-4">
-          <div className="corner-accent-tl text-[#ffbb2a]" />
-          <div className="corner-accent-tr text-[#ffbb2a]" />
-          <div className="corner-accent-bl text-[#ffbb2a]" />
-          <div className="corner-accent-br text-[#ffbb2a]" />
-          <div className="w-12 h-12 bg-[#ffbb2a]/10 border border-[#ffbb2a] rounded-full flex items-center justify-center mx-auto text-[#ffbb2a]">
-            <Lock className="w-6 h-6" />
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0c1214] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#080e10] border border-amber-500/40 p-8 text-center glow-box-amber relative space-y-4">
+          <div className="corner-accent-tl text-amber-400/60" />
+          <div className="corner-accent-tr text-amber-400/60" />
+          <div className="corner-accent-bl text-amber-400/60" />
+          <div className="corner-accent-br text-amber-400/60" />
+          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto text-amber-400">
+            <Scale className="w-6 h-6" />
           </div>
-          <h2 className="font-display text-xl font-bold uppercase text-[#ffbb2a]">
+          <h2 className="font-display text-xl font-bold uppercase text-amber-300">
             YÊU CẦU QUYỀN GIÁM KHẢO
           </h2>
-          <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
+          <p className="font-mono text-xs text-zinc-400 leading-relaxed">
             Vui lòng đăng nhập với tài khoản Giám khảo hoặc chọn nhanh vai trò Demo bên dưới để kiểm tra giao diện:
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
             <button
               type="button"
               onClick={() => loginAsDemoRole("Judge")}
-              className="w-full bg-[#ffbb2a] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors"
+              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all"
             >
               [ ⚖️ Vào Bằng Tài Khoản Giám Khảo Demo ]
             </button>
             <Link href="/login" className="w-full">
-              <button className="w-full border border-[#3c494d] text-[#bbc9ce] py-2 uppercase hover:border-[#ffbb2a] hover:text-white">
+              <button className="w-full border border-zinc-700 text-zinc-300 py-2 uppercase hover:border-amber-500/40 hover:text-amber-200 transition-colors">
                 Đến trang đăng nhập thật
               </button>
             </Link>
@@ -70,12 +70,12 @@ export function JudgeEventsView() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#ffbb2a] selection:text-[#080f11]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0c1214] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-amber-500/30 selection:text-amber-200">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Top Status Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#3c494d] pb-4 gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-800 pb-4 gap-4">
           <div>
-            <div className="font-mono text-[11px] text-[#ffbb2a] mb-1 uppercase tracking-wider flex items-center gap-2">
+            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider flex items-center gap-2">
               <Scale className="w-3.5 h-3.5" />
               <span>// JUDGE_OPERATIONS / ASSIGNED_EVENTS</span>
             </div>
@@ -84,44 +84,44 @@ export function JudgeEventsView() {
             </h1>
           </div>
           <div className="flex items-center gap-3 font-mono text-xs">
-            <div className="bg-[#161d1f] border border-[#3c494d] px-3 py-1.5 text-[#bbc9ce]">
-              TỔNG SỰ KIỆN: <span className="text-[#ffbb2a] font-bold">{judgeEvents.length}</span>
+            <div className="bg-[#12191c] border border-zinc-800 px-3 py-1.5 text-zinc-300">
+              TỔNG SỰ KIỆN: <span className="text-amber-300 font-bold">{judgeEvents.length}</span>
             </div>
-            <div className="bg-[#ffbb2a]/10 border border-[#ffbb2a]/30 text-[#ffbb2a] px-3 py-1.5 font-bold uppercase">
+            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-3 py-1.5 font-bold uppercase">
               VAI TRÒ: GIÁM KHẢO [JUDGE]
             </div>
           </div>
         </div>
 
         {/* Banner lưu ý bảo mật */}
-        <div className="bg-[#ffbb2a]/10 border border-[#ffbb2a] text-[#ffbb2a] p-3.5 font-mono text-xs flex items-center justify-between glow-box-amber">
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 p-3.5 font-mono text-xs flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <ShieldAlert className="w-4 h-4 shrink-0" />
+            <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
             <span className="font-bold uppercase tracking-wider">
               QUY CHUẨN CHẤM ĐIỂM ẨN DANH (BR-12 ACTIVE):
             </span>
-            <span className="hidden md:inline text-[11px] text-[#dde4e6]">
+            <span className="hidden md:inline text-[11px] text-zinc-300">
               Toàn bộ bài nộp trong các Hạng mục đều được ẩn danh danh tính thí sinh và trường học.
             </span>
           </div>
-          <span className="text-[10px] bg-[#ffbb2a] text-[#080f11] font-bold px-2 py-0.5 uppercase">
+          <span className="text-[10px] bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold px-2 py-0.5 uppercase">
             BẢO MẬT CAO
           </span>
         </div>
 
         {/* Loading State */}
         {isLoading && (
-          <div className="p-12 text-center font-mono text-xs text-[#859398] animate-pulse">
+          <div className="p-12 text-center font-mono text-xs text-zinc-500 animate-pulse">
             ĐANG TẢI DỮ LIỆU SỰ KIỆN PHÂN CÔNG...
           </div>
         )}
 
         {/* Empty State */}
         {!isLoading && judgeEvents.length === 0 && (
-          <div className="p-12 bg-[#080f11] border border-[#3c494d] text-center space-y-3">
-            <AlertTriangle className="w-8 h-8 text-[#ffbb2a] mx-auto" />
+          <div className="p-12 bg-[#0c1214] border border-zinc-800 text-center space-y-3">
+            <ShieldAlert className="w-8 h-8 text-amber-400/50 mx-auto" />
             <div className="font-display text-lg text-white uppercase">Chưa có sự kiện nào được phân công</div>
-            <p className="font-mono text-xs text-[#859398] max-w-md mx-auto">
+            <p className="font-mono text-xs text-zinc-500 max-w-md mx-auto">
               Bạn chưa được chỉ định làm Giám khảo trong sự kiện nào. Vui lòng liên hệ Ban Tổ Chức (Event Coordinator) để được cấp quyền.
             </p>
           </div>
@@ -142,54 +142,54 @@ export function JudgeEventsView() {
             return (
               <div
                 key={eventId}
-                className="bg-[#080f11] border border-[#3c494d] hover:border-[#ffbb2a] transition-all relative p-5 flex flex-col justify-between group glow-box-amber"
+                className="bg-[#0e1518] border border-zinc-800 hover:border-amber-500/40 transition-all relative p-5 flex flex-col justify-between group shadow-sm"
               >
-                <div className="corner-accent-tl text-[#ffbb2a]" />
-                <div className="corner-accent-tr text-[#ffbb2a]" />
-                <div className="corner-accent-bl text-[#ffbb2a]" />
-                <div className="corner-accent-br text-[#ffbb2a]" />
+                <div className="corner-accent-tl text-amber-400/40" />
+                <div className="corner-accent-tr text-amber-400/40" />
+                <div className="corner-accent-bl text-amber-400/40" />
+                <div className="corner-accent-br text-amber-400/40" />
 
                 <div className="space-y-4">
                   {/* Top Badge & Season */}
                   <div className="flex items-center justify-between font-mono text-[10px]">
-                    <span className="px-2 py-0.5 bg-[#161d1f] border border-[#3c494d] text-[#ffbb2a] font-bold">
+                    <span className="px-2 py-0.5 bg-[#141c20] border border-zinc-800 text-amber-300 font-bold">
                       {season} // {year}
                     </span>
                     <span
                       className={`px-2 py-0.5 font-bold uppercase flex items-center gap-1 ${
                         isOngoing
-                          ? "bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30"
-                          : "bg-[#859398]/10 text-[#859398] border border-[#859398]/30"
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                          : "bg-zinc-800 text-zinc-400 border border-zinc-700"
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${isOngoing ? "bg-[#10b981]" : "bg-[#859398]"}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${isOngoing ? "bg-emerald-400" : "bg-zinc-500"}`} />
                       {isOngoing ? "ĐANG MỞ CHẤM THI" : "ĐÃ KẾT THÚC"}
                     </span>
                   </div>
 
                   {/* Title */}
                   <div>
-                    <h3 className="font-display text-lg font-bold text-white uppercase group-hover:text-[#ffbb2a] transition-colors line-clamp-2">
+                    <h3 className="font-display text-lg font-bold text-white uppercase group-hover:text-amber-300 transition-colors line-clamp-2">
                       {eventName}
                     </h3>
-                    <p className="font-mono text-xs text-[#859398] mt-1 line-clamp-2">
+                    <p className="font-mono text-xs text-zinc-400 mt-1 line-clamp-2">
                       {evt.description || (evt as any).Description || "Sự kiện thi đấu lập trình và đổi mới sáng tạo SEAL."}
                     </p>
                   </div>
 
                   {/* Timeline */}
-                  <div className="bg-[#161d1f] p-3 border border-[#3c494d] font-mono text-xs space-y-1.5">
-                    <div className="flex items-center justify-between text-[#bbc9ce]">
-                      <span className="flex items-center gap-1.5 text-[#859398]">
+                  <div className="bg-[#12191c] p-3 border border-zinc-800 font-mono text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-zinc-300">
+                      <span className="flex items-center gap-1.5 text-zinc-400">
                         <Calendar className="w-3.5 h-3.5" /> Bắt đầu:
                       </span>
                       <span>{startDate ? new Date(startDate).toLocaleDateString("vi-VN") : "N/A"}</span>
                     </div>
-                    <div className="flex items-center justify-between text-[#bbc9ce]">
-                      <span className="flex items-center gap-1.5 text-[#859398]">
+                    <div className="flex items-center justify-between text-zinc-300">
+                      <span className="flex items-center gap-1.5 text-zinc-400">
                         <Clock className="w-3.5 h-3.5" /> Hạn chót:
                       </span>
-                      <span className="text-[#ffbb2a] font-bold">
+                      <span className="text-amber-300 font-bold">
                         {endDate ? new Date(endDate).toLocaleDateString("vi-VN") : "N/A"}
                       </span>
                     </div>
@@ -197,9 +197,9 @@ export function JudgeEventsView() {
                 </div>
 
                 {/* Bottom CTA */}
-                <div className="pt-5 mt-4 border-t border-[#3c494d]/60">
+                <div className="pt-5 mt-4 border-t border-zinc-800">
                   <Link href={`/judge/tracks`}>
-                    <button className="w-full py-2.5 bg-[#ffbb2a] text-[#080f11] font-mono font-bold text-xs uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2 cursor-pointer hud-clipped">
+                    <button className="w-full py-2.5 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-600/20 text-amber-300 border border-amber-500/40 font-mono font-bold text-xs uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
                       <span>// TIẾP CẬN HẠNG MỤC CHẤM &gt;</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>

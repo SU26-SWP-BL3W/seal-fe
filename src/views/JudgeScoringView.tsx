@@ -125,21 +125,21 @@ export function JudgeScoringView() {
 
   if (!user) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#080f11] border border-[#ffbb2a] p-8 text-center glow-box-amber relative space-y-4">
-          <div className="corner-accent-tl text-[#ffbb2a]" />
-          <div className="corner-accent-tr text-[#ffbb2a]" />
-          <div className="corner-accent-bl text-[#ffbb2a]" />
-          <div className="corner-accent-br text-[#ffbb2a]" />
-          <h2 className="font-display text-xl font-bold uppercase text-[#ffbb2a]">BÀN CHẤM ĐIỂM GIÁM KHẢO</h2>
-          <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0c1214] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#080e10] border border-amber-500/40 p-8 text-center glow-box-amber relative space-y-4">
+          <div className="corner-accent-tl text-amber-400/60" />
+          <div className="corner-accent-tr text-amber-400/60" />
+          <div className="corner-accent-bl text-amber-400/60" />
+          <div className="corner-accent-br text-amber-400/60" />
+          <h2 className="font-display text-xl font-bold uppercase text-amber-300">BÀN CHẤM ĐIỂM GIÁM KHẢO</h2>
+          <p className="font-mono text-xs text-zinc-400 leading-relaxed">
             Vui lòng đăng nhập hoặc bấm chọn nhanh vai trò Giám Khảo Demo để mở bàn chấm điểm RBL:
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
             <button
               type="button"
               onClick={() => loginAsDemoRole("Judge")}
-              className="w-full bg-[#ffbb2a] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors"
+              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all"
             >
               [ ⚖️ Vào Bằng Tài Khoản Giám Khảo Demo ]
             </button>
@@ -150,29 +150,29 @@ export function JudgeScoringView() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#ffbb2a] selection:text-[#271900]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0c1214] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-amber-500/30 selection:text-amber-200">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Locking / Active Status Banner (Stitch J4) */}
-        <div className="bg-[#ffbb2a]/10 border border-[#ffbb2a] text-[#ffbb2a] p-3 font-mono text-xs flex items-center justify-between shadow-[inset_0_0_8px_rgba(255,187,42,0.15)]">
+        {/* Locking / Active Status Banner */}
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 p-3 font-mono text-xs flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2">
-            <span className="animate-pulse">⚠</span>
+            <span className="text-amber-400">⚠</span>
             <span className="font-bold uppercase tracking-wider">
               SCORING CONSOLE // RBL BLIND EVALUATION PROTOCOL
             </span>
           </div>
-          <span className="text-[10px] opacity-80">HỘI ĐỒNG GIÁM KHẢO ĐỘC LẬP</span>
+          <span className="text-[10px] text-zinc-400 uppercase">Hội Đồng Giám Khảo Độc Lập</span>
         </div>
 
-        {/* Header Panel (Stitch J4) */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/10 pb-4 gap-4">
+        {/* Header Panel */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-800 pb-4 gap-4">
           <div>
-            <div className="font-mono text-[11px] text-[#859398] mb-1 flex items-center gap-2 uppercase tracking-wider">
-              <span className="w-2 h-2 bg-[#ffbb2a] inline-block" />
+            <div className="font-mono text-[11px] text-zinc-400 mb-1 flex items-center gap-2 uppercase tracking-wider">
+              <span className="w-2 h-2 bg-amber-400/80 inline-block" />
               ACTIVE TARGET // BÀI NỘP ẨN DANH
             </div>
             <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase flex items-center gap-3">
               Chấm Điểm Bài Nộp:{" "}
-              <span className="text-[#ffbb2a] tracking-tight">
+              <span className="text-amber-300 tracking-tight font-mono">
                 {selectedSubmission ? (selectedSubmission.displayCode || selectedSubmission.DisplayCode || "SUB-ANONYMOUS") : "CHƯA CHỌN"}
               </span>
             </h1>
@@ -185,46 +185,46 @@ export function JudgeScoringView() {
                 setSelectedTrackId(e.target.value);
                 setSelectedSubmission(null);
               }}
-              className="bg-[#152238] border-b-2 border-[#ffbb2a] text-white font-mono text-xs px-3 py-2 focus:outline-none"
+              className="bg-[#141e24] border-b-2 border-amber-500/40 text-zinc-200 font-mono text-xs px-3 py-2 focus:outline-none focus:border-amber-400"
             >
               {trackOptions.map((t) => (
-                <option key={t.id} value={t.id} className="bg-[#0e1417] text-white">
+                <option key={t.id} value={t.id} className="bg-[#0c1214] text-white">
                   Track: {t.name}
                 </option>
               ))}
             </select>
-            <div className="font-mono text-xs text-[#ffbb2a] border border-[#ffbb2a] px-3 py-1.5 bg-[#ffbb2a]/10 font-bold uppercase">
+            <div className="font-mono text-xs text-amber-300 border border-amber-500/30 px-3 py-1.5 bg-amber-500/10 font-bold uppercase">
               [ ROLE: JUDGE ]
             </div>
           </div>
         </div>
 
-        {/* Content Grid (Stitch J4) */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-[1px] bg-white/10 border border-white/10 glow-box">
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-[1px] bg-zinc-800/80 border border-zinc-800 shadow-md">
           {/* Left Column: Submissions Selector (3 cols) */}
-          <div className="xl:col-span-3 bg-[#1a2123] p-4 flex flex-col gap-3">
-            <div className="bg-[#ffbb2a]/10 h-7 -mx-4 -mt-4 mb-2 flex items-center px-4 border-b border-[#ffbb2a]/20 font-mono text-[11px] text-[#ffbb2a] font-bold uppercase">
+          <div className="xl:col-span-3 bg-[#131b1e] p-4 flex flex-col gap-3">
+            <div className="bg-amber-500/10 h-7 -mx-4 -mt-4 mb-2 flex items-center px-4 border-b border-amber-500/20 font-mono text-[11px] text-amber-300 font-bold uppercase">
               DANH SÁCH BÀI NỘP ({apiSubmissions.length})
             </div>
 
             {loadingSubmissions ? (
-              <div className="p-6 text-center font-mono text-xs text-[#ffbb2a] animate-pulse">
+              <div className="p-6 text-center font-mono text-xs text-amber-400/80 animate-pulse">
                 Đang tải bài nộp...
               </div>
             ) : apiSubmissions.length === 0 ? (
-              <div className="p-6 text-center font-mono text-xs text-[#859398]">
+              <div className="p-6 text-center font-mono text-xs text-zinc-500">
                 Chưa có bài nộp trong Track này.
               </div>
             ) : (
               <div className="space-y-2 overflow-y-auto max-h-[500px]">
                 {apiSubmissions.map((sub, idx) => {
-                  const id = sub.id || sub.Id;
-                  const isSelected = selectedSubmission && (selectedSubmission.id || selectedSubmission.Id) === id;
-                  const code = sub.displayCode || sub.DisplayCode || `SUB-${String(idx + 1).padStart(3, "0")}`;
+                  const subId = sub.id || sub.Id || `sub-${idx}`;
+                  const isSelected = selectedSubmission && (selectedSubmission.id || selectedSubmission.Id) === subId;
+                  const isGraded = (sub as any).isGraded || (sub as any).IsGraded;
 
                   return (
                     <button
-                      key={id || idx}
+                      key={subId}
                       type="button"
                       onClick={() => {
                         setSelectedSubmission(sub);
@@ -232,18 +232,25 @@ export function JudgeScoringView() {
                         setSaveError("");
                         setSaveOk("");
                       }}
-                      className={`w-full p-3 text-left font-mono text-xs border transition-all ${isSelected
-                          ? "bg-[#ffbb2a]/10 border-[#ffbb2a] text-[#ffbb2a] font-bold shadow-[0_0_10px_rgba(255,187,42,0.2)]"
-                          : "bg-[#0e1417] border-[#3c494d] text-[#bbc9ce] hover:border-[#ffbb2a]/50"
-                        }`}
+                      className={`w-full text-left p-3 border transition-all flex flex-col gap-1 relative ${
+                        isSelected
+                          ? "bg-[#182428] border-amber-500/60 shadow-sm"
+                          : "bg-[#0f1618] border-zinc-800 hover:border-zinc-700"
+                      }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span>{code}</span>
-                        <span className="text-[10px] px-1.5 py-0.2 border border-[#34d399]/30 text-[#34d399]">ĐÃ NỘP</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-white flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          {sub.displayCode || sub.DisplayCode || `SUB-${subId.substring(0, 6).toUpperCase()}`}
+                        </span>
+                        {isGraded ? (
+                          <span className="font-mono text-[10px] text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> ĐÃ CHẤM
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[10px] text-zinc-400">CHỜ CHẤM</span>
+                        )}
                       </div>
-                      <p className="text-[11px] text-[#859398] truncate">
-                        {sub.repoUrl || sub.RepoUrl || sub.submissionUrl || "Bài thi"}
-                      </p>
                     </button>
                   );
                 })}
@@ -251,50 +258,48 @@ export function JudgeScoringView() {
             )}
           </div>
 
-          {/* Center Column: Criteria Evaluation Metrics (5 cols) */}
-          <div className="xl:col-span-5 bg-[#1a2123] p-4 flex flex-col gap-3">
-            <div className="bg-[#242b2d] h-7 -mx-4 -mt-4 mb-2 flex items-center px-4 border-b border-white/10 font-mono text-[11px] text-[#dde4e6] font-bold uppercase tracking-widest">
+          {/* Middle Column: Criteria Deck (5 cols) */}
+          <div className="xl:col-span-5 bg-[#10171a] p-4 space-y-4">
+            <div className="bg-amber-500/10 h-7 -mx-4 -mt-4 mb-2 flex items-center px-4 border-b border-amber-500/20 font-mono text-[11px] text-amber-300 font-bold uppercase">
               EVALUATION METRICS ({criteria.length} TIÊU CHÍ)
             </div>
 
             {!selectedSubmission ? (
-              <div className="p-12 text-center font-mono text-xs text-[#859398] space-y-3">
-                <Shield className="w-10 h-10 text-[#ffbb2a]/40 mx-auto" />
+              <div className="p-12 text-center text-zinc-500 font-mono text-xs space-y-2">
+                <Shield className="w-8 h-8 mx-auto opacity-30 text-amber-400" />
                 <p>Chọn một bài nộp ở cột bên trái để bắt đầu chấm điểm.</p>
               </div>
             ) : criteria.length === 0 ? (
-              <div className="p-8 text-center font-mono text-xs text-[#febb29]">
+              <div className="p-12 text-center text-zinc-500 font-mono text-xs">
                 Hạng mục chưa gắn Template tiêu chí đánh giá.
               </div>
             ) : (
-              <div className="space-y-3 overflow-y-auto max-h-[500px] pr-1">
-                {criteria.map((cr) => {
-                  const crId = cr.criteriaId || "";
+              <div className="space-y-4 overflow-y-auto max-h-[500px] pr-1">
+                {criteria.map((cr, idx) => {
+                  const crId = cr.criteriaId || `crit-${idx}`;
                   const max = Number(cr.maxScore) || 10;
+                  const weight = Number(cr.weight) || 0;
                   const currentVal = scores[crId] ?? 0;
 
                   return (
                     <div
                       key={crId}
-                      className="p-4 bg-[#0e1417] border border-[#3c494d] hover:border-[#ffbb2a]/50 transition-colors relative group"
+                      className="p-3.5 bg-[#141d20] border border-zinc-800 space-y-2.5 relative hover:border-zinc-700 transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="font-display text-sm font-bold text-white uppercase tracking-wider">
-                            {cr.criteriaName}
-                          </div>
-                          <div className="font-mono text-[11px] text-[#859398] flex items-center gap-2 mt-1">
-                            <span className="bg-[#242b2d] px-2 py-0.5 text-[10px]">Trọng số: {cr.weight}%</span>
-                            <span className="bg-[#242b2d] px-2 py-0.5 text-[10px]">Tối đa: {max}đ</span>
-                          </div>
+                          <span className="font-mono text-[10px] text-amber-400 font-bold block uppercase tracking-wider">
+                            CRITERIA {idx + 1} // TRỌNG SỐ: {weight}%
+                          </span>
+                          <h4 className="font-bold text-white text-xs mt-0.5">{cr.criteriaName}</h4>
                         </div>
 
-                        {/* Point Input Box */}
-                        <div className="flex items-center gap-1 bg-[#080f11] p-1 border border-[#3c494d]">
+                        {/* Stepper + Input */}
+                        <div className="flex items-center border border-zinc-700 bg-[#0c1214] shrink-0">
                           <button
                             type="button"
                             onClick={() => handleScoreChange(crId, Math.max(0, currentVal - 1), max)}
-                            className="w-8 h-8 bg-[#1a2123] text-[#ffbb2a] font-mono font-bold hover:bg-[#ffbb2a]/20"
+                            className="w-7 h-7 bg-[#162124] text-amber-300 font-mono font-bold hover:bg-amber-500/20 transition-colors"
                           >
                             -1
                           </button>
@@ -305,12 +310,12 @@ export function JudgeScoringView() {
                             step={0.5}
                             value={currentVal}
                             onChange={(e) => handleScoreChange(crId, Number(e.target.value), max)}
-                            className="w-14 h-8 bg-[#0e1417] text-center font-mono text-base font-bold text-[#ffbb2a] border-none focus:outline-none"
+                            className="w-12 h-7 bg-[#0c1214] text-center font-mono text-xs font-bold text-amber-300 border-none focus:outline-none"
                           />
                           <button
                             type="button"
                             onClick={() => handleScoreChange(crId, Math.min(max, currentVal + 1), max)}
-                            className="w-8 h-8 bg-[#1a2123] text-[#ffbb2a] font-mono font-bold hover:bg-[#ffbb2a]/20"
+                            className="w-7 h-7 bg-[#162124] text-amber-300 font-mono font-bold hover:bg-amber-500/20 transition-colors"
                           >
                             +1
                           </button>
@@ -325,7 +330,7 @@ export function JudgeScoringView() {
                         step={0.5}
                         value={currentVal}
                         onChange={(e) => handleScoreChange(crId, Number(e.target.value), max)}
-                        className="w-full accent-[#ffbb2a] cursor-pointer mt-2"
+                        className="w-full accent-amber-500 cursor-pointer mt-1"
                       />
                     </div>
                   );
@@ -335,22 +340,22 @@ export function JudgeScoringView() {
           </div>
 
           {/* Right Column: Summary & Transmit (4 cols) */}
-          <div className="xl:col-span-4 bg-[#1a2123] p-4 flex flex-col justify-between gap-4">
+          <div className="xl:col-span-4 bg-[#131b1e] p-4 flex flex-col justify-between gap-4">
             <div className="space-y-4">
-              <div className="bg-[#ffbb2a]/10 h-7 -mx-4 -mt-4 mb-2 flex items-center px-4 border-b border-[#ffbb2a]/20 font-mono text-[11px] text-[#ffbb2a] font-bold uppercase tracking-widest">
+              <div className="bg-amber-500/10 h-7 -mx-4 -mt-4 mb-2 flex items-center px-4 border-b border-amber-500/20 font-mono text-[11px] text-amber-300 font-bold uppercase tracking-widest">
                 SUMMARY &amp; TRANSMIT
               </div>
 
               {selectedSubmission && (
-                <div className="p-3 bg-[#0e1417] border border-[#3c494d] space-y-2 font-mono text-xs">
-                  <span className="text-[#859398] text-[10px] uppercase font-bold block">LIÊN KẾT BÀI THI:</span>
+                <div className="p-3 bg-[#0a1215] border border-zinc-800 space-y-2 font-mono text-xs">
+                  <span className="text-zinc-400 text-[10px] uppercase font-bold block">LIÊN KẾT BÀI THI:</span>
                   <div className="flex flex-col gap-1.5">
                     {(selectedSubmission.repoUrl || selectedSubmission.RepoUrl || selectedSubmission.submissionUrl) && (
                       <a
                         href={selectedSubmission.repoUrl || selectedSubmission.RepoUrl || selectedSubmission.submissionUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[#00d9ff] hover:underline flex items-center gap-1.5 truncate"
+                        className="text-cyan-400 hover:underline flex items-center gap-1.5 truncate"
                       >
                         <Code className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">{selectedSubmission.repoUrl || "Repo mã nguồn"}</span>
@@ -362,7 +367,7 @@ export function JudgeScoringView() {
                         href={selectedSubmission.demoUrl || selectedSubmission.DemoUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[#f87171] hover:underline flex items-center gap-1.5 truncate"
+                        className="text-red-400 hover:underline flex items-center gap-1.5 truncate"
                       >
                         <Globe className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">{selectedSubmission.demoUrl || "Live Demo"}</span>
@@ -374,7 +379,7 @@ export function JudgeScoringView() {
                         href={selectedSubmission.slideUrl || selectedSubmission.SlideUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[#fb923c] hover:underline flex items-center gap-1.5 truncate"
+                        className="text-orange-400 hover:underline flex items-center gap-1.5 truncate"
                       >
                         <Presentation className="w-3.5 h-3.5 shrink-0" />
                         <span className="truncate">{selectedSubmission.slideUrl || "Slide thuyết trình"}</span>
@@ -386,18 +391,18 @@ export function JudgeScoringView() {
               )}
 
               {/* Total Score Box */}
-              <div className="p-4 bg-[#080f11] border border-[#ffbb2a] text-center glow-box space-y-1">
-                <span className="font-mono text-[10px] text-[#859398] uppercase tracking-widest block">
+              <div className="p-4 bg-[#0a1215] border border-amber-500/30 text-center space-y-1">
+                <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest block">
                   TỔNG ĐIỂM CHUẨN RBL (THANG 10)
                 </span>
-                <div className="font-mono text-4xl font-extrabold text-[#ffbb2a] glow-text">
-                  {calculatedTotalScore.toFixed(2)} <span className="text-sm font-normal text-[#859398]">/ 10.00</span>
+                <div className="font-mono text-3xl font-bold text-amber-300">
+                  {calculatedTotalScore.toFixed(2)} <span className="text-xs font-normal text-zinc-400">/ 10.00</span>
                 </div>
               </div>
 
               {/* Comments */}
               <div className="space-y-1">
-                <label className="font-mono text-[11px] text-[#859398] uppercase tracking-wider block">
+                <label className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider block">
                   NHẬN XÉT &amp; LÝ DO CHẤM ĐIỂM
                 </label>
                 <textarea
@@ -405,29 +410,29 @@ export function JudgeScoringView() {
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Ghi chú đánh giá chuyên môn cho bài nộp này..."
-                  className="w-full input-cyber p-3 bg-[#152238] text-white font-mono text-xs border-b-2 border-[#3c494d] focus:border-[#ffbb2a]"
+                  className="w-full p-3 bg-[#0a1215] text-white font-mono text-xs border border-zinc-800 focus:border-amber-400 focus:outline-none"
                 />
               </div>
 
-              {saveError && <p className="font-mono text-xs text-[#ffb4ab]">{saveError}</p>}
-              {saveOk && <p className="font-mono text-xs text-[#34d399]">{saveOk}</p>}
+              {saveError && <p className="font-mono text-xs text-red-400">{saveError}</p>}
+              {saveOk && <p className="font-mono text-xs text-emerald-400">{saveOk}</p>}
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-2 pt-2 border-t border-white/10 font-mono text-xs">
+            <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800 font-mono text-xs">
               <button
                 type="button"
                 disabled={isSaving || !selectedSubmission || criteria.length === 0}
                 onClick={() => handleSaveScore(true)}
-                className="w-full bg-[#ffbb2a] text-[#080f11] font-display text-sm font-bold py-3 uppercase hover:bg-white transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,187,42,0.3)]"
+                className="w-full bg-gradient-to-r from-amber-500/25 via-amber-500/15 to-amber-600/25 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold py-3 uppercase hover:bg-amber-500 hover:text-black transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Send className="w-4 h-4" /> // CHỐT BẢNG ĐIỂM (TRANSMIT_SCORE) &gt;
+                <Send className="w-3.5 h-3.5" /> // CHỐT BẢNG ĐIỂM (TRANSMIT_SCORE) &gt;
               </button>
               <button
                 type="button"
                 disabled={isSaving || !selectedSubmission || criteria.length === 0}
                 onClick={() => handleSaveScore(false)}
-                className="w-full border border-[#3c494d] text-[#bbc9ce] py-2 uppercase hover:border-[#ffbb2a] hover:text-white transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-[#0a1215] border border-zinc-700 text-zinc-300 py-2.5 uppercase hover:border-amber-500/40 hover:text-amber-200 transition-colors flex items-center justify-center gap-2 font-mono text-xs disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Save className="w-3.5 h-3.5" /> [ Lưu Bản Nháp ]
               </button>
