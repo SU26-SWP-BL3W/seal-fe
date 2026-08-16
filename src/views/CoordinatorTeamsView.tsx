@@ -180,7 +180,7 @@ export function CoordinatorTeamsView() {
                       </div>
 
                       <p className="text-xs text-[var(--text-muted)] font-mono mt-1">
-                        Sĩ số: <strong className="text-[var(--text-primary)]">{members.length} thành viên</strong> · Mô tả: {team.description || "Dự án phát triển giải pháp công nghệ SEAL Hackathon"}
+                        Sĩ số: <strong className="text-[var(--text-primary)]">{members.length} thành viên</strong> · Mô tả: {team.description || "Chưa có mô tả chi tiết."}
                       </p>
 
                       {/* Roster preview */}
@@ -293,7 +293,7 @@ export function CoordinatorTeamsView() {
               <div>
                 <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold block mb-1">Mô tả dự án & định hướng kỹ thuật:</span>
                 <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-muted)]">
-                  {detailModal.description || "Đội thi đăng ký tham gia thi đấu giải pháp công nghệ SEAL Hackathon 2026."}
+                  {detailModal.description || "Chưa có mô tả chi tiết cho đội thi này."}
                 </div>
               </div>
 

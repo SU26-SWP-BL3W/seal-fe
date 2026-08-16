@@ -317,7 +317,7 @@ export function useCreateEventWizardViewModel() {
     // Step 1 -> Step 2 transition
     if (currentStep === 1) {
       if (!createdEvent) {
-        setCreatedEvent({ id: "EV-02", eventName: eventData.eventName || "SEAL Hackathon 2026" } as any);
+        setCreatedEvent({ id: `ev-draft-${Date.now()}`, eventName: eventData.eventName || "Sự kiện mới" } as any);
       }
       setCurrentStep(2);
       return;
