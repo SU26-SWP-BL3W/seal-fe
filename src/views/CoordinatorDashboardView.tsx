@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 import { useMyEvents, eventsRepository, type MyEventModel } from "@/repositories/eventsRepository";
 import { useGetPendingTeams } from "@/repositories/teamsRepository";
-import { useAppeals } from "@/repositories/appealsRepository";
 import { useGetUsers } from "@/repositories/usersRepository";
 import { computeEventStatus, STATUS_LABEL, STATUS_TONE, STATUS_DOT_VAR, type EventItem } from "@/viewModels/eventsMetadata";
 import { Shield, Settings, Activity, Users, CalendarPlus, Trash2, Edit3, Award, FileText, CheckCircle2, Sliders, ExternalLink, Eye, EyeOff, Rocket } from "lucide-react";
@@ -22,7 +21,10 @@ export const CoordinatorDashboardView: React.FC = () => {
   const { data: eventsList = [], isLoading, refetch } = useMyEvents();
   const { data: pendingTeams = [] } = useGetPendingTeams();
   const { data: pendingUsersData } = useGetUsers({ isApproved: false });
-  const { data: appealsList = [] } = useAppeals();
+  // AppealsController thật không có route "GET tất cả đơn phúc khảo" (chỉ có
+  // theo team/round/eventRole) — không có cách hợp lệ để đếm tổng số đơn đang
+  // mở trên toàn hệ thống từ 1 lệnh gọi. Để trống thay vì gọi route giả.
+  const appealsList: { status?: number | string; Status?: string }[] = [];
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
