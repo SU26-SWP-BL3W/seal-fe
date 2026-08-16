@@ -1,0 +1,30 @@
+{
+  "Index": {
+    "title": "SEAL Command Deck",
+    "description": "Hệ thống Quản lý Hackathon SEAL & Đánh giá Minh Bạch RBL"
+  },
+  "Navigation": {
+    "home": "Trang chủ",
+    "events": "Khám phá Sự kiện",
+    "leaderboard": "Bảng Vinh Danh",
+    "myTeam": "Đội Thi Của Tôi",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "logout": "Đăng xuất"
+  },
+  "Role": {
+    "admin": "Admin Tổng",
+    "coordinator": "Ban Tổ Chức",
+    "judge": "Giám Khảo",
+    "mentor": "Cố Vấn",
+    "leader": "Đội Trưởng",
+    "member": "Thành Viên"
+  },
+  "Common": {
+    "exportExcel": "Xuất Excel Bảng Điểm",
+    "status": "Trạng thái",
+    "action": "Thao tác",
+    "search": "Tìm kiếm...",
+    "filter": "Bộ lọc"
+  }
+}

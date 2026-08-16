@@ -1,0 +1,30 @@
+{
+  "Index": {
+    "title": "SEAL Command Deck",
+    "description": "SEAL Hackathon Management System & RBL Inter-Rater Evaluation"
+  },
+  "Navigation": {
+    "home": "Home",
+    "events": "Discover Events",
+    "leaderboard": "Hall of Fame",
+    "myTeam": "My Team Workspace",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout"
+  },
+  "Role": {
+    "admin": "System Admin",
+    "coordinator": "Event Coordinator",
+    "judge": "Judge",
+    "mentor": "Mentor",
+    "leader": "Team Leader",
+    "member": "Team Member"
+  },
+  "Common": {
+    "exportExcel": "Export Excel Score Sheet",
+    "status": "Status",
+    "action": "Actions",
+    "search": "Search...",
+    "filter": "Filters"
+  }
+}

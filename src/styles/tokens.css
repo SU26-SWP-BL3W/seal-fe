@@ -1,0 +1,95 @@
+/* ============================================================
+   DESIGN TOKENS — "Command Deck" (HUD)
+   Nguồn: SEAL UI/UX Design Proposal (bản chi tiết). Đây là single
+   source of truth cho màu/font/spacing — mọi component đọc qua biến
+   ở đây, KHÔNG hardcode giá trị riêng hay tự định nghĩa token khác.
+   ============================================================ */
+
+:root {
+  /* ---------- Color: Base surfaces ---------- */
+  /* Nền navy sẫm kết hợp dải gradient đa màu sống động */
+  --bg-base:  #0a0f1d;        /* Deep Space Navy */
+  --bg-panel: #111a2e;        /* Panel bề mặt tương phản sắc nét */
+  --bg-input: #17243e;        /* Input field vừa vặn */
+
+  /* ---------- Color: Brand accents (Phối đa sắc Mint Teal + Cyber Violet) ---------- */
+  --accent-primary:   #2dd4bf;  /* Electric Mint tươi mát */
+  --accent-secondary: #a78bfa;  /* Cyber Violet quyến rũ */
+
+  /* ---------- Color: Role accents (Đa sắc phân vai sống động) ---------- */
+  --accent-team:        #38bdf8;  /* Sky Blue sinh động cho Team */
+  --accent-mentor:      #34d399;  /* Mint Emerald cho Mentor */
+  --accent-judge:       #fbbf24;  /* Amber Gold rực rỡ cho Giám khảo & Vinh danh */
+  --accent-coordinator: #c084fc;  /* Electric Purple cho BTC */
+
+  /* ---------- Color: Semantic feedback ---------- */
+  --color-success: #10b981;   /* Vibrant Emerald */
+  --color-danger:  #f87171;   /* Soft Coral Red */
+  --color-warning: #f59e0b;   /* Warm Amber */
+
+  /* ---------- Color: Text ---------- */
+  --text-primary: #f1f5f9;    /* Clean Off-white */
+  --text-muted:   #94a3b8;    /* Slate Gray rõ ràng */
+
+  /* ---------- Color: Borders ---------- */
+  --border-muted: #24344d;    /* Viền sắc nét phân khối */
+
+  /* ---------- Typography ---------- */
+  --font-display-face: "Chakra Petch", var(--font-chakra-petch), sans-serif;
+  --font-body-face:    "IBM Plex Sans", var(--font-ibm-plex-sans), sans-serif;
+  --font-mono-face:    "JetBrains Mono", var(--font-jetbrains-mono), monospace;
+  --fs-heading-lg: 26px;
+  --fs-heading-md: 20px;
+  --fs-body-md:    16px;
+  --fs-caption-sm: 13px;
+
+  /* ---------- Spacing (Thoáng đãng) ---------- */
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 36px;
+
+  /* ---------- Shape ---------- */
+  --clip-size: 12px;
+
+  /* ---------- Layout ---------- */
+  --container-max: 1280px;
+}
+
+@keyframes scanlineSweep {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.scanline-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--accent-primary) 30%,
+    #00f2fe 50%,
+    var(--accent-primary) 70%,
+    transparent 100%
+  );
+  box-shadow: 0 0 15px #00f2fe, 0 0 30px var(--accent-primary);
+  pointer-events: none;
+  z-index: 9999;
+  animation: scanlineSweep 0.35s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanline-overlay {
+    display: none !important;
+  }
+}

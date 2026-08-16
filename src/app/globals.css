@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-body-face);
+  --font-mono: var(--font-mono-face);
+  --font-display: var(--font-display-face);
+}
+
+/* Tailwind v4 dùng CSS Cascade Layers (@layer theme/base/components/utilities) —
+   rule KHÔNG nằm trong layer nào ("unlayered") luôn thắng MỌI rule có layer,
+   bất kể specificity. Nếu viết "body {...}" trần như code cũ, nó sẽ đè lên
+   toàn bộ utility class màu chữ (text-[...]) của Tailwind một cách vô hình.
+   Bắt buộc bọc trong @layer base để tham gia đúng thứ tự cascade. */
+@layer base {
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-body-face);
+  }
+}
+
+/* ============================================================
+   HUD utility classes — góc vát + glow theo vai trò (Command Deck)
+   ============================================================ */
+@layer utilities {
+  /* Góc vát trên-phải/dưới-trái, mượn hình khiên SEAL — dùng cho Button/Card/Input
+     thay vì border-radius tròn thông thường. */
+  .hud-clipped {
+    clip-path: polygon(
+      0 0,
+      calc(100% - var(--clip-size)) 0,
+      100% var(--clip-size),
+      100% 100%,
+      var(--clip-size) 100%,
+      0 calc(100% - var(--clip-size))
+    );
+  }
+
+  .hud-gradient-brand {
+    background: linear-gradient(135deg, #10b981 0%, #38bdf8 50%, #8b5cf6 100%);
+  }
+
+  .hud-gradient-gold {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #f43f5e 100%);
+  }
+
+  .hud-glow-cyan {
+    box-shadow: 0 0 12px rgba(45, 212, 191, 0.2);
+    border: 1px solid rgba(45, 212, 191, 0.4);
+  }
+  .hud-glow-amber {
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.2);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+  }
+  .hud-glow-team {
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+  }
+  .hud-glow-mentor {
+    box-shadow: 0 0 12px rgba(52, 211, 153, 0.2);
+    border: 1px solid rgba(52, 211, 153, 0.4);
+  }
+  .hud-glow-coordinator {
+    box-shadow: 0 0 12px rgba(192, 132, 252, 0.2);
+    border: 1px solid rgba(192, 132, 252, 0.4);
+  }
+
+  /* Lưới hexagon nền rất mờ (~5% opacity, baked thẳng vào màu SVG) — chất
+     "giáp công nghệ" theo mục 4.1 proposal, gần như 0kb vì chỉ 1 SVG lặp lại
+     làm background-image, không dùng ảnh/3D nặng. Chưa verify bằng ảnh chụp
+     (Browser pane không hiển thị được trong môi trường này) — mở thử trên
+     trình duyệt thật để xem lưới có đều/khớp mắt lưới hay không. */
+  .hud-lattice {
+    background-color: var(--bg-base);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='104' viewBox='0 0 60 104'%3E%3Cpath d='M30 0L60 17.3V51.9L30 69.2L0 51.9V17.3Z' fill='none' stroke='rgba(79,209,197,0.04)' stroke-width='1'/%3E%3Cpath d='M30 69.2L60 86.5V104M30 69.2L0 86.5V104M30 -17.3V0' fill='none' stroke='rgba(79,209,197,0.04)' stroke-width='1'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+
+  /* Hiệu ứng "thở" cho hoạ tiết trang trí (khiên/glow lớn) — chỉ transform +
+     opacity (đúng quy tắc chỉ animate GPU-composited property, FE_Design_Spec
+     §19.1), tự tắt khi prefers-reduced-motion (§19.2 bắt buộc). */
+  @media (prefers-reduced-motion: no-preference) {
+    .hud-pulse {
+      animation: hud-pulse-breathe 3.2s ease-in-out infinite;
+    }
+
+    /* Quét sáng 1 lần khi khối vừa xuất hiện — bản rút gọn của "Scanline
+       Reveal" (FE_Design_Spec §18.4), chỉ chạy 1 lần (forwards), không lặp. */
+    .hud-scanline-once::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent, rgba(0, 217, 255, 0.14), transparent);
+      transform: scaleY(0);
+      transform-origin: top;
+      opacity: 1;
+      pointer-events: none;
+      animation: hud-scanline-sweep 0.9s ease-out forwards;
+    }
+  }
+
+  @keyframes hud-pulse-breathe {
+    0%,
+    100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.55;
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes hud-scanline-sweep {
+    0% {
+      transform: scaleY(0);
+      opacity: 1;
+    }
+    60% {
+      transform: scaleY(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scaleY(1);
+      opacity: 0;
+    }
+  }
+
+  /* Chấm nhấp nháy báo "đang diễn ra trực tiếp" — cạnh badge trạng thái. */
+  @media (prefers-reduced-motion: no-preference) {
+    .hud-live-dot {
+      animation: hud-live-blink 1.6s ease-in-out infinite;
+    }
+
+    /* Hiệu ứng xoay tròn chậm cho vòng khiên background Hero */
+    .hud-shield-rotate {
+      animation: hud-rotate-slow 45s linear infinite;
+    }
+
+    /* Hiệu ứng hào quang phát sáng Hero */
+    .hud-hero-glow {
+      animation: hud-glow-breathe 4s ease-in-out infinite;
+    }
+  }
+
+  @keyframes hud-live-blink {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.4;
+      transform: scale(0.8);
+    }
+  }
+
+  @keyframes hud-rotate-slow {
+    0% {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+    100% {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+
+  @keyframes hud-glow-breathe {
+    0%, 100% {
+      opacity: 0.15;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+  }
+}
+
