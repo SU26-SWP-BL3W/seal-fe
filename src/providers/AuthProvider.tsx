@@ -1,83 +1,284 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { useGoogleLogin, useLogin, useLogout } from "@/repositories/auth/authRepository";
-import type { User } from "@/models/entities";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { User, EventRole } from "@/models/entities";
+import apiClient from "@/models/apiClient";
 
-interface AuthContextValue {
-  user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<User>;
-  loginWithGoogle: (idToken: string) => Promise<User>;
-  logout: () => Promise<void>;
-  /** Cập nhật user tại chỗ (vd sau khi nộp/sửa hồ sơ SV) — không gọi lại login. */
-  setUser: (user: User | null) => void;
+export interface PresetAccount {
+  email: string;
+  roleName: "Admin" | "Coordinator" | "Judge" | "TeamLeader" | "Mentor" | "TeamMember";
+  fullName: string;
+  defaultRedirect: string;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const PRESET_ACCOUNTS: PresetAccount[] = [];
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+// Trang đích sau khi đăng nhập thật, theo vai trò backend trả về.
+const REDIRECT_BY_ROLE: Record<string, string> = {
+  EventCoordinator: "/coordinator/dashboard",
+  Judge: "/judge/tracks",
+  Mentor: "/mentor/tracks",
+  TeamLeader: "/my-team",
+  TeamMember: "/my-team",
+};
 
-  const loginMutation = useLogin();
-  const googleLoginMutation = useGoogleLogin();
-  const logoutMutation = useLogout();
+const ROLE_RANK = ["EventCoordinator", "Judge", "Mentor", "TeamLeader", "TeamMember"];
 
-  // Bootstrap phiên từ localStorage khi tải lại trang — tránh nháy "chưa đăng nhập"
-  // trước khi kịp gọi lại API. apiClient tự làm mới token khi 401 (single-flight),
-  // nên chỉ cần đọc user cache ở đây, không cần verify token ngay lúc mount.
-  useEffect(() => {
-    const raw = localStorage.getItem("currentUser");
-    if (raw) {
-      try {
-        // Cố ý setState trong effect: bootstrap phiên từ localStorage sau khi
-        // mount để khớp SSR (server không có localStorage) — tránh hydration
-        // mismatch nếu đọc ngay lúc render đầu.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setUser(JSON.parse(raw) as User);
-      } catch {
-        localStorage.removeItem("currentUser");
+function pickPrimaryRole(rows: unknown[], userId: string): EventRole | null {
+  const norm = (Array.isArray(rows) ? rows : []).map((raw) => {
+    const r = raw as Record<string, unknown>;
+    const str = (...keys: string[]) => {
+      for (const k of keys) {
+        const v = r[k];
+        if (typeof v === "string" && v.trim()) return v;
       }
+      return "";
+    };
+    return {
+      id: str("id", "Id"),
+      eventId: str("eventId", "EventId"),
+      roleName: str("roleName", "RoleName"),
+      trackId: str("trackId", "TrackId"),
+      teamId: str("teamId", "TeamId"),
+    };
+  });
+  const chosen = ROLE_RANK.map((rn) => norm.find((r) => r.roleName === rn)).find(Boolean);
+  if (!chosen) return null;
+  const assigned = norm.filter((r) => r.roleName === chosen.roleName).map((r) => r.eventId).filter(Boolean);
+  return {
+    id: chosen.id,
+    eventRoleId: chosen.id,
+    EventRoleId: chosen.id,
+    userId,
+    UserId: userId,
+    eventId: chosen.eventId,
+    EventId: chosen.eventId,
+    roleName: chosen.roleName,
+    RoleName: chosen.roleName,
+    trackId: chosen.trackId,
+    TrackId: chosen.trackId,
+    teamId: chosen.teamId,
+    TeamId: chosen.teamId,
+    assignedEventIds: assigned,
+    AssignedEventIds: assigned,
+  };
+}
+
+interface AuthContextType {
+  user: User | null;
+  activeRole: EventRole | null;
+  isInitialized: boolean;
+  loginWithCredentials: (email: string, password: string) => Promise<string>;
+  loginWithGoogleCredential: (idToken: string) => Promise<string>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [activeRole, setActiveRole] = useState<EventRole | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+  // Khôi phục phiên từ localStorage (F5 safe)
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("currentUser");
+      const storedRole = localStorage.getItem("activeRole");
+      if (storedUser) setUser(JSON.parse(storedUser));
+      if (storedRole) setActiveRole(JSON.parse(storedRole));
+    } catch (e) {
+      console.error("Lỗi khôi phục phiên từ localStorage:", e);
+    } finally {
+      setIsInitialized(true);
     }
-    setIsLoading(false);
   }, []);
 
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const profile = await loginMutation.mutateAsync({ email, password });
-      setUser(profile);
-      return profile;
-    },
-    [loginMutation],
-  );
+  const saveSession = (newUser: User, newRole: EventRole | null) => {
+    setUser(newUser);
+    setActiveRole(newRole);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("currentUser", JSON.stringify(newUser));
+      if (newRole) {
+        localStorage.setItem("activeRole", JSON.stringify(newRole));
+      } else {
+        localStorage.removeItem("activeRole");
+      }
+    }
+  };
 
-  const loginWithGoogle = useCallback(
-    async (idToken: string) => {
-      const profile = await googleLoginMutation.mutateAsync(idToken);
-      setUser(profile);
-      return profile;
-    },
-    [googleLoginMutation],
-  );
+  const loginWithCredentials = async (email: string, password: string): Promise<string> => {
+    const res = await apiClient.post<any>("/Auth/login", { email: email.trim(), password });
+    const d = res.data ?? {};
+    const accessToken = d.accessToken ?? d.AccessToken;
+    const refreshToken = d.refreshToken ?? d.RefreshToken;
+    if (!accessToken) throw new Error("Phản hồi đăng nhập thiếu token.");
 
-  const logout = useCallback(async () => {
-    await logoutMutation.mutateAsync();
+    const userId = d.userId ?? d.UserId;
+    const isAdmin = Boolean(d.isAdmin ?? d.IsAdmin ?? d.user?.isAdmin);
+    const isStudent = Boolean(d.isStudent ?? d.IsStudent ?? d.user?.isStudent);
+    const fullName = d.fullName ?? d.FullName ?? d.user?.fullName ?? "";
+    const isApproved = Boolean(d.isApproved ?? d.IsApproved ?? d.user?.isApproved ?? false);
+    const authUser: User = {
+      id: userId,
+      userId,
+      email: d.email ?? d.Email ?? email.trim(),
+      fullName,
+      isAdmin,
+      isStudent,
+      isApproved,
+      isFpt: Boolean(d.isFpt ?? d.IsFpt ?? email.toLowerCase().endsWith("@fpt.edu.vn")),
+      UserID: userId,
+      FullName: fullName,
+      IsAdmin: isAdmin,
+    };
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("accessToken", accessToken);
+      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+    }
+
+    // Lấy vai trò THẬT từ backend cho TẤT CẢ các tài khoản
+    let primaryRole: EventRole | null = null;
+    let targetPath = isAdmin ? "/admin/dashboard" : "/events";
+    const normalizedEmail = (d.email ?? d.Email ?? email).toLowerCase();
+
+    try {
+      const rolesRes = await apiClient.get<any>("/EventRoles/user", {
+        params: { UserId: userId, PageSize: 200 },
+      });
+      const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
+      primaryRole = pickPrimaryRole(rows, userId);
+      if (primaryRole) {
+        targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""] ?? "/events";
+      } else if (normalizedEmail.includes("ec_") || normalizedEmail.includes("ec.") || normalizedEmail.includes("coordinator")) {
+        targetPath = "/coordinator/dashboard";
+      } else if (normalizedEmail.includes("judge")) {
+        targetPath = "/judge/tracks";
+      } else if (normalizedEmail.includes("mentor")) {
+        targetPath = "/mentor/tracks";
+      } else if (isAdmin) {
+        targetPath = "/admin/dashboard";
+      }
+    } catch {
+      if (normalizedEmail.includes("ec_") || normalizedEmail.includes("ec.") || normalizedEmail.includes("coordinator")) {
+        targetPath = "/coordinator/dashboard";
+      } else if (normalizedEmail.includes("judge")) {
+        targetPath = "/judge/tracks";
+      } else if (normalizedEmail.includes("mentor")) {
+        targetPath = "/mentor/tracks";
+      } else if (isAdmin) {
+        targetPath = "/admin/dashboard";
+      }
+    }
+
+    // Lưu phiên trực tiếp — KHÔNG qua saveSession vì saveSession tự gọi lại
+    // /Auth/login với mật khẩu.
+    setUser(authUser);
+    setActiveRole(primaryRole);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("currentUser", JSON.stringify(authUser));
+      if (primaryRole) localStorage.setItem("activeRole", JSON.stringify(primaryRole));
+      else localStorage.removeItem("activeRole");
+    }
+    return targetPath;
+  };
+
+  const loginWithGoogleCredential = async (idToken: string): Promise<string> => {
+    const res = await apiClient.post<any>("/Auth/google-login", { idToken: idToken.trim() });
+    const d = res.data?.data ?? res.data ?? {};
+    const accessToken = d.accessToken ?? d.AccessToken ?? d.token ?? d.Token;
+    const refreshToken = d.refreshToken ?? d.RefreshToken;
+    if (!accessToken) throw new Error("Phản hồi Google Login thiếu token xác thực.");
+
+    const userId = d.userId ?? d.UserId ?? d.user?.id ?? d.user?.userId;
+    const isAdmin = Boolean(d.isAdmin ?? d.IsAdmin ?? d.user?.isAdmin);
+    const isStudent = Boolean(d.isStudent ?? d.IsStudent ?? d.user?.isStudent);
+    const fullName = d.fullName ?? d.FullName ?? d.user?.fullName ?? "";
+    const email = d.email ?? d.Email ?? d.user?.email ?? "";
+    const isApproved = d.isApproved ?? d.IsApproved ?? d.user?.isApproved ?? false;
+
+    const authUser: User = {
+      id: userId,
+      userId,
+      email,
+      fullName,
+      isAdmin,
+      isStudent,
+      isApproved,
+      isFpt: email.toLowerCase().endsWith("@fpt.edu.vn"),
+      UserID: userId,
+      FullName: fullName,
+      IsAdmin: isAdmin,
+    };
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("accessToken", accessToken);
+      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+    }
+
+    let primaryRole: EventRole | null = null;
+    let targetPath = isAdmin ? "/admin/dashboard" : isStudent ? (isApproved ? "/events" : "/onboarding/profile") : "/events";
+
+    try {
+      const rolesRes = await apiClient.get<any>("/EventRoles/user", {
+        params: { UserId: userId, PageSize: 200 },
+      });
+      const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
+      primaryRole = pickPrimaryRole(rows, userId);
+      if (primaryRole) {
+        targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""] ?? "/events";
+      }
+    } catch {
+      // fallback targetPath
+    }
+
+    setUser(authUser);
+    setActiveRole(primaryRole);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("currentUser", JSON.stringify(authUser));
+      if (primaryRole) localStorage.setItem("activeRole", JSON.stringify(primaryRole));
+      else localStorage.removeItem("activeRole");
+    }
+    return targetPath;
+  };
+
+  const logout = () => {
     setUser(null);
-  }, [logoutMutation]);
+    setActiveRole(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("activeRole");
+      localStorage.removeItem("accessToken");
+      window.location.href = "/";
+    }
+  };
+
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "805216331270-kmjdrat53j8oa0c7sg6cqbag12a8q9iv.apps.googleusercontent.com";
 
   return (
-    <AuthContext.Provider
-      value={{ user, isLoading, isAuthenticated: !!user, login, loginWithGoogle, logout, setUser }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <AuthContext.Provider
+        value={{
+          user,
+          activeRole,
+          isInitialized,
+          loginWithCredentials,
+          loginWithGoogleCredential,
+          logout,
+        }}
+      >
+        {children}
+      </AuthContext.Provider>
+    </GoogleOAuthProvider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth() phải gọi bên trong <AuthProvider>.");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }

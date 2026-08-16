@@ -5,12 +5,13 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { AppLayoutWrapper } from "@/components/domain/AppLayoutWrapper";
 import "@/styles/tokens.css";
 import "../globals.css";
 
 export const metadata: Metadata = {
   title: "SEAL",
-  description: "SEAL — SU26 SWP391",
+  description: "SEAL — SU26 SWP391 BL3W",
 };
 
 export default async function RootLayout({
@@ -21,7 +22,7 @@ export default async function RootLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  if (!routing.locales.includes(locale as (typeof routing.locales)[number])) {
+  if (!routing.locales.includes(locale as typeof routing.locales[number])) {
     notFound();
   }
 
@@ -40,7 +41,9 @@ export default async function RootLayout({
       <body className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]" suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
           <QueryProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <AppLayoutWrapper>{children}</AppLayoutWrapper>
+            </AuthProvider>
           </QueryProvider>
         </NextIntlClientProvider>
       </body>
