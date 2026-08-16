@@ -183,11 +183,25 @@ export function LandingLeaderboardPodium({
 
         {/* ── Podium Grid: Silver | Gold | Bronze ──────────────────────────── */}
         {!gold && !silver && !bronze ? (
-          <ApiMissingDataBadge
-            endpoint="GET /api/FinalResults/podium"
-            title="CHƯA CÓ DỮ LIỆU BẢNG VÀNG TỪ BACKEND"
-            message="Chưa có kết quả vinh danh Podium Quán quân/Á quân được công bố từ Backend API."
-          />
+          <div className="border border-[var(--border-muted)] bg-[var(--bg-input)]/50 p-8 hud-clipped text-center flex flex-col items-center justify-center gap-3 max-w-xl mx-auto">
+            <div className="w-12 h-12 rounded bg-[var(--accent-judge)]/10 border border-[var(--accent-judge)]/30 flex items-center justify-center text-[var(--accent-judge)] text-xl font-bold font-mono">
+              ★
+            </div>
+            <div>
+              <h3 className="font-display text-base font-bold uppercase text-[var(--text-primary)]">
+                Mùa Giải Đang Tranh Tài // Chưa Công Bố Kết Quả
+              </h3>
+              <p className="font-sans text-xs text-[var(--text-muted)] mt-1 max-w-md">
+                Bảng vàng vinh danh Top 3 Quán quân &amp; Á quân sẽ được mở công khai ngay sau khi Hội đồng Giám khảo hoàn tất chấm điểm vòng Chung kết.
+              </p>
+            </div>
+            <a
+              href="/events"
+              className="mt-2 font-mono text-xs text-[var(--accent-primary)] hover:underline border border-[var(--accent-primary)]/40 bg-[var(--bg-panel)] px-4 py-1.5 hud-clipped"
+            >
+              [ KHÁM PHÁ CÁC ĐỘI ĐANG TRANH TÀI → ]
+            </a>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-end">
             {/* #2 Silver — trái */}
