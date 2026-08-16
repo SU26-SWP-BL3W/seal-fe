@@ -1,4 +1,4 @@
-import { HTMLAttributes } from "react";
+import { CSSProperties, HTMLAttributes } from "react";
 
 type Tone =
   | "neutral"
@@ -11,49 +11,31 @@ type Tone =
   | "judge"
   | "coordinator";
 
-export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  tone?: Tone;
-  dot?: boolean;
-}
-
-const TONE_CLASSES: Record<Tone, string> = {
-  neutral: "bg-slate-800 text-slate-300 border-slate-700/60",
-  success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  warning: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  danger: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-  info: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  team: "bg-sky-500/10 text-sky-400 border-sky-500/20",
-  mentor: "bg-teal-500/10 text-teal-400 border-teal-500/20",
-  judge: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  coordinator: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+const TONE_VALUE: Record<Tone, string> = {
+  neutral: "var(--text-muted)",
+  success: "var(--color-success)",
+  warning: "var(--color-warning)",
+  danger: "var(--color-danger)",
+  info: "var(--accent-primary)",
+  team: "var(--accent-team)",
+  mentor: "var(--accent-mentor)",
+  judge: "var(--accent-judge)",
+  coordinator: "var(--accent-coordinator)",
 };
 
+// Badge phẳng, nền bán trong suốt + viền 1px cùng màu — KHÔNG bo tròn pill,
+// đúng "Geometric Discipline" của proposal (góc vuông thay vì rounded-full).
 export function Badge({
   tone = "neutral",
-  dot = false,
   className = "",
-  children,
+  style,
   ...props
-}: BadgeProps) {
+}: HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-sans text-xs font-semibold tracking-wide ${TONE_CLASSES[tone]} ${className}`}
+      style={{ "--badge-tone": TONE_VALUE[tone], ...style } as CSSProperties}
+      className={`inline-flex items-center gap-[var(--space-xs)] border border-[var(--badge-tone)]/30 bg-[var(--badge-tone)]/10 px-[var(--space-sm)] py-[2px] font-mono text-[length:var(--fs-caption-sm)] font-bold uppercase tracking-wider text-[color:var(--badge-tone)] ${className}`}
       {...props}
-    >
-      {dot && (
-        <span
-          className={`h-1.5 w-1.5 rounded-full ${
-            tone === "success"
-              ? "bg-emerald-400 animate-pulse"
-              : tone === "danger"
-              ? "bg-rose-400"
-              : tone === "warning"
-              ? "bg-amber-400"
-              : "bg-cyan-400"
-          }`}
-        />
-      )}
-      {children}
-    </span>
+    />
   );
 }

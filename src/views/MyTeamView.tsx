@@ -1,0 +1,299 @@
+"use client";
+
+import { useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
+import {
+  useCancelInvitation,
+  useConfirmRegistration,
+  useInviteMember,
+  useLeaveTeam,
+  useMyTeam,
+  useTeamInvitations,
+  useTransferLeadership,
+} from "@/repositories/teamsRepository";
+import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
+import {
+  buildRequirements,
+  ConfirmRegistrationDialog,
+  CreateTeamForm,
+  InvitePanel,
+  MemberRoster,
+  RegistrationChecklist,
+  TeamHeader,
+  TeamInfoCard,
+  TransferLeaderDialog,
+  type InvitationView,
+  type TeamStatus,
+  type TeamView,
+} from "@/components/domain/team";
+import type { MemberItem } from "@/viewModels/teamTypes";
+
+// BE trả camelCase, một vài endpoint cũ trả PascalCase — đọc cả hai để không
+// phụ thuộc vào thứ tự dọn dẹp bên backend.
+function pick(obj: unknown, ...keys: string[]): string {
+  const record = obj as Record<string, unknown> | null | undefined;
+  for (const key of keys) {
+    const value = record?.[key];
+    if (value != null && value !== "") return String(value);
+  }
+  return "";
+}
+
+export function MyTeamView() {
+  const { user, activeRole } = useAuth();
+  const roleName = pick(activeRole, "RoleName", "roleName");
+  const isLeader = roleName === "TeamLeader";
+  const currentUserId = pick(user, "id", "userId", "UserID");
+  const eventIdFromRole =
+    pick(activeRole, "eventId", "EventId") ||
+    ((activeRole?.assignedEventIds?.[0] as string | undefined) ?? "");
+
+  const { data: rawTeam, isLoading } = useMyTeam(eventIdFromRole || undefined);
+
+  const team: TeamView | null = rawTeam
+    ? {
+        id: pick(rawTeam, "id", "Id", "TeamId"),
+        teamName: pick(rawTeam, "name", "Name", "TeamName") || "Đội chưa đặt tên",
+        description: pick(rawTeam, "description", "Description"),
+        eventId: pick(rawTeam, "eventId", "EventId") || eventIdFromRole,
+        eventName: pick(rawTeam, "eventName", "EventName") || "Sự kiện",
+        status: (pick(rawTeam, "status", "Status") || "Forming") as TeamStatus,
+        createdTime: pick(rawTeam, "createdTime", "CreatedTime"),
+        lastRejectReason: pick(rawTeam, "lastRejectReason", "LastRejectReason"),
+      }
+    : null;
+
+  const members: MemberItem[] = ((rawTeam?.members ?? rawTeam?.Members ?? []) as unknown[]).map((m) => ({
+    userId: pick(m, "userId", "UserId"),
+    fullName: pick(m, "fullName", "FullName") || "Thành viên",
+    email: pick(m, "email", "Email"),
+    roleName: (pick(m, "roleName", "RoleName") || "TeamMember") as MemberItem["roleName"],
+    isApproved: Boolean((m as Record<string, unknown>).isApproved ?? (m as Record<string, unknown>).IsApproved),
+    hasStudentProfile: Boolean(
+      (m as Record<string, unknown>).hasStudentProfile ?? (m as Record<string, unknown>).HasStudentProfile
+    ),
+    school: pick(m, "studentCode", "StudentCode"),
+  }));
+
+  const {
+    data: rawInvitations = [],
+    isLoading: isLoadingInvitations,
+    isError: hasInvitationError,
+  } = useTeamInvitations(team?.id);
+
+  const invitations: InvitationView[] = (rawInvitations as unknown[])
+    .filter((inv) => {
+      const status = pick(inv, "status", "Status");
+      return status === "PendingAccept" || status === "Pending";
+    })
+    .map((inv) => ({
+      id: pick(inv, "invitationId", "InvitationId", "id", "Id"),
+      email: pick(inv, "invitedUserEmail", "InvitedUserEmail", "email", "Email"),
+      fullName: pick(inv, "invitedUserFullName", "InvitedUserFullName"),
+      statusLabel: pick(inv, "statusLabel", "StatusLabel") || "Đang chờ",
+      sentAt: pick(inv, "createdTime", "CreatedTime", "sentAt"),
+    }));
+
+  const { mutateAsync: inviteMember, isPending: isInviting } = useInviteMember();
+  const { mutateAsync: cancelInvitation, isPending: isCancelling } = useCancelInvitation();
+  const { mutateAsync: confirmRegistration, isPending: isRegistering } = useConfirmRegistration();
+  const { mutateAsync: transferLeadership, isPending: isTransferring } = useTransferLeadership();
+  const { mutateAsync: leaveTeam, isPending: isLeaving } = useLeaveTeam();
+
+  const [transferTarget, setTransferTarget] = useState<{ id: string; name: string } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<InvitationView | null>(null);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [dialogError, setDialogError] = useState("");
+
+  if (isLoading) {
+    return (
+      <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)]">
+        <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-[var(--space-lg)]">
+          <SkeletonRows rows={1} />
+          <div className="grid grid-cols-1 gap-[var(--space-lg)] lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <SkeletonRows rows={4} />
+            </Card>
+            <Card>
+              <SkeletonRows rows={3} />
+            </Card>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!team) {
+    return (
+      <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)]">
+        <CreateTeamForm />
+      </main>
+    );
+  }
+
+  const requirements = buildRequirements(members);
+  const isForming = team.status === "Forming" || team.status === "Rejected";
+  const canConfirm =
+    isForming && requirements.hasEnoughMembers && requirements.membersWithoutProfile.length === 0;
+  const showRequirementBanner =
+    isForming && (!requirements.hasEnoughMembers || requirements.membersWithoutProfile.length > 0);
+
+  const closeDialogs = () => {
+    setShowRegisterDialog(false);
+    setShowLeaveDialog(false);
+    setTransferTarget(null);
+    setCancelTarget(null);
+    setDialogError("");
+  };
+
+  const runAction = async (action: () => Promise<unknown>, fallback: string) => {
+    setDialogError("");
+    try {
+      await action();
+      closeDialogs();
+    } catch (err: unknown) {
+      const detail = err as { message?: string; response?: { data?: { message?: string } } };
+      setDialogError(detail?.response?.data?.message || detail?.message || fallback);
+    }
+  };
+
+  return (
+    <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)]">
+      <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-[var(--space-lg)]">
+        <TeamHeader
+          team={team}
+          isLeader={isLeader}
+          canConfirm={canConfirm}
+          isLeaving={isLeaving}
+          onConfirmRegistration={() => {
+            setDialogError("");
+            setShowRegisterDialog(true);
+          }}
+          onLeave={() => {
+            setDialogError("");
+            setShowLeaveDialog(true);
+          }}
+        />
+
+        {team.lastRejectReason && isForming && (
+          <Card className="border-[var(--color-danger)]/40 bg-[var(--color-danger)]/5">
+            <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-[color:var(--color-danger)]">
+              Lý do BTC trả hồ sơ
+            </h2>
+            <p className="mt-[var(--space-xs)] font-mono text-xs text-pretty text-[color:var(--text-primary)]">
+              {team.lastRejectReason}
+            </p>
+          </Card>
+        )}
+
+        {showRequirementBanner && (
+          <Card className="border-[var(--color-warning)]/40 bg-[var(--color-warning)]/5">
+            <h2 className="mb-[var(--space-sm)] font-mono text-xs font-bold uppercase tracking-wider text-[color:var(--color-warning)]">
+              Chưa đủ điều kiện ghi danh
+            </h2>
+            <RegistrationChecklist requirements={requirements} />
+          </Card>
+        )}
+
+        <div className="grid grid-cols-1 gap-[var(--space-lg)] lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <MemberRoster
+              members={members}
+              currentUserId={currentUserId}
+              isLeader={isLeader}
+              onTransfer={(id, name) => {
+                setDialogError("");
+                setTransferTarget({ id, name });
+              }}
+            />
+          </div>
+
+          <div className="flex flex-col gap-[var(--space-lg)]">
+            {isLeader && (
+              <InvitePanel
+                invitations={invitations}
+                memberCount={requirements.memberCount}
+                canInvite={isForming}
+                isLoading={isLoadingInvitations}
+                loadError={hasInvitationError}
+                isInviting={isInviting}
+                isCancelling={isCancelling}
+                onInvite={(email) => inviteMember({ teamId: team.id, email })}
+                onCancel={(invitation) => {
+                  setDialogError("");
+                  setCancelTarget(invitation);
+                }}
+              />
+            )}
+            <TeamInfoCard team={team} memberCount={requirements.memberCount} isLeader={isLeader} />
+          </div>
+        </div>
+      </div>
+
+      <ConfirmRegistrationDialog
+        open={showRegisterDialog}
+        teamName={team.teamName}
+        eventName={team.eventName}
+        requirements={requirements}
+        canConfirm={canConfirm}
+        isPending={isRegistering}
+        error={dialogError}
+        onConfirm={() =>
+          runAction(
+            () => confirmRegistration(team.id),
+            "Không ghi danh được. Kiểm tra lại số thành viên và hồ sơ.",
+          )
+        }
+        onCancel={closeDialogs}
+      />
+
+      <TransferLeaderDialog
+        open={Boolean(transferTarget)}
+        targetName={transferTarget?.name ?? ""}
+        isPending={isTransferring}
+        error={dialogError}
+        onConfirm={() =>
+          runAction(
+            () => transferLeadership({ teamId: team.id, targetUserId: transferTarget!.id }),
+            "Không gửi được yêu cầu chuyển quyền.",
+          )
+        }
+        onCancel={closeDialogs}
+      />
+
+      <ConfirmDialog
+        open={Boolean(cancelTarget)}
+        eyebrow="Hủy lời mời"
+        title="Thu hồi lời mời"
+        description={`Lời mời gửi tới ${cancelTarget?.email ?? ""} sẽ bị hủy.`}
+        confirmLabel="Hủy lời mời"
+        cancelLabel="Giữ lại"
+        destructive
+        pending={isCancelling}
+        error={dialogError || undefined}
+        onConfirm={() =>
+          runAction(
+            () => cancelInvitation({ teamId: team.id, invitationId: cancelTarget!.id }),
+            "Không hủy được lời mời.",
+          )
+        }
+        onCancel={closeDialogs}
+      />
+
+      <ConfirmDialog
+        open={showLeaveDialog}
+        eyebrow="Rời đội"
+        title="Rời khỏi đội thi"
+        description={`Bạn sẽ rời đội ${team.teamName} và mất quyền truy cập bài nộp của đội.`}
+        confirmLabel="Rời đội"
+        cancelLabel="Ở lại"
+        destructive
+        pending={isLeaving}
+        error={dialogError || undefined}
+        onConfirm={() => runAction(() => leaveTeam(team.id), "Không rời đội được.")}
+        onCancel={closeDialogs}
+      />
+    </main>
+  );
+}

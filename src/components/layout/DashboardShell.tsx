@@ -4,14 +4,14 @@ import { DashboardHeader } from "./DashboardHeader";
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex font-sans antialiased selection:bg-cyan-500/20 selection:text-cyan-300">
-      {/* Fixed Left Sidebar */}
+    <div className="hud-lattice min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] flex font-sans antialiased">
+      {/* Fixed 260px Navigation Bar */}
       <DashboardSidebar />
 
-      {/* Main Content Area */}
+      {/* Main 1fr Context-Specific HUD Panel */}
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader />
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="flex-1 p-6 max-w-[var(--container-max)] w-full mx-auto space-y-6">
           {children}
         </main>
       </div>
