@@ -382,12 +382,34 @@ export function NavigationBar() {
                 <Link
                   href="/mentor/tracks"
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                    pathname.includes("/mentor")
+                    pathname === "/mentor/tracks" || pathname === "/mentor"
                       ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
                       : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Briefcase className="w-4 h-4 shrink-0" /> Bàn Làm Việc Cố Vấn
+                  <Briefcase className="w-4 h-4 shrink-0" /> Hạng Mục Cố Vấn
+                </Link>
+
+                <Link
+                  href="/mentor/teams"
+                  className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
+                    pathname.includes("/mentor/teams")
+                      ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                  }`}
+                >
+                  <Users className="w-4 h-4 shrink-0" /> Đội Thi Cố Vấn
+                </Link>
+
+                <Link
+                  href="/mentor/submissions"
+                  className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
+                    pathname.includes("/mentor/submissions")
+                      ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                  }`}
+                >
+                  <Send className="w-4 h-4 shrink-0" /> Bài Nộp &amp; Góp Ý
                 </Link>
 
                 <Link
