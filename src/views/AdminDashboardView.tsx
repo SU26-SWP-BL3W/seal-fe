@@ -26,6 +26,7 @@ import { useEvents } from "@/repositories/eventsRepository";
 import { usersRepository, useGetUsers } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
+import { AdminCoordinatorModal } from "@/components/domain/AdminCoordinatorModal";
 
 import { ApiMissingDataBadge } from "@/components/ui";
 
@@ -85,84 +86,6 @@ export const AdminDashboardView: React.FC = () => {
 
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
-  const [ecEmail, setEcEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [assignSuccessMessage, setAssignSuccessMessage] = useState<string | null>(null);
-
-  const handleOpenAssignModal = (ev: EventItem) => {
-    setSelectedEvent(ev);
-    setEcEmail((ev as any).coordinatorEmail || (ev as any).CoordinatorEmail || "");
-    setAssignSuccessMessage(null);
-  };
-
-  const handleAssignEc = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ecEmail.trim() || !selectedEvent) return;
-
-    setIsSubmitting(true);
-    const eventId = selectedEvent.id || selectedEvent.Id || selectedEvent.eventId || selectedEvent.EventId || "";
-    const eventName = selectedEvent.eventName || selectedEvent.EventName || "Sự kiện";
-    const targetEmail = ecEmail.trim().toLowerCase();
-
-    // 1. Nếu là tài khoản Điều Phối Viên đã có sẵn trong danh sách -> Gán vai trò trực tiếp
-    const existingEcUser: User | undefined = availableCoordinators.find(
-      (u: any) => (u.email || u.Email || "").toLowerCase() === targetEmail
-    );
-
-    if (existingEcUser) {
-      const realUserId = existingEcUser.id || (existingEcUser as any).Id || (existingEcUser as any).userId || (existingEcUser as any).UserId;
-      try {
-        const res = await staffRepository.assignRoleDirectly({
-          userId: realUserId,
-          eventId: eventId,
-          roleName: "EventCoordinator",
-        });
-        setIsSubmitting(false);
-
-        if (res && res.success !== false) {
-          setAssignSuccessMessage(`Đã phân công ${existingEcUser.fullName || existingEcUser.email} làm Điều Phối Viên cho sự kiện "${eventName}" thành công!`);
-          refetchEvents();
-          setTimeout(() => {
-            setSelectedEvent(null);
-            setAssignSuccessMessage(null);
-          }, 2000);
-        }
-        return;
-      } catch (err: any) {
-        setIsSubmitting(false);
-        const msg = err.response?.data?.message || err.message || "Phân công vai trò thất bại. Vui lòng kiểm tra lại.";
-        alert(`Lỗi phân công EC: ${msg}`);
-        return;
-      }
-    }
-
-    // 2. Nếu là Email mới (hoặc chưa có tài khoản EC) -> Gửi lời mời qua Email + Tạo tài khoản tạm (IsTemporary)
-    try {
-      const res = await staffRepository.inviteCoordinator({
-        eventId: eventId,
-        email: targetEmail,
-        fullName: targetEmail.split("@")[0],
-        notes: `Mời làm Event Coordinator cho sự kiện ${eventName}`,
-      });
-      setIsSubmitting(false);
-
-      if (res && (res.success !== false || (res as any).invitationId || (res as any).id)) {
-        setAssignSuccessMessage(`Đã gửi thư mời và tạo tài khoản tạm cho ${targetEmail} thành công!`);
-        refetchEvents();
-        setTimeout(() => {
-          setSelectedEvent(null);
-          setAssignSuccessMessage(null);
-        }, 2500);
-      } else {
-        const msg = (res as any)?.message || "Gửi lời mời thất bại. Vui lòng kiểm tra lại địa chỉ email.";
-        alert(`Thông báo: ${msg}`);
-      }
-    } catch (err: any) {
-      setIsSubmitting(false);
-      const msg = err.response?.data?.message || err.message || "Gửi thư mời thất bại. Vui lòng kiểm tra lại.";
-      alert(`Lỗi mời EC: ${msg}`);
-    }
-  };
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
       <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
@@ -363,11 +286,11 @@ export const AdminDashboardView: React.FC = () => {
                             </Button>
                             <Button
                               variant="ghost"
-                              onClick={() => handleOpenAssignModal(ev)}
+                              onClick={() => setSelectedEvent(ev)}
                               className="text-xs font-mono border-[var(--accent-coordinator)] text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/10 px-2.5 py-0.5 h-7 cursor-pointer inline-flex items-center gap-1"
-                              title="Phân công Event Coordinator"
+                              title="Quản lý & phân công Event Coordinator"
                             >
-                              <UserCheck className="w-3.5 h-3.5" /> Gán EC
+                              <UserCheck className="w-3.5 h-3.5" /> Quản lý EC
                             </Button>
                             <Link href={`/events/${id}`}>
                               <Button
@@ -389,109 +312,16 @@ export const AdminDashboardView: React.FC = () => {
           )}
         </Card>
 
-        {/* Modal Gán Event Coordinator Dành Cho Admin */}
+        {/* Trung Tâm Quản Lý & Phân Công Event Coordinator (EC HUB) */}
         {selectedEvent && (
-          <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in">
-            <Card className="w-full max-w-lg p-6 bg-[var(--bg-panel)] border border-[var(--accent-coordinator)] space-y-4 relative hud-clipped shadow-2xl">
-              <button
-                type="button"
-                onClick={() => setSelectedEvent(null)}
-                className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="space-y-1">
-                <h3 className="font-display font-bold text-lg text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                  <UserCheck className="w-5 h-5 text-[var(--accent-coordinator)]" />
-                  Phân Công Event Coordinator (EC)
-                </h3>
-                <p className="font-mono text-xs text-[var(--text-muted)]">
-                  Chỉ định Điều Phối Viên phụ trách sự kiện{" "}
-                  <span className="text-[var(--accent-primary)] font-bold">"{selectedEvent.eventName || selectedEvent.EventName}"</span>.
-                </p>
-              </div>
-
-              {/* EC hiện tại */}
-              <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1 font-mono text-xs">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase block font-bold">
-                  Điều Phối Viên Đang Phụ Trách Hiện Tại:
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[var(--accent-coordinator)] shrink-0" />
-                  <span className="font-bold text-[var(--accent-coordinator)] truncate">
-                    {selectedEvent.coordinatorEmail || selectedEvent.CoordinatorEmail || "Chưa phân công EC"}
-                  </span>
-                </div>
-              </div>
-
-              {assignSuccessMessage ? (
-                <div className="p-4 bg-[rgba(16,185,129,0.1)] border border-[var(--color-success)] text-[var(--color-success)] font-mono text-xs hud-clipped flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-success)] shrink-0" />
-                  <span>{assignSuccessMessage}</span>
-                </div>
-              ) : (
-                <form onSubmit={handleAssignEc} className="space-y-4 pt-1">
-                  {/* Chọn nhanh từ danh sách Coordinator trong hệ thống */}
-                  {availableCoordinators.length > 0 && (
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                        Chọn Nhanh Điều Phối Viên Đã Đăng Ký (Coordinator)
-                      </label>
-                      <select
-                        value={ecEmail}
-                        onChange={(e) => setEcEmail(e.target.value)}
-                        className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
-                      >
-                        <option value="">— Chọn Điều Phối Viên từ danh sách —</option>
-                        {availableCoordinators.map((c: any) => {
-                          const email = c.email || c.Email;
-                          const name = c.fullName || c.FullName || email;
-                          return (
-                            <option key={c.id || c.Id || email} value={email}>
-                              {name} ({email})
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                      Hoặc Nhập Email Tài Khoản Event Coordinator *
-                    </label>
-                    <Input
-                      type="email"
-                      placeholder="e.g. ec.coordinator@seal.edu.vn"
-                      value={ecEmail}
-                      onChange={(e) => setEcEmail(e.target.value)}
-                      className="w-full text-xs font-mono"
-                      required
-                    />
-                    <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
-                      💡 Nếu email chưa có tài khoản trong hệ thống, hệ thống sẽ tự động tạo tài khoản tạm và gửi email mời tham gia Ban tổ chức.
-                    </p>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-muted)]">
-                    <Button variant="ghost" type="button" onClick={() => setSelectedEvent(null)} className="text-xs font-mono">
-                      Hủy Bỏ
-                    </Button>
-                    <Button
-                      variant="primary"
-                      accent="coordinator"
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="text-xs font-mono font-bold px-4 cursor-pointer"
-                    >
-                      {isSubmitting ? "Đang xử lý..." : "PHÂN CÔNG ĐIỀU PHỐI VIÊN"}
-                    </Button>
-                  </div>
-                </form>
-              )}
-            </Card>
-          </div>
+          <AdminCoordinatorModal
+            event={selectedEvent}
+            allUsers={usersList}
+            onClose={() => setSelectedEvent(null)}
+            onSuccess={() => {
+              refetchEvents();
+            }}
+          />
         )}
 
         {/* Modal Chỉnh Sửa Toàn Diện Sự Kiện Cho Admin */}
