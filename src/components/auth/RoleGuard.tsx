@@ -1,6 +1,7 @@
 "use client";
 
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { getRoleName } from "@/lib/permissions";
 import { HexagonLoader, Button, Card } from "@/components/ui";
@@ -22,8 +23,21 @@ interface RoleGuardProps {
   allowedRoles: AllowedRole[];
 }
 
+// Lấy dashboard URL theo role
+function getRoleDashboardUrl(user: { isAdmin?: boolean; IsAdmin?: boolean } | null, activeRole: { roleName?: string; RoleName?: string } | null): string {
+  const roleName = getRoleName(activeRole);
+
+  if (user?.isAdmin || user?.IsAdmin) return "/admin/dashboard";
+  if (roleName === "Judge") return "/judge/tracks";
+  if (roleName === "EventCoordinator" || roleName === "Coordinator") return "/coordinator/dashboard";
+  if (roleName === "Mentor") return "/mentor/tracks";
+  if (roleName === "TeamLeader" || roleName === "TeamMember") return "/my-team";
+  return "/login";
+}
+
 export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
   const { user, activeRole, isInitialized } = useAuth();
+  const router = useRouter();
 
   if (!isInitialized) {
     return (
@@ -52,7 +66,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
           <div className="pt-4 flex justify-center">
             <Link href="/login">
               <Button variant="primary" className="font-mono text-xs">
-                // ĐẾN TRANG ĐĂNG NHẬP &gt;
+                ĐẾN TRANG ĐĂNG NHẬP
               </Button>
             </Link>
           </div>
@@ -75,10 +89,19 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
   const hasAccess =
     (allowedRoles.includes("Admin") && isUserAdmin) ||
     (userRoleDisplay && allowedRoles.includes(userRoleDisplay as AllowedRole)) ||
-    // Student = user logged in but isStudent
     (allowedRoles.includes("Student") && user.isStudent);
 
+  // Không có quyền -> redirect về dashboard đúng role
   if (!hasAccess) {
+    const redirectUrl = getRoleDashboardUrl(user, activeRole);
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        router.replace(redirectUrl);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }, [router, redirectUrl]);
+
     return (
       <div className="min-h-[70vh] flex items-center justify-center px-4 py-12 hud-lattice">
         <Card className="max-w-lg p-8 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)] space-y-4 text-center">
@@ -90,25 +113,21 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
               403 // TRUY CẬP BỊ TỪ CHỐI
             </h3>
             <p className="font-mono text-xs text-[var(--text-muted)]">
-              Tài khoản hiện tại{" "}
-              <span className="text-[var(--text-primary)] font-bold">
-                [{isUserAdmin ? "System Admin" : userRoleDisplay || "Guest"}]
-              </span>{" "}
-              không có quyền. Trang này chỉ dành cho:{" "}
-              <span className="text-[var(--accent-primary)] font-bold">
-                [{allowedRoles.join(", ")}]
-              </span>
+              Tài khoản <span className="text-[var(--text-primary)] font-bold">[{isUserAdmin ? "System Admin" : userRoleDisplay || "Guest"}]</span> không có quyền truy cập trang này.
+            </p>
+            <p className="font-mono text-xs text-[var(--accent-primary)]">
+              Đang chuyển hướng về trang của bạn...
             </p>
           </div>
           <div className="pt-4 flex justify-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" className="font-mono text-xs">
-                Đăng Nhập Lại
+            <Link href={redirectUrl}>
+              <Button variant="primary" className="font-mono text-xs">
+                Chuyển về trang của tôi
               </Button>
             </Link>
             <Link href="/">
-              <Button variant="primary" className="font-mono text-xs">
-                Về Trang Chủ &gt;
+              <Button variant="ghost" className="font-mono text-xs">
+                Về Trang Chủ
               </Button>
             </Link>
           </div>
