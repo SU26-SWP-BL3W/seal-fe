@@ -255,15 +255,9 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
         
         {/* Modal Header */}
         <div className="flex items-center justify-between p-5 border-b border-zinc-800">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2 font-mono text-xs text-[#00d9ff] font-bold uppercase tracking-wider">
-              <Sliders className="w-4 h-4 text-[#00d9ff]" />
-              <span>TRUNG TÂM CẤU HÌNH TOÀN DIỆN</span>
-            </div>
-            <h2 className="font-display font-bold text-xl text-white uppercase tracking-wide">
-              Chỉnh Sửa Sự Kiện &amp; Lộ Trình Vòng Thi
-            </h2>
-          </div>
+          <h2 className="font-display font-bold text-xl text-white uppercase tracking-wide">
+            Chỉnh Sửa Sự Kiện &amp; Lộ Trình
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -285,7 +279,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span>1. Thông Tin Sự Kiện &amp; Tuyển Sinh</span>
+            <span>Thông Tin Sự Kiện</span>
           </button>
 
           <button
@@ -298,7 +292,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>2. Vòng Thi &amp; Timeline Phase 1 → 5 ({rounds.length})</span>
+            <span>Vòng Thi ({rounds.length})</span>
           </button>
         </div>
 
@@ -358,7 +352,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-zinc-400 uppercase font-bold block">Quy Mô Số Đội (Max)</label>
+                  <label className="text-zinc-400 uppercase font-bold block">Số Đội Tối Đa</label>
                   <input
                     type="number"
                     value={maxTeams}
@@ -395,16 +389,16 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
                 </div>
               </div>
 
-              {/* Giai đoạn Tuyển sinh (Phase 0) */}
+              {/* Giai đoạn Tuyển sinh */}
               <div className="p-4 bg-[#131e24] border border-cyan-500/30 rounded-lg space-y-3 font-mono text-xs">
                 <div className="flex items-center gap-2 text-cyan-300 font-bold uppercase tracking-wider">
                   <Clock className="w-4 h-4 text-cyan-400" />
-                  <span>Giai Đoạn Tuyển Sinh (Nhận Hồ Sơ Đội Thi)</span>
+                  <span>Thời Gian Tuyển Sinh</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-zinc-400 uppercase font-bold block">
-                      Mở Cổng Nhận Hồ Sơ Đội
+                      Mở Đăng Ký
                     </label>
                     <input
                       type="datetime-local"
@@ -416,7 +410,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
 
                   <div className="space-y-1.5">
                     <label className="text-zinc-400 uppercase font-bold block">
-                      Đóng Cổng &amp; Khóa Đăng Ký
+                      Khóa Đăng Ký
                     </label>
                     <input
                       type="datetime-local"
@@ -446,10 +440,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
           {/* TAB 2: QUẢN LÝ VÒNG THI & PHASE 1 -> 5 */}
           {activeTab === "rounds" && (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-              <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-                <div className="font-mono text-xs text-zinc-400">
-                  Cấu hình từng vòng thi: Thời gian mở đề, Hạn nộp bài, Chấm điểm, Công bố &amp; Phúc khảo.
-                </div>
+              <div className="flex items-center justify-end pb-2 border-b border-zinc-800">
                 <button
                   type="button"
                   onClick={handleAddRound}
@@ -505,7 +496,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#10171a] p-3 rounded border border-zinc-800/80">
                         <div className="space-y-1">
                           <label className="text-[11px] text-cyan-300 font-bold block">
-                            Phase 1: Bắt Đầu Vòng Thi (Mở Đề)
+                            Phase 1: Mở Đề Bài
                           </label>
                           <input
                             type="datetime-local"
@@ -517,7 +508,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
 
                         <div className="space-y-1">
                           <label className="text-[11px] text-cyan-300 font-bold block">
-                            Phase 2: Hạn Khóa Nộp Bài Thi (Deadline)
+                            Phase 2: Hạn Nộp Bài
                           </label>
                           <input
                             type="datetime-local"
@@ -532,7 +523,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#10171a] p-3 rounded border border-zinc-800/80">
                         <div className="space-y-1">
                           <label className="text-[11px] text-amber-300 font-bold block">
-                            Phase 3: Giám Khảo Chấm Điểm
+                            Phase 3: Chấm Điểm
                           </label>
                           <div className="grid grid-cols-2 gap-1.5">
                             <input
@@ -582,28 +573,22 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
           )}
 
           {/* Modal Footer Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-zinc-800 font-mono text-xs">
-            <div className="text-zinc-500 text-[11px]">
-              * Mọi thay đổi về thông tin sự kiện &amp; lộ trình 5 phase sẽ được lưu đồng thời.
-            </div>
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-zinc-800 font-mono text-xs">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white rounded-lg uppercase cursor-pointer"
+            >
+              Hủy Bỏ
+            </button>
 
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white rounded-lg uppercase cursor-pointer"
-              >
-                Hủy Bỏ
-              </button>
-
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-6 py-2.5 bg-[#00d9ff] text-black font-extrabold uppercase hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] transition-all rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {isSaving ? "Đang lưu toàn bộ..." : "💾 LƯU TOÀN BỘ THAY ĐỔI"}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-6 py-2.5 bg-[#00d9ff] text-black font-extrabold uppercase hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] transition-all rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {isSaving ? "Đang lưu..." : "Lưu Thay Đổi"}
+            </button>
           </div>
         </form>
       </div>

@@ -442,7 +442,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
               {roleName === "Admin" && (
                 <div className="flex items-center gap-2">
                   <Link href="/admin/dashboard">
-                    <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                    <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
                       <Shield className="w-4 h-4" />
                       <span>Bảng Điều Hành Admin</span>
                     </button>
@@ -453,7 +453,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                     className="px-4 py-2 bg-amber-950/60 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <Settings className="w-4 h-4" />
-                    <span>Chỉnh Sửa Sự Kiện &amp; Lộ Trình</span>
+                    <span>Chỉnh Sửa Sự Kiện</span>
                   </button>
                   <Link href={`/events/${eventId}/leaderboard`}>
                     <button className="px-4 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-amber-400 hover:text-white rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
@@ -468,7 +468,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 <div className="flex items-center gap-2">
                   <Link href="/coordinator/dashboard">
                     <button className="px-3.5 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-purple-400 hover:text-white rounded font-bold transition-all cursor-pointer">
-                      <span>Control Center BTC</span>
+                      <span>Quản Trị BTC</span>
                     </button>
                   </Link>
                   <button
@@ -477,7 +477,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                     className="px-3.5 py-2 bg-purple-950/60 text-purple-300 border border-purple-500/40 hover:bg-purple-900/80 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <Settings className="w-3.5 h-3.5" />
-                    <span>Chỉnh Sửa Sự Kiện &amp; Lộ Trình</span>
+                    <span>Chỉnh Sửa Sự Kiện</span>
                   </button>
                   <Link href={`/events/${eventId}/leaderboard`}>
                     <button className="px-4 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-purple-400 hover:text-white rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
@@ -491,9 +491,9 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
               {roleName === "Judge" && (
                 <div className="flex items-center gap-2">
                   <Link href="/judge/scoring">
-                    <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5">
+                    <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
                       <Scale className="w-4 h-4" />
-                      <span>Vào Bàn Chấm Giám Khảo</span>
+                      <span>Vào Bàn Chấm Điểm</span>
                     </button>
                   </Link>
                   <Link href={`/events/${eventId}/leaderboard`}>
@@ -507,7 +507,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
 
               {roleName === "Mentor" && (
                 <Link href="/mentor/tracks">
-                  <button className="px-4 py-2 bg-teal-500 text-black hover:bg-teal-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5">
+                  <button className="px-4 py-2 bg-teal-500 text-black hover:bg-teal-400 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
                     <Users className="w-4 h-4" />
                     <span>Xem Đội Thi Được Phân Công</span>
                   </button>
@@ -517,7 +517,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
               {(roleName === "TeamLeader" || roleName === "TeamMember") && (
                 <div className="flex items-center gap-2">
                   <Link href={`/my-team?eventId=${eventId}`}>
-                    <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                    <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
                       <Upload className="w-4 h-4" />
                       <span>Quản Lý Đội Thi / Nộp Bài</span>
                     </button>
@@ -545,7 +545,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            1. Lịch Trình Vòng Thi ({rounds.length} Giai đoạn)
+            Lịch Trình Vòng Thi ({rounds.length})
           </button>
           <button
             type="button"
@@ -556,7 +556,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            2. Hạng Mục Chuyên Môn ({tracks.length})
+            Hạng Mục ({tracks.length})
           </button>
           <button
             type="button"
@@ -567,7 +567,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            3. Cơ Cấu Giải Thưởng
+            Giải Thưởng
           </button>
           <button
             type="button"
@@ -578,7 +578,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            4. Thể Lệ &amp; Quy Định
+            Thể Lệ &amp; Quy Định
           </button>
         </div>
 
