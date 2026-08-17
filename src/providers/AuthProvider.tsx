@@ -88,8 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const storedUser = localStorage.getItem("currentUser");
       const storedRole = localStorage.getItem("activeRole");
-      if (storedUser) setUser(JSON.parse(storedUser));
-      if (storedRole) setActiveRole(JSON.parse(storedRole));
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        if (storedRole) setActiveRole(JSON.parse(storedRole));
+      } else {
+        setUser(null);
+        setActiveRole(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("activeRole");
+        }
+      }
     } catch (e) {
       console.error("Lỗi khôi phục phiên từ localStorage:", e);
     } finally {
@@ -283,14 +291,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
+      if (!isAdmin && primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
         targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
       }
     } catch {
       // fallback targetPath
     }
 
-    saveSession(authUser, primaryRole);
+    saveSession(authUser, isAdmin ? null : primaryRole);
     return targetPath;
   };
 
@@ -369,14 +377,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
+      if (!isAdmin && primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
         targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
       }
     } catch {
       // fallback targetPath
     }
 
-    saveSession(authUser, primaryRole);
+    saveSession(authUser, isAdmin ? null : primaryRole);
     return targetPath;
   };
 
