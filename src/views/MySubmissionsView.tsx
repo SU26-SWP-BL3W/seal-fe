@@ -156,7 +156,7 @@ export function MySubmissionsView() {
 
                   <Link href="/submissions/new">
                     <button className="bg-[#00d9ff] text-[#080f11] font-display text-sm font-bold px-5 py-2 rounded-[12px] rounded-br-none hover:bg-white transition-all flex items-center gap-1.5 uppercase shadow-[0_0_15px_rgba(0,217,255,0.3)]">
-                      <Plus className="w-4 h-4" /> Nộp bài mới &gt;
+                      <Plus className="w-4 h-4" /> Nộp bài mới
                     </button>
                   </Link>
                 </div>

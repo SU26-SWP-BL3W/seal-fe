@@ -201,7 +201,7 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
 
       <div className="flex items-center justify-between pt-4 border-t border-[var(--border-muted)]">
         <Button variant="ghost" onClick={onPrev} className="flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" /> &lt; Quay Lại Bước 4
+          <ArrowLeft className="w-4 h-4" /> <span>Quay Lại Bước 4</span>
         </Button>
         <Button
           variant="primary"
@@ -209,7 +209,7 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
           disabled={isSubmitting}
           className="flex items-center gap-2"
         >
-          {isSubmitting ? "Đang gửi lời mời & tạo sự kiện..." : "// KÍCH HOẠT SỰ KIỆN & GỬI LỜI MỜI >"}
+          {isSubmitting ? "Đang gửi lời mời & tạo sự kiện..." : "// KÍCH HOẠT SỰ KIỆN & GỬI LỜI MỜI"}
         </Button>
       </div>
 
