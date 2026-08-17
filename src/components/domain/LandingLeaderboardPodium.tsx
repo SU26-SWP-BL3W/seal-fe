@@ -1,7 +1,9 @@
 "use client";
 
 import { ApiMissingDataBadge } from "@/components/ui";
+import type { PrizeItem } from "@/viewModels/eventsMetadata";
 
+/** Tiền thưởng của 1 đội tại 1 hạng cụ thể (từ FinalResult/AssignPrize) — số thật, khác Event.Prize.Value (text tự do). */
 function formatVnd(val: number): string {
   return `${new Intl.NumberFormat("vi-VN").format(val)} ₫`;
 }
@@ -137,14 +139,14 @@ function PodiumCard({
 interface LandingLeaderboardPodiumProps {
   eventName?: string;
   season?: string;
-  totalPrizeVnd?: number;
+  prizes?: PrizeItem[];
 }
 
 // ─── Main Podium Section ───────────────────────────────────────────────────────
 export function LandingLeaderboardPodium({
   eventName = "SEAL Hackathon 2026",
   season = "MÙA GIẢI 2026",
-  totalPrizeVnd = 200_000_000,
+  prizes = [],
 }: LandingLeaderboardPodiumProps) {
   const podiumTeams: any[] = [];
   const gold   = podiumTeams.find((t) => t.rank === 1);
@@ -165,16 +167,15 @@ export function LandingLeaderboardPodium({
             <span className="text-[var(--accent-judge)]">Bảng Vàng</span>{" "}
             {season}
           </h2>
-          <div className="mt-1 flex flex-wrap items-center justify-center gap-3 border border-[var(--accent-judge)]/25 bg-[var(--accent-judge)]/6 px-4 py-2 font-mono text-xs text-[var(--accent-judge)]">
-            <span>
-              Tổng quỹ giải thưởng:{" "}
-              <strong className="text-sm">{formatVnd(totalPrizeVnd)}</strong>
-            </span>
-            <span className="hidden sm:inline text-[var(--border-muted)]">|</span>
-            <span className="text-[var(--text-muted)] text-[10px]">
-              Giải Nhất 80M · Giải Nhì 45M · Giải Ba 25M
-            </span>
-          </div>
+          {prizes.length > 0 && (
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-3 border border-[var(--accent-judge)]/25 bg-[var(--accent-judge)]/6 px-4 py-2 font-mono text-xs text-[var(--accent-judge)]">
+              {prizes.map((p) => (
+                <span key={p.id}>
+                  {p.prizeName}: <strong className="text-sm">{p.value}</strong>
+                </span>
+              ))}
+            </div>
+          )}
           <p className="max-w-2xl font-mono text-[11px] text-[var(--text-muted)] mt-1">
             Kết quả chính thức từ{" "}
             <strong className="text-[var(--text-primary)]">{eventName}</strong>
@@ -184,9 +185,8 @@ export function LandingLeaderboardPodium({
         {/* ── Podium Grid: Silver | Gold | Bronze ──────────────────────────── */}
         {!gold && !silver && !bronze ? (
           <ApiMissingDataBadge
-            endpoint="GET /api/FinalResults/podium"
-            title="CHƯA CÓ DỮ LIỆU BẢNG VÀNG TỪ BACKEND"
-            message="Chưa có kết quả vinh danh Podium Quán quân/Á quân được công bố từ Backend API."
+            title="Chưa có dữ liệu Bảng Vàng"
+            message="Chưa có kết quả vinh danh Podium Quán quân/Á quân được công bố."
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:items-end">

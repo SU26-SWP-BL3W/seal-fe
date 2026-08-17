@@ -1,33 +1,35 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { NavigationBar } from "./NavigationBar";
 import { Footer } from "./Footer";
 
 export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
+  const router = useRouter();
   const { user, activeRole } = useAuth();
   const roleName = activeRole?.RoleName || (user?.IsAdmin ? "Admin" : "Guest");
+
+  // Tài khoản tạm chưa đổi mật khẩu — chặn mọi trang khác, kể cả gõ thẳng URL.
+  const isChangePasswordRoute = pathname.includes("/change-password");
+  useEffect(() => {
+    if (user?.mustChangePassword && !isChangePasswordRoute) {
+      router.replace("/change-password");
+    }
+  }, [user?.mustChangePassword, isChangePasswordRoute, router]);
 
   const isCoordinatorRoute = pathname.includes("/coordinator");
   const isMentorRoute = pathname.includes("/mentor");
   const isJudgeRoute = pathname.includes("/judge");
   const isAdminRoute = pathname.includes("/admin");
-  const isEventDetailRoute = pathname.includes("/events/") && (pathname.split("/events/")[1] || "").length > 0;
-  const isEventInnerRoute =
-    isEventDetailRoute ||
-    pathname.includes("/my-team") ||
-    pathname.includes("/my-submissions") ||
-    pathname.includes("/appeals") ||
-    pathname.includes("/leaderboard");
 
   const hasVerticalSidebar =
     isCoordinatorRoute ||
     isMentorRoute ||
     isJudgeRoute ||
-    isAdminRoute ||
-    (isEventInnerRoute && roleName !== "Guest");
+    isAdminRoute;
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] relative">

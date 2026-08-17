@@ -35,7 +35,16 @@ export interface SubmissionScoreBreakdown {
 export interface TeamScoreBreakdown {
   teamId: string;
   teamName: string;
-  submissions: SubmissionScoreBreakdown[];
+  submissions?: SubmissionScoreBreakdown[];
+  trackName?: string;
+  totalScore?: number;
+  details?: Array<{
+    criteriaId?: string;
+    criteriaName?: string;
+    scoreValue?: number;
+    maxScore?: number;
+    weight?: number;
+  }>;
 }
 
 /** GET /Scores/team/{teamId}/breakdown — thành viên đội, EC hoặc Admin mới xem được. */
@@ -322,13 +331,27 @@ export function useGetScoresByEventRole(
 ) {
   return useQuery({
     queryKey: ["scoresByEventRole", eventRoleId, params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<Score>>(
+    queryFn: async (): Promise<Score[]> => {
+      const res = await apiClient.get<PagedResult<Score>>(
         `/Scores/event-role/${eventRoleId}`,
         { params },
       );
-      return data;
+      if (Array.isArray(res.data?.data)) return res.data.data;
+      if (Array.isArray(res.data)) return res.data as unknown as Score[];
+      return [];
     },
     enabled: !!eventRoleId,
   });
 }
+
+export async function fetchScoresByEventRole(eventRoleId: string): Promise<Score[]> {
+  try {
+    const res = await apiClient.get<PagedResult<Score>>(`/Scores/event-role/${eventRoleId}`);
+    if (Array.isArray(res.data?.data)) return res.data.data;
+    if (Array.isArray(res.data)) return res.data as unknown as Score[];
+    return [];
+  } catch {
+    return [];
+  }
+}
+

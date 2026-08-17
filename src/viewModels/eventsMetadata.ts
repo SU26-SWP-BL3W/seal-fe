@@ -11,6 +11,30 @@ export interface EventRoundItem {
   description: string;
 }
 
+/**
+ * Track KHÔNG phải field phẳng trên Event — Track nằm lồng trong Round.tracks[]
+ * (đã xác nhận qua DTO thật của BE: GET /Events/{id} trả rounds[].tracks[], không
+ * có event.tracks). Đọc thẳng ev.tracks luôn undefined → hiện "0 hạng mục" dù event
+ * có track thật. Gom tên track từ mọi Round, khử trùng lặp.
+ */
+export function extractTrackNames(ev: any): string[] {
+  const rounds = ev?.rounds || ev?.Rounds;
+  if (!Array.isArray(rounds)) return [];
+  const names = rounds.flatMap((r: any) => {
+    const tracks = r?.tracks || r?.Tracks;
+    return Array.isArray(tracks) ? tracks.map((t: any) => t?.trackName || t?.TrackName || "") : [];
+  });
+  return [...new Set(names.filter(Boolean))];
+}
+
+/** Giải thưởng thật từ BE — Value là text tự do (VD: "10.000.000 VNĐ", "Laptop + tiền mặt"), không phải số. */
+export interface PrizeItem {
+  id: string;
+  prizeName: string;
+  value: string;
+  quantity: number;
+}
+
 export interface EventItem {
   id: string;
   eventName: string;
@@ -26,7 +50,7 @@ export interface EventItem {
   teamCount: number;
   tracks: string[];
   rounds: EventRoundItem[];
-  totalPrizeVnd: number;
+  prizes: PrizeItem[];
 }
 
 export type TrackIconKey = "ai" | "web" | "security" | "iot" | "idea";
@@ -73,21 +97,42 @@ export interface EventCardData extends EventItem {
 }
 
 export const STATUS_PRIORITY: Record<EventDisplayStatus, number> = {
-  ongoing: 0,
-  registration_open: 1,
+  registration_open: 0,
+  ongoing: 1,
   upcoming: 2,
   ended: 3,
 };
 
+export function isTeamRegistrationOpen(
+  ev: { registrationStartDate?: string; registrationEndDate?: string; startDate?: string; endDate?: string },
+  now: number = Date.now()
+): boolean {
+  const regStart = ev.registrationStartDate ? new Date(ev.registrationStartDate).getTime() : (ev.startDate ? new Date(ev.startDate).getTime() : 0);
+  const regEnd = ev.registrationEndDate ? new Date(ev.registrationEndDate).getTime() : (ev.endDate ? new Date(ev.endDate).getTime() : 0);
+  if (!regEnd) return true;
+  return now >= regStart && now <= regEnd;
+}
+
+export function isTeamRegistrationExpired(
+  ev: { registrationEndDate?: string; endDate?: string },
+  now: number = Date.now()
+): boolean {
+  const regEnd = ev.registrationEndDate ? new Date(ev.registrationEndDate).getTime() : (ev.endDate ? new Date(ev.endDate).getTime() : 0);
+  if (!regEnd) return false;
+  return now > regEnd;
+}
+
 export function computeEventStatus(ev: EventItem, now: number): EventDisplayStatus {
   const start = new Date(ev.startDate).getTime();
   const end = new Date(ev.endDate).getTime();
-  const regEnd = new Date(ev.registrationEndDate).getTime();
+  const regStart = new Date(ev.registrationStartDate || ev.startDate).getTime();
+  const regEnd = new Date(ev.registrationEndDate || ev.endDate).getTime();
 
   if (now > end) return "ended";
-  if (now >= start) return "ongoing";
-  if (now <= regEnd) return "registration_open";
-  return "upcoming";
+  if (now >= regStart && now <= regEnd) return "registration_open";
+  if (now >= start && now <= end) return "ongoing";
+  if (now < regStart) return "upcoming";
+  return "ongoing";
 }
 
 export const STATUS_LABEL: Record<EventDisplayStatus, string> = {

@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 Document/
 src/.mcp.json
+stitch_extracted/
+*.zip
+BUSINESS_LOGIC.md

@@ -39,7 +39,7 @@ export function LandingWorkflowSteps() {
       <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-[var(--space-xl)]">
         <div className="flex flex-col items-center text-center gap-2">
           <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-primary)]">
-            {"// "}OPERATIONAL PROTOCOL
+            QUY TRÌNH THI ĐẤU
           </span>
 
           <h2 className="font-display text-2xl font-bold uppercase text-[var(--text-primary)] md:text-4xl">
