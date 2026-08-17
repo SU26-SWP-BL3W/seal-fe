@@ -25,6 +25,7 @@ import { Link } from "@/i18n/routing";
 import { useEvents } from "@/repositories/eventsRepository";
 import { usersRepository, useGetUsers } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
+import { useGetAllEventsCoordinators } from "@/repositories/staffRepository";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 import { AdminCoordinatorModal } from "@/components/domain/AdminCoordinatorModal";
 
@@ -53,6 +54,8 @@ export const AdminDashboardView: React.FC = () => {
   const { data: rawEvents = [], isLoading: isLoadingEvents, refetch: refetchEvents } = useEvents();
   const realEvents = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
   const displayEvents = realEvents;
+
+  const { data: ecMap = {}, refetch: refetchEcs } = useGetAllEventsCoordinators(displayEvents);
 
   const { data: rawUsersData } = useGetUsers({ pageSize: 500 });
   const usersList = rawUsersData?.data ?? [];
@@ -200,6 +203,18 @@ export const AdminDashboardView: React.FC = () => {
         <Card className="p-6 space-y-4 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
           <div className="flex items-center justify-between">
             <SectionTitle>DANH SÁCH TẤT CẢ SỰ KIỆN TRONG HỆ THỐNG ({displayEvents.length})</SectionTitle>
+            <button
+              type="button"
+              onClick={() => {
+                refetchEvents();
+                refetchEcs();
+              }}
+              className="text-xs font-mono text-[var(--text-muted)] hover:text-white flex items-center gap-1.5 px-3 py-1.5 border border-[var(--border-muted)] hover:border-[var(--accent-primary)] rounded bg-[var(--bg-base)] cursor-pointer transition-colors"
+              title="Tải lại danh sách sự kiện và điều phối viên"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Làm Mới</span>
+            </button>
           </div>
 
           {isLoadingEvents ? (
@@ -217,16 +232,16 @@ export const AdminDashboardView: React.FC = () => {
               <table className="w-full table-fixed min-w-[950px] text-left border-collapse">
                 <thead className="bg-[var(--bg-base)] border-b border-[var(--border-muted)]">
                   <tr>
-                    <th className="w-[25%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[24%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       TÊN SỰ KIỆN
                     </th>
-                    <th className="w-[13%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[12%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       MÙA GIẢI
                     </th>
                     <th className="w-[10%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       SỐ VÒNG
                     </th>
-                    <th className="w-[16%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[18%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       EVENT COORDINATOR
                     </th>
                     <th className="w-[10%] px-2 py-3.5 text-center font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
@@ -244,7 +259,12 @@ export const AdminDashboardView: React.FC = () => {
                     const season = ev.season || ev.Season || "Mùa Hè";
                     const year = ev.year || ev.Year || 2026;
                     const roundsCount = ev.rounds?.length ?? ev.Rounds?.length ?? 1;
-                    const ecInfo = ev.coordinatorEmail || ev.CoordinatorEmail || "Chưa gán EC";
+                    
+                    const assignedEcs = ecMap[id] || [];
+                    const fallbackEc = ev.coordinatorEmail || ev.CoordinatorEmail;
+                    const ecSummaryTitle = assignedEcs.length > 0
+                      ? assignedEcs.map((x) => x.name ? `${x.name} (${x.email})` : x.email).join(", ")
+                      : fallbackEc || "Chưa gán EC";
 
                     return (
                       <tr key={id} className="hover:bg-[var(--color-danger)]/5 transition-colors group">
@@ -264,9 +284,30 @@ export const AdminDashboardView: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          <span className="font-mono text-xs text-[var(--accent-coordinator)] font-bold truncate block" title={ecInfo}>
-                            {ecInfo}
-                          </span>
+                          {assignedEcs.length > 0 ? (
+                            <div className="flex items-center gap-1.5 max-w-full" title={ecSummaryTitle}>
+                              <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
+                              <span className="font-mono text-xs font-bold text-purple-300 truncate">
+                                {assignedEcs[0].name || assignedEcs[0].email}
+                              </span>
+                              {assignedEcs.length > 1 && (
+                                <span className="px-1.5 py-0.2 bg-purple-950/60 text-purple-300 border border-purple-500/40 rounded text-[9px] font-mono shrink-0 font-bold">
+                                  +{assignedEcs.length - 1}
+                                </span>
+                              )}
+                            </div>
+                          ) : fallbackEc ? (
+                            <div className="flex items-center gap-1.5 max-w-full" title={fallbackEc}>
+                              <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
+                              <span className="font-mono text-xs font-bold text-purple-300 truncate">
+                                {fallbackEc}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="font-mono text-xs text-zinc-500 italic">
+                              Chưa gán EC
+                            </span>
+                          )}
                         </td>
                         <td className="px-2 py-3.5 align-middle border-t border-[var(--border-muted)]/50 text-center">
                           <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border border-[var(--color-success)]/20 uppercase rounded whitespace-nowrap">
@@ -320,6 +361,7 @@ export const AdminDashboardView: React.FC = () => {
             onClose={() => setSelectedEvent(null)}
             onSuccess={() => {
               refetchEvents();
+              refetchEcs();
             }}
           />
         )}

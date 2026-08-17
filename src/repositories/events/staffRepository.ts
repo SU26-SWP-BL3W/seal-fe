@@ -38,6 +38,53 @@ export function useGetEventRoles(eventId?: string) {
   });
 }
 
+export function useGetAllEventsCoordinators(events: any[]) {
+  const eventIds = events.map((e: any) => e.id || e.Id || e.eventId || e.EventId).filter(Boolean);
+  const cacheKey = eventIds.join(",");
+
+  return useQuery({
+    queryKey: ["all-events-coordinators", cacheKey],
+    queryFn: async () => {
+      if (eventIds.length === 0) return {};
+
+      const map: Record<string, { email: string; name: string }[]> = {};
+
+      await Promise.allSettled(
+        eventIds.map(async (evId) => {
+          try {
+            const res = await apiClient.get<BaseResponse<EventRole[]>>("/EventRoles/event", {
+              params: { EventId: evId, PageSize: 500 },
+            });
+            const roles = res.data?.data ?? [];
+            const ecs = roles
+              .filter((r: any) => {
+                const roleName = r.roleName || r.RoleName;
+                return (
+                  roleName === "EventCoordinator" ||
+                  roleName === 0 ||
+                  (typeof roleName === "string" && roleName.toLowerCase().includes("coordinator"))
+                );
+              })
+              .map((r: any) => ({
+                email: r.user?.email || r.User?.Email || r.email || r.Email || "",
+                name: r.user?.fullName || r.User?.FullName || r.fullName || "",
+              }))
+              .filter((x: any) => Boolean(x.email || x.name));
+
+            map[evId] = ecs;
+          } catch (e) {
+            map[evId] = [];
+          }
+        })
+      );
+
+      return map;
+    },
+    enabled: eventIds.length > 0,
+    staleTime: 15000,
+  });
+}
+
 export interface InviteCoordinatorDirectPayload {
   eventId: string;
   email: string;
