@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useGetPrizesByEvent, useCreatePrize, saveStoredPrizesForEvent } from "@/repositories/results/prizesRepository";
+import { useGetPrizesByEvent, useCreatePrize, useUpdatePrize, useDeletePrize } from "@/repositories/results/prizesRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
 
@@ -13,7 +13,8 @@ export interface PrizeItemState {
   prizeName: string;
   quantity: number;
   value: string;
-  trackName: string;
+  /** "" = giải chung toàn sự kiện, không giới hạn hạng mục */
+  trackId: string;
 }
 
 export const CoordinatorPrizesView: React.FC = () => {
@@ -35,6 +36,8 @@ export const CoordinatorPrizesView: React.FC = () => {
   const { data: dbPrizes = [] } = useGetPrizesByEvent(activeEventId);
   const { data: dbTracks = [] } = useGetTracksByEvent(activeEventId);
   const createPrizeMutation = useCreatePrize();
+  const updatePrizeMutation = useUpdatePrize();
+  const deletePrizeMutation = useDeletePrize();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -50,9 +53,9 @@ export const CoordinatorPrizesView: React.FC = () => {
     return new Intl.NumberFormat("vi-VN").format(num);
   };
 
-  // Dynamic tracks list
+  // Dynamic tracks list ("" = giải chung toàn sự kiện, không gán hạng mục)
   const tracksList = [
-    { id: "all", name: "Toàn Sự Kiện (Chung)" },
+    { id: "", name: "Toàn Sự Kiện (Chung)" },
     ...dbTracks.map((t: any) => ({
       id: t.id || t.Id || t.trackId,
       name: t.trackName || t.Name || "Hạng mục",
@@ -64,58 +67,54 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   React.useEffect(() => {
     if (Array.isArray(dbPrizes) && dbPrizes.length > 0) {
-      // Deduplicate DB prizes by clean lowercased name to collapse all historic duplicates
-      const uniqueMap = new Map<string, any>();
-      dbPrizes.forEach((p: any) => {
-        const rawName = p.prizeName || p.PrizeName || p.name || "";
-        const cleanName = rawName.replace(/\s*\([^)]*\)/g, "").trim() || rawName;
-        const nameKey = cleanName.toLowerCase();
-        if (nameKey && !uniqueMap.has(nameKey)) {
-          uniqueMap.set(nameKey, { ...p, cleanName });
-        }
-      });
-      const uniqueList = Array.from(uniqueMap.values());
-
-      const mapped = uniqueList.map((p: any, idx: number) => {
+      const mapped = dbPrizes.map((p: any) => {
         const valStr = p.prizeValueVnd
           ? formatCurrencyNumber(String(p.prizeValueVnd))
           : (p.value ? formatCurrencyNumber(String(p.value)) : "1.000.000");
 
         return {
-          id: p.id || p.Id || `prz-${idx}`,
-          prizeName: p.cleanName || "Giải thưởng",
+          id: p.id || p.Id,
+          prizeName: p.prizeName || p.PrizeName || "Giải thưởng",
           quantity: p.quantity || p.Quantity || 1,
           value: valStr,
-          trackName: p.trackName || p.TrackName || "Toàn Sự Kiện (Chung)",
+          trackId: p.trackId || p.TrackId || "",
         };
       });
       setPrizes(mapped);
+    } else {
+      setPrizes([]);
     }
-  }, [activeEventId, dbPrizes.length]);
+  }, [activeEventId, dbPrizes]);
 
-  // Handle Add New Editable Prize Row
+  const isNewPrize = (id: string) => id.startsWith("new-");
+
+  // Handle Add New Editable Prize Row (chưa có trên BE cho tới khi bấm Lưu)
   const handleAddPrize = () => {
     const nextNum = prizes.length + 1;
     setPrizes((prev) => [
       ...prev,
       {
-        id: `prz-${Date.now()}`,
+        id: `new-${Date.now()}`,
         prizeName: `Giải Thưởng Mới ${nextNum}`,
         quantity: 1,
         value: "1.000.000",
-        trackName: "Toàn Sự Kiện (Chung)",
+        trackId: "",
       },
     ]);
   };
 
-  // Handle Remove Prize Row
-  const handleRemovePrize = (id: string) => {
+  // Handle Remove Prize Row — xoá thẳng trên BE nếu đã tồn tại, chỉ bỏ khỏi state nếu mới thêm chưa lưu
+  const handleRemovePrize = async (id: string) => {
     if (prizes.length <= 1) return;
-    const updated = prizes.filter((p) => p.id !== id);
-    setPrizes(updated);
-    if (activeEventId) {
-      saveStoredPrizesForEvent(activeEventId, updated);
+    if (!isNewPrize(id)) {
+      try {
+        await deletePrizeMutation.mutateAsync(id);
+      } catch (err: any) {
+        setErrorMessage(`Xóa giải thưởng thất bại: ${err?.response?.data?.message || err?.message}`);
+        return;
+      }
     }
+    setPrizes((prev) => prev.filter((p) => p.id !== id));
   };
 
   // Handle Update Prize Field
@@ -139,46 +138,44 @@ export const CoordinatorPrizesView: React.FC = () => {
     return acc + val * (p.quantity || 1);
   }, 0);
 
-  // Save All Prizes Configuration
+  // Save All Prizes Configuration — tạo mới giải chưa có id thật, cập nhật giải đã tồn tại
   const handleSaveConfig = async () => {
+    if (!activeEventId) return;
     setIsSubmitting(true);
     setSuccessMessage(null);
     setErrorMessage(null);
 
-    try {
-      if (activeEventId) {
-        // Clean prize names before saving (strip duplicate suffixes)
-        const cleanedPrizes = prizes.map(p => ({
-          ...p,
-          prizeName: p.prizeName.replace(/\s*\([^)]*\)/g, "").trim() || p.prizeName,
-        }));
+    const failures: string[] = [];
+    const nextPrizes = [...prizes];
 
-        // 1. Overwrite stored prize list to prevent geometric duplication (2 -> 4 -> 8)
-        saveStoredPrizesForEvent(activeEventId, cleanedPrizes);
-        setPrizes(cleanedPrizes);
-
-        // 2. Sync to API
-        for (const p of cleanedPrizes) {
-          try {
-            await createPrizeMutation.mutateAsync({
-              eventId: activeEventId,
-              payload: {
-                prizeName: `${p.prizeName} (${p.trackName})`,
-                value: p.value,
-                quantity: p.quantity,
-              },
-            });
-          } catch (e) {
-            // Ignore API network errors
-          }
+    for (let i = 0; i < nextPrizes.length; i++) {
+      const p = nextPrizes[i];
+      const payload = {
+        prizeName: p.prizeName,
+        value: p.value,
+        quantity: p.quantity,
+        trackId: p.trackId || null,
+      };
+      try {
+        if (isNewPrize(p.id)) {
+          const created = await createPrizeMutation.mutateAsync({ eventId: activeEventId, payload });
+          nextPrizes[i] = { ...p, id: created.id };
+        } else {
+          await updatePrizeMutation.mutateAsync({ id: p.id, payload });
         }
+      } catch (err: any) {
+        failures.push(`${p.prizeName}: ${err?.response?.data?.message || err?.message}`);
       }
-      setSuccessMessage(`✓ Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
-    } catch (err: any) {
-      setErrorMessage(`Lưu cấu hình thất bại: ${err?.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
+
+    setPrizes(nextPrizes);
+
+    if (failures.length > 0) {
+      setErrorMessage(`Một số giải thưởng lưu thất bại — ${failures.join("; ")}`);
+    } else {
+      setSuccessMessage(`✓ Đã ghi nhận thành công cấu hình ${nextPrizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
+    }
+    setIsSubmitting(false);
   };
 
   return (
@@ -334,12 +331,12 @@ export const CoordinatorPrizesView: React.FC = () => {
                       {/* Hạng mục áp dụng dropdown */}
                       <td className="p-3">
                         <select
-                          value={p.trackName}
-                          onChange={(e) => handleUpdatePrize(p.id, "trackName", e.target.value)}
+                          value={p.trackId}
+                          onChange={(e) => handleUpdatePrize(p.id, "trackId", e.target.value)}
                           className="w-full px-2 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-[11px] focus:outline-none focus:border-[#f59e0b]"
                         >
                           {tracksList.map((t) => (
-                            <option key={t.id} value={t.name}>
+                            <option key={t.id || "all"} value={t.id}>
                               {t.name}
                             </option>
                           ))}
@@ -393,9 +390,9 @@ export const CoordinatorPrizesView: React.FC = () => {
 
               <div className="space-y-3">
                 {tracksList.map((trk) => {
-                  const assignedPrizes = prizes.filter((p) => p.trackName === trk.name);
+                  const assignedPrizes = prizes.filter((p) => p.trackId === trk.id);
                   return (
-                    <div key={trk.id} className="p-3 bg-[#0a0e10] border border-[#263339] space-y-1.5">
+                    <div key={trk.id || "all"} className="p-3 bg-[#0a0e10] border border-[#263339] space-y-1.5">
                       <div className="font-bold text-[#e1e7ec] text-[11px] flex items-center justify-between">
                         <span>{trk.name}</span>
                         <span className="text-[#f59e0b]">({assignedPrizes.length} Giải)</span>

@@ -5,15 +5,6 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { User, EventRole } from "@/models/entities";
 import apiClient from "@/models/apiClient";
 
-export interface PresetAccount {
-  email: string;
-  roleName: "Admin" | "Coordinator" | "Judge" | "TeamLeader" | "Mentor" | "TeamMember";
-  fullName: string;
-  defaultRedirect: string;
-}
-
-export const PRESET_ACCOUNTS: PresetAccount[] = [];
-
 // Trang đích sau khi đăng nhập thật, theo vai trò backend trả về.
 // Chỉ trỏ route THẬT SỰ tồn tại (có page.tsx) — EventCoordinator/Mentor/Team* trước
 // đây trỏ vào route rỗng (404 khi đăng nhập thật, xác nhận sống với tài khoản
@@ -64,15 +55,12 @@ function pickPrimaryRole(rows: unknown[], userId: string): EventRole | null {
   };
 }
 
-export type DemoRoleType = "Admin" | "Coordinator" | "Judge" | "Mentor" | "TeamLeader" | "TeamMember";
-
 interface AuthContextType {
   user: User | null;
   activeRole: EventRole | null;
   isInitialized: boolean;
   loginWithCredentials: (email: string, password: string) => Promise<string>;
   loginWithGoogleCredential: (idToken: string) => Promise<string>;
-  loginAsDemoRole: (role: DemoRoleType) => void;
   logout: () => void;
 }
 
@@ -142,79 +130,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("activeRole");
       }
     }
-  };
-
-  const loginAsDemoRole = (role: DemoRoleType) => {
-    let mockUser: User;
-    let mockRole: EventRole | null = null;
-
-    if (role === "Admin") {
-      mockUser = {
-        id: "demo-admin-01",
-        userId: "demo-admin-01",
-        email: "admin.overwatch@seal.edu.vn",
-        fullName: "System Admin (Demo)",
-        isAdmin: true,
-        isStudent: false,
-        isApproved: true,
-        isFpt: true,
-        IsAdmin: true,
-      };
-    } else if (role === "Judge") {
-      mockUser = {
-        id: "demo-judge-01",
-        userId: "demo-judge-01",
-        email: "judge.lead@seal.edu.vn",
-        fullName: "Hội Đồng Giám Khảo (Demo)",
-        isAdmin: false,
-        isStudent: false,
-        isApproved: true,
-        isFpt: true,
-      };
-      // Không gán eventId/trackId giả — id không có thật trong DB sẽ làm mọi
-      // fetch theo sau (chi tiết event/track) trả 400. Vai trò demo chỉ đổi
-      // giao diện điều hướng, không giả lập được phân công thật.
-      mockRole = { id: "role-judge-01", roleName: "Judge" };
-    } else if (role === "Coordinator") {
-      mockUser = {
-        id: "demo-ec-01",
-        userId: "demo-ec-01",
-        email: "coordinator@seal.edu.vn",
-        fullName: "Trưởng Ban Tổ Chức (Demo)",
-        isAdmin: false,
-        isStudent: false,
-        isApproved: true,
-        isFpt: true,
-      };
-      mockRole = { id: "role-ec-01", roleName: "EventCoordinator" };
-    } else if (role === "Mentor") {
-      mockUser = {
-        id: "demo-mentor-01",
-        userId: "demo-mentor-01",
-        email: "mentor.tech@seal.edu.vn",
-        fullName: "Cố Vấn Chuyên Môn (Demo)",
-        isAdmin: false,
-        isStudent: false,
-        isApproved: true,
-        isFpt: true,
-      };
-      mockRole = { id: "role-mentor-01", roleName: "Mentor" };
-    } else {
-      mockUser = {
-        id: "demo-student-01",
-        userId: "demo-student-01",
-        email: "student.leader@fpt.edu.vn",
-        fullName: "Thí Sinh Trưởng Đội (Demo)",
-        isAdmin: false,
-        isStudent: true,
-        isApproved: true,
-        isFpt: true,
-        studentCode: "SE180001",
-      };
-      mockRole = { id: "role-lead-01", roleName: "TeamLeader" };
-    }
-
-    saveSession(mockUser, mockRole);
   };
 
   const loginWithCredentials = async (email: string, password: string): Promise<string> => {
@@ -426,7 +341,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isInitialized,
           loginWithCredentials,
           loginWithGoogleCredential,
-          loginAsDemoRole,
           logout,
         }}
       >

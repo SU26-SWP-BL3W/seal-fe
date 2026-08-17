@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 
 export function MySubmissionsView() {
-  const { user, loginAsDemoRole } = useAuth();
+  const { user } = useAuth();
   const { data: teamResponse, isLoading: isLoadingTeam } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
 
@@ -113,16 +113,14 @@ export function MySubmissionsView() {
           <div className="corner-accent-br" />
           <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
           <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Vui lòng đăng nhập hoặc bấm nút Demo bên dưới để kiểm tra giao diện bảng bài nộp:
+            Vui lòng đăng nhập để xem danh sách bài nộp của đội.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("TeamLeader")}
-              className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors"
-            >
-              [ 🎯 Xem Bằng Tài Khoản Thí Sinh Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors">
+                Đến Trang Đăng Nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>

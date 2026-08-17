@@ -51,6 +51,9 @@ export interface EventItem {
   tracks: string[];
   rounds: EventRoundItem[];
   prizes: PrizeItem[];
+  /** Tổng tiền thưởng (VND) — tính từ prizes[] khi map từ API. UI Discovery
+   *  dùng để hiển thị chip "giải thưởng" trên card (giữ nguyên UI FE cũ). */
+  totalPrizeVnd?: number;
 }
 
 export type TrackIconKey = "ai" | "web" | "security" | "iot" | "idea";
