@@ -38,10 +38,12 @@ export function MySubmissionsView() {
   const team = (teamResponse as any)?.team ?? teamResponse;
 
   const teamId = team?.id || team?.Id || "";
-  const isLeader = team?.leaderId === user?.id || team?.LeaderId === user?.id;
+  const isLeader = (team?.members || []).some(
+    (m: any) => m.userId === user?.id && m.roleName === "TeamLeader",
+  );
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
-  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions();
+  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
 
   // Edit Modal State
   const [editingSub, setEditingSub] = useState<SubmitResultListItem | null>(null);
