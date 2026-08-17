@@ -126,10 +126,10 @@ export function NavigationBar() {
               <NotificationBell align="left" />
             </div>
             <Link
-              href="/admin/dashboard"
+              href="/"
               className="font-mono text-[11px] text-[var(--text-muted)] hover:text-[var(--color-danger)] flex items-center gap-1.5 transition-colors"
             >
-              <ArrowLeft className="w-3 h-3" /> Quay lại Dashboard
+              <ArrowLeft className="w-3 h-3" /> Quay lại trang chủ
             </Link>
           </div>
 
