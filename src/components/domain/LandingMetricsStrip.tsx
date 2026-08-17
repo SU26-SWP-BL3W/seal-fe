@@ -6,8 +6,13 @@ export function LandingMetricsStrip() {
   const { data: events = [] } = useEvents();
 
   const totalEvents = events.length;
-  const totalPrize = events.reduce((sum: number, e: any) => sum + (e.totalPrizeVnd || e.TotalPrizeVnd || 0), 0);
-  const formattedPrize = totalPrize > 0 ? `${(totalPrize / 1_000_000).toFixed(0)} Triệu VNĐ` : "0 VNĐ";
+  // Prize.Value ở BE là text tự do (VD: "10.000.000 VNĐ"), không phải số nên không cộng
+  // tổng tiền chính xác được — đếm số giải thưởng đã cấu hình thay vì bịa 1 con số tiền.
+  const totalPrizeCount = events.reduce(
+    (sum: number, e: any) => sum + (Array.isArray(e.prizes) ? e.prizes.length : Array.isArray(e.Prizes) ? e.Prizes.length : 0),
+    0,
+  );
+  const formattedPrize = totalPrizeCount > 0 ? `${totalPrizeCount} Giải thưởng` : "Chưa công bố";
 
   const metrics = [
     {

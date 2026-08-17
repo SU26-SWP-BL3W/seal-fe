@@ -223,3 +223,14 @@ export function useUpdateStudentProfile() {
     },
   });
 }
+
+/** GET /api/fpt-mock/students/{studentCode} */
+export function useFptStudentVerification() {
+  return useMutation({
+    mutationFn: async (studentCode: string) => {
+      const res = await apiClient.get<any>(`/fpt-mock/students/${studentCode}`);
+      return res.data;
+    },
+  });
+}
+

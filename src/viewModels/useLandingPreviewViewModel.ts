@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { computeEventStatus, STATUS_PRIORITY, type EventCardData } from "./eventsMetadata";
+import { computeEventStatus, STATUS_PRIORITY, extractTrackNames, type EventCardData } from "./eventsMetadata";
 import { usePublicEvents } from "@/repositories/eventsRepository";
 
 /**
@@ -35,8 +35,16 @@ export function useLandingPreviewViewModel() {
         registrationEndDate: eRegEnd,
         maxTeams: Number(ev.maxTeams || ev.MaxTeams || 50),
         teamCount: Number(ev.teamCount || ev.TeamCount || 0),
-        totalPrizeVnd: Number(ev.totalPrizeVnd || ev.TotalPrizeVnd || 100000000),
-        tracks: Array.isArray(ev.tracks || ev.Tracks) ? (ev.tracks || ev.Tracks) : ["RBL Project"],
+        prizes: Array.isArray(ev.prizes || ev.Prizes)
+          ? (ev.prizes || ev.Prizes).map((p: any) => ({
+              id: p.id || p.Id || "",
+              prizeName: p.prizeName || p.PrizeName || "",
+              value: p.value || p.Value || "",
+              quantity: Number(p.quantity ?? p.Quantity ?? 1),
+            }))
+          : [],
+        tracks: extractTrackNames(ev),
+        rounds: Array.isArray(ev.rounds || ev.Rounds) ? (ev.rounds || ev.Rounds) : [],
         status: "upcoming",
       };
     });
@@ -58,7 +66,7 @@ export function useLandingPreviewViewModel() {
   const featuredEvents = useMemo(() => {
     return [...allEvents]
       .filter((e) => e.id !== latestEvent?.id)
-      .sort((a, b) => b.totalPrizeVnd - a.totalPrizeVnd)
+      .sort((a, b) => b.teamCount - a.teamCount || new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
       .slice(0, 3);
   }, [allEvents, latestEvent]);
 

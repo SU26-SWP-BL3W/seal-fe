@@ -69,7 +69,7 @@ export function AppealsView() {
   const assignedAppeals = useGetAssignedAppeals(isEC ? eventRoleId || undefined : undefined);
 
   const { data: appealsRaw, isLoading, refetch } = isEC ? assignedAppeals : teamAppeals;
-  const appeals: Appeal[] = appealsRaw ?? [];
+  const appeals: Appeal[] = Array.isArray(appealsRaw) ? appealsRaw : ((appealsRaw as any)?.data ?? []);
 
   const { mutateAsync: createAppeal, isPending: isSubmitting } = useCreateAppeal();
   const { mutateAsync: respondAppeal, isPending: isResponding } = useRespondAppeal();
@@ -93,7 +93,7 @@ export function AppealsView() {
     if (!detailModal || !responseText.trim()) return;
     setRespondError("");
     try {
-      await respondAppeal({ appealId: detailModal.id, status, response: responseText.trim() });
+      await respondAppeal({ id: detailModal.id, appealId: detailModal.id, status, response: responseText.trim(), payload: { status, response: responseText.trim() } } as any);
       setDetailModal(null);
       setResponseText("");
       refetch();
@@ -221,7 +221,6 @@ export function AppealsView() {
             <div className="p-8 text-center text-xs font-mono text-[var(--text-muted)]">Đang tải danh sách đơn phúc khảo...</div>
           ) : appeals.length === 0 ? (
             <ApiMissingDataBadge
-              endpoint={isEC ? "GET /api/Appeals/assigned/{eventRoleId}" : "GET /api/Appeals/team/{teamId}"}
               title="CHƯA CÓ ĐƠN PHÚC KHẢO"
               message="Chưa có bản ghi đơn phúc khảo nào phù hợp."
             />

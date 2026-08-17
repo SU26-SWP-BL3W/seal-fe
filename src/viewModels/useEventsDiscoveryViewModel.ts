@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   computeEventStatus,
   STATUS_PRIORITY,
+  extractTrackNames,
   type EventDisplayStatus,
   type EventCardData,
 } from "./eventsMetadata";
@@ -19,7 +20,6 @@ export type EventSortOption = "relevant" | "soonest" | "newest" | "most_teams";
 export interface TrackSummary {
   track: string;
   eventCount: number;
-  totalPrizeVnd: number;
 }
 
 export function useEventsDiscoveryViewModel() {
@@ -78,8 +78,16 @@ export function useEventsDiscoveryViewModel() {
         registrationEndDate: eRegEnd,
         maxTeams: Number(ev.maxTeams || ev.MaxTeams || 50),
         teamCount: Number(ev.teamCount || ev.TeamCount || 0),
-        totalPrizeVnd: Number(ev.totalPrizeVnd || ev.TotalPrizeVnd || 100000000),
-        tracks: Array.isArray(ev.tracks || ev.Tracks) ? (ev.tracks || ev.Tracks) : ["RBL Project"],
+        prizes: Array.isArray(ev.prizes || ev.Prizes)
+          ? (ev.prizes || ev.Prizes).map((p: any) => ({
+              id: p.id || p.Id || "",
+              prizeName: p.prizeName || p.PrizeName || "",
+              value: p.value || p.Value || "",
+              quantity: Number(p.quantity ?? p.Quantity ?? 1),
+            }))
+          : [],
+        tracks: extractTrackNames(ev),
+        rounds: Array.isArray(ev.rounds || ev.Rounds) ? (ev.rounds || ev.Rounds) : [],
         status: "upcoming",
       };
     });
@@ -126,8 +134,13 @@ export function useEventsDiscoveryViewModel() {
         break;
       case "relevant":
       default:
-        // Ưu tiên: đang diễn ra > đang mở đăng ký > sắp diễn ra > đã kết thúc.
-        sorted.sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]);
+        // Ưu tiên cao nhất: Đang mở đăng ký (0) > Đang diễn ra (1) > Sắp diễn ra (2) > Đã kết thúc (3).
+        sorted.sort((a, b) => {
+          const pA = STATUS_PRIORITY[a.status] ?? 99;
+          const pB = STATUS_PRIORITY[b.status] ?? 99;
+          if (pA !== pB) return pA - pB;
+          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        });
     }
     return sorted;
   }, [allEvents, search, statusFilter, sort, trackFilter, myEventIds]);
@@ -141,15 +154,12 @@ export function useEventsDiscoveryViewModel() {
         const existing = byTrack.get(track);
         if (existing) {
           existing.eventCount += 1;
-          existing.totalPrizeVnd += ev.totalPrizeVnd;
         } else {
-          byTrack.set(track, { track, eventCount: 1, totalPrizeVnd: ev.totalPrizeVnd });
+          byTrack.set(track, { track, eventCount: 1 });
         }
       }
     }
-    return Array.from(byTrack.values()).sort(
-      (a, b) => b.eventCount - a.eventCount || b.totalPrizeVnd - a.totalPrizeVnd,
-    );
+    return Array.from(byTrack.values()).sort((a, b) => b.eventCount - a.eventCount);
   }, [allEvents]);
 
   return {
