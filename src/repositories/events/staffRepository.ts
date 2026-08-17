@@ -26,7 +26,7 @@ export function useGetEventRoles(eventId?: string) {
       if (!eventId) return [];
       try {
         const res = await apiClient.get<BaseResponse<EventRole[]>>("/EventRoles/event", {
-          params: { EventId: eventId },
+          params: { EventId: eventId, PageSize: 500 },
         });
         return res.data?.data ?? [];
       } catch (err: any) {
