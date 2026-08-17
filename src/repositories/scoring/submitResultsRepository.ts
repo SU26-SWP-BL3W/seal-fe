@@ -168,6 +168,8 @@ export interface SubmitResultListItem {
   RoundId?: string;
   teamName?: string | null;
   TeamName?: string | null;
+  isTeamDisqualified?: boolean;
+  IsTeamDisqualified?: boolean;
   displayCode?: string | null;
   submissionUrl?: string;
   SubmissionUrl?: string;

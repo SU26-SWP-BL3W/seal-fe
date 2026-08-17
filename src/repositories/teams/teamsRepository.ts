@@ -521,17 +521,6 @@ export function useGetTeamsByEvent(eventId?: string, status?: string) {
   });
 }
 
-export function useGetTeamProgress(teamId?: string) {
-  return useQuery({
-    queryKey: ["team-progress", teamId],
-    queryFn: async () => {
-      const res = await apiClient.get<any>(`/Teams/${teamId}/progress`);
-      return res.data;
-    },
-    enabled: !!teamId,
-  });
-}
-
 export function useGetTeamsByTrack(trackId?: string) {
   return useQuery({
     queryKey: ["teams-by-track", trackId],

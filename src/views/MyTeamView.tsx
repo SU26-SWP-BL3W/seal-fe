@@ -11,6 +11,7 @@ import {
   useMyTeam,
   useTeamInvitations,
   useTransferLeadership,
+  useRemoveTeamMember,
 } from "@/repositories/teamsRepository";
 import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
 import {
@@ -99,6 +100,8 @@ export function MyTeamView() {
     }));
 
   const { mutateAsync: inviteMember, isPending: isInviting } = useInviteMember();
+  const { mutateAsync: kickMember, isPending: isKicking } = useRemoveTeamMember();
+  const [kickTarget, setKickTarget] = useState<{ id: string; name: string } | null>(null);
   const { mutateAsync: cancelInvitation, isPending: isCancelling } = useCancelInvitation();
   const { mutateAsync: confirmRegistration, isPending: isRegistering } = useConfirmRegistration();
   const { mutateAsync: transferLeadership, isPending: isTransferring } = useTransferLeadership();
@@ -210,6 +213,10 @@ export function MyTeamView() {
                 setDialogError("");
                 setTransferTarget({ id, name });
               }}
+              onKick={(id, name) => {
+                setDialogError("");
+                setKickTarget({ id, name });
+              }}
             />
           </div>
 
@@ -299,6 +306,25 @@ export function MyTeamView() {
         error={dialogError || undefined}
         onConfirm={() => runAction(() => leaveTeam(team.id), "Không rời đội được.")}
         onCancel={closeDialogs}
+      />
+
+      <ConfirmDialog
+        open={Boolean(kickTarget)}
+        eyebrow="Xóa thành viên"
+        title={`Xóa ${kickTarget?.name ?? ""} khỏi đội?`}
+        description="Thành viên sẽ mất quyền truy cập đội và phải được mời lại nếu muốn tham gia lại."
+        confirmLabel="Xóa khỏi đội"
+        cancelLabel="Hủy"
+        destructive
+        pending={isKicking}
+        error={dialogError || undefined}
+        onConfirm={() =>
+          runAction(
+            () => kickMember({ teamId: team.id, userId: kickTarget!.id }),
+            "Không xóa được thành viên.",
+          )
+        }
+        onCancel={() => { setKickTarget(null); setDialogError(""); }}
       />
     </main>
   );

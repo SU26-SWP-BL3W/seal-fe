@@ -7,6 +7,7 @@ import {
   useRejectTeamRegistration,
   useGetTeamsByEvent,
   useDisqualifyTeam,
+  useGetTeamById,
 } from "@/repositories/teamsRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { Button, Card, Badge } from "@/components/ui";
@@ -52,13 +53,19 @@ export function CoordinatorTeamsView() {
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
   const { mutateAsync: disqualifyTeam, isPending: isDisqualifying } = useDisqualifyTeam();
 
+  // TeamListItemModel (danh sách) không có field members — phải gọi riêng GET /Teams/{id}
+  // để lấy roster thật khi mở modal chi tiết.
+  const detailTeamId = detailModal ? pickId(detailModal) : undefined;
+  const { data: teamDetail } = useGetTeamById(detailTeamId);
+  const detailMembers = teamDetail?.members ?? [];
+
   const handleApprove = async (teamId: string) => {
     try {
       await approveTeam(teamId);
       setDetailModal(null);
       refetch();
-    } catch {
-      alert("Đã duyệt đội thi thành công! Đội thi đã ở trạng thái REGISTERED.");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Duyệt đội thi thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -68,13 +75,12 @@ export function CoordinatorTeamsView() {
 
     try {
       await rejectTeam({ teamId: rejectModal.teamId, reason: rejectReason.trim() });
-      refetch();
-    } catch {
-      alert("Đã từ chối đăng ký đội thi.");
-    } finally {
       setRejectModal(null);
       setDetailModal(null);
       setRejectReason("");
+      refetch();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Từ chối đăng ký thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -83,12 +89,11 @@ export function CoordinatorTeamsView() {
     if (!disqualifyReason.trim()) return;
     try {
       await disqualifyTeam({ teamId: disqualifyModal.teamId, reason: disqualifyReason.trim() });
-      refetchRegistered();
-    } catch {
-      alert("Đã loại đội khỏi cuộc thi.");
-    } finally {
       setDisqualifyModal(null);
       setDisqualifyReason("");
+      refetchRegistered();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Loại đội thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -161,7 +166,6 @@ export function CoordinatorTeamsView() {
             {pendingTeams.map((team: any) => {
               const teamId = team.id || team.TeamId || "";
               const teamName = team.teamName || team.TeamName || "Đội thi";
-              const members = team.members ?? [];
 
               return (
                 <Card
@@ -179,26 +183,11 @@ export function CoordinatorTeamsView() {
                       </div>
 
                       <p className="text-xs text-[var(--text-muted)] font-mono mt-1">
-                        Sĩ số: <strong className="text-[var(--text-primary)]">{members.length} thành viên</strong> · Mô tả: {team.description || "Chưa có mô tả chi tiết."}
+                        Mô tả: {team.description || "Chưa có mô tả chi tiết."}
                       </p>
-
-                      {/* Roster preview */}
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {members.map((m: any, idx: number) => (
-                          <div
-                            key={m.userId || idx}
-                            className="px-2.5 py-1 bg-[var(--bg-base)] border border-[var(--border-muted)] text-xs font-mono flex items-center gap-1.5"
-                          >
-                            {m.roleName === "TeamLeader" && (
-                              <Crown className="w-3 h-3 text-[var(--accent-team)]" />
-                            )}
-                            <span>{m.fullName}</span>
-                            <Badge tone={m.isApproved ? "success" : "danger"} className="text-[9px] px-1">
-                              {m.isApproved ? "PROFILE OK" : "CHƯA DUYỆT THẺ"}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono mt-2 italic">
+                        Bấm &quot;Soi chi tiết đội thi&quot; để xem danh sách thành viên và trạng thái hồ sơ.
+                      </p>
                     </div>
 
                     {/* Actions */}
@@ -301,15 +290,15 @@ export function CoordinatorTeamsView() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-[var(--text-primary)] uppercase font-bold flex items-center gap-2">
                     <Users className="w-4 h-4 text-[var(--accent-team)]" />
-                    Danh sách thành viên ({detailModal.members?.length || 0} / 5 người):
+                    Danh sách thành viên ({detailMembers.length} / 5 người):
                   </span>
-                  <span className="text-[10px] text-[var(--color-success)] font-bold">
-                    ✓ Sĩ số hợp lệ (3 - 5 người)
+                  <span className={`text-[10px] font-bold ${detailMembers.length >= 3 && detailMembers.length <= 5 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}`}>
+                    {detailMembers.length >= 3 && detailMembers.length <= 5 ? "✓ Sĩ số hợp lệ (3 - 5 người)" : "✗ Sĩ số không hợp lệ"}
                   </span>
                 </div>
 
                 <div className="space-y-2">
-                  {detailModal.members?.map((m: any, idx: number) => (
+                  {detailMembers.map((m: any, idx: number) => (
                     <div
                       key={m.userId || idx}
                       className="p-3 bg-[var(--bg-base)] border border-[var(--border-muted)] flex items-center justify-between hud-clipped"

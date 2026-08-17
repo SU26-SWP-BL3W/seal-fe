@@ -44,7 +44,7 @@ export interface SubmissionItem {
   submissionUrl: string;
   description: string;
   isActive: boolean;
-  isEliminated: boolean;
+  isEliminated?: boolean;
   eliminatedReason?: string;
   createdTime: string;
 }

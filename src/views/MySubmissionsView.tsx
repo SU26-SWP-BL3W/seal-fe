@@ -215,7 +215,7 @@ export function MySubmissionsView() {
                     <tbody className="divide-y divide-[#3c494d]/40">
                       {submissions.map((sub, idx) => {
                         const id = sub.id || sub.Id || `sub-${idx}`;
-                        const isEliminated = (sub as any).isEliminated || (sub as any).IsEliminated;
+                        const isEliminated = (sub as any).isTeamDisqualified || (sub as any).IsTeamDisqualified;
                         const isActive = sub.isActive ?? sub.IsActive ?? true;
 
                         return (
