@@ -12,14 +12,11 @@ import {
   Mail,
   Trash2,
   Shield,
-  Clock,
-  Sparkles,
   Info,
   RefreshCw,
-  Send,
   UserPlus,
 } from "lucide-react";
-import { Button, Card, Input } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { useGetEventRoles, staffRepository } from "@/repositories/staffRepository";
 import type { User, EventRole } from "@/models/entities";
 
