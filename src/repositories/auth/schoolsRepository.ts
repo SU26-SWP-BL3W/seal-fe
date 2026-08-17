@@ -41,3 +41,32 @@ export function useCreateSchool() {
     },
   });
 }
+
+/** PUT /api/Schools/{id} — Cập nhật trường học (Admin) */
+export function useUpdateSchool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { schoolName: string; address?: string } }) => {
+      const res = await apiClient.put(`/Schools/${id}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schools"] });
+    },
+  });
+}
+
+/** DELETE /api/Schools/{id} — Xóa trường học (Admin) */
+export function useDeleteSchool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiClient.delete(`/Schools/${id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schools"] });
+    },
+  });
+}
+
