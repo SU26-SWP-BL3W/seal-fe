@@ -261,7 +261,7 @@ export const AdminCreateEventView: React.FC = () => {
                     onEndChange={(v) => setForm((prev) => ({ ...prev, registrationEndDate: v }))}
                     startLabel="Mở cổng"
                     endLabel="Đóng cổng"
-                    hint="Chấm xanh trên lịch = ngày Khai mạc/Bế mạc sự kiện đã chọn ở trên, để cân đối mốc đăng ký cho hợp lý."
+                    hint="Cân đối mốc đăng ký so với thời gian diễn ra sự kiện đã chọn ở trên."
                     referenceRange={{
                       start: form.startDate,
                       end: form.endDate,

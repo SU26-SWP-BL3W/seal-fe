@@ -18,7 +18,7 @@ export const CreateEventWizardView: React.FC = () => {
 
   // Streamlined 5-Step Event Config Wizard (Staff Assignment managed in dedicated view C8)
   const steps = [
-    { number: 1, label: "Info (Admin)", icon: Shield },
+    { number: 1, label: "Thông Tin", icon: Shield },
     { number: 2, label: "Vòng Thi", icon: Layers },
     { number: 3, label: "Hạng Mục", icon: Target },
     { number: 4, label: "Tiêu Chí", icon: Sliders },
