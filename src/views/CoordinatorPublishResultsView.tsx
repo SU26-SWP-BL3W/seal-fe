@@ -8,8 +8,10 @@ import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
 import { Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle2, Award, ChevronDown, Filter, Layers } from "lucide-react";
+import { useToast } from "@/providers/ToastProvider";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
+  const toast = useToast();
   const params = useParams();
 
   const { data: eventsList = [] } = useMyEvents();
@@ -87,13 +89,16 @@ export const CoordinatorPublishResultsView: React.FC = () => {
         });
       }
       const prizeObj = availablePrizesList.find((p) => p.id === prizeId);
-      setSuccessMessage(
+      const okMsg =
         prizeId !== "none"
           ? `Đã trao ${prizeObj?.name || 'Giải thưởng'} cho Đội "${teamName}"!`
-          : `Đã hủy gán giải thưởng cho Đội "${teamName}".`
-      );
+          : `Đã hủy gán giải thưởng cho Đội "${teamName}".`;
+      setSuccessMessage(okMsg);
+      toast.success(okMsg);
     } catch (err: any) {
-      setErrorMessage(`Gán giải thưởng thất bại: ${err?.message}`);
+      const errMsg = `Gán giải thưởng thất bại: ${err?.message}`;
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -107,10 +112,14 @@ export const CoordinatorPublishResultsView: React.FC = () => {
       if (!selectedRoundId.startsWith("round-")) {
         await finalResultsRepository.calculateRoundResults(selectedRoundId, topN);
       }
-      setSuccessMessage(`Đã tự động tính toán xếp hạng điểm số cho Vòng thi (Top ${topN}).`);
+      const okMsg = `Đã tự động tính toán xếp hạng điểm số cho Vòng thi (Top ${topN}).`;
+      setSuccessMessage(okMsg);
+      toast.success(okMsg);
       await refetch();
     } catch (err: any) {
-      setErrorMessage(`Tính điểm thất bại: ${err?.response?.data?.message || err?.message}`);
+      const errMsg = `Tính điểm thất bại: ${err?.response?.data?.message || err?.message}`;
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -126,14 +135,16 @@ export const CoordinatorPublishResultsView: React.FC = () => {
         await finalResultsRepository.setPublishStatus(selectedRoundId, nextStatus);
       }
       setIsPublishedState(nextStatus);
-      setSuccessMessage(
-        nextStatus
-          ? "Đã công bố công khai bảng kết quả cho thí sinh và Bảng Vàng Danh Dự!"
-          : "Đã ẩn bảng kết quả về chế độ bản nháp an toàn."
-      );
+      const okMsg = nextStatus
+        ? "Đã công bố công khai bảng kết quả cho thí sinh và Bảng Vàng Danh Dự!"
+        : "Đã ẩn bảng kết quả về chế độ bản nháp an toàn.";
+      setSuccessMessage(okMsg);
+      toast.success(okMsg);
       await refetch();
     } catch (err: any) {
-      setErrorMessage(`Đổi trạng thái thất bại: ${err?.response?.data?.message || err?.message}`);
+      const errMsg = `Đổi trạng thái thất bại: ${err?.response?.data?.message || err?.message}`;
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }

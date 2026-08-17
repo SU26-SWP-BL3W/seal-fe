@@ -1,8 +1,7 @@
-'use client';
-
 import { useState, FormEvent } from 'react';
 import { LogIn, Mail, ArrowLeft, Check } from 'lucide-react';
 import { Link } from '@/i18n/routing';
+import { useToast } from '@/providers/ToastProvider';
 
 export interface ForgotPasswordFormProps {
   onSubmit?: (email: string) => Promise<void>;
@@ -15,6 +14,7 @@ export function ForgotPasswordForm({
   onSubmit, 
   isLoading = false
 }: ForgotPasswordFormProps) {
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -32,14 +32,18 @@ export function ForgotPasswordForm({
 
     try {
       if (!email) {
-        setError('Vui lòng nhập email');
+        const msg = 'Vui lòng nhập email';
+        setError(msg);
+        toast.error(msg);
         setLocalIsLoading(false);
         return;
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        setError('Email không hợp lệ');
+        const msg = 'Email không hợp lệ';
+        setError(msg);
+        toast.error(msg);
         setLocalIsLoading(false);
         return;
       }
@@ -48,9 +52,12 @@ export function ForgotPasswordForm({
         await onSubmit(email);
       }
 
+      toast.success('Đã gửi mã xác thực tới email của bạn!');
       setStep('verify');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      const msg = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLocalIsLoading(false);
     }

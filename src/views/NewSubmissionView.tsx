@@ -14,6 +14,7 @@ import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import { ApiMissingDataBadge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 
 import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
 
@@ -42,6 +43,7 @@ function TrackSubmissionCard({
   teamId: string;
   roundId: string;
 }) {
+  const toast = useToast();
   const deliverables: DeliverableItem[] = [
     { id: "github", type: "github", label: "GitHub / GitLab repo", placeholder: "https://github.com/org/repo", required: true, trackId: track.id },
     { id: "deployed_url", type: "deployed_url", label: "Live demo", placeholder: "https://demo.example.com", required: true, trackId: track.id },
@@ -145,9 +147,13 @@ function TrackSubmissionCard({
       };
       setIsSaved(true);
       setFormError("");
+      const okMsg = `Đã lưu thành công bài nộp cho hạng mục ${track.trackName}!`;
+      toast.success(okMsg);
       onSubmitSuccess(track.id, updatedItem);
     } catch (err) {
-      setFormError(readApiError(err));
+      const errMsg = readApiError(err);
+      setFormError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
