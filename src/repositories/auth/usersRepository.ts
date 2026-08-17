@@ -15,6 +15,24 @@ export function useCurrentUser() {
   });
 }
 
+/** GET /api/Users/{id} — Lấy chi tiết người dùng theo ID */
+export function useGetUserById(userId?: string | null) {
+  return useQuery({
+    queryKey: ["user", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      try {
+        const res = await apiClient.get<BaseResponse<User>>(`/Users/${userId}`);
+        return (res.data as any)?.data ?? res.data;
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Users/" + userId + " error:", err?.message);
+        return null;
+      }
+    },
+    enabled: !!userId,
+  });
+}
+
 // ─── User Profile ─────────────────────────────────────────────
 
 export function useUpdateUserProfile() {
