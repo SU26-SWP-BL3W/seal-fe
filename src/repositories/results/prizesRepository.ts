@@ -9,6 +9,8 @@ import apiClient from "@/models/apiClient";
 export interface Prize {
   id: string;
   eventId: string;
+  /** Hạng mục (Track) áp dụng. null/undefined = giải chung toàn sự kiện. */
+  trackId?: string | null;
   prizeName: string;
   /** Giá trị giải — kiểu string (vd "10,000,000 VNĐ" hoặc mô tả hiện vật), không phải số tiền thuần. */
   value: string;
@@ -28,6 +30,7 @@ export function useGetPrizesByEvent(eventId: string | undefined) {
 }
 
 export interface CreatePrizePayload {
+  trackId?: string | null;
   prizeName: string;
   value: string;
   quantity: number;
