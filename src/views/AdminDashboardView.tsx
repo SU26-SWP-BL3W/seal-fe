@@ -65,6 +65,11 @@ export const AdminDashboardView: React.FC = () => {
     const role = (u.roleName || u.RoleName || "").toLowerCase();
     const isAdmin = Boolean(u.isAdmin || u.IsAdmin || em.includes("admin") || role.includes("admin"));
     if (isAdmin) return false;
+
+    // Sinh viên / Thí sinh không được phép gán làm EC
+    const isStudent = Boolean(u.isStudent || u.IsStudent || u.studentCode || u.StudentCode);
+    if (isStudent) return false;
+
     return (
       role.includes("coordinator") ||
       role.includes("coodinator") ||
@@ -74,13 +79,6 @@ export const AdminDashboardView: React.FC = () => {
       em.includes("ec@") ||
       em.startsWith("ec")
     );
-  });
-
-  const otherUsers = usersList.filter((u: any) => {
-    const isEc = availableCoordinators.some((c: any) => (c.id || c.Id) === (u.id || u.Id));
-    const em = (u.email || u.Email || "").toLowerCase();
-    const isAdmin = Boolean(u.isAdmin || u.IsAdmin || em.includes("admin"));
-    return !isEc && !isAdmin;
   });
 
   const ecCount = availableCoordinators.length;
@@ -104,42 +102,65 @@ export const AdminDashboardView: React.FC = () => {
     setIsSubmitting(true);
     const eventId = selectedEvent.id || selectedEvent.Id || selectedEvent.eventId || selectedEvent.EventId || "";
     const eventName = selectedEvent.eventName || selectedEvent.EventName || "Sự kiện";
-
     const targetEmail = ecEmail.trim().toLowerCase();
-    let foundUser: User | null | undefined = usersList.find(
+
+    // 1. Nếu là tài khoản Điều Phối Viên đã có sẵn trong danh sách -> Gán vai trò trực tiếp
+    const existingEcUser: User | undefined = availableCoordinators.find(
       (u: any) => (u.email || u.Email || "").toLowerCase() === targetEmail
     );
-    if (!foundUser) {
-      foundUser = await usersRepository.findUserByEmail(targetEmail);
-    }
-    if (!foundUser) {
-      setIsSubmitting(false);
-      alert(`Không tìm thấy tài khoản người dùng với email "${ecEmail}". Vui lòng kiểm tra lại chính tả.`);
-      return;
+
+    if (existingEcUser) {
+      const realUserId = existingEcUser.id || (existingEcUser as any).Id || (existingEcUser as any).userId || (existingEcUser as any).UserId;
+      try {
+        const res = await staffRepository.assignRoleDirectly({
+          userId: realUserId,
+          eventId: eventId,
+          roleName: "EventCoordinator",
+        });
+        setIsSubmitting(false);
+
+        if (res && res.success !== false) {
+          setAssignSuccessMessage(`Đã phân công ${existingEcUser.fullName || existingEcUser.email} làm Điều Phối Viên cho sự kiện "${eventName}" thành công!`);
+          refetchEvents();
+          setTimeout(() => {
+            setSelectedEvent(null);
+            setAssignSuccessMessage(null);
+          }, 2000);
+        }
+        return;
+      } catch (err: any) {
+        setIsSubmitting(false);
+        const msg = err.response?.data?.message || err.message || "Phân công vai trò thất bại. Vui lòng kiểm tra lại.";
+        alert(`Lỗi phân công EC: ${msg}`);
+        return;
+      }
     }
 
-    const realUserId = foundUser.id || (foundUser as any).Id || (foundUser as any).userId || (foundUser as any).UserId;
-
+    // 2. Nếu là Email mới (hoặc chưa có tài khoản EC) -> Gửi lời mời qua Email + Tạo tài khoản tạm (IsTemporary)
     try {
-      const res = await staffRepository.assignRoleDirectly({
-        userId: realUserId,
+      const res = await staffRepository.inviteCoordinator({
         eventId: eventId,
-        roleName: "EventCoordinator",
+        email: targetEmail,
+        fullName: targetEmail.split("@")[0],
+        notes: `Mời làm Event Coordinator cho sự kiện ${eventName}`,
       });
       setIsSubmitting(false);
 
-      if (res && res.success !== false) {
-        setAssignSuccessMessage(`Đã phân công ${ecEmail} làm Event Coordinator cho sự kiện "${eventName}" thành công!`);
+      if (res && (res.success !== false || (res as any).invitationId || (res as any).id)) {
+        setAssignSuccessMessage(`Đã gửi thư mời và tạo tài khoản tạm cho ${targetEmail} thành công!`);
         refetchEvents();
         setTimeout(() => {
           setSelectedEvent(null);
           setAssignSuccessMessage(null);
-        }, 2000);
+        }, 2500);
+      } else {
+        const msg = (res as any)?.message || "Gửi lời mời thất bại. Vui lòng kiểm tra lại địa chỉ email.";
+        alert(`Thông báo: ${msg}`);
       }
     } catch (err: any) {
       setIsSubmitting(false);
-      const msg = err.response?.data?.message || err.message || "Phân công vai trò thất bại. Vui lòng kiểm tra quyền Admin.";
-      alert(`Lỗi phân công EC: ${msg}`);
+      const msg = err.response?.data?.message || err.message || "Gửi thư mời thất bại. Vui lòng kiểm tra lại.";
+      alert(`Lỗi mời EC: ${msg}`);
     }
   };
   return (
@@ -412,43 +433,26 @@ export const AdminDashboardView: React.FC = () => {
               ) : (
                 <form onSubmit={handleAssignEc} className="space-y-4 pt-1">
                   {/* Chọn nhanh từ danh sách Coordinator trong hệ thống */}
-                  {(availableCoordinators.length > 0 || otherUsers.length > 0) && (
+                  {availableCoordinators.length > 0 && (
                     <div className="space-y-1.5">
                       <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                        Chọn Nhanh Từ Danh Sách Người Dùng Hệ Thống
+                        Chọn Nhanh Điều Phối Viên Đã Đăng Ký (Coordinator)
                       </label>
                       <select
                         value={ecEmail}
                         onChange={(e) => setEcEmail(e.target.value)}
                         className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
                       >
-                        <option value="">— Chọn tài khoản từ danh sách —</option>
-                        {availableCoordinators.length > 0 && (
-                          <optgroup label="⭐ Điều Phối Viên Đã Đăng Ký (Coordinator)">
-                            {availableCoordinators.map((c: any) => {
-                              const email = c.email || c.Email;
-                              const name = c.fullName || c.FullName || email;
-                              return (
-                                <option key={c.id || c.Id || email} value={email}>
-                                  {name} ({email})
-                                </option>
-                              );
-                            })}
-                          </optgroup>
-                        )}
-                        {otherUsers.length > 0 && (
-                          <optgroup label="👥 Tất Cả Người Dùng & Cán Bộ Khác">
-                            {otherUsers.slice(0, 100).map((c: any) => {
-                              const email = c.email || c.Email;
-                              const name = c.fullName || c.FullName || email;
-                              return (
-                                <option key={c.id || c.Id || email} value={email}>
-                                  {name} ({email})
-                                </option>
-                              );
-                            })}
-                          </optgroup>
-                        )}
+                        <option value="">— Chọn Điều Phối Viên từ danh sách —</option>
+                        {availableCoordinators.map((c: any) => {
+                          const email = c.email || c.Email;
+                          const name = c.fullName || c.FullName || email;
+                          return (
+                            <option key={c.id || c.Id || email} value={email}>
+                              {name} ({email})
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   )}
@@ -465,6 +469,9 @@ export const AdminDashboardView: React.FC = () => {
                       className="w-full text-xs font-mono"
                       required
                     />
+                    <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                      💡 Nếu email chưa có tài khoản trong hệ thống, hệ thống sẽ tự động tạo tài khoản tạm và gửi email mời tham gia Ban tổ chức.
+                    </p>
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-muted)]">
