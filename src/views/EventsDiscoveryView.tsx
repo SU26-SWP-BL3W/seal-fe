@@ -119,29 +119,29 @@ function EventCard({
           {/* User's event-scoped role tag */}
           {userRole === "EventCoordinator" && (
             <span className="font-mono text-[9px] px-2 py-0.5 border border-purple-500/40 text-purple-300 bg-purple-500/10 uppercase tracking-wider font-bold">
-              👑 BAN TỔ CHỨC
+              Ban Tổ Chức
             </span>
           )}
           {userRole === "Judge" && (
             <span className="font-mono text-[9px] px-2 py-0.5 border border-amber-500/40 text-amber-300 bg-amber-500/10 uppercase tracking-wider font-bold">
-              ⚖ GIÁM KHẢO
+              Giám Khảo
             </span>
           )}
           {userRole === "Mentor" && (
             <span className="font-mono text-[9px] px-2 py-0.5 border border-teal-500/40 text-teal-300 bg-teal-500/10 uppercase tracking-wider font-bold">
-              💼 CỐ VẤN
+              Cố Vấn
             </span>
           )}
           {(userRole === "TeamLeader" || userRole === "TeamMember") && (
             <span className="font-mono text-[9px] px-2 py-0.5 border border-cyan-500/40 text-cyan-300 bg-cyan-500/10 uppercase tracking-wider font-bold">
-              👥 ĐÃ THAM GIA
+              Đã Tham Gia
             </span>
           )}
 
           {/* Registration status tag */}
           {isRegOpen && (
             <span className="font-mono text-[9px] px-2 py-0.5 border border-emerald-500/40 text-emerald-400 bg-emerald-500/10 uppercase tracking-wider font-bold">
-              ✓ ĐANG MỞ ĐĂNG KÝ ĐỘI
+              Đang Mở Đăng Ký
             </span>
           )}
           {isRegExpired && (
@@ -502,7 +502,7 @@ export function EventsDiscoveryView() {
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-[var(--accent-primary)] uppercase tracking-widest">
                   <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-                  ⭐ SỰ KIỆN CỦA TÔI {roleName === "Mentor" ? "(VAI TRÒ: CỐ VẤN TRACK)" : roleName === "Coordinator" ? "(VAI TRÒ: BAN TỔ CHỨC)" : roleName === "Judge" ? "(VAI TRÒ: GIÁM KHẢO)" : team ? `(ĐỘI: ${team.TeamName || (team as any).teamName})` : ""}
+                  SỰ KIỆN CỦA BẠN
                 </div>
                 <h2 className="font-display text-xl font-bold text-[var(--text-primary)]">
                   {myEventId ? (
@@ -514,7 +514,7 @@ export function EventsDiscoveryView() {
                   )}
                 </h2>
                 <div className="flex items-center gap-3 font-mono text-xs text-[var(--text-muted)] mt-0.5">
-                  <span>Vai trò: <strong className="text-[var(--accent-primary)]">{roleName === "Coordinator" ? "Event Coordinator (BTC)" : roleName}</strong></span>
+                  <span>Vai trò: <strong className="text-[var(--accent-primary)]">{roleName === "Coordinator" ? "Ban Tổ Chức" : roleName}</strong></span>
                   {bannerStatus && (
                     <>
                       <span>·</span>
@@ -535,7 +535,7 @@ export function EventsDiscoveryView() {
                 {roleName === "Coordinator" && (
                   <Link href="/coordinator/dashboard">
                     <button className="hud-clipped px-5 py-2.5 bg-[#a855f7] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
-                      <span>🎯 CONTROL CENTER BTC ➔</span>
+                      <span>Vào Quản Trị BTC</span>
                     </button>
                   </Link>
                 )}
@@ -543,7 +543,7 @@ export function EventsDiscoveryView() {
                 {roleName === "Judge" && (
                   <Link href="/judge/scoring">
                     <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-judge)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
-                      <span>⚖ VÀO BÀN CHẤM GIÁM KHẢO ➔</span>
+                      <span>Vào Bàn Chấm Điểm</span>
                     </button>
                   </Link>
                 )}
@@ -551,7 +551,7 @@ export function EventsDiscoveryView() {
                 {roleName === "Mentor" && (
                   <Link href="/mentor/tracks">
                     <button className="hud-clipped px-5 py-2.5 bg-[#2dd4bf] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
-                      <span>💼 VÀO BÀN LÀM VIỆC CỐ VẤN ➔</span>
+                      <span>Vào Không Gian Cố Vấn</span>
                     </button>
                   </Link>
                 )}
@@ -559,7 +559,7 @@ export function EventsDiscoveryView() {
                 {(roleName === "TeamLeader" || roleName === "TeamMember") && (
                   <Link href="/my-team">
                     <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
-                      <span>👥 ĐỘI THI CỦA TÔI ➔</span>
+                      <span>Vào Đội Thi</span>
                     </button>
                   </Link>
                 )}
@@ -567,7 +567,7 @@ export function EventsDiscoveryView() {
                 {roleName === "Admin" && (
                   <Link href="/admin/dashboard">
                     <button className="hud-clipped px-5 py-2.5 bg-[var(--color-danger)] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm cursor-pointer">
-                      👑 BẢNG ĐIỀU HÀNH ADMIN ➔
+                      Bảng Điều Hành Admin
                     </button>
                   </Link>
                 )}

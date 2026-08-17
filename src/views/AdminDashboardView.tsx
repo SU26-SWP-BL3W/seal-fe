@@ -497,7 +497,7 @@ export function AdminDashboardView() {
                                 type="button"
                                 className="px-3 py-1.5 bg-[#162228] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-200 font-mono text-xs font-bold rounded transition-all cursor-pointer flex items-center gap-1"
                               >
-                                <span>👁 Xem</span>
+                                <span>Xem</span>
                               </button>
                             </Link>
 
