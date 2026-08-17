@@ -66,6 +66,24 @@ export function AdminDashboardView() {
     });
   }, [events, eventStatusFilter, eventSearch]);
 
+  const ecCount = useMemo(() => {
+    return usersList.filter((u: any) => {
+      const em = (u.email || u.Email || "").toLowerCase();
+      const role = (u.roleName || u.RoleName || "").toLowerCase();
+      const isAdmin = Boolean(u.isAdmin || u.IsAdmin || em.includes("admin") || role.includes("admin"));
+      if (isAdmin) return false;
+      return (
+        role.includes("coordinator") ||
+        role.includes("coodinator") ||
+        em.includes("coordinator") ||
+        em.includes("ec.") ||
+        em.includes("ec_") ||
+        em.includes("ec@") ||
+        em.startsWith("ec")
+      );
+    }).length;
+  }, [usersList]);
+
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [ecEmailsList, setEcEmailsList] = useState<string[]>([]);
   const [currentEmailInput, setCurrentEmailInput] = useState("");
@@ -221,10 +239,6 @@ export function AdminDashboardView() {
       </div>
     );
   }
-
-  const ecCount = usersList.filter(
-    (u: any) => u && ((u.role || u.Role) === "Coordinator" || (u.email || "").toLowerCase().includes("coordinator"))
-  ).length;
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
