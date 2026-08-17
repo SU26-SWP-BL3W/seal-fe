@@ -80,7 +80,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      if (assignPrizeMutation?.mutateAsync && !resultId.startsWith("res-")) {
+      if (assignPrizeMutation?.mutateAsync) {
         await assignPrizeMutation.mutateAsync({
           resultId,
           prizeId: prizeId !== "none" ? prizeId : null,
@@ -340,7 +340,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                             <Award className="w-4 h-4 text-[#f59e0b] shrink-0" />
                             <select
                               value={assignedPrizeId}
-                              onChange={(e) => handleAssignPrizeToTeam(r.id || `res-0${idx + 1}`, e.target.value, name)}
+                              onChange={(e) => handleAssignPrizeToTeam(r.id, e.target.value, name)}
                               className="w-full px-2.5 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono text-xs font-bold focus:outline-none focus:border-[#f59e0b] cursor-pointer"
                             >
                               <option value="none">— Chưa gán giải —</option>

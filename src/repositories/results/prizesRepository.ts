@@ -15,48 +15,13 @@ export interface Prize {
   quantity: number;
 }
 
-const PRIZES_STORAGE_PREFIX = "seal_prizes_";
-
-export function getStoredPrizesForEvent(eventId: string): Prize[] {
-  if (typeof window === "undefined" || !eventId) return [];
-  try {
-    const raw = localStorage.getItem(`${PRIZES_STORAGE_PREFIX}${eventId}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveStoredPrizesForEvent(eventId: string, list: any[]) {
-  if (typeof window === "undefined" || !eventId) return;
-  try {
-    localStorage.setItem(`${PRIZES_STORAGE_PREFIX}${eventId}`, JSON.stringify(list));
-  } catch {
-    // ignore
-  }
-}
-
 /** GET /Events/{eventId}/Prizes */
 export function useGetPrizesByEvent(eventId: string | undefined) {
   return useQuery({
     queryKey: ["prizesByEvent", eventId],
-    queryFn: async () => {
-      if (!eventId) return [];
-      
-      const localList = getStoredPrizesForEvent(eventId);
-      if (localList.length > 0) {
-        return localList;
-      }
-
-      try {
-        const { data } = await apiClient.get<Prize[]>(`/Events/${eventId}/Prizes`);
-        if (Array.isArray(data) && data.length > 0) {
-          return data;
-        }
-      } catch (e) {
-        // ignore
-      }
-      return [];
+    queryFn: async (): Promise<Prize[]> => {
+      const { data } = await apiClient.get<Prize[]>(`/Events/${eventId}/Prizes`);
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!eventId,
   });
