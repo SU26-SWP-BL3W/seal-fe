@@ -40,14 +40,14 @@ export const CoordinatorPrizesView: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Helper function to auto-format numeric string to "X.XXX.XXX VNĐ"
-  const formatCurrencyInput = (val: string): string => {
+  // Helper function to auto-format numeric string to "X.XXX.XXX" without sticky text suffix
+  const formatCurrencyNumber = (val: string): string => {
     if (!val) return "";
-    const digits = val.replace(/[^0-9]/g, "");
-    if (!digits) return val;
+    const digits = String(val).replace(/[^0-9]/g, "");
+    if (!digits) return "";
     const num = parseInt(digits, 10);
-    if (isNaN(num)) return val;
-    return `${new Intl.NumberFormat("vi-VN").format(num)} VNĐ`;
+    if (isNaN(num)) return "";
+    return new Intl.NumberFormat("vi-VN").format(num);
   };
 
   // Dynamic tracks list
@@ -78,7 +78,9 @@ export const CoordinatorPrizesView: React.FC = () => {
         const rawName = p.prizeName || p.PrizeName || p.name || "Giải thưởng";
         // Strip duplicate track suffix if already appended previously
         const cleanName = rawName.replace(/\s*\([^)]+\)\s*$/, "").trim() || rawName;
-        const valStr = p.prizeValueVnd ? `${new Intl.NumberFormat("vi-VN").format(p.prizeValueVnd)} VNĐ` : (p.value ? formatCurrencyInput(String(p.value)) : "0 VNĐ");
+        const valStr = p.prizeValueVnd
+          ? formatCurrencyNumber(String(p.prizeValueVnd))
+          : (p.value ? formatCurrencyNumber(String(p.value)) : "1.000.000");
 
         return {
           id: p.id || p.Id || `prz-${idx}`,
@@ -103,7 +105,7 @@ export const CoordinatorPrizesView: React.FC = () => {
         id: `prz-${Date.now()}`,
         prizeName: `Giải Thưởng Mới ${nextNum}`,
         quantity: 1,
-        value: "1.000.000 VNĐ",
+        value: "1.000.000",
         trackName: "Toàn Sự Kiện (Chung)",
       },
     ]);
@@ -121,7 +123,7 @@ export const CoordinatorPrizesView: React.FC = () => {
       prev.map((p) => {
         if (p.id !== id) return p;
         if (field === "value" && typeof value === "string") {
-          const formattedVal = formatCurrencyInput(value);
+          const formattedVal = formatCurrencyNumber(value);
           return { ...p, [field]: formattedVal };
         }
         return { ...p, [field]: value };
@@ -295,13 +297,19 @@ export const CoordinatorPrizesView: React.FC = () => {
 
                       {/* Giá trị VNĐ editable input */}
                       <td className="p-3">
-                        <input
-                          type="text"
-                          value={p.value}
-                          onChange={(e) => handleUpdatePrize(p.id, "value", e.target.value)}
-                          placeholder="5.000.000 VNĐ"
-                          className="w-full px-3 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono font-bold text-xs focus:outline-none focus:border-[#f59e0b]"
-                        />
+                        <div className="relative flex items-center">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={p.value}
+                            onChange={(e) => handleUpdatePrize(p.id, "value", e.target.value)}
+                            placeholder="1.000.000"
+                            className="w-full pl-3 pr-11 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono font-bold text-xs focus:outline-none focus:border-[#f59e0b]"
+                          />
+                          <span className="absolute right-2.5 text-[10px] font-mono text-[#8a9ba8] font-bold pointer-events-none select-none">
+                            VNĐ
+                          </span>
+                        </div>
                       </td>
 
                       {/* Hạng mục áp dụng dropdown */}

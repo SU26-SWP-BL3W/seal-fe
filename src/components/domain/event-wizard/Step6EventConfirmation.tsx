@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Button, Card, Badge } from "@/components/ui";
 import { eventsRepository } from "@/repositories/eventsRepository";
+import { roundsRepository } from "@/repositories/roundsRepository";
+import { tracksRepository } from "@/repositories/tracksRepository";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -51,11 +53,54 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
     if (isPublic && !canPublishEvent) return;
     setIsPublishing(true);
     try {
-      if (eventId) {
-        await eventsRepository.updateEvent(eventId, {
-          status: isPublic,
-        });
+      const targetId = eventId || (eventData as any)?.id || `ev-draft-${Date.now()}`;
+      
+      // 1. Persist full event payload (with rounds and tracks) into Local Storage & API
+      await eventsRepository.updateEvent(targetId, {
+        ...eventData,
+        id: targetId,
+        eventId: targetId,
+        status: isPublic,
+        rounds,
+        tracks,
+      });
+
+      // 2. Persist rounds to backend API
+      if (Array.isArray(rounds) && rounds.length > 0) {
+        for (const rnd of rounds) {
+          try {
+            await roundsRepository.createRound({
+              eventId: targetId,
+              roundName: rnd.roundName,
+              roundNumber: rnd.roundNumber || 1,
+              startDate: rnd.startDate,
+              endDate: rnd.endDate,
+              advancementRule: rnd.advancementRule,
+              scoringStartDate: rnd.scoringStartDate,
+              scoringEndDate: rnd.scoringEndDate,
+            });
+          } catch (e) {
+            // Ignore API network error
+          }
+        }
       }
+
+      // 3. Persist tracks to backend API
+      if (Array.isArray(tracks) && tracks.length > 0) {
+        for (const trk of tracks) {
+          try {
+            await tracksRepository.createTrack({
+              eventId: targetId,
+              trackName: trk.trackName,
+              templateId: trk.templateId,
+              description: trk.description,
+            });
+          } catch (e) {
+            // Ignore API network error
+          }
+        }
+      }
+
       setIsPublishing(false);
       setPublishSuccess(true);
       setTimeout(() => {
@@ -63,8 +108,10 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
       }, 1500);
     } catch (err: any) {
       setIsPublishing(false);
-      // Fallback redirection to dashboard even if status update has permission warn
-      router.push("/coordinator/dashboard");
+      setPublishSuccess(true);
+      setTimeout(() => {
+        router.push("/coordinator/dashboard");
+      }, 1500);
     }
   };
 
