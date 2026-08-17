@@ -88,8 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const storedUser = localStorage.getItem("currentUser");
       const storedRole = localStorage.getItem("activeRole");
-      if (storedUser) setUser(JSON.parse(storedUser));
-      if (storedRole) setActiveRole(JSON.parse(storedRole));
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        if (storedRole) setActiveRole(JSON.parse(storedRole));
+      } else {
+        setUser(null);
+        setActiveRole(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("activeRole");
+        }
+      }
     } catch (e) {
       console.error("Lỗi khôi phục phiên từ localStorage:", e);
     } finally {
@@ -224,6 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let studentCode = d.studentCode ?? d.StudentCode ?? d.user?.studentCode ?? null;
     let schoolId = d.schoolId ?? d.SchoolId ?? d.user?.schoolId ?? null;
     let photoStudentCardUrl = d.photoStudentCardUrl ?? d.PhotoStudentCardUrl ?? d.user?.photoStudentCardUrl ?? null;
+    let mustChangePassword = Boolean(d.mustChangePassword ?? d.MustChangePassword);
 
     if (typeof window !== "undefined") {
       localStorage.setItem("accessToken", accessToken);
@@ -242,6 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (p.studentCode) studentCode = p.studentCode;
         if (p.schoolId) schoolId = p.schoolId;
         if (p.photoStudentCardUrl) photoStudentCardUrl = p.photoStudentCardUrl;
+        if (p.mustChangePassword !== undefined) mustChangePassword = Boolean(p.mustChangePassword);
       }
     } catch {
       // Dùng thông tin từ response login nếu profile endpoint lỗi
@@ -258,6 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       studentCode,
       schoolId,
       photoStudentCardUrl,
+      mustChangePassword,
       isFpt: Boolean(d.isFpt ?? d.IsFpt ?? email.trim().toLowerCase().endsWith("@fpt.edu.vn")),
       UserID: userId,
       FullName: fullName,
@@ -283,14 +294,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
+      if (!isAdmin && primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
         targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
       }
     } catch {
       // fallback targetPath
     }
 
-    saveSession(authUser, primaryRole);
+    // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
+    if (mustChangePassword) {
+      targetPath = "/change-password";
+    }
+
+    saveSession(authUser, isAdmin ? null : primaryRole);
     return targetPath;
   };
 
@@ -310,6 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let studentCode = d.studentCode ?? d.StudentCode ?? d.user?.studentCode ?? null;
     let schoolId = d.schoolId ?? d.SchoolId ?? d.user?.schoolId ?? null;
     let photoStudentCardUrl = d.photoStudentCardUrl ?? d.PhotoStudentCardUrl ?? d.user?.photoStudentCardUrl ?? null;
+    let mustChangePassword = Boolean(d.mustChangePassword ?? d.MustChangePassword);
 
     if (typeof window !== "undefined") {
       localStorage.setItem("accessToken", accessToken);
@@ -328,6 +345,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (p.studentCode) studentCode = p.studentCode;
         if (p.schoolId) schoolId = p.schoolId;
         if (p.photoStudentCardUrl) photoStudentCardUrl = p.photoStudentCardUrl;
+        if (p.mustChangePassword !== undefined) mustChangePassword = Boolean(p.mustChangePassword);
       }
     } catch {
       // Dùng thông tin từ response login nếu profile endpoint lỗi
@@ -344,6 +362,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       studentCode,
       schoolId,
       photoStudentCardUrl,
+      mustChangePassword,
       isFpt: email.toLowerCase().endsWith("@fpt.edu.vn"),
       UserID: userId,
       FullName: fullName,
@@ -369,14 +388,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
+      if (!isAdmin && primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
         targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
       }
     } catch {
       // fallback targetPath
     }
 
-    saveSession(authUser, primaryRole);
+    // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
+    if (mustChangePassword) {
+      targetPath = "/change-password";
+    }
+
+    saveSession(authUser, isAdmin ? null : primaryRole);
     return targetPath;
   };
 

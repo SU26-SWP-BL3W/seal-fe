@@ -108,22 +108,23 @@ export function AppealsView() {
 
   return (
     <div className="p-[var(--space-xl)] max-w-[var(--container-max)] mx-auto hud-lattice min-h-[calc(100vh-4rem)]">
-      <div className="flex items-center justify-between mb-8 border-b border-[var(--border-muted)] pb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[rgba(245,158,11,0.1)] border border-[var(--color-warning)]/30 flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6 text-[var(--color-warning)]" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-[var(--border-muted)] pb-6">
+        <div>
+          <div className="flex items-center gap-2 font-mono text-xs text-[#f59e0b] font-bold uppercase tracking-wider mb-1">
+            <AlertTriangle className="w-4 h-4 text-[#f59e0b]" />
+            <span>TRUNG TÂM PHÚC KHẢO VÀ PHẢN HỒI</span>
           </div>
-          <div>
-            <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--color-warning)]">
-              Trung Tâm Phúc Khảo
-            </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)]">
-              // {isEC ? "ĐƠN ĐƯỢC PHÂN CÔNG XỬ LÝ" : "ĐƠN CỦA ĐỘI BẠN"}
-            </p>
-          </div>
+          <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+            QUẢN LÝ ĐƠN PHÚC KHẢO BÀI NỘP
+          </h1>
+          <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+            {isEC
+              ? "Tiếp nhận, kiểm tra và phản hồi các yêu cầu phúc khảo kết quả chấm điểm từ các đội thi."
+              : "Tạo và theo dõi tiến độ xử lý đơn phúc khảo kết quả chấm điểm của đội thi trong các vòng đấu."}
+          </p>
         </div>
 
-        <Button variant="ghost" onClick={() => refetch()} className="text-xs font-mono">
+        <Button variant="ghost" onClick={() => refetch()} className="text-xs font-mono shrink-0">
           <RefreshCw className="w-3.5 h-3.5" /> Làm mới
         </Button>
       </div>

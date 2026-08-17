@@ -43,8 +43,10 @@ export function NavigationBar() {
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
   const userEmail = (user?.email || user?.Email || "").toLowerCase();
   
-  let roleName = "";
-  if (user?.isAdmin || user?.IsAdmin) {
+  let roleName = "Guest";
+  if (!user) {
+    roleName = "Guest";
+  } else if (user?.isAdmin || user?.IsAdmin) {
     roleName = "Admin";
   } else {
     roleName = rawRole || "";
@@ -912,7 +914,7 @@ export function NavigationBar() {
           </Link>
 
           {/* Single Workspace Access Link for Coordinator */}
-          {roleName === "Coordinator" && (
+          {user && roleName === "Coordinator" && (
             <Link
               href="/coordinator/dashboard"
               className="text-[#a855f7] font-bold hover:underline flex items-center gap-1.5 bg-[#a855f7]/10 border border-[#a855f7]/30 px-3 py-1 hud-clipped text-xs"
@@ -921,7 +923,7 @@ export function NavigationBar() {
             </Link>
           )}
 
-          {roleName === "Mentor" && (
+          {user && roleName === "Mentor" && (
             <Link
               href="/mentor/tracks"
               className="text-[#2dd4bf] font-bold hover:underline flex items-center gap-1.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 px-3 py-1 hud-clipped text-xs"
@@ -930,7 +932,7 @@ export function NavigationBar() {
             </Link>
           )}
 
-          {roleName === "Judge" && (
+          {user && roleName === "Judge" && (
             <Link
               href="/judge/scoring"
               className="text-[var(--accent-judge)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--accent-judge)]/10 border border-[var(--accent-judge)]/30 px-3 py-1 hud-clipped text-xs"
@@ -940,7 +942,7 @@ export function NavigationBar() {
           )}
 
           {/* Single Workspace Access Link for System Admin */}
-          {roleName === "Admin" && (
+          {user && roleName === "Admin" && (
             <Link
               href="/admin/dashboard"
               className="text-[var(--color-danger)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 px-3 py-1 hud-clipped text-xs"
@@ -949,7 +951,7 @@ export function NavigationBar() {
             </Link>
           )}
 
-          {(roleName === "TeamLeader" || roleName === "TeamMember") && (
+          {user && (roleName === "TeamLeader" || roleName === "TeamMember") && (
             <Link
               href="/my-team"
               className="text-[var(--accent-team)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--accent-team)]/10 border border-[var(--accent-team)]/30 px-3 py-1 hud-clipped text-xs"

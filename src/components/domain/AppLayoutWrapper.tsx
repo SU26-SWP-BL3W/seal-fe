@@ -1,12 +1,14 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { NavigationBar } from "./NavigationBar";
 import { Footer } from "./Footer";
 
 export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
+  const router = useRouter();
   const { user, activeRole } = useAuth();
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
   const userEmail = (user?.email || user?.Email || "").toLowerCase();
@@ -29,6 +31,14 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
       }
     }
   }
+
+  // Tài khoản tạm chưa đổi mật khẩu — chặn mọi trang khác, kể cả gõ thẳng URL.
+  const isChangePasswordRoute = pathname.includes("/change-password");
+  useEffect(() => {
+    if (user?.mustChangePassword && !isChangePasswordRoute) {
+      router.replace("/change-password");
+    }
+  }, [user?.mustChangePassword, isChangePasswordRoute, router]);
 
   const isAuthRoute =
     pathname.includes("/login") ||

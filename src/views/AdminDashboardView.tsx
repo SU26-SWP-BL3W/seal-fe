@@ -23,10 +23,12 @@ import {
   Radio,
   Trash2,
   AlertTriangle,
+  Edit3,
 } from "lucide-react";
 import { staffRepository } from "@/repositories/staffRepository";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { readApiError } from "@/repositories/submitResultsRepository";
+import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 
 export function AdminDashboardView() {
   const { user, loginAsDemoRole } = useAuth();
@@ -75,6 +77,13 @@ export function AdminDashboardView() {
   const [deleteTargetEvent, setDeleteTargetEvent] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+
+  // Edit Event State
+  const [editingEvent, setEditingEvent] = useState<any | null>(null);
+
+  const handleOpenEditModal = (ev: any) => {
+    setEditingEvent(ev);
+  };
 
   const handleOpenAssignModal = (ev: any) => {
     setSelectedEvent(ev);
@@ -488,9 +497,20 @@ export function AdminDashboardView() {
                                 type="button"
                                 className="px-3 py-1.5 bg-[#162228] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-200 font-mono text-xs font-bold rounded transition-all cursor-pointer flex items-center gap-1"
                               >
-                                <span>👁 Xem Chi Tiết</span>
+                                <span>Xem</span>
                               </button>
                             </Link>
+
+                            {/* NÚT SỬA SỰ KIỆN CHO ADMIN */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(evt)}
+                              className="px-3 py-1.5 bg-amber-950/40 text-amber-300 border border-amber-500/40 hover:bg-amber-900/60 font-mono text-xs font-bold rounded transition-all cursor-pointer flex items-center gap-1"
+                              title="Chỉnh sửa thông tin khung sự kiện"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Sửa</span>
+                            </button>
 
                             {/* NÚT GÁN ĐIỀU PHỐI VIÊN */}
                             <button
@@ -714,6 +734,15 @@ export function AdminDashboardView() {
                     + ec.lehoa@seal.edu.vn
                   </button>
                 </div>
+
+                <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1">
+                  <span className="font-mono text-[10px] text-[var(--accent-coordinator)] uppercase block font-bold">
+                    Ghi chú phân quyền hệ thống:
+                  </span>
+                  <p className="font-mono text-[10px] text-[var(--text-muted)]">
+                    Admin chỉ định EC quản lý sự kiện này. Tài khoản EC được gán sẽ thấy sự kiện xuất hiện trên Bảng điều hành EC của họ để cấu hình Vòng thi (Rounds), Hạng mục (Tracks) & Tiêu chí.
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-800">
@@ -735,6 +764,14 @@ export function AdminDashboardView() {
             </form>
           </div>
         </div>
+      )}
+      {/* Modal Chỉnh Sửa Toàn Diện Sự Kiện & Lộ Trình Vòng Thi */}
+      {editingEvent && (
+        <ComprehensiveEventEditModal
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSuccess={() => refetchEvents()}
+        />
       )}
     </div>
   );

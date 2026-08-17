@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useEventDetailViewModel, type RoundSummary } from "@/viewModels/useEventDetailViewModel";
 import type { PrizeItem } from "@/viewModels/eventsMetadata";
 import { useCountdown } from "@/lib/useCountdown";
+import { useGetEventRolesByUser } from "@/repositories/events/eventRolesRepository";
+import { useMyTeam } from "@/repositories/teamsRepository";
 import {
   Calendar,
   Trophy,
@@ -36,6 +38,7 @@ import {
 } from "lucide-react";
 import { roundsRepository } from "@/repositories/roundsRepository";
 import { eventsRepository } from "@/repositories/eventsRepository";
+import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 
 function formatShortDate(iso?: string): string {
   if (!iso) return "N/A";
@@ -95,27 +98,54 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
   const [activeTab, setActiveTab] = useState<"timeline" | "tracks" | "prizes" | "rules">("timeline");
   const [selectedRoundIndex, setSelectedRoundIndex] = useState<number>(0);
 
-  const rawRole = activeRole?.roleName || activeRole?.RoleName;
-  const userEmail = (user?.email || user?.Email || "").toLowerCase();
-  let roleName = "Guest";
-  if (user) {
-    let detected = rawRole || "";
-    if (detected === "EventCoordinator") detected = "Coordinator";
-    if (!detected) {
-      if (userEmail.includes("coordinator") || userEmail.includes("ec.") || userEmail.includes("ec_")) {
-        detected = "Coordinator";
-      } else if (userEmail.includes("judge")) {
-        detected = "Judge";
-      } else if (userEmail.includes("mentor")) {
-        detected = "Mentor";
-      } else if (user?.isAdmin || user?.IsAdmin) {
-        detected = "Admin";
-      } else {
-        detected = "Student";
-      }
+  const { data: userRolesResult } = useGetEventRolesByUser(user?.id, { pageSize: 100 });
+  const userRoles = useMemo(() => {
+    const raw = (userRolesResult as any)?.data?.items ?? (userRolesResult as any)?.items ?? (Array.isArray(userRolesResult) ? userRolesResult : []);
+    return Array.isArray(raw) ? raw : [];
+  }, [userRolesResult]);
+
+  const { data: myTeamResult } = useMyTeam();
+  const myTeam = (myTeamResult as any)?.team ?? myTeamResult;
+
+  // XÁC ĐỊNH CHÍNH XÁC VAI TRÒ CỦA NGƯỜI DÙNG ĐỐI VỚI SỰ KIỆN NÀY (EVENT-SCOPED ROLE)
+  const roleName = useMemo(() => {
+    if (!user) return "Guest";
+    if (user.isAdmin || user.IsAdmin) return "Admin";
+
+    // 1. Kiểm tra xem người dùng có bản ghi EventRole nào cho chính eventId này không
+    const matchedRole = userRoles.find(
+      (r: any) => (r.eventId || r.EventId) === eventId
+    );
+    if (matchedRole) {
+      const rn = matchedRole.roleName || matchedRole.RoleName;
+      if (rn === "EventCoordinator") return "Coordinator";
+      if (rn === "Judge") return "Judge";
+      if (rn === "Mentor") return "Mentor";
+      if (rn === "TeamLeader") return "TeamLeader";
+      if (rn === "TeamMember") return "TeamMember";
+      return rn || "Guest";
     }
-    roleName = detected;
-  }
+
+    // 2. Kiểm tra nếu activeRole hiện tại được gán cho eventId này
+    const assignedIds = activeRole?.assignedEventIds || activeRole?.AssignedEventIds || [];
+    if (activeRole && (activeRole.eventId === eventId || activeRole.EventId === eventId || assignedIds.includes(eventId))) {
+      const rn = activeRole.roleName || activeRole.RoleName;
+      if (rn === "EventCoordinator") return "Coordinator";
+      if (rn === "Judge") return "Judge";
+      if (rn === "Mentor") return "Mentor";
+      if (rn === "TeamLeader") return "TeamLeader";
+      if (rn === "TeamMember") return "TeamMember";
+      return rn || "Guest";
+    }
+
+    // 3. Kiểm tra xem người dùng có đội thi trong eventId này không
+    if (myTeam && (myTeam.eventId === eventId || myTeam.EventId === eventId)) {
+      return myTeam.isLeader ? "TeamLeader" : "TeamMember";
+    }
+
+    // 4. Nếu không thuộc bất kỳ vai trò nào trong eventId này -> Là Guest / Thí sinh chưa tham gia
+    return "Guest";
+  }, [user, userRoles, activeRole, eventId, myTeam]);
 
   const {
     eventName,
@@ -135,83 +165,8 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
 
   const countdown = useCountdown(deadline);
 
-  // Modal State cho Admin / Coordinator sửa 5 Phase của vòng thi
-  const [editingRound, setEditingRound] = useState<{
-    round: RoundSummary;
-    index: number;
-  } | null>(null);
-
-  const [phase1Start, setPhase1Start] = useState("");
-  const [phase2End, setPhase2End] = useState("");
-  const [phase3Eval, setPhase3Eval] = useState("");
-  const [phase4Announce, setPhase4Announce] = useState("");
-  const [phase5Appeal, setPhase5Appeal] = useState("");
-  const [isSavingPhases, setIsSavingPhases] = useState(false);
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
-  const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
-
-  const handleOpenEditPhases = (round: RoundSummary, index: number) => {
-    setEditingRound({ round, index });
-    setPhase1Start(toDateTimeLocal(round.startDate, "08:00"));
-    setPhase2End(toDateTimeLocal(round.submissionDeadline || round.endDate, "23:59"));
-    setPhase3Eval(toDateTimeLocal(round.evaluationEndDate || round.endDate, "18:00"));
-    setPhase4Announce(toDateTimeLocal(round.resultAnnouncementDate || round.endDate, "09:00"));
-    setPhase5Appeal(toDateTimeLocal(round.appealDeadline || round.endDate, "23:59"));
-    setSaveSuccessMsg(null);
-    setSaveErrorMsg(null);
-  };
-
-  const handleSavePhases = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingRound) return;
-    setIsSavingPhases(true);
-    setSaveSuccessMsg(null);
-    setSaveErrorMsg(null);
-
-    const { round, index } = editingRound;
-
-    try {
-      if (index === 0 || round.id === "reg-phase") {
-        // Cập nhật mốc đăng ký sự kiện
-        await eventsRepository.updateEvent(eventId, {
-          registrationStartDate: new Date(phase1Start).toISOString(),
-          registrationEndDate: new Date(phase2End).toISOString(),
-        });
-      } else {
-        // Cập nhật vòng thi cụ thể
-        const roundId = round.id;
-        const payload = {
-          startDate: new Date(phase1Start).toISOString(),
-          endDate: new Date(phase2End).toISOString(),
-          scoringStartDate: new Date(phase2End).toISOString(),
-          scoringEndDate: new Date(phase3Eval).toISOString(),
-          appealStartDate: new Date(phase4Announce).toISOString(),
-          appealEndDate: new Date(phase5Appeal).toISOString(),
-        };
-
-        if (roundId && !roundId.startsWith("rnd-") && !roundId.startsWith("main-")) {
-          await roundsRepository.updateRound(roundId, payload);
-        } else {
-          // Fallback cập nhật sự kiện
-          await eventsRepository.updateEvent(eventId, {
-            startDate: new Date(phase1Start).toISOString(),
-            endDate: new Date(phase5Appeal || phase2End).toISOString(),
-          });
-        }
-      }
-
-      setIsSavingPhases(false);
-      setSaveSuccessMsg("Đã cập nhật thành công các mốc thời gian Phase 1 đến Phase 5!");
-      refetch();
-      setTimeout(() => {
-        setEditingRound(null);
-        setSaveSuccessMsg(null);
-      }, 1000);
-    } catch (err: any) {
-      setIsSavingPhases(false);
-      setSaveErrorMsg(err?.response?.data?.message || err?.message || "Cập nhật mốc thời gian thất bại.");
-    }
-  };
+  // Modal State cho Admin / Coordinator chỉnh sửa toàn diện sự kiện & lộ trình
+  const [isComprehensiveEditOpen, setIsComprehensiveEditOpen] = useState(false);
 
   const activeRound = rounds[selectedRoundIndex] || rounds[0] || {
     id: "rnd-0",
@@ -415,87 +370,165 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           <div className="pt-2 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 font-mono text-xs">
               <span className="text-zinc-400 font-bold">VAI TRÒ CỦA BẠN:</span>
-              <span className={`px-2.5 py-0.5 rounded font-bold uppercase ${roleName === "Guest" ? "bg-zinc-800 text-cyan-300 border border-cyan-500/30" : "bg-zinc-800 text-white"}`}>
-                {roleName === "Guest" ? "KHÁCH (GUEST)" : roleName}
+              <span className={`px-2.5 py-0.5 rounded font-bold uppercase ${
+                roleName === "Coordinator"
+                  ? "bg-purple-950/60 text-purple-300 border border-purple-500/40"
+                  : roleName === "Admin"
+                  ? "bg-amber-950/60 text-amber-300 border border-amber-500/40"
+                  : roleName === "Judge"
+                  ? "bg-yellow-950/60 text-yellow-300 border border-yellow-500/40"
+                  : roleName === "Mentor"
+                  ? "bg-teal-950/60 text-teal-300 border border-teal-500/40"
+                  : roleName === "TeamLeader" || roleName === "TeamMember"
+                  ? "bg-cyan-950/60 text-cyan-300 border border-cyan-500/40"
+                  : user
+                  ? "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                  : "bg-zinc-800 text-cyan-300 border border-cyan-500/30"
+              }`}>
+                {roleName === "Coordinator"
+                  ? "BAN TỔ CHỨC (COORDINATOR)"
+                  : roleName === "Admin"
+                  ? "SYSTEM ADMIN"
+                  : roleName === "Judge"
+                  ? "GIÁM KHẢO (JUDGE)"
+                  : roleName === "Mentor"
+                  ? "CỐ VẤN (MENTOR)"
+                  : roleName === "TeamLeader"
+                  ? "TRƯỞNG ĐỘI THI"
+                  : roleName === "TeamMember"
+                  ? "THÀNH VIÊN ĐỘI THI"
+                  : user
+                  ? "CHƯA THAM GIA SỰ KIỆN NÀY"
+                  : "KHÁCH (GUEST)"}
               </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
               {roleName === "Guest" && (
                 <>
-                  <Link href="/register">
-                    <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                      <User className="w-4 h-4" />
-                      <span>Đăng Ký Tài Khoản Tham Gia</span>
-                    </button>
-                  </Link>
-                  <Link href="/login">
-                    <button className="px-4 py-2.5 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white rounded font-bold transition-all cursor-pointer">
-                      <span>Đăng Nhập</span>
-                    </button>
-                  </Link>
+                  {user ? (
+                    <>
+                      <Link href={`/my-team?eventId=${eventId}`}>
+                        <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                          <Users className="w-4 h-4" />
+                          <span>Đăng Ký Đội Thi Tham Gia</span>
+                        </button>
+                      </Link>
+                      <Link href={`/events/${eventId}/leaderboard`}>
+                        <button className="px-4 py-2.5 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                          <Trophy className="w-4 h-4 text-amber-400" />
+                          <span>Bảng Xếp Hạng</span>
+                        </button>
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/register">
+                        <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                          <User className="w-4 h-4" />
+                          <span>Đăng Ký Tài Khoản Tham Gia</span>
+                        </button>
+                      </Link>
+                      <Link href="/login">
+                        <button className="px-4 py-2.5 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white rounded font-bold transition-all cursor-pointer">
+                          <span>Đăng Nhập</span>
+                        </button>
+                      </Link>
+                    </>
+                  )}
                 </>
               )}
 
               {roleName === "Admin" && (
-                <Link href="/admin/dashboard">
-                  <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                    <Shield className="w-4 h-4" />
-                    <span>Bảng Điều Hành Admin</span>
+                <div className="flex items-center gap-2">
+                  <Link href="/admin/dashboard">
+                    <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                      <Shield className="w-4 h-4" />
+                      <span>Bảng Điều Hành Admin</span>
+                    </button>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setIsComprehensiveEditOpen(true)}
+                    className="px-4 py-2 bg-amber-950/60 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Chỉnh Sửa Sự Kiện</span>
                   </button>
-                </Link>
+                  <Link href={`/events/${eventId}/leaderboard`}>
+                    <button className="px-4 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-amber-400 hover:text-white rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span>Bảng Xếp Hạng</span>
+                    </button>
+                  </Link>
+                </div>
               )}
 
               {roleName === "Coordinator" && (
-                <>
-                  <Link href={`/coordinator/events/${eventId}`}>
-                    <button className="px-3.5 py-2 bg-purple-950/60 text-purple-300 border border-purple-500/40 hover:bg-purple-900/80 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
-                      <Briefcase className="w-3.5 h-3.5" />
-                      <span>Quản Lý Vòng Thi &amp; Tiêu Chí</span>
-                    </button>
-                  </Link>
+                <div className="flex items-center gap-2">
                   <Link href="/coordinator/dashboard">
-                    <button className="px-3.5 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white rounded font-bold transition-all cursor-pointer">
-                      <span>Control Center BTC</span>
+                    <button className="px-3.5 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-purple-400 hover:text-white rounded font-bold transition-all cursor-pointer">
+                      <span>Quản Trị BTC</span>
                     </button>
                   </Link>
-                </>
+                  <button
+                    type="button"
+                    onClick={() => setIsComprehensiveEditOpen(true)}
+                    className="px-3.5 py-2 bg-purple-950/60 text-purple-300 border border-purple-500/40 hover:bg-purple-900/80 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Chỉnh Sửa Sự Kiện</span>
+                  </button>
+                  <Link href={`/events/${eventId}/leaderboard`}>
+                    <button className="px-4 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-purple-400 hover:text-white rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span>Bảng Xếp Hạng</span>
+                    </button>
+                  </Link>
+                </div>
               )}
 
               {roleName === "Judge" && (
-                <Link href="/judge/events">
-                  <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5">
-                    <Scale className="w-4 h-4" />
-                    <span>Vào Chấm Điểm Hạng Mục</span>
-                  </button>
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link href="/judge/scoring">
+                    <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                      <Scale className="w-4 h-4" />
+                      <span>Vào Bàn Chấm Điểm</span>
+                    </button>
+                  </Link>
+                  <Link href={`/events/${eventId}/leaderboard`}>
+                    <button className="px-4 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-amber-400 hover:text-white rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span>Bảng Xếp Hạng</span>
+                    </button>
+                  </Link>
+                </div>
               )}
 
               {roleName === "Mentor" && (
                 <Link href="/mentor/tracks">
-                  <button className="px-4 py-2 bg-teal-500 text-black hover:bg-teal-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5">
+                  <button className="px-4 py-2 bg-teal-500 text-black hover:bg-teal-400 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
                     <Users className="w-4 h-4" />
                     <span>Xem Đội Thi Được Phân Công</span>
                   </button>
                 </Link>
               )}
 
-              {roleName === "Student" && (
-                user?.isApproved ? (
+              {(roleName === "TeamLeader" || roleName === "TeamMember") && (
+                <div className="flex items-center gap-2">
                   <Link href={`/my-team?eventId=${eventId}`}>
-                    <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                    <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
                       <Upload className="w-4 h-4" />
                       <span>Quản Lý Đội Thi / Nộp Bài</span>
                     </button>
                   </Link>
-                ) : (
-                  <Link href="/onboarding/profile">
-                    <button className="px-5 py-2.5 bg-amber-500 text-black hover:bg-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>Cần Cập Nhật Hồ Sơ Để Đăng Ký</span>
+                  <Link href={`/events/${eventId}/leaderboard`}>
+                    <button className="px-4 py-2.5 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span>Bảng Xếp Hạng</span>
                     </button>
                   </Link>
-                )
+                </div>
               )}
             </div>
           </div>
@@ -512,7 +545,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            1. Lịch Trình Vòng Thi ({rounds.length} Giai đoạn)
+            Lịch Trình Vòng Thi ({rounds.length})
           </button>
           <button
             type="button"
@@ -523,7 +556,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            2. Hạng Mục Chuyên Môn ({tracks.length})
+            Hạng Mục ({tracks.length})
           </button>
           <button
             type="button"
@@ -534,7 +567,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            3. Cơ Cấu Giải Thưởng
+            Giải Thưởng
           </button>
           <button
             type="button"
@@ -545,7 +578,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            4. Thể Lệ &amp; Quy Định
+            Thể Lệ &amp; Quy Định
           </button>
         </div>
 
@@ -624,18 +657,6 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                          {(roleName === "Admin" || roleName === "Coordinator") && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditPhases(round, index)}
-                              className="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black font-mono text-[11px] font-bold rounded transition-all cursor-pointer flex items-center gap-1 shadow-sm"
-                              title="Admin / BTC có quyền chỉnh sửa thời gian Phase 1 đến Phase 5"
-                            >
-                              <Settings className="w-3.5 h-3.5" />
-                              <span>Sửa Phase 1 → 5</span>
-                            </button>
-                          )}
-
                           <span
                             className={`px-3 py-1 rounded font-mono text-xs font-bold uppercase ${
                               isCurrent
@@ -999,180 +1020,21 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
         )}
       </div>
 
-      {/* ── Modal Admin / Coordinator Chỉnh Sửa Mốc Thời Gian (Phase 1 -> 5) ── */}
-      {editingRound && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="max-w-2xl w-full bg-[#11181c] border border-amber-500/40 p-6 rounded-lg space-y-5 shadow-2xl font-mono text-xs max-h-[90vh] overflow-y-auto">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                  <Settings className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-display font-bold text-base text-white uppercase">
-                    CHỈNH SỬA MỐC THỜI GIAN (PHASE 1 → 5)
-                  </h3>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    {editingRound.round.roundName} • Quyền Quản Trị Hệ Thống / Ban Tổ Chức
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setEditingRound(null)}
-                className="text-zinc-400 hover:text-white p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {saveSuccessMsg && (
-              <div className="p-3 bg-emerald-950/50 border border-emerald-500/50 text-emerald-300 flex items-center gap-2 rounded">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{saveSuccessMsg}</span>
-              </div>
-            )}
-
-            {saveErrorMsg && (
-              <div className="p-3 bg-red-950/50 border border-red-500/50 text-red-300 rounded">
-                {saveErrorMsg}
-              </div>
-            )}
-
-            {/* Form 5 Phases */}
-            <form onSubmit={handleSavePhases} className="space-y-4">
-              
-              {/* Phase 1 */}
-              <div className="p-3.5 bg-[#141f24] border border-sky-500/30 rounded space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sky-400 flex items-center gap-1.5 uppercase text-[11px]">
-                    <Flame className="w-3.5 h-3.5" /> Phase 1: Mở Cổng &amp; Nhận Bài Thi
-                  </span>
-                  <span className="text-[10px] text-zinc-400">Bắt đầu vòng thi</span>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-400 block">Thời gian mở cổng (Ngày &amp; Giờ):</label>
-                  <input
-                    type="datetime-local"
-                    value={phase1Start}
-                    onChange={(e) => setPhase1Start(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-sky-400 outline-none text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Phase 2 */}
-              <div className="p-3.5 bg-[#141f24] border border-amber-500/30 rounded space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-amber-400 flex items-center gap-1.5 uppercase text-[11px]">
-                    <Clock className="w-3.5 h-3.5" /> Phase 2: Hạn Chót &amp; Khóa Cổng Nộp Bài
-                  </span>
-                  <span className="text-[10px] text-zinc-400">Hạn chót nộp bài</span>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-400 block">Thời gian đóng form nộp (Ngày &amp; Giờ):</label>
-                  <input
-                    type="datetime-local"
-                    value={phase2End}
-                    onChange={(e) => setPhase2End(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-amber-400 outline-none text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Phase 3 */}
-              <div className="p-3.5 bg-[#141f24] border border-purple-500/30 rounded space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-purple-400 flex items-center gap-1.5 uppercase text-[11px]">
-                    <Scale className="w-3.5 h-3.5" /> Phase 3: Hội Đồng Chấm Điểm &amp; Đánh Giá
-                  </span>
-                  <span className="text-[10px] text-zinc-400">Thời hạn giám khảo chấm</span>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-400 block">Hạn chốt kết quả chấm (Ngày &amp; Giờ):</label>
-                  <input
-                    type="datetime-local"
-                    value={phase3Eval}
-                    onChange={(e) => setPhase3Eval(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-purple-400 outline-none text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Phase 4 */}
-              <div className="p-3.5 bg-[#141f24] border border-emerald-500/30 rounded space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-400 flex items-center gap-1.5 uppercase text-[11px]">
-                    <Megaphone className="w-3.5 h-3.5" /> Phase 4: Công Bố Điểm &amp; Danh Sách Xếp Hạng
-                  </span>
-                  <span className="text-[10px] text-zinc-400">Công bố công khai</span>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-400 block">Thời gian mở bảng xếp hạng (Ngày &amp; Giờ):</label>
-                  <input
-                    type="datetime-local"
-                    value={phase4Announce}
-                    onChange={(e) => setPhase4Announce(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-emerald-400 outline-none text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Phase 5 */}
-              <div className="p-3.5 bg-[#141f24] border border-pink-500/30 rounded space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-pink-400 flex items-center gap-1.5 uppercase text-[11px]">
-                    <Shield className="w-3.5 h-3.5" /> Phase 5: Khung Giờ Khiếu Nại &amp; Phúc Khảo
-                  </span>
-                  <span className="text-[10px] text-zinc-400">Hạn chót tiếp nhận phúc khảo</span>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-400 block">Thời hạn đóng cổng khiếu nại (Ngày &amp; Giờ):</label>
-                  <input
-                    type="datetime-local"
-                    value={phase5Appeal}
-                    onChange={(e) => setPhase5Appeal(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-pink-400 outline-none text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setEditingRound(null)}
-                  disabled={isSavingPhases}
-                  className="px-4 py-2 bg-[#1c2830] border border-zinc-700 hover:border-zinc-500 text-zinc-300 rounded font-bold transition-colors cursor-pointer"
-                >
-                  Đóng
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingPhases}
-                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold uppercase rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-md disabled:opacity-50"
-                >
-                  {isSavingPhases ? (
-                    <span>Đang lưu...</span>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Lưu Cập Nhật 5 Phase</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Modal Chỉnh Sửa Toàn Diện Sự Kiện & Lộ Trình Cho Admin / Coordinator */}
+      {isComprehensiveEditOpen && (
+        <ComprehensiveEventEditModal
+          event={{
+            id: eventId,
+            eventName,
+            season,
+            year,
+            tagline,
+            description,
+            maxTeams,
+          }}
+          onClose={() => setIsComprehensiveEditOpen(false)}
+          onSuccess={() => refetch()}
+        />
       )}
     </div>
   );

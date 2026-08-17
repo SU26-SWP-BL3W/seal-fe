@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useRouter } from "@/i18n/routing";
 import { Badge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useEventDetail } from "@/repositories/eventsRepository";
+import { useGetEventRolesByUser } from "@/repositories/events/eventRolesRepository";
 import {
   STATUS_LABEL,
   STATUS_DOT_VAR,
@@ -72,9 +73,11 @@ function SealMark() {
 // ─── Event Card (Devpost-style horizontal) ────────────────────────────────────
 function EventCard({
   event,
+  userRole,
   onSelectExpired,
 }: {
   event: EventCardData;
+  userRole?: string;
   onSelectExpired: (ev: EventCardData) => void;
 }) {
   const days = daysLeft(event.endDate);
@@ -106,17 +109,39 @@ function EventCard({
 
       {/* Main content */}
       <div className="flex flex-1 flex-col justify-between p-4 min-w-0">
-        {/* Top row: title + status badge + registration badge */}
+        {/* Top row: title + status badge + registration badge + user role badge */}
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
           <h3 className="font-display text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
             {event.eventName}
           </h3>
           <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
 
+          {/* User's event-scoped role tag */}
+          {userRole === "EventCoordinator" && (
+            <span className="font-mono text-[9px] px-2 py-0.5 border border-purple-500/40 text-purple-300 bg-purple-500/10 uppercase tracking-wider font-bold">
+              Ban Tổ Chức
+            </span>
+          )}
+          {userRole === "Judge" && (
+            <span className="font-mono text-[9px] px-2 py-0.5 border border-amber-500/40 text-amber-300 bg-amber-500/10 uppercase tracking-wider font-bold">
+              Giám Khảo
+            </span>
+          )}
+          {userRole === "Mentor" && (
+            <span className="font-mono text-[9px] px-2 py-0.5 border border-teal-500/40 text-teal-300 bg-teal-500/10 uppercase tracking-wider font-bold">
+              Cố Vấn
+            </span>
+          )}
+          {(userRole === "TeamLeader" || userRole === "TeamMember") && (
+            <span className="font-mono text-[9px] px-2 py-0.5 border border-cyan-500/40 text-cyan-300 bg-cyan-500/10 uppercase tracking-wider font-bold">
+              Đã Tham Gia
+            </span>
+          )}
+
           {/* Registration status tag */}
           {isRegOpen && (
             <span className="font-mono text-[9px] px-2 py-0.5 border border-emerald-500/40 text-emerald-400 bg-emerald-500/10 uppercase tracking-wider font-bold">
-              ✓ ĐANG MỞ ĐĂNG KÝ ĐỘI
+              Đang Mở Đăng Ký
             </span>
           )}
           {isRegExpired && (
@@ -290,19 +315,42 @@ const SORT_OPTIONS: { value: EventSortOption; label: string }[] = [
   { value: "most_teams",  label: "Nhiều đội nhất" },
 ];
 
-// ─── Main View ─────────────────────────────────────────────────────────────────
 export function EventsDiscoveryView() {
   const router = useRouter();
   const { user, activeRole } = useAuth();
-  const roleName = activeRole?.roleName || activeRole?.RoleName || (user?.isAdmin || user?.IsAdmin ? "Admin" : "Guest");
+
+  const rawRole = activeRole?.roleName || activeRole?.RoleName;
+  let roleName = rawRole || (user?.isAdmin || user?.IsAdmin ? "Admin" : "Guest");
+  if (roleName === "EventCoordinator") roleName = "Coordinator";
+
+  const { data: userRolesResult } = useGetEventRolesByUser(user?.id, { pageSize: 100 });
+  const userRoles = useMemo(() => {
+    const raw = (userRolesResult as any)?.data?.items ?? (userRolesResult as any)?.items ?? (Array.isArray(userRolesResult) ? userRolesResult : []);
+    return Array.isArray(raw) ? raw : [];
+  }, [userRolesResult]);
 
   const { data: teamResponse } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
+
+  const roleByEventId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of userRoles) {
+      const eid = r.eventId || r.EventId;
+      const rn = r.roleName || r.RoleName;
+      if (eid && rn) map.set(eid, rn);
+    }
+    if (team?.eventId || team?.EventId) {
+      map.set(team.eventId || team.EventId, team.isLeader ? "TeamLeader" : "TeamMember");
+    }
+    return map;
+  }, [userRoles, team]);
+
   const myEventId =
     activeRole?.eventId ||
     activeRole?.EventId ||
     team?.EventId ||
     (team as { eventId?: string })?.eventId ||
+    (userRoles.length > 0 ? userRoles[0].eventId || userRoles[0].EventId : "") ||
     "";
   const { data: assignedEvent } = useEventDetail(myEventId);
 
@@ -454,13 +502,19 @@ export function EventsDiscoveryView() {
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-[var(--accent-primary)] uppercase tracking-widest">
                   <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-                  ⭐ SỰ KIỆN CỦA TÔI {roleName === "Mentor" ? "(VAI TRÒ: CỐ VẤN TRACK)" : roleName === "Coordinator" ? "(VAI TRÒ: BAN TỔ CHỨC)" : roleName === "Judge" ? "(VAI TRÒ: GIÁM KHẢO)" : team ? `(ĐỘI: ${team.TeamName || (team as any).teamName})` : ""}
+                  SỰ KIỆN CỦA BẠN
                 </div>
                 <h2 className="font-display text-xl font-bold text-[var(--text-primary)]">
-                  {bannerName || "Sự kiện được phân công"}
+                  {myEventId ? (
+                    <Link href={`/events/${myEventId}`} className="hover:text-[var(--accent-primary)] transition-colors">
+                      {bannerName || "Sự kiện được phân công"}
+                    </Link>
+                  ) : (
+                    bannerName || "Sự kiện được phân công"
+                  )}
                 </h2>
                 <div className="flex items-center gap-3 font-mono text-xs text-[var(--text-muted)] mt-0.5">
-                  <span>Vai trò hiện tại: <strong className="text-[var(--accent-primary)]">{roleName}</strong></span>
+                  <span>Vai trò: <strong className="text-[var(--accent-primary)]">{roleName === "Coordinator" ? "Ban Tổ Chức" : roleName}</strong></span>
                   {bannerStatus && (
                     <>
                       <span>·</span>
@@ -476,46 +530,48 @@ export function EventsDiscoveryView() {
                 </div>
               </div>
 
-              {/* Smart Role-Based Button Action */}
-              {roleName === "Mentor" && (
-                <Link href="/mentor/tracks">
-                  <button className="hud-clipped px-5 py-2.5 bg-[#2dd4bf] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
-                    💼 VÀO BÀN LÀM VIỆC CỐ VẤN ➔
-                  </button>
-                </Link>
-              )}
+              {/* Smart Role-Based Button Actions */}
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {roleName === "Coordinator" && (
+                  <Link href="/coordinator/dashboard">
+                    <button className="hud-clipped px-5 py-2.5 bg-[#a855f7] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
+                      <span>Vào Quản Trị BTC</span>
+                    </button>
+                  </Link>
+                )}
 
-              {roleName === "Coordinator" && (
-                <Link href="/coordinator/dashboard">
-                  <button className="hud-clipped px-5 py-2.5 bg-[#a855f7] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm shrink-0 cursor-pointer">
-                    🎯 CONTROL CENTER BTC ➔
-                  </button>
-                </Link>
-              )}
+                {roleName === "Judge" && (
+                  <Link href="/judge/scoring">
+                    <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-judge)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
+                      <span>Vào Bàn Chấm Điểm</span>
+                    </button>
+                  </Link>
+                )}
 
-              {roleName === "Judge" && (
-                <Link href="/judge/scoring">
-                  <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-judge)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
-                    ⚖ VÀO BÀN CHẤM GIÁM KHẢO ➔
-                  </button>
-                </Link>
-              )}
+                {roleName === "Mentor" && (
+                  <Link href="/mentor/tracks">
+                    <button className="hud-clipped px-5 py-2.5 bg-[#2dd4bf] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
+                      <span>Vào Không Gian Cố Vấn</span>
+                    </button>
+                  </Link>
+                )}
 
-              {roleName === "Admin" && (
-                <Link href="/admin/dashboard">
-                  <button className="hud-clipped px-5 py-2.5 bg-[var(--color-danger)] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm shrink-0 cursor-pointer">
-                    👑 BẢNG ĐIỀU HÀNH ADMIN ➔
-                  </button>
-                </Link>
-              )}
+                {(roleName === "TeamLeader" || roleName === "TeamMember") && (
+                  <Link href="/my-team">
+                    <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
+                      <span>Vào Đội Thi</span>
+                    </button>
+                  </Link>
+                )}
 
-              {(roleName === "TeamLeader" || roleName === "TeamMember") && myEventId && (
-                <Link href={`/events/${myEventId}`}>
-                  <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
-                    ↗ XEM CHI TIẾT SỰ KIỆN CỦA TÔI ➔
-                  </button>
-                </Link>
-              )}
+                {roleName === "Admin" && (
+                  <Link href="/admin/dashboard">
+                    <button className="hud-clipped px-5 py-2.5 bg-[var(--color-danger)] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm cursor-pointer">
+                      Bảng Điều Hành Admin
+                    </button>
+                  </Link>
+                )}
+              </div>
             </div>
           )}
 
@@ -563,11 +619,12 @@ export function EventsDiscoveryView() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {events.map((ev) => (
+              {events.map((event) => (
                 <EventCard
-                  key={ev.id}
-                  event={ev}
-                  onSelectExpired={(target) => setExpiredModalEvent(target)}
+                  key={event.id}
+                  event={event}
+                  userRole={roleByEventId.get(event.id)}
+                  onSelectExpired={(ev) => setExpiredModalEvent(ev)}
                 />
               ))}
             </div>

@@ -185,6 +185,18 @@ export interface TrackWithStaffModel extends Track {
 }
 
 export const tracksRepository = {
+  async createTrack(payload: CreateTrackPayload): Promise<TrackCreated> {
+    const res = await apiClient.post<TrackCreated>("/Tracks", payload);
+    return res.data;
+  },
+  async updateTrack(id: string, payload: UpdateTrackPayload): Promise<TrackUpdated> {
+    const res = await apiClient.put<TrackUpdated>(`/Tracks/${id}`, payload);
+    return res.data;
+  },
+  async deleteTrack(id: string): Promise<boolean> {
+    const res = await apiClient.delete<boolean>(`/Tracks/${id}`);
+    return res.data;
+  },
   async assignTemplate(trackId: string, templateId: string): Promise<boolean> {
     const res = await apiClient.patch<boolean>(`/Tracks/${trackId}/assign-template`, { templateId });
     return res.data;

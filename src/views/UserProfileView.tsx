@@ -327,7 +327,7 @@ export function UserProfileView() {
                       : "text-[var(--color-warning)]"
                   }`}>
                     {isBlocked
-                      ? "TÀI KHOẢN BỊ KHÓA (TWO-STRIKE BLOCK)"
+                      ? "TÀI KHOẢN BỊ TẠM KHÓA"
                       : user?.isApproved
                       ? "HỒ SƠ SINH VIÊN HỢP LỆ (APPROVED)"
                       : user?.isRejected
@@ -411,15 +411,15 @@ export function UserProfileView() {
                     ? "bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
                     : "bg-[var(--accent-team)]/10 text-[var(--accent-team)] border border-[var(--accent-team)]/30"
                 }`}>
-                  ROLE: {
+                  VAI TRÒ: {
                     roleName === "Coordinator"
-                      ? "EVENT COORDINATOR"
+                      ? "BAN TỔ CHỨC (COORDINATOR)"
                       : roleName === "Judge"
-                      ? "GIÁM KHẢO (JUDGE)"
+                      ? "GIÁM KHẢO"
                       : roleName === "Mentor"
-                      ? "CỐ VẤN (MENTOR)"
+                      ? "CỐ VẤN"
                       : roleName === "Admin"
-                      ? "SYSTEM ADMIN"
+                      ? "QUẢN TRỊ VIÊN HỆ THỐNG"
                       : "THÍ SINH (STUDENT)"
                   }
                 </span>

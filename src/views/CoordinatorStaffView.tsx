@@ -3,30 +3,27 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { staffRepository, useGetEventRoles } from "@/repositories/staffRepository";
+import { useGetUsers } from "@/repositories/usersRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 
-export const SYSTEM_ACCOUNTS = [
-  { email: "ec.co-organizer@fpt.edu.vn", fullName: "Nguyễn Văn Điều Phối (Coordinator)" },
-  { email: "judge.ai@fpt.edu.vn", fullName: "TS. Hoàng Văn Giám Khảo (Judge AI)" },
-  { email: "tran.phuc.judge@fpt.edu.vn", fullName: "ThS. Trần Phúc (Giám Khảo RBL)" },
-  { email: "mentor.tech@fpt.edu.vn", fullName: "Lê Cố Vấn Chuyên Môn (Mentor)" },
-  { email: "hoang.nam.mentor@fpt.edu.vn", fullName: "Nguyễn Hoàng Nam (Senior Cloud Architect)" },
-  { email: "nguyenvana@fpt.edu.vn", fullName: "Nguyễn Văn A" },
-  { email: "tranthib@fpt.edu.vn", fullName: "Trần Thị B" },
-  { email: "levanc@fpt.edu.vn", fullName: "Lê Văn C" },
-];
-
-export const checkEmailInSystem = (email: string) => {
+export const checkEmailInSystem = (email: string, usersList: Array<any> = []) => {
   if (!email.trim()) return true;
-  return SYSTEM_ACCOUNTS.some((acc) => acc.email.toLowerCase() === email.trim().toLowerCase());
+  const target = email.trim().toLowerCase();
+  return usersList.some((acc: any) => {
+    const e = (acc?.email || acc?.Email || acc?.userEmail || acc?.UserEmail || "").trim().toLowerCase();
+    return e === target;
+  });
 };
 
 export const CoordinatorStaffView: React.FC = () => {
   const searchParams = useSearchParams();
   const queryEventId = searchParams.get("eventId");
+
+  const { data: usersPaged } = useGetUsers();
+  const systemAccounts = usersPaged?.data || [];
 
   const { data: myEvents = [] } = useMyEvents();
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId || "");
@@ -249,15 +246,15 @@ export const CoordinatorStaffView: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
-            <div className="flex items-center gap-2 font-mono text-xs text-[var(--accent-coordinator)] mb-1">
-              <Shield className="w-3.5 h-3.5" />
-              <span>PHÂN CÔNG &amp; QUẢN LÝ NHÂN SỰ SU KIỆN</span>
+            <div className="flex items-center gap-2 font-mono text-xs text-[#a855f7] font-bold uppercase tracking-wider mb-1">
+              <Shield className="w-4 h-4 text-[#a855f7]" />
+              <span>QUẢN LÝ NHÂN SỰ BAN TỔ CHỨC</span>
             </div>
-            <h1 className="font-display font-bold text-2xl md:text-3xl text-[var(--text-primary)] uppercase tracking-wider">
-              Mời Giám Khảo &amp; Cố Vấn Chuyên Môn
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              MỜI VÀ PHÂN CÔNG GIÁM KHẢO &amp; CỐ VẤN
             </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-              Mời nhân sự chuyên môn tham gia sự kiện và quản lý danh sách phân công Giám khảo / Cố vấn theo từng Hạng mục.
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+              Mời nhân sự chuyên môn tham gia sự kiện và quản lý danh sách phân công Giám khảo, Cố vấn cho từng hạng mục thi đấu.
             </p>
           </div>
 
@@ -588,13 +585,16 @@ export const CoordinatorStaffView: React.FC = () => {
           )}
         </Card>
 
-        {/* Global Datalist for System Accounts Auto-Feed */}
         <datalist id="system-staff-accounts">
-          {SYSTEM_ACCOUNTS.map((acc) => (
-            <option key={acc.email} value={acc.email}>
-              {acc.fullName} ({acc.email})
-            </option>
-          ))}
+          {systemAccounts.map((acc: any, idx: number) => {
+            const emailVal = acc.email || acc.Email || acc.userEmail || "";
+            const nameVal = acc.fullName || acc.FullName || emailVal;
+            return (
+              <option key={acc.id || acc.Id || idx} value={emailVal}>
+                {nameVal} ({emailVal})
+              </option>
+            );
+          })}
         </datalist>
 
       </main>

@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { Button, Input, Card, Badge } from "@/components/ui";
 import { StaffInviteFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
 import { Users, Mail, UserPlus, Trash2, ArrowLeft, CheckCircle2, ShieldCheck, Clock, AlertCircle } from "lucide-react";
-import { SYSTEM_ACCOUNTS, checkEmailInSystem } from "@/views/CoordinatorStaffView";
+import { checkEmailInSystem } from "@/views/CoordinatorStaffView";
+import { useGetUsers } from "@/repositories/usersRepository";
 
 interface Step5StaffAssignmentProps {
   tracks: TrackFormState[];
@@ -29,6 +30,9 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
   successMessage,
   isReadOnly = false,
 }) => {
+  const { data: usersPaged } = useGetUsers();
+  const systemAccounts = usersPaged?.data || [];
+
   const [emailInput, setEmailInput] = useState<string>("");
   const [roleInput, setRoleInput] = useState<"Judge" | "Mentor">("Judge");
   const [trackInput, setTrackInput] = useState<string>(tracks[0]?.id || "");
@@ -82,7 +86,7 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
               onChange={(e) => setEmailInput(e.target.value)}
               required
             />
-            {emailInput.trim() && !checkEmailInSystem(emailInput) && (
+            {emailInput.trim() && !checkEmailInSystem(emailInput, systemAccounts) && (
               <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>Email này chưa tồn tại trong hệ thống</span>
@@ -209,13 +213,16 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
         </Button>
       </div>
 
-      {/* Datalist Auto-Feed for System Accounts */}
       <datalist id="wizard-staff-accounts">
-        {SYSTEM_ACCOUNTS.map((acc) => (
-          <option key={acc.email} value={acc.email}>
-            {acc.fullName} ({acc.email})
-          </option>
-        ))}
+        {systemAccounts.map((acc: any, idx: number) => {
+          const emailVal = acc.email || acc.Email || acc.userEmail || "";
+          const nameVal = acc.fullName || acc.FullName || emailVal;
+          return (
+            <option key={acc.id || acc.Id || idx} value={emailVal}>
+              {nameVal} ({emailVal})
+            </option>
+          );
+        })}
       </datalist>
     </Card>
   );
