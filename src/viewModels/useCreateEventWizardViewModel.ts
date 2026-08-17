@@ -88,6 +88,18 @@ export function useCreateEventWizardViewModel() {
   // Created Event Entity after Step 1 submit
   const [createdEvent, setCreatedEvent] = useState<EventEntity | null>(null);
 
+  // Step 2 State: Initial Rounds for Coordinator to configure
+  const [rounds, setRounds] = useState<RoundFormState[]>([]);
+
+  // Step 3 State: Initial Tracks
+  const [tracks, setTracks] = useState<TrackFormState[]>([]);
+
+  // Step 4 State: Criteria & Template Config
+  const [templateName, setTemplateName] = useState<string>("");
+  const [criterias, setCriterias] = useState<TemplateCriteriaFormState[]>([]);
+
+  const [criteriasByTrack, setCriteriasByTrack] = useState<Record<string, TemplateCriteriaFormState[]>>({});
+
   // Sync real Event data from Backend API / myEvents
   const searchParams = useSearchParams();
   const targetEventId = searchParams?.get("eventId");
@@ -167,18 +179,6 @@ export function useCreateEventWizardViewModel() {
       }
     }
   }, [myEvents, targetEventId]);
-
-  // Step 2 State: Initial Rounds for Coordinator to configure
-  const [rounds, setRounds] = useState<RoundFormState[]>([]);
-
-  // Step 3 State: Initial Tracks
-  const [tracks, setTracks] = useState<TrackFormState[]>([]);
-
-  // Step 4 State: Criteria & Template Config
-  const [templateName, setTemplateName] = useState<string>("");
-  const [criterias, setCriterias] = useState<TemplateCriteriaFormState[]>([]);
-
-  const [criteriasByTrack, setCriteriasByTrack] = useState<Record<string, TemplateCriteriaFormState[]>>({});
 
   const setCriteriasForTrack = (trackId: string, list: TemplateCriteriaFormState[]) => {
     setCriteriasByTrack((prev) => ({ ...prev, [trackId]: list }));
