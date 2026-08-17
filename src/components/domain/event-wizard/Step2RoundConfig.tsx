@@ -59,11 +59,38 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
     onUpdateRound(activeRound.id, "advancementRule", `${currentRuleMode}:${newVal}`);
   };
 
-  // Date validation check
-  const hasDateError =
-    activeRound.startDate &&
-    activeRound.endDate &&
-    new Date(activeRound.startDate) > new Date(activeRound.endDate);
+  // Comprehensive Date Logic Validations
+  const activeRoundIndex = rounds.findIndex((r) => r.id === activeRound.id);
+  const prevRound = activeRoundIndex > 0 ? rounds[activeRoundIndex - 1] : null;
+
+  const dateErrors: string[] = [];
+
+  if (activeRound.startDate && activeRound.endDate) {
+    if (new Date(activeRound.startDate) > new Date(activeRound.endDate)) {
+      dateErrors.push("Hạn chót nộp bài không được trước Ngày bắt đầu nộp bài!");
+    }
+  }
+
+  if (activeRound.endDate && activeRound.scoringStartDate) {
+    if (new Date(activeRound.scoringStartDate) < new Date(activeRound.endDate)) {
+      dateErrors.push("Ngày bắt đầu chấm điểm phải diễn ra sau (hoặc cùng lúc với) Hạn chót nộp bài!");
+    }
+  }
+
+  if (activeRound.scoringStartDate && activeRound.scoringEndDate) {
+    if (new Date(activeRound.scoringEndDate) < new Date(activeRound.scoringStartDate)) {
+      dateErrors.push("Hạn chót chấm điểm không được trước Ngày bắt đầu chấm điểm!");
+    }
+  }
+
+  if (prevRound) {
+    const prevEnd = prevRound.scoringEndDate || prevRound.endDate;
+    if (activeRound.startDate && prevEnd && new Date(activeRound.startDate) < new Date(prevEnd)) {
+      dateErrors.push(`Ngày bắt đầu của [${activeRound.roundName || `Vòng ${activeRoundIndex + 1}`}] phải diễn ra sau kết thúc của [${prevRound.roundName || `Vòng ${activeRoundIndex}`}]!`);
+    }
+  }
+
+  const hasDateError = dateErrors.length > 0;
 
   return (
     <div className="space-y-6 text-[#e1e7ec]">
@@ -97,7 +124,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
                   value={activeRound.startDate ? activeRound.startDate.substring(0, 16) : ""}
                   onChange={(e) => onUpdateRound(activeRound.id, "startDate", e.target.value)}
                   disabled={isReadOnly}
-                  className={`w-full px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs focus:outline-none ${
+                  className={`[color-scheme:dark] w-full px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs focus:outline-none cursor-pointer ${
                     hasDateError ? "border-[#ef4444]" : "border-[#263339] focus:border-[#8b5cf6]"
                   }`}
                 />
@@ -110,7 +137,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
                   value={activeRound.endDate ? activeRound.endDate.substring(0, 16) : ""}
                   onChange={(e) => onUpdateRound(activeRound.id, "endDate", e.target.value)}
                   disabled={isReadOnly}
-                  className={`w-full px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs focus:outline-none ${
+                  className={`[color-scheme:dark] w-full px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs focus:outline-none cursor-pointer ${
                     hasDateError ? "border-[#ef4444]" : "border-[#263339] focus:border-[#8b5cf6]"
                   }`}
                 />
@@ -119,13 +146,15 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[#8a9ba8] tracking-wider block uppercase text-[11px]">BẮT ĐẦU CHẤM ĐIỂM</label>
+                <label className="text-[#8a9ba8] tracking-wider block uppercase text-[11px]">BẮT ĐẦU CHẤM ĐIỂM *</label>
                 <input
                   type="datetime-local"
                   value={activeRound.scoringStartDate ? activeRound.scoringStartDate.substring(0, 16) : ""}
                   onChange={(e) => onUpdateRound(activeRound.id, "scoringStartDate", e.target.value)}
                   disabled={isReadOnly}
-                  className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] text-xs focus:outline-none focus:border-[#8b5cf6]"
+                  className={`[color-scheme:dark] w-full px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs focus:outline-none cursor-pointer ${
+                    hasDateError ? "border-[#ef4444]" : "border-[#263339] focus:border-[#8b5cf6]"
+                  }`}
                 />
               </div>
 
@@ -136,16 +165,25 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
                   value={activeRound.scoringEndDate ? activeRound.scoringEndDate.substring(0, 16) : ""}
                   onChange={(e) => onUpdateRound(activeRound.id, "scoringEndDate", e.target.value)}
                   disabled={isReadOnly}
-                  className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] text-xs focus:outline-none focus:border-[#8b5cf6]"
+                  className={`[color-scheme:dark] w-full px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs focus:outline-none cursor-pointer ${
+                    hasDateError ? "border-[#ef4444]" : "border-[#263339] focus:border-[#8b5cf6]"
+                  }`}
                 />
               </div>
             </div>
 
-            {/* Red Error Banner if End Date < Start Date */}
+            {/* Red Error Banner displaying Date Constraint Errors */}
             {hasDateError && (
-              <div className="p-2.5 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] text-[11px] font-mono flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>LỖI: NGÀY KẾT THÚC KHÔNG ĐƯỢC TRƯỚC NGÀY BẮT ĐẦU</span>
+              <div className="p-3 bg-red-500/10 border border-[#ef4444]/40 text-[#ef4444] text-xs font-mono space-y-1">
+                <div className="font-bold flex items-center gap-1.5 uppercase">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444]" />
+                  <span>CẢNH BÁO VI PHẠM LOGIC THỜI GIAN VÒNG THI</span>
+                </div>
+                <ul className="list-disc pl-5 text-[11px] space-y-0.5">
+                  {dateErrors.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
               </div>
             )}
 
