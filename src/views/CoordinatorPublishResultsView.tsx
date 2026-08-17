@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
+import { useAuth } from "@/providers/AuthProvider";
 import { useGetFinalResultsByRound, useAssignPrize, finalResultsRepository } from "@/repositories/finalResultsRepository";
-import { useMyEvents, useEventRounds } from "@/repositories/eventsRepository";
+import { useMyEvents, useEvents, useEventRounds } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
@@ -13,8 +14,17 @@ import { useToast } from "@/providers/ToastProvider";
 export const CoordinatorPublishResultsView: React.FC = () => {
   const toast = useToast();
   const params = useParams();
+  const { user: currentUser } = useAuth();
 
-  const { data: eventsList = [] } = useMyEvents();
+  const { data: myEvents = [] } = useMyEvents();
+  const { data: rawAllEvents = [] } = useEvents();
+  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allEvents
+    : myEvents.length > 0
+    ? myEvents
+    : allEvents;
+
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedRoundId, setSelectedRoundId] = useState<string>("");
   const [selectedTrackId, setSelectedTrackId] = useState<string>("");
@@ -171,9 +181,9 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                 className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#8b5cf6]"
               >
                 {eventsList.length > 0 ? (
-                  eventsList.map((ev, idx) => (
-                    <option key={ev.id || idx} value={ev.id || ev.eventId}>
-                      {ev.eventName || ev.EventName} ({ev.season} {ev.year})
+                  eventsList.map((ev: any, idx: number) => (
+                    <option key={ev.id || ev.Id || ev.eventId || ev.EventId || idx} value={ev.id || ev.Id || ev.eventId || ev.EventId}>
+                      {ev.eventName || ev.EventName || "Sự kiện"} ({ev.season || ev.Season || ""} {ev.year || ev.Year || ""})
                     </option>
                   ))
                 ) : (

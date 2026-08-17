@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import { appealsRepository, AppealStatus, type Appeal } from "@/repositories/appealsRepository";
-import { useMyEvents } from "@/repositories/eventsRepository";
+import { useAuth } from "@/providers/AuthProvider";
+import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
 import { Check, X, AlertCircle, CheckCircle2, UserPlus, Filter, ChevronDown } from "lucide-react";
@@ -40,7 +41,16 @@ function useAppealsByEvent(eventId: string | undefined) {
 }
 
 export const CoordinatorAppealsView: React.FC = () => {
-  const { data: eventsList = [] } = useMyEvents();
+  const { user: currentUser } = useAuth();
+  const { data: myEvents = [] } = useMyEvents();
+  const { data: rawAllEvents = [] } = useEvents();
+  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allEvents
+    : myEvents.length > 0
+    ? myEvents
+    : allEvents;
+
   const [selectedEventId, setSelectedEventId] = useState<string>("");
 
   React.useEffect(() => {
@@ -147,9 +157,9 @@ export const CoordinatorAppealsView: React.FC = () => {
                 className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#8b5cf6]"
               >
                 {eventsList.length > 0 ? (
-                  eventsList.map((ev, idx) => (
-                    <option key={ev.id || idx} value={ev.id || ev.eventId}>
-                      {ev.eventName || ev.EventName} ({ev.season} {ev.year})
+                  eventsList.map((ev: any, idx: number) => (
+                    <option key={ev.id || ev.Id || ev.eventId || ev.EventId || idx} value={ev.id || ev.Id || ev.eventId || ev.EventId}>
+                      {ev.eventName || ev.EventName || "Sự kiện"} ({ev.season || ev.Season || ""} {ev.year || ev.Year || ""})
                     </option>
                   ))
                 ) : (

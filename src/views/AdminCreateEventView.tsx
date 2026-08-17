@@ -7,7 +7,7 @@ import { staffRepository } from "@/repositories/staffRepository";
 import { usersRepository } from "@/repositories/usersRepository";
 import { Shield, Calendar, Clock, Info, ArrowLeft, CheckCircle2, UserCheck, AlertCircle } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 export const AdminCreateEventView: React.FC = () => {
   const toast = useToast();
@@ -31,7 +31,7 @@ export const AdminCreateEventView: React.FC = () => {
     round1Name: "Vòng 1",
     round1StartDate: "2026-07-15T08:00",
     round1EndDate: "2026-09-20T17:00",
-    track1Name: "",
+    track1Name: "Bảng Đấu Phần Mềm Ứng Dụng (General Software)",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

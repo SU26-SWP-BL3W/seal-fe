@@ -5,7 +5,7 @@ import { Button, Card, Badge, Table, Input } from "@/components/ui";
 import type { EventItem } from "@/viewModels/eventsMetadata";
 import { staffRepository } from "@/repositories/staffRepository";
 import { ShieldAlert, Plus, Users, School, Activity, ArrowRight, Shield, UserCheck, X, CheckCircle2, Edit, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 import { useEvents } from "@/repositories/eventsRepository";
 import { usersRepository, useGetUsers } from "@/repositories/usersRepository";

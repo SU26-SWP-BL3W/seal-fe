@@ -79,6 +79,36 @@ export function JudgeScoringView() {
     [myScores],
   );
 
+  // Tự động nạp lại điểm số từng tiêu chí và nhận xét nếu giám khảo đã chấm/lưu nháp trước đó
+  useEffect(() => {
+    if (!selectedSubmission) {
+      setScores({});
+      setComment("");
+      return;
+    }
+    const currentSubId = selectedSubmission.id || selectedSubmission.Id;
+    const existingScore = myScores.find((s) => (s.submitResultId || (s as any).SubmitResultId) === currentSubId);
+    if (existingScore) {
+      setComment((existingScore as any).comment || (existingScore as any).Comment || "");
+      const detailsList = (existingScore as any).details || (existingScore as any).Details || [];
+      if (Array.isArray(detailsList) && detailsList.length > 0) {
+        const loaded: Record<string, number> = {};
+        detailsList.forEach((d: any) => {
+          const cId = d.criteriaId || d.CriteriaId;
+          if (cId) {
+            loaded[cId] = Number(d.value ?? d.Value ?? 0);
+          }
+        });
+        setScores(loaded);
+      } else {
+        setScores({});
+      }
+    } else {
+      setScores({});
+      setComment("");
+    }
+  }, [selectedSubmission, myScores]);
+
   // Tính tổng điểm RBL theo trọng số
   const calculatedTotalScore = useMemo(() => {
     let totalWeightedRatio = 0;

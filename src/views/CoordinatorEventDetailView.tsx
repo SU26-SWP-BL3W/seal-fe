@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import { Calendar, Info, FileText, Lock, ArrowRight, Shield } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 export const CoordinatorEventDetailView: React.FC = () => {
   const params = useParams();

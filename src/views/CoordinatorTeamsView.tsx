@@ -232,11 +232,12 @@ export function CoordinatorTeamsView() {
   const handleApprove = async (teamId: string) => {
     try {
       await approveTeam(teamId);
+      alert("Đã duyệt đội thi thành công!");
       setDetailModal(null);
       refetchPending();
       refetchRegistered();
-    } catch {
-      alert("Đã duyệt đội thi thành công!");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Duyệt đội thi thất bại.");
     }
   };
 
@@ -244,10 +245,11 @@ export function CoordinatorTeamsView() {
     if (!rejectModal) return;
     try {
       await rejectTeam({ teamId: rejectModal.teamId, reason: rejectReason.trim() || "Chưa đạt yêu cầu" });
+      alert("Đã từ chối đăng ký đội thi.");
       refetchPending();
       refetchRegistered();
-    } catch {
-      alert("Đã từ chối đăng ký đội thi.");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Từ chối đăng ký đội thi thất bại.");
     } finally {
       setRejectModal(null);
       setDetailModal(null);

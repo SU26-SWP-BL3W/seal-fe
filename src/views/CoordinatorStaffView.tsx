@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/providers/AuthProvider";
 import { staffRepository, useGetEventRoles } from "@/repositories/staffRepository";
 import { useGetUsers } from "@/repositories/usersRepository";
-import { useMyEvents } from "@/repositories/eventsRepository";
+import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Info } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
@@ -19,6 +20,7 @@ export const checkEmailInSystem = (email: string, usersList: Array<any> = []) =>
 };
 
 export const CoordinatorStaffView: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const searchParams = useSearchParams();
   const queryEventId = searchParams.get("eventId");
 
@@ -26,6 +28,14 @@ export const CoordinatorStaffView: React.FC = () => {
   const systemAccounts = usersPaged?.data || [];
 
   const { data: myEvents = [] } = useMyEvents();
+  const { data: rawAllEvents = [] } = useEvents();
+  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allEvents
+    : myEvents.length > 0
+    ? myEvents
+    : allEvents;
+
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId || "");
 
   React.useEffect(() => {
@@ -252,8 +262,8 @@ export const CoordinatorStaffView: React.FC = () => {
               onChange={(e) => setSelectedEventId(e.target.value)}
               className="w-full px-4 py-3 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
             >
-              <option value="">-- Chọn Sự Kiện Của Bạn --</option>
-              {myEvents.map((ev: any) => {
+              <option value="">-- Chọn Sự Kiện Để Quản Lý ({eventsList.length}) --</option>
+              {eventsList.map((ev: any) => {
                 const id = ev.id || ev.Id || ev.eventId || ev.EventId;
                 const name = ev.eventName || ev.EventName || "Sự kiện không tên";
                 return (

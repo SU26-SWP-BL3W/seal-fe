@@ -6,7 +6,8 @@ import { useGetPrizesByEvent, useCreatePrize, useUpdatePrize, useDeletePrize } f
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
 
-import { useMyEvents } from "@/repositories/eventsRepository";
+import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
+import { useAuth } from "@/providers/AuthProvider";
 
 export interface PrizeItemState {
   id: string;
@@ -18,10 +19,20 @@ export interface PrizeItemState {
 }
 
 export const CoordinatorPrizesView: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const params = useParams();
   const searchParams = useSearchParams();
   const urlEventId = (searchParams?.get("eventId") as string) || (params?.id as string) || "";
-  const { data: eventsList = [] } = useMyEvents();
+  
+  const { data: myEvents = [] } = useMyEvents();
+  const { data: rawAllEvents = [] } = useEvents();
+  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allEvents
+    : myEvents.length > 0
+    ? myEvents
+    : allEvents;
+
   const [selectedEventId, setSelectedEventId] = useState<string>(urlEventId);
 
   React.useEffect(() => {
@@ -208,9 +219,9 @@ export const CoordinatorPrizesView: React.FC = () => {
                 className="bg-transparent text-[#f59e0b] font-bold focus:outline-none cursor-pointer max-w-[220px] truncate"
               >
                 {eventsList.length > 0 ? (
-                  eventsList.map((ev, idx) => (
-                    <option key={ev.id || idx} value={ev.id || ev.eventId} className="bg-[#13191c] text-[#e1e7ec]">
-                      {ev.eventName || ev.EventName}
+                  eventsList.map((ev: any, idx: number) => (
+                    <option key={ev.id || ev.Id || ev.eventId || ev.EventId || idx} value={ev.id || ev.Id || ev.eventId || ev.EventId} className="bg-[#13191c] text-[#e1e7ec]">
+                      {ev.eventName || ev.EventName || "Sự kiện"}
                     </option>
                   ))
                 ) : (

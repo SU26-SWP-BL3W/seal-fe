@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
 import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 export interface CriteriaInsideSet {
   id: string;
