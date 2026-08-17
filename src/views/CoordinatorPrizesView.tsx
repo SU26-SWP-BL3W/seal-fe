@@ -40,6 +40,16 @@ export const CoordinatorPrizesView: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Helper function to auto-format numeric string to "X.XXX.XXX VNĐ"
+  const formatCurrencyInput = (val: string): string => {
+    if (!val) return "";
+    const digits = val.replace(/[^0-9]/g, "");
+    if (!digits) return val;
+    const num = parseInt(digits, 10);
+    if (isNaN(num)) return val;
+    return `${new Intl.NumberFormat("vi-VN").format(num)} VNĐ`;
+  };
+
   // Dynamic tracks list
   const tracksList = [
     { id: "all", name: "Toàn Sự Kiện (Chung)" },
@@ -54,13 +64,30 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   React.useEffect(() => {
     if (Array.isArray(dbPrizes) && dbPrizes.length > 0) {
-      const mapped = dbPrizes.map((p: any, idx: number) => ({
-        id: p.id || p.Id || `prz-${idx}`,
-        prizeName: p.prizeName || p.PrizeName || p.name || "Giải thưởng",
-        quantity: p.quantity || p.Quantity || 1,
-        value: p.prizeValueVnd ? `${new Intl.NumberFormat("vi-VN").format(p.prizeValueVnd)} VNĐ` : (p.value || "0 VNĐ"),
-        trackName: p.trackName || p.TrackName || "Toàn Sự Kiện (Chung)",
-      }));
+      // Deduplicate DB prizes by name to prevent duplication on re-fetch
+      const uniqueMap = new Map<string, any>();
+      dbPrizes.forEach((p: any) => {
+        const nameKey = (p.prizeName || p.PrizeName || p.name || "").trim();
+        if (nameKey && !uniqueMap.has(nameKey)) {
+          uniqueMap.set(nameKey, p);
+        }
+      });
+      const uniqueList = Array.from(uniqueMap.values());
+
+      const mapped = uniqueList.map((p: any, idx: number) => {
+        const rawName = p.prizeName || p.PrizeName || p.name || "Giải thưởng";
+        // Strip duplicate track suffix if already appended previously
+        const cleanName = rawName.replace(/\s*\([^)]+\)\s*$/, "").trim() || rawName;
+        const valStr = p.prizeValueVnd ? `${new Intl.NumberFormat("vi-VN").format(p.prizeValueVnd)} VNĐ` : (p.value ? formatCurrencyInput(String(p.value)) : "0 VNĐ");
+
+        return {
+          id: p.id || p.Id || `prz-${idx}`,
+          prizeName: cleanName,
+          quantity: p.quantity || p.Quantity || 1,
+          value: valStr,
+          trackName: p.trackName || p.TrackName || "Toàn Sự Kiện (Chung)",
+        };
+      });
       setPrizes(mapped);
     } else {
       setPrizes([]);
@@ -91,7 +118,14 @@ export const CoordinatorPrizesView: React.FC = () => {
   // Handle Update Prize Field
   const handleUpdatePrize = (id: string, field: keyof PrizeItemState, value: any) => {
     setPrizes((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        if (field === "value" && typeof value === "string") {
+          const formattedVal = formatCurrencyInput(value);
+          return { ...p, [field]: formattedVal };
+        }
+        return { ...p, [field]: value };
+      })
     );
   };
 
@@ -112,10 +146,13 @@ export const CoordinatorPrizesView: React.FC = () => {
       if (activeEventId) {
         for (const p of prizes) {
           try {
+            const hasSuffix = p.prizeName.includes("(");
+            const finalPrizeName = hasSuffix ? p.prizeName : `${p.prizeName} (${p.trackName})`;
+
             await createPrizeMutation.mutateAsync({
               eventId: activeEventId,
               payload: {
-                prizeName: `${p.prizeName} (${p.trackName})`,
+                prizeName: finalPrizeName,
                 value: p.value,
                 quantity: p.quantity,
               },

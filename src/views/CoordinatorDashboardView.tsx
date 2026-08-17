@@ -219,7 +219,7 @@ export const CoordinatorDashboardView: React.FC = () => {
             
             {/* Shortcut 1: Event Config (Trỏ về Event Wizard Cấu Hình Vòng & Hạng Mục) */}
             <Link
-              href="/coordinator/events/new"
+              href={selectedEventId ? `/coordinator/events/new?eventId=${selectedEventId}` : "/coordinator/events/new"}
               className="bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] p-5 space-y-3 transition-all group cursor-pointer"
             >
               <div className="w-9 h-9 bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
