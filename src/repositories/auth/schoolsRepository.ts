@@ -11,7 +11,7 @@ export function useGetSchools() {
     queryFn: async () => {
       try {
         const res = await apiClient.get<PagedResult<School>>("/Schools", {
-          params: { PageNumber: 1, PageSize: 100 },
+          params: { PageNumber: 1, PageSize: 500 },
         });
         if (Array.isArray(res.data?.data)) {
           return res.data.data;
@@ -41,3 +41,32 @@ export function useCreateSchool() {
     },
   });
 }
+
+/** PUT /api/Schools/{id} — Cập nhật trường học (Admin) */
+export function useUpdateSchool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { schoolName: string; address?: string } }) => {
+      const res = await apiClient.put(`/Schools/${id}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schools"] });
+    },
+  });
+}
+
+/** DELETE /api/Schools/{id} — Xóa trường học (Admin) */
+export function useDeleteSchool() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiClient.delete(`/Schools/${id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schools"] });
+    },
+  });
+}
+

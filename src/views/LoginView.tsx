@@ -8,8 +8,10 @@ import { Mail, Lock, Eye, EyeOff, GraduationCap, ArrowRight } from "lucide-react
 import { SealShield } from "@/components/domain/SealShield";
 
 import { useSearchParams } from "next/navigation";
+import { useToast } from "@/providers/ToastProvider";
 
 export function LoginView() {
+  const toast = useToast();
   const searchParams = useSearchParams();
   const isVerifiedNotice = searchParams.get("verified") === "true";
   const [email, setEmail] = useState("");
@@ -25,15 +27,20 @@ export function LoginView() {
     e.preventDefault();
     setErrorMessage(null);
     if (!email.trim() || !password) {
-      setErrorMessage("Vui lòng nhập email và mật khẩu!");
+      const msg = "Vui lòng nhập email và mật khẩu!";
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     setIsSubmitting(true);
     try {
       const targetPath = await loginWithCredentials(email, password);
+      toast.success("Đăng nhập thành công!");
       router.push(targetPath);
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || "Email hoặc mật khẩu không đúng.");
+      const msg = err?.response?.data?.message || "Email hoặc mật khẩu không đúng.";
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -41,23 +48,30 @@ export function LoginView() {
 
   const handleGoogleSuccess = async (response: CredentialResponse) => {
     if (!response.credential) {
-      setErrorMessage("Không nhận được token xác thực từ Google.");
+      const msg = "Không nhận được token xác thực từ Google.";
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
       const targetPath = await loginWithGoogleCredential(response.credential);
+      toast.success("Đăng nhập Google thành công!");
       router.push(targetPath);
     } catch (err: any) {
-      setErrorMessage(err?.response?.data?.message || err?.message || "Đăng nhập Google thất bại.");
+      const msg = err?.response?.data?.message || err?.message || "Đăng nhập Google thất bại.";
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleGoogleError = () => {
-    setErrorMessage("Đăng nhập với Google bị hủy hoặc gặp sự cố.");
+    const msg = "Đăng nhập với Google bị hủy hoặc gặp sự cố.";
+    setErrorMessage(msg);
+    toast.error(msg);
   };
 
   return (

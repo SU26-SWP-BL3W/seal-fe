@@ -4,6 +4,7 @@ import React from "react";
 import { AlertTriangle } from "lucide-react";
 
 interface ApiMissingDataBadgeProps {
+  endpoint?: string;
   title?: string;
   message?: string;
   className?: string;

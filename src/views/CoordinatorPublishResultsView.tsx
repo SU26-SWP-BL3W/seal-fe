@@ -2,17 +2,29 @@
 
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
+import { useAuth } from "@/providers/AuthProvider";
 import { useGetFinalResultsByRound, useAssignPrize, finalResultsRepository } from "@/repositories/finalResultsRepository";
-import { useMyEvents, useEventRounds } from "@/repositories/eventsRepository";
+import { useMyEvents, useEvents, useEventRounds } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
 import { Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle2, Award, ChevronDown, Filter, Layers } from "lucide-react";
+import { useToast } from "@/providers/ToastProvider";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
+  const toast = useToast();
   const params = useParams();
+  const { user: currentUser } = useAuth();
 
-  const { data: eventsList = [] } = useMyEvents();
+  const { data: myEvents = [] } = useMyEvents();
+  const { data: rawAllEvents = [] } = useEvents();
+  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allEvents
+    : myEvents.length > 0
+    ? myEvents
+    : allEvents;
+
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedRoundId, setSelectedRoundId] = useState<string>("");
   const [selectedTrackId, setSelectedTrackId] = useState<string>("");
@@ -87,13 +99,16 @@ export const CoordinatorPublishResultsView: React.FC = () => {
         });
       }
       const prizeObj = availablePrizesList.find((p) => p.id === prizeId);
-      setSuccessMessage(
+      const okMsg =
         prizeId !== "none"
           ? `Đã trao ${prizeObj?.name || 'Giải thưởng'} cho Đội "${teamName}"!`
-          : `Đã hủy gán giải thưởng cho Đội "${teamName}".`
-      );
+          : `Đã hủy gán giải thưởng cho Đội "${teamName}".`;
+      setSuccessMessage(okMsg);
+      toast.success(okMsg);
     } catch (err: any) {
-      setErrorMessage(`Gán giải thưởng thất bại: ${err?.message}`);
+      const errMsg = `Gán giải thưởng thất bại: ${err?.message}`;
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -107,10 +122,14 @@ export const CoordinatorPublishResultsView: React.FC = () => {
       if (!selectedRoundId.startsWith("round-")) {
         await finalResultsRepository.calculateRoundResults(selectedRoundId, topN);
       }
-      setSuccessMessage(`Đã tự động tính toán xếp hạng điểm số cho Vòng thi (Top ${topN}).`);
+      const okMsg = `Đã tự động tính toán xếp hạng điểm số cho Vòng thi (Top ${topN}).`;
+      setSuccessMessage(okMsg);
+      toast.success(okMsg);
       await refetch();
     } catch (err: any) {
-      setErrorMessage(`Tính điểm thất bại: ${err?.response?.data?.message || err?.message}`);
+      const errMsg = `Tính điểm thất bại: ${err?.response?.data?.message || err?.message}`;
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -126,14 +145,16 @@ export const CoordinatorPublishResultsView: React.FC = () => {
         await finalResultsRepository.setPublishStatus(selectedRoundId, nextStatus);
       }
       setIsPublishedState(nextStatus);
-      setSuccessMessage(
-        nextStatus
-          ? "Đã công bố công khai bảng kết quả cho thí sinh và Bảng Vàng Danh Dự!"
-          : "Đã ẩn bảng kết quả về chế độ bản nháp an toàn."
-      );
+      const okMsg = nextStatus
+        ? "Đã công bố công khai bảng kết quả cho thí sinh và Bảng Vàng Danh Dự!"
+        : "Đã ẩn bảng kết quả về chế độ bản nháp an toàn.";
+      setSuccessMessage(okMsg);
+      toast.success(okMsg);
       await refetch();
     } catch (err: any) {
-      setErrorMessage(`Đổi trạng thái thất bại: ${err?.response?.data?.message || err?.message}`);
+      const errMsg = `Đổi trạng thái thất bại: ${err?.response?.data?.message || err?.message}`;
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -160,9 +181,9 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                 className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#8b5cf6]"
               >
                 {eventsList.length > 0 ? (
-                  eventsList.map((ev, idx) => (
-                    <option key={ev.id || idx} value={ev.id || ev.eventId}>
-                      {ev.eventName || ev.EventName} ({ev.season} {ev.year})
+                  eventsList.map((ev: any, idx: number) => (
+                    <option key={ev.id || ev.Id || ev.eventId || ev.EventId || idx} value={ev.id || ev.Id || ev.eventId || ev.EventId}>
+                      {ev.eventName || ev.EventName || "Sự kiện"} ({ev.season || ev.Season || ""} {ev.year || ev.Year || ""})
                     </option>
                   ))
                 ) : (

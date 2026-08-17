@@ -8,13 +8,27 @@ import { Step3TrackConfig } from "@/components/domain/event-wizard/Step3TrackCon
 import { Step4TemplateCriteriaEditor } from "@/components/domain/event-wizard/Step4TemplateCriteriaEditor";
 import { Step6EventConfirmation } from "@/components/domain/event-wizard/Step6EventConfirmation";
 import { Shield, Layers, Target, Sliders, AlertCircle, ArrowLeft, CheckCircle2, Rocket } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 import { useGetTemplates } from "@/repositories/templatesRepository";
+import { useToast } from "@/providers/ToastProvider";
 
 export const CreateEventWizardView: React.FC = () => {
+  const toast = useToast();
   const wizard = useCreateEventWizardViewModel();
   const { data: templates = [] } = useGetTemplates();
+
+  React.useEffect(() => {
+    if (wizard.errorMessage) {
+      toast.error(wizard.errorMessage);
+    }
+  }, [wizard.errorMessage, toast]);
+
+  React.useEffect(() => {
+    if (wizard.successMessage) {
+      toast.success(wizard.successMessage);
+    }
+  }, [wizard.successMessage, toast]);
 
   // Streamlined 5-Step Event Config Wizard (Staff Assignment managed in dedicated view C8)
   const steps = [

@@ -14,10 +14,13 @@ import {
   Code,
   CheckCircle2,
   MessageSquare,
+  AlertCircle,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useToast } from "@/providers/ToastProvider";
 
 export function JudgeScoringView() {
+  const toast = useToast();
   const searchParams = useSearchParams();
   const prefillSubId = searchParams?.get("subId");
   const prefillTrackId = searchParams?.get("trackId") || "";
@@ -76,6 +79,36 @@ export function JudgeScoringView() {
     [myScores],
   );
 
+  // Tự động nạp lại điểm số từng tiêu chí và nhận xét nếu giám khảo đã chấm/lưu nháp trước đó
+  useEffect(() => {
+    if (!selectedSubmission) {
+      setScores({});
+      setComment("");
+      return;
+    }
+    const currentSubId = selectedSubmission.id || selectedSubmission.Id;
+    const existingScore = myScores.find((s) => (s.submitResultId || (s as any).SubmitResultId) === currentSubId);
+    if (existingScore) {
+      setComment((existingScore as any).comment || (existingScore as any).Comment || "");
+      const detailsList = (existingScore as any).details || (existingScore as any).Details || [];
+      if (Array.isArray(detailsList) && detailsList.length > 0) {
+        const loaded: Record<string, number> = {};
+        detailsList.forEach((d: any) => {
+          const cId = d.criteriaId || d.CriteriaId;
+          if (cId) {
+            loaded[cId] = Number(d.value ?? d.Value ?? 0);
+          }
+        });
+        setScores(loaded);
+      } else {
+        setScores({});
+      }
+    } else {
+      setScores({});
+      setComment("");
+    }
+  }, [selectedSubmission, myScores]);
+
   // Tính tổng điểm RBL theo trọng số
   const calculatedTotalScore = useMemo(() => {
     let totalWeightedRatio = 0;
@@ -124,7 +157,9 @@ export function JudgeScoringView() {
 
   const handleSaveScore = async (isFinalSubmit: boolean, autoAdvance = false) => {
     if (!selectedSubmission) {
-      setSaveError("Vui lòng chọn bài nộp cần chấm điểm.");
+      const msg = "Vui lòng chọn bài nộp cần chấm điểm.";
+      setSaveError(msg);
+      toast.error(msg);
       return;
     }
     setSaveError("");
@@ -132,7 +167,9 @@ export function JudgeScoringView() {
     const submitResultId = selectedSubmission.id || selectedSubmission.Id;
     const currentTemplateId = selectedTrack?.templateId;
     if (!submitResultId || !currentTemplateId || !eventRoleId) {
-      setSaveError("Thiếu submitResultId/templateId/eventRoleId thật — không thể lưu điểm.");
+      const msg = "Thiếu submitResultId/templateId/eventRoleId thật — không thể lưu điểm.";
+      setSaveError(msg);
+      toast.error(msg);
       return;
     }
     const payloadDetails = criteria.map((cr) => ({
@@ -148,12 +185,16 @@ export function JudgeScoringView() {
         isSubmitted: isFinalSubmit,
         details: payloadDetails,
       });
-      setSaveOk(isFinalSubmit ? "✓ Đã khóa và chốt điểm chính thức thành công!" : "✓ Đã lưu nháp bảng điểm thành công.");
+      const okMsg = isFinalSubmit ? "Đã khóa và chốt điểm chính thức thành công!" : "Đã lưu nháp bảng điểm thành công.";
+      setSaveOk(`✓ ${okMsg}`);
+      toast.success(okMsg);
       if (autoAdvance && currentSubIndex < apiSubmissions.length - 1) {
         setTimeout(() => handleNextSubmission(), 600);
       }
     } catch (err: any) {
-      setSaveError(err?.response?.data?.message || err?.message || "Lưu điểm thất bại — vui lòng thử lại.");
+      const errMsg = err?.response?.data?.message || err?.message || "Lưu điểm thất bại — vui lòng thử lại.";
+      setSaveError(errMsg);
+      toast.error(errMsg);
     }
   };
 

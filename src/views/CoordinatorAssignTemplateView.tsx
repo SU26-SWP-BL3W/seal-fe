@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
 import { tracksRepository } from "@/repositories/tracksRepository";
 import { AlertCircle, Lock, CheckCircle2, Info } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 export const CoordinatorAssignTemplateView: React.FC = () => {
   const params = useParams();

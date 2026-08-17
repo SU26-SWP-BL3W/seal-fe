@@ -48,10 +48,10 @@
   --space-sm: 10px;
   --space-md: 16px;
   --space-lg: 24px;
-  --space-xl: 48px;
+  --space-xl: 36px;  /* FE cu: 36px, FE moi: 48px -> fix ve 36px */
 
   /* ---------- Shape ---------- */
-  --clip-size: 8px;
+  --clip-size: 12px;  /* FE cu: 12px, FE moi: 8px -> fix ve 12px */
 
   /* ---------- Layout ---------- */
   --container-max: 1280px;
