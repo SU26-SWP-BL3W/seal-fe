@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useGetPrizesByEvent, useCreatePrize, saveStoredPrizesForEvent } from "@/repositories/results/prizesRepository";
+import { useGetPrizesByEvent, useCreatePrize, useUpdatePrize, useDeletePrize } from "@/repositories/results/prizesRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
 
@@ -35,6 +35,8 @@ export const CoordinatorPrizesView: React.FC = () => {
   const { data: dbPrizes = [] } = useGetPrizesByEvent(activeEventId);
   const { data: dbTracks = [] } = useGetTracksByEvent(activeEventId);
   const createPrizeMutation = useCreatePrize();
+  const updatePrizeMutation = useUpdatePrize();
+  const deletePrizeMutation = useDeletePrize();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export const CoordinatorPrizesView: React.FC = () => {
           : (p.value ? formatCurrencyNumber(String(p.value)) : "1.000.000");
 
         return {
-          id: p.id || p.Id || `prz-${idx}`,
+          id: p.id || p.Id,
           prizeName: p.cleanName || "Giải thưởng",
           quantity: p.quantity || p.Quantity || 1,
           value: valStr,
@@ -90,16 +92,20 @@ export const CoordinatorPrizesView: React.FC = () => {
         };
       });
       setPrizes(mapped);
+    } else {
+      setPrizes([]);
     }
-  }, [activeEventId, dbPrizes.length]);
+  }, [activeEventId, dbPrizes]);
 
-  // Handle Add New Editable Prize Row
+  const isNewPrize = (id: string) => id.startsWith("new-");
+
+  // Handle Add New Editable Prize Row (chưa có trên BE cho tới khi bấm Lưu)
   const handleAddPrize = () => {
     const nextNum = prizes.length + 1;
     setPrizes((prev) => [
       ...prev,
       {
-        id: `prz-${Date.now()}`,
+        id: `new-${Date.now()}`,
         prizeName: `Giải Thưởng Mới ${nextNum}`,
         quantity: 1,
         value: "1.000.000",
@@ -108,14 +114,18 @@ export const CoordinatorPrizesView: React.FC = () => {
     ]);
   };
 
-  // Handle Remove Prize Row
-  const handleRemovePrize = (id: string) => {
+  // Handle Remove Prize Row — xoá thẳng trên BE nếu đã tồn tại, chỉ bỏ khỏi state nếu mới thêm chưa lưu
+  const handleRemovePrize = async (id: string) => {
     if (prizes.length <= 1) return;
-    const updated = prizes.filter((p) => p.id !== id);
-    setPrizes(updated);
-    if (activeEventId) {
-      saveStoredPrizesForEvent(activeEventId, updated);
+    if (!isNewPrize(id)) {
+      try {
+        await deletePrizeMutation.mutateAsync(id);
+      } catch (err: any) {
+        setErrorMessage(`Xóa giải thưởng thất bại: ${err?.response?.data?.message || err?.message}`);
+        return;
+      }
     }
+    setPrizes((prev) => prev.filter((p) => p.id !== id));
   };
 
   // Handle Update Prize Field
@@ -139,46 +149,45 @@ export const CoordinatorPrizesView: React.FC = () => {
     return acc + val * (p.quantity || 1);
   }, 0);
 
-  // Save All Prizes Configuration
+  // Save All Prizes Configuration — tạo mới giải chưa có id thật, cập nhật giải đã tồn tại
   const handleSaveConfig = async () => {
+    if (!activeEventId) return;
     setIsSubmitting(true);
     setSuccessMessage(null);
     setErrorMessage(null);
 
-    try {
-      if (activeEventId) {
-        // Clean prize names before saving (strip duplicate suffixes)
-        const cleanedPrizes = prizes.map(p => ({
-          ...p,
-          prizeName: p.prizeName.replace(/\s*\([^)]*\)/g, "").trim() || p.prizeName,
-        }));
+    const failures: string[] = [];
+    const nextPrizes = [...prizes];
 
-        // 1. Overwrite stored prize list to prevent geometric duplication (2 -> 4 -> 8)
-        saveStoredPrizesForEvent(activeEventId, cleanedPrizes);
-        setPrizes(cleanedPrizes);
-
-        // 2. Sync to API
-        for (const p of cleanedPrizes) {
-          try {
-            await createPrizeMutation.mutateAsync({
-              eventId: activeEventId,
-              payload: {
-                prizeName: `${p.prizeName} (${p.trackName})`,
-                value: p.value,
-                quantity: p.quantity,
-              },
-            });
-          } catch (e) {
-            // Ignore API network errors
-          }
+    for (let i = 0; i < nextPrizes.length; i++) {
+      const p = nextPrizes[i];
+      const cleanName = p.prizeName.replace(/\s*\([^)]*\)/g, "").trim() || p.prizeName;
+      const payload = {
+        prizeName: `${cleanName} (${p.trackName})`,
+        value: p.value,
+        quantity: p.quantity,
+      };
+      try {
+        if (isNewPrize(p.id)) {
+          const created = await createPrizeMutation.mutateAsync({ eventId: activeEventId, payload });
+          nextPrizes[i] = { ...p, id: created.id, prizeName: cleanName };
+        } else {
+          await updatePrizeMutation.mutateAsync({ id: p.id, payload });
+          nextPrizes[i] = { ...p, prizeName: cleanName };
         }
+      } catch (err: any) {
+        failures.push(`${cleanName}: ${err?.response?.data?.message || err?.message}`);
       }
-      setSuccessMessage(`✓ Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
-    } catch (err: any) {
-      setErrorMessage(`Lưu cấu hình thất bại: ${err?.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
+
+    setPrizes(nextPrizes);
+
+    if (failures.length > 0) {
+      setErrorMessage(`Một số giải thưởng lưu thất bại — ${failures.join("; ")}`);
+    } else {
+      setSuccessMessage(`✓ Đã ghi nhận thành công cấu hình ${nextPrizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
+    }
+    setIsSubmitting(false);
   };
 
   return (
