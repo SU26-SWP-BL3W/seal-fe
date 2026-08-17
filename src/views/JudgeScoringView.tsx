@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetSubmitResultsByTrack } from "@/repositories/submitResultsRepository";
 import { useGetTemplate } from "@/repositories/templatesRepository";
@@ -21,7 +22,7 @@ export function JudgeScoringView() {
   const prefillSubId = searchParams?.get("subId");
   const prefillTrackId = searchParams?.get("trackId") || "";
 
-  const { user, loginAsDemoRole } = useAuth();
+  const { user } = useAuth();
 
   // Dùng chung logic với Bảng Phân Công (useMyAssignedJudgeTracks) — đảm bảo bàn
   // chấm điểm thấy được MỌI track thật được gán, kể cả ở sự kiện khác với sự kiện
@@ -165,16 +166,14 @@ export function JudgeScoringView() {
           </div>
           <h2 className="font-display text-xl font-bold uppercase text-white">BÀN CHẤM ĐIỂM GIÁM KHẢO</h2>
           <p className="font-sans text-xs text-zinc-400 leading-relaxed">
-            Vui lòng đăng nhập hoặc bấm chọn nhanh vai trò Giám Khảo Demo để mở bàn chấm điểm:
+            Vui lòng đăng nhập với tài khoản Giám khảo để mở bàn chấm điểm.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Judge")}
-              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-md"
-            >
-              [ ⚖️ Vào Bằng Tài Khoản Giám Khảo Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-md">
+                Đến trang đăng nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>

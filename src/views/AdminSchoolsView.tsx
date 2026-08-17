@@ -18,7 +18,7 @@ import {
 import { Link } from "@/i18n/routing";
 
 export const AdminSchoolsView: React.FC = () => {
-  const { user, loginAsDemoRole } = useAuth();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [newSchoolName, setNewSchoolName] = useState("");
@@ -81,16 +81,14 @@ export const AdminSchoolsView: React.FC = () => {
             YÊU CẦU QUYỀN SYSTEM ADMIN
           </h2>
           <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Khu vực quản lý danh mục trường đại học chỉ dành cho Quản trị viên. Bấm chọn nhanh tài khoản Admin Demo để tiếp tục:
+            Khu vực quản lý danh mục trường đại học chỉ dành cho Quản trị viên.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Admin")}
-              className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors"
-            >
-              [ 🛡️ Đăng Nhập System Admin Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors">
+                Đến trang đăng nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>

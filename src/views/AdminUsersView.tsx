@@ -31,7 +31,7 @@ import type { User } from "@/models/entities";
 import { readApiError } from "@/repositories/submitResultsRepository";
 
 export const AdminUsersView: React.FC = () => {
-  const { user: currentUser, loginAsDemoRole } = useAuth();
+  const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -170,16 +170,14 @@ export const AdminUsersView: React.FC = () => {
             YÊU CẦU QUYỀN SYSTEM ADMIN
           </h2>
           <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Khu vực quản lý danh sách người dùng toàn hệ thống chỉ dành cho Quản trị viên. Bấm chọn nhanh tài khoản Admin Demo để tiếp tục:
+            Khu vực quản lý danh sách người dùng toàn hệ thống chỉ dành cho Quản trị viên.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Admin")}
-              className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors"
-            >
-              [ 🛡️ Đăng Nhập System Admin Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors">
+                Đến trang đăng nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>
