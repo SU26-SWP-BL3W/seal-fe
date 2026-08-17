@@ -11,7 +11,7 @@ export function useGetSchools() {
     queryFn: async () => {
       try {
         const res = await apiClient.get<PagedResult<School>>("/Schools", {
-          params: { PageNumber: 1, PageSize: 100 },
+          params: { PageNumber: 1, PageSize: 500 },
         });
         if (Array.isArray(res.data?.data)) {
           return res.data.data;

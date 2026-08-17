@@ -4,12 +4,27 @@ import React, { useState } from "react";
 import { Button, Card, Badge, Table, Input } from "@/components/ui";
 import type { EventItem } from "@/viewModels/eventsMetadata";
 import { staffRepository } from "@/repositories/staffRepository";
-import { ShieldAlert, Plus, Users, School, Activity, ArrowRight, Shield, UserCheck, X, CheckCircle2, Edit, ExternalLink } from "lucide-react";
+import {
+  ShieldAlert,
+  Plus,
+  Users,
+  School,
+  Activity,
+  ArrowRight,
+  Shield,
+  UserCheck,
+  X,
+  CheckCircle2,
+  Edit,
+  ExternalLink,
+  RefreshCw,
+} from "lucide-react";
 import { Link } from "@/i18n/routing";
 
 import { useEvents } from "@/repositories/eventsRepository";
 import { usersRepository, useGetUsers } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
+import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 
 import { ApiMissingDataBadge } from "@/components/ui";
 
@@ -33,11 +48,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export const AdminDashboardView: React.FC = () => {
-  const { data: rawEvents = [] } = useEvents();
+  const { data: rawEvents = [], isLoading: isLoadingEvents, refetch: refetchEvents } = useEvents();
   const realEvents = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
   const displayEvents = realEvents;
 
-  const { data: rawUsersData } = useGetUsers({ pageSize: 100 });
+  const { data: rawUsersData } = useGetUsers({ pageSize: 500 });
   const usersList = rawUsersData?.data ?? [];
   const totalUsersCount = rawUsersData?.totalItems ?? usersList.length;
 
@@ -60,8 +75,16 @@ export const AdminDashboardView: React.FC = () => {
     );
   });
 
+  const otherUsers = usersList.filter((u: any) => {
+    const isEc = availableCoordinators.some((c: any) => (c.id || c.Id) === (u.id || u.Id));
+    const em = (u.email || u.Email || "").toLowerCase();
+    const isAdmin = Boolean(u.isAdmin || u.IsAdmin || em.includes("admin"));
+    return !isEc && !isAdmin;
+  });
+
   const ecCount = availableCoordinators.length;
 
+  const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [ecEmail, setEcEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,6 +123,7 @@ export const AdminDashboardView: React.FC = () => {
 
       if (res && res.success !== false) {
         setAssignSuccessMessage(`Đã phân công ${ecEmail} làm Event Coordinator cho sự kiện "${eventName}" thành công!`);
+        refetchEvents();
         setTimeout(() => {
           setSelectedEvent(null);
           setAssignSuccessMessage(null);
@@ -134,11 +158,20 @@ export const AdminDashboardView: React.FC = () => {
             </p>
           </div>
 
-          <Link href="/admin/events/new">
-            <Button variant="primary" className="hud-clipped flex items-center gap-2 bg-[var(--color-danger)] text-white hover:bg-white hover:text-[var(--bg-base)] font-mono text-xs font-bold shadow-lg shadow-[var(--color-danger)]/20 transition-all duration-200">
-              <Plus className="w-4 h-4" /> Tạo Sự Kiện Mới
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            <Button
+              variant="ghost"
+              onClick={() => refetchEvents()}
+              className="hud-clipped font-mono text-xs border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer text-zinc-300 hover:text-white"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Làm Mới
             </Button>
-          </Link>
+            <Link href="/admin/events/new">
+              <Button variant="primary" className="hud-clipped flex items-center gap-2 bg-[var(--color-danger)] text-white hover:bg-white hover:text-[var(--bg-base)] font-mono text-xs font-bold shadow-lg shadow-[var(--color-danger)]/20 transition-all duration-200 cursor-pointer">
+                <Plus className="w-4 h-4" /> Tạo Sự Kiện Mới
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Metrics Grid */}
@@ -214,9 +247,15 @@ export const AdminDashboardView: React.FC = () => {
 
         {/* All Events Admin Table */}
         <Card className="p-6 space-y-4 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
-          <SectionTitle>DANH SÁCH TẤT CẢ SỰ KIỆN TRONG HỆ THỐNG ({displayEvents.length})</SectionTitle>
+          <div className="flex items-center justify-between">
+            <SectionTitle>DANH SÁCH TẤT CẢ SỰ KIỆN TRONG HỆ THỐNG ({displayEvents.length})</SectionTitle>
+          </div>
 
-          {displayEvents.length === 0 ? (
+          {isLoadingEvents ? (
+            <div className="p-12 text-center font-mono text-xs text-zinc-400 animate-pulse">
+              Đang tải danh sách sự kiện toàn hệ thống...
+            </div>
+          ) : displayEvents.length === 0 ? (
             <ApiMissingDataBadge
               endpoint="GET /api/Events"
               title="CHƯA CÓ SỰ KIỆN TỪ BACKEND DATABASE"
@@ -286,15 +325,14 @@ export const AdminDashboardView: React.FC = () => {
                         </td>
                         <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50 text-right">
                           <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                            <Link href={`/admin/events/${id}`}>
-                              <Button
-                                variant="ghost"
-                                className="text-xs font-mono border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
-                                title="Chỉnh sửa thông tin & cấu hình sự kiện"
-                              >
-                                <Edit className="w-3.5 h-3.5" /> Sửa
-                              </Button>
-                            </Link>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setEditingEvent(ev)}
+                              className="text-xs font-mono border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
+                              title="Chỉnh sửa toàn diện sự kiện & các vòng thi"
+                            >
+                              <Edit className="w-3.5 h-3.5" /> Sửa
+                            </Button>
                             <Button
                               variant="ghost"
                               onClick={() => handleOpenAssignModal(ev)}
@@ -367,26 +405,43 @@ export const AdminDashboardView: React.FC = () => {
               ) : (
                 <form onSubmit={handleAssignEc} className="space-y-4 pt-1">
                   {/* Chọn nhanh từ danh sách Coordinator trong hệ thống */}
-                  {availableCoordinators.length > 0 && (
+                  {(availableCoordinators.length > 0 || otherUsers.length > 0) && (
                     <div className="space-y-1.5">
                       <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                        Chọn Nhanh Từ Danh Sách EC Hệ Thống
+                        Chọn Nhanh Từ Danh Sách Người Dùng Hệ Thống
                       </label>
                       <select
                         value={ecEmail}
                         onChange={(e) => setEcEmail(e.target.value)}
                         className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
                       >
-                        <option value="">— Chọn tài khoản Coordinator —</option>
-                        {availableCoordinators.map((c: any) => {
-                          const email = c.email || c.Email;
-                          const name = c.fullName || c.FullName || email;
-                          return (
-                            <option key={c.id || c.Id || email} value={email}>
-                              {name} ({email})
-                            </option>
-                          );
-                        })}
+                        <option value="">— Chọn tài khoản từ danh sách —</option>
+                        {availableCoordinators.length > 0 && (
+                          <optgroup label="⭐ Điều Phối Viên Đã Đăng Ký (Coordinator)">
+                            {availableCoordinators.map((c: any) => {
+                              const email = c.email || c.Email;
+                              const name = c.fullName || c.FullName || email;
+                              return (
+                                <option key={c.id || c.Id || email} value={email}>
+                                  {name} ({email})
+                                </option>
+                              );
+                            })}
+                          </optgroup>
+                        )}
+                        {otherUsers.length > 0 && (
+                          <optgroup label="👥 Tất Cả Người Dùng & Cán Bộ Khác">
+                            {otherUsers.slice(0, 100).map((c: any) => {
+                              const email = c.email || c.Email;
+                              const name = c.fullName || c.FullName || email;
+                              return (
+                                <option key={c.id || c.Id || email} value={email}>
+                                  {name} ({email})
+                                </option>
+                              );
+                            })}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
                   )}
@@ -423,6 +478,18 @@ export const AdminDashboardView: React.FC = () => {
               )}
             </Card>
           </div>
+        )}
+
+        {/* Modal Chỉnh Sửa Toàn Diện Sự Kiện Cho Admin */}
+        {editingEvent && (
+          <ComprehensiveEventEditModal
+            event={editingEvent}
+            onClose={() => setEditingEvent(null)}
+            onSuccess={() => {
+              refetchEvents();
+              setEditingEvent(null);
+            }}
+          />
         )}
       </main>
     </div>

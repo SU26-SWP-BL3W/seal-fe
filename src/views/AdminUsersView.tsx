@@ -3,8 +3,6 @@
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetUsers, useApproveUser, useRejectUser, useDeleteUser } from "@/repositories/usersRepository";
-import { staffRepository } from "@/repositories/staffRepository";
-import { useEvents } from "@/repositories/eventsRepository";
 import {
   Users,
   Search,
@@ -43,14 +41,10 @@ export const AdminUsersView: React.FC = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [deleteUserModal, setDeleteUserModal] = useState<User | null>(null);
 
-  const { data: eventsList = [] } = useEvents();
-  const [selectedUserForEc, setSelectedUserForEc] = useState<User | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data: rawUsersData, isLoading, refetch } = useGetUsers();
+  const { data: rawUsersData, isLoading, refetch } = useGetUsers({ pageSize: 500 });
   const usersList: User[] = useMemo(() => {
     const list = rawUsersData?.data ?? (Array.isArray(rawUsersData) ? rawUsersData : []);
     return Array.isArray(list) ? list : [];
