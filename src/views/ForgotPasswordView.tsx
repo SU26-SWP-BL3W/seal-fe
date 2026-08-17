@@ -1,122 +1,93 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
+import { useState } from "react";
+import { Mail, Send, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useForgotPassword } from "@/repositories/authRepository";
+import { Button, Card } from "@/components/ui";
+import { Link } from "@/i18n/routing";
 
 export function ForgotPasswordView() {
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutateAsync: forgotPassword, isPending } = useForgotPassword();
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
 
-  const handleSubmit = async (email: string) => {
-    setIsLoading(true);
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email.trim()) {
+      setError("Vui lòng nhập email.");
+      return;
+    }
     try {
-      // TODO: Integrate with actual API
-      // Call forgot password API to send reset email
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Có lỗi xảy ra');
-      }
-    } catch (err) {
-      console.error('Forgot password error:', err);
-    } finally {
-      setIsLoading(false);
+      // BE luôn trả cùng 1 thông báo chung dù email có tồn tại hay không (chống dò email) —
+      // nên FE cũng chỉ cần biết request thành công, không cần đọc nội dung message.
+      await forgotPassword(email.trim());
+      setSent(true);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || "Không gửi được yêu cầu. Vui lòng thử lại.");
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#0a0f1d] text-[#f1f5f9] antialiased flex items-center justify-center relative overflow-hidden">
-      {/* Hexagon Pattern Background */}
-      <div 
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='104' viewBox='0 0 60 104' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 17.3V51.9L30 69.2L0 51.9V17.3Z' fill='none' stroke='%232dd4bf' stroke-width='1'/%3E%3Cpath d='M30 69.2L60 86.5V104M30 69.2L0 86.5V104M30 -17.3V0' fill='none' stroke='%232dd4bf' stroke-width='1'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'repeat',
-        }}
-      />
-
-      {/* Gradient Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0f1d] via-transparent to-[#0a0f1d] opacity-80 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1d] via-transparent to-[#0a0f1d] opacity-80 pointer-events-none" />
-
-      {/* Radial Glow Effect */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#2dd4bf]/5 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Main Content Container */}
-      <div className="relative z-10 w-full max-w-md mx-4 p-1">
-        {/* Decorative Top Header */}
-        <div className="mb-8 text-center">
-          <div className="text-xs font-mono uppercase tracking-[0.2em] text-[#2dd4bf] mb-2">
-            // SEAL SYSTEM RECOVERY
-          </div>
-          <div className="text-xs font-mono uppercase tracking-widest text-[#94a3b8]">
-            Password Recovery Protocol v1.0
-          </div>
+    <div className="hud-lattice min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-md p-8 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-6">
+        <div className="text-center space-y-2">
+          <Mail className="w-10 h-10 text-[var(--accent-primary)] mx-auto" />
+          <h1 className="font-display text-xl font-extrabold uppercase tracking-wide text-[var(--text-primary)]">
+            Khôi Phục Mật Khẩu
+          </h1>
+          <p className="font-mono text-xs text-[var(--text-muted)] leading-relaxed">
+            Nhập email đã đăng ký — nếu tài khoản tồn tại, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.
+          </p>
         </div>
 
-        {/* Forgot Password Form */}
-        <ForgotPasswordForm 
-          onSubmit={handleSubmit}
-          isLoading={isLoading}
-        />
+        {sent ? (
+          <div className="p-4 bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 text-xs font-mono text-[var(--color-success)] flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>Nếu email hợp lệ, liên kết đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư (hết hạn sau 24 giờ).</span>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 text-xs font-mono text-[var(--color-danger)] flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
 
-        {/* Footer Info */}
-        <div className="mt-8 text-center text-[10px] font-mono text-[#475569] uppercase tracking-wider">
-          <p>PROTECTED BY ENCRYPTION • AUDIT LOGGED</p>
+            <div>
+              <label className="block text-xs font-mono text-[var(--text-muted)] mb-1 uppercase">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="ban@fpt.edu.vn"
+                className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-primary)]"
+                required
+                autoFocus
+              />
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={isPending}
+              className="w-full justify-center flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              {isPending ? "Đang gửi..." : "Gửi Liên Kết Đặt Lại"}
+            </Button>
+          </form>
+        )}
+
+        <div className="text-center">
+          <Link href="/login" className="text-xs font-mono text-[var(--accent-primary)] hover:underline">
+            Về Trang Đăng Nhập
+          </Link>
         </div>
-      </div>
-
-      {/* Decorative Corner Elements */}
-      <div className="fixed top-4 left-4 w-16 h-16 border-t-2 border-l-2 border-[#2dd4bf]/30 pointer-events-none hidden md:block" />
-      <div className="fixed bottom-4 right-4 w-16 h-16 border-b-2 border-r-2 border-[#2dd4bf]/30 pointer-events-none hidden md:block" />
-
-      {/* Global Scan Line Animation */}
-      <style>{`
-        @keyframes scan {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(100%); }
-        }
-
-        .hud-clipped {
-          clip-path: polygon(
-            15px 0,
-            100% 0,
-            100% calc(100% - 15px),
-            calc(100% - 15px) 100%,
-            0 100%,
-            0 15px
-          );
-        }
-
-        .hud-clipped-reverse {
-          clip-path: polygon(
-            0 0,
-            calc(100% - 15px) 0,
-            100% 15px,
-            100% 100%,
-            15px 100%,
-            0 calc(100% - 15px)
-          );
-        }
-
-        .sci-input {
-          background-color: rgba(15, 24, 38, 0.7);
-          border: 1px solid #1e293b;
-          transition: all 0.3s ease;
-        }
-
-        .sci-input:focus {
-          border-color: #2dd4bf;
-          box-shadow: 0 0 10px rgba(45, 212, 191, 0.2);
-          outline: none;
-        }
-      `}</style>
-    </main>
+      </Card>
+    </div>
   );
 }
 
