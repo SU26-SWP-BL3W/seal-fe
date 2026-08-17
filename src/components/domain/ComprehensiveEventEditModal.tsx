@@ -16,9 +16,11 @@ import {
   Briefcase,
   Sliders,
   Check,
+  AlertCircle,
 } from "lucide-react";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { roundsRepository } from "@/repositories/roundsRepository";
+import { useToast } from "@/providers/ToastProvider";
 
 export interface RoundEditState {
   id?: string;
@@ -56,6 +58,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
   onClose,
   onSuccess,
 }) => {
+  const toast = useToast();
   const eventId = event?.id || event?.Id || event?.eventId || event?.EventId || "";
 
   const [activeTab, setActiveTab] = useState<"general" | "rounds">("general");
@@ -181,7 +184,9 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
   const handleSaveAll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!eventName.trim()) {
-      setErrorMsg("Vui lòng nhập Tên sự kiện!");
+      const msg = "Vui lòng nhập Tên sự kiện!";
+      setErrorMsg(msg);
+      toast.error(msg);
       return;
     }
 
@@ -237,15 +242,19 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
       }
 
       setIsSaving(false);
-      setSuccessMsg("Đã lưu thành công toàn bộ thông tin sự kiện & lộ trình các vòng thi!");
+      const okMsg = "Đã lưu thành công toàn bộ thông tin sự kiện & lộ trình các vòng thi!";
+      setSuccessMsg(okMsg);
+      toast.success(okMsg);
       if (onSuccess) onSuccess();
 
       setTimeout(() => {
         onClose();
-      }, 1200);
+      }, 1000);
     } catch (err: any) {
       setIsSaving(false);
-      setErrorMsg(err?.response?.data?.message || err?.message || "Lưu thay đổi thất bại. Vui lòng thử lại.");
+      const apiMsg = err?.response?.data?.message || err?.message || "Lưu thay đổi thất bại. Vui lòng kiểm tra dữ liệu và thử lại.";
+      setErrorMsg(apiMsg);
+      toast.error(apiMsg);
     }
   };
 
@@ -569,6 +578,19 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Action-Anchored Error Banner */}
+          {errorMsg && (
+            <div className="p-3.5 bg-rose-950/70 border border-rose-500/80 text-rose-200 font-mono text-xs rounded-lg flex items-center gap-2.5 animate-in slide-in-from-bottom-2 shadow-[0_0_20px_rgba(244,63,94,0.25)]">
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 animate-pulse" />
+              <div className="flex-1">
+                <strong className="block text-rose-300 font-bold uppercase tracking-wider text-[11px] mb-0.5">
+                  Chưa Thể Lưu Cập Nhật
+                </strong>
+                <span>{errorMsg}</span>
+              </div>
             </div>
           )}
 

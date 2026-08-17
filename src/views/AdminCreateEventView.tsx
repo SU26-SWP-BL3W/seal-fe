@@ -5,10 +5,12 @@ import { Button, Input, Card, CalendarRangeField } from "@/components/ui";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { usersRepository } from "@/repositories/usersRepository";
-import { Shield, Calendar, Clock, Info, ArrowLeft, CheckCircle2, UserCheck } from "lucide-react";
+import { Shield, Calendar, Clock, Info, ArrowLeft, CheckCircle2, UserCheck, AlertCircle } from "lucide-react";
+import { useToast } from "@/providers/ToastProvider";
 import Link from "next/link";
 
 export const AdminCreateEventView: React.FC = () => {
+  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successEventId, setSuccessEventId] = useState<string | null>(null);
@@ -37,19 +39,27 @@ export const AdminCreateEventView: React.FC = () => {
     setErrorMessage(null);
 
     if (!form.eventName.trim()) {
-      setErrorMessage("Vui lòng nhập tên sự kiện!");
+      const msg = "Vui lòng nhập tên sự kiện!";
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     if (new Date(form.startDate) > new Date(form.endDate)) {
-      setErrorMessage("Ngày bắt đầu sự kiện phải diễn ra trước ngày kết thúc!");
+      const msg = "Ngày bắt đầu sự kiện phải diễn ra trước ngày kết thúc!";
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     if (!form.round1Name.trim() || !form.round1StartDate || !form.round1EndDate) {
-      setErrorMessage("Vui lòng nhập đủ tên và thời gian Vòng 1 — hệ thống bắt buộc mỗi sự kiện phải có ít nhất một vòng thi.");
+      const msg = "Vui lòng nhập đủ tên và thời gian Vòng 1 — hệ thống bắt buộc mỗi sự kiện phải có ít nhất một vòng thi.";
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     if (!form.track1Name.trim()) {
-      setErrorMessage("Vui lòng nhập tên Hạng mục (Track) đầu tiên — mỗi vòng thi bắt buộc phải có ít nhất một hạng mục.");
+      const msg = "Vui lòng nhập tên Hạng mục (Track) đầu tiên — mỗi vòng thi bắt buộc phải có ít nhất một hạng mục.";
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
@@ -101,18 +111,19 @@ export const AdminCreateEventView: React.FC = () => {
           }
         }
         setSuccessEventId(eventId);
+        toast.success("Khởi tạo sự kiện cuộc thi thành công!");
       } else {
-        setErrorMessage(res?.message || "Tạo sự kiện thất bại. Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.");
+        const msg = res?.message || "Tạo sự kiện thất bại. Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.";
+        setErrorMessage(msg);
+        toast.error(msg);
       }
     } catch (err: any) {
       console.error("Lỗi tạo sự kiện:", err);
-      // BE trả lỗi validate field-level trong response.data.details (vd:
-      // [{key:"Model.Rounds", value:["Sự kiện phải cấu hình ít nhất một vòng thi."]}]),
-      // cụ thể hơn hẳn message chung "Exception of type ... was thrown." — ưu tiên hiện details.
       const details = err?.response?.data?.details;
       const detailMsg = Array.isArray(details) ? details.map((d: any) => d?.value?.join?.(" ") || d?.value).filter(Boolean).join(" ") : null;
-      const apiMsg = detailMsg || err?.response?.data?.message || err?.message || "Tạo sự kiện thất bại. Vui lòng kiểm tra kết nối mạng và thử lại.";
+      const apiMsg = detailMsg || err?.response?.data?.message || err?.message || "Tạo sự kiện thất bại. Vui lòng kiểm tra dữ liệu và thử lại.";
       setErrorMessage(apiMsg);
+      toast.error(apiMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -360,6 +371,19 @@ export const AdminCreateEventView: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Action-Anchored Error Banner: Hiển thị ngay trên nút bấm để nhìn thấy lập tức mà không cần cuộn trang */}
+              {errorMessage && (
+                <div className="p-4 bg-rose-950/70 border border-rose-500/80 text-rose-200 font-mono text-xs rounded-lg flex items-center gap-3 animate-in slide-in-from-bottom-2 shadow-[0_0_25px_rgba(244,63,94,0.25)]">
+                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 animate-pulse" />
+                  <div className="flex-1">
+                    <strong className="block text-rose-300 font-bold uppercase tracking-wider text-[11px] mb-0.5">
+                      Chưa Thể Khởi Tạo Sự Kiện
+                    </strong>
+                    <span>{errorMessage}</span>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between pt-4 border-t border-[var(--border-muted)]">
                 <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
