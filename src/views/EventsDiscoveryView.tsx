@@ -18,142 +18,161 @@ import {
   type EventStatusFilter,
   type EventSortOption,
 } from "@/viewModels/useEventsDiscoveryViewModel";
+import {
+  Calendar,
+  Tag,
+  Users,
+  Search,
+  ArrowRight,
+  ShieldAlert,
+  Star,
+  Trophy,
+  Filter,
+  SlidersHorizontal,
+  X,
+  Sparkles,
+} from "lucide-react";
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
 function formatVnd(value: number): string {
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
 }
+
 function formatShortDate(iso: string): string {
+  if (!iso) return "N/A";
   return new Date(iso).toLocaleDateString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
 }
+
 function daysLeft(endDate: string): number {
+  if (!endDate) return 0;
   return Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000);
 }
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
-      <rect x="2" y="3" width="12" height="11" rx="1" />
-      <path d="M2 6.5h12M5 1.5v3M11 1.5v3" strokeLinecap="round" />
-    </svg>
-  );
-}
-function TagIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" className={`mt-[1px] h-3.5 w-3.5 shrink-0 ${className}`} fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
-      <path d="M8.5 2H3a1 1 0 00-1 1v5.5a1 1 0 00.3.7l6 6a1 1 0 001.4 0l5.5-5.5a1 1 0 000-1.4l-6-6a1 1 0 00-.7-.3z" strokeLinejoin="round" />
-      <circle cx="5" cy="5" r="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-function TeamIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
-      <circle cx="6" cy="5" r="2.5" />
-      <path d="M1 13c0-2.8 2-4.5 5-4.5s5 1.7 5 4.5" strokeLinecap="round" />
-      <circle cx="12" cy="5" r="1.8" />
-      <path d="M14 13c0-1.8-1-3-2.5-3.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-function SealMark() {
-  return (
-    <svg viewBox="0 0 100 100" className="h-10 w-10" aria-hidden="true">
-      <polygon points="50,4 92,27 92,73 50,96 8,73 8,27" fill="none" stroke="var(--accent-primary)" strokeWidth="3" opacity="0.7" />
-      <polygon points="50,30 68,40 68,60 50,70 32,60 32,40" fill="rgba(0,217,255,0.15)" />
-    </svg>
-  );
-}
-
-// ─── Event Card (Devpost-style horizontal) ────────────────────────────────────
+// ─── Modern Event Card ────────────────────────────────────────────────────────
 function EventCard({ event }: { event: EventCardData }) {
   const days = daysLeft(event.endDate);
   const isActive = event.status === "ongoing" || event.status === "registration_open";
-  const statusColor = STATUS_DOT_VAR[event.status];
+  const statusColor = STATUS_DOT_VAR[event.status] || "var(--accent-primary)";
 
   return (
     <Link
       href={`/events/${event.id}`}
-      className="group flex items-stretch border border-[var(--border-muted)] bg-[var(--bg-panel)] transition-all duration-200 hover:border-[var(--accent-primary)]/60 hover:shadow-[0_0_20px_rgba(0,217,255,0.06)] hud-clipped"
-      style={{ borderLeft: `3px solid ${statusColor}` }}
+      className="group block bg-[#10171a] border border-zinc-800/90 hover:border-emerald-500/50 rounded-xl p-5 transition-all duration-200 hover:shadow-[0_4px_25px_rgba(16,185,129,0.06)] relative overflow-hidden"
     >
-      {/* Thumbnail */}
-      <div className="hidden sm:flex w-28 shrink-0 items-center justify-center bg-[var(--bg-input)] border-r border-[var(--border-muted)]">
-        <SealMark />
-      </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+        
+        {/* Left / Main Info */}
+        <div className="flex-1 min-w-0 space-y-2.5">
+          {/* Header Row: Badges + Title */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md font-mono text-[10px] font-bold uppercase tracking-wider"
+              style={{
+                backgroundColor: `${statusColor}15`,
+                color: statusColor,
+                border: `1px solid ${statusColor}40`,
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
+              {STATUS_LABEL[event.status] || "Sự kiện"}
+            </span>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col justify-between p-4 min-w-0">
-        {/* Top row: title + status badge */}
-        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-          <h3 className="font-display text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
+            {event.season && (
+              <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-zinc-800/80 text-zinc-300 border border-zinc-700">
+                {event.season} {event.year || 2026}
+              </span>
+            )}
+
+            {isActive && days > 0 && days <= 30 && (
+              <span className={`font-mono text-[10px] px-2 py-0.5 rounded-md border font-bold uppercase ${
+                days <= 3
+                  ? "border-rose-500/40 text-rose-400 bg-rose-500/10 animate-pulse"
+                  : "border-amber-500/40 text-amber-300 bg-amber-500/10"
+              }`}>
+                {days <= 0 ? "HÔM NAY" : `CÒN ${days} NGÀY`}
+              </span>
+            )}
+          </div>
+
+          {/* Event Title */}
+          <h3 className="font-display text-lg font-bold text-white group-hover:text-emerald-400 transition-colors truncate">
             {event.eventName}
           </h3>
-          <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
-          {isActive && days > 0 && days <= 30 && (
-            <span className={`font-mono text-[9px] px-2 py-0.5 border tracking-widest uppercase ${days <= 3 ? "border-[var(--color-danger)]/50 text-[var(--color-danger)] bg-[var(--color-danger)]/10 animate-pulse" : "border-[var(--color-warning)]/50 text-[var(--color-warning)] bg-[var(--color-warning)]/10"}`}>
-              {days <= 0 ? "HÔM NAY" : `${days} NGÀY`}
-            </span>
+
+          {/* Tagline / Brief description */}
+          <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+            {event.tagline || event.description || "Cuộc thi lập trình và phát triển sản phẩm công nghệ theo chuẩn RBL."}
+          </p>
+
+          {/* Tracks Tags */}
+          {event.tracks && event.tracks.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              <Tag className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+              {event.tracks.slice(0, 3).map((t) => (
+                <span
+                  key={t}
+                  className="px-2 py-0.5 text-[10px] font-mono bg-zinc-900 border border-zinc-800 text-zinc-300 rounded"
+                >
+                  {t}
+                </span>
+              ))}
+              {event.tracks.length > 3 && (
+                <span className="text-[10px] font-mono text-zinc-500">
+                  +{event.tracks.length - 3} bảng khác
+                </span>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Tagline */}
-        <p className="text-xs text-[var(--text-muted)] truncate mb-2">{event.tagline}</p>
+        {/* Right Info: Prize, Dates, CTA */}
+        <div className="flex flex-row md:flex-col md:items-end justify-between md:justify-center border-t md:border-t-0 md:border-l border-zinc-800/80 pt-3 md:pt-0 md:pl-6 shrink-0 gap-2 min-w-[190px]">
+          {/* Prize */}
+          <div className="space-y-0.5 md:text-right">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">
+              Tổng Giải Thưởng
+            </span>
+            <span className="font-mono text-base font-extrabold text-emerald-400 flex items-center md:justify-end gap-1">
+              <Trophy className="w-4 h-4 text-emerald-400 shrink-0" />
+              {formatVnd(event.totalPrizeVnd ?? 0)}
+            </span>
+          </div>
 
-        {/* Bottom row: prize + teams */}
-        <div className="flex flex-wrap items-center gap-4">
-          <span className="font-mono text-sm font-bold text-[var(--text-primary)]">
-            {formatVnd(event.totalPrizeVnd)}
-          </span>
-          <span className="flex items-center gap-1.5 font-mono text-xs text-[var(--text-muted)]">
-            <TeamIcon />
-            {event.teamCount}/{event.maxTeams} đội
-          </span>
+          {/* Dates */}
+          <div className="space-y-0.5 md:text-right text-right md:pt-1">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">
+              Thời Gian
+            </span>
+            <span className="font-mono text-xs text-zinc-300 flex items-center justify-end gap-1">
+              <Calendar className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+              {formatShortDate(event.startDate)} – {formatShortDate(event.endDate)}
+            </span>
+          </div>
+
+          {/* Action Hover Arrow */}
+          <div className="hidden md:flex items-center gap-1 font-mono text-xs text-emerald-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity pt-1">
+            <span>Chi tiết sự kiện</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </div>
         </div>
-      </div>
 
-      {/* Right meta column */}
-      <div className="hidden md:flex w-52 shrink-0 flex-col justify-center gap-2 border-l border-[var(--border-muted)] px-4 py-4">
-        <span className="flex items-center gap-1.5 font-mono text-[10px] text-[var(--text-muted)]">
-          <CalendarIcon />
-          {formatShortDate(event.startDate)} – {formatShortDate(event.endDate)}
-        </span>
-        <span className="flex items-start gap-1.5 font-mono text-[10px] text-[var(--text-muted)]">
-          <TagIcon className="mt-px" />
-          <span className="flex flex-wrap gap-1">
-            {event.tracks.slice(0, 2).map((t) => (
-              <span key={t} className="border border-[var(--border-muted)] px-1.5 py-0.5 text-[var(--accent-primary)]/80">
-                {t}
-              </span>
-            ))}
-            {event.tracks.length > 2 && (
-              <span className="text-[var(--text-muted)]">+{event.tracks.length - 2}</span>
-            )}
-          </span>
-        </span>
-      </div>
-
-      {/* Arrow */}
-      <div className="flex shrink-0 items-center px-3 text-[var(--text-muted)] opacity-0 transition-opacity group-hover:opacity-100">
-        →
       </div>
     </Link>
   );
 }
 
-// ─── Sidebar Filter ────────────────────────────────────────────────────────────
+// ─── Modern Sidebar Filter ────────────────────────────────────────────────────
 const ALL_STATUS_OPTIONS: { value: EventStatusFilter | "my_event"; label: string; dot: string }[] = [
-  { value: "all",               label: "Tất cả sự kiện",   dot: "bg-[var(--text-muted)]" },
-  { value: "my_event",          label: "⭐ Sự kiện của tôi",dot: "bg-[var(--accent-team)] animate-pulse" },
-  { value: "registration_open", label: "Đang mở đăng ký",  dot: "bg-[var(--color-success)]" },
-  { value: "ongoing",           label: "Đang diễn ra",     dot: "bg-[var(--accent-primary)]" },
-  { value: "upcoming",          label: "Sắp diễn ra",      dot: "bg-[var(--color-warning)]" },
-  { value: "ended",             label: "Đã kết thúc",      dot: "bg-[var(--text-muted)] opacity-50" },
+  { value: "all",               label: "Tất cả sự kiện",   dot: "bg-zinc-400" },
+  { value: "my_event",          label: "Sự kiện của tôi",  dot: "bg-amber-400 animate-pulse" },
+  { value: "registration_open", label: "Đang mở đăng ký",  dot: "bg-emerald-400" },
+  { value: "ongoing",           label: "Đang diễn ra",     dot: "bg-cyan-400" },
+  { value: "upcoming",          label: "Sắp diễn ra",      dot: "bg-amber-400" },
+  { value: "ended",             label: "Đã kết thúc",      dot: "bg-zinc-600" },
 ];
 
 function SidebarFilter({
@@ -177,89 +196,97 @@ function SidebarFilter({
     : ALL_STATUS_OPTIONS;
 
   return (
-    <aside className="w-full md:w-56 shrink-0 flex flex-col gap-5">
-      {/* Clear */}
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase">
-          BỘ LỌC
-        </span>
+    <aside className="w-full md:w-60 shrink-0 space-y-6">
+      {/* Header & Clear Button */}
+      <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-emerald-400" />
+          <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">
+            BỘ LỌC TÌM KIẾM
+          </span>
+        </div>
         {activeCount > 0 && (
           <button
             onClick={onClear}
-            className="font-mono text-[10px] text-[var(--color-danger)] hover:underline"
+            className="font-mono text-[11px] text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1 cursor-pointer"
           >
-            Xóa ({activeCount})
+            <X className="w-3 h-3" />
+            <span>Xóa ({activeCount})</span>
           </button>
         )}
       </div>
 
       {/* Status section */}
-      <div className="flex flex-col gap-1.5">
-        <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
+      <div className="space-y-2">
+        <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider block font-bold">
           Trạng thái
         </span>
-        {statusOptions.map((opt) => {
-          const isSelected = statusFilter === opt.value;
-          return (
-            <button
-              key={opt.value}
-              onClick={() => setStatusFilter(opt.value)}
-              className={`group flex items-center justify-between px-3 py-2 text-left font-mono text-xs transition-colors hud-clipped ${
-                isSelected
-                  ? "bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold"
-                  : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className={`h-1.5 w-1.5 rounded-full ${opt.dot}`} />
-                <span>{opt.label}</span>
-              </div>
-              {isSelected && <span className="text-[10px]">✓</span>}
-            </button>
-          );
-        })}
+        <div className="space-y-1">
+          {statusOptions.map((opt) => {
+            const isSelected = statusFilter === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setStatusFilter(opt.value)}
+                className={`w-full flex items-center justify-between px-3 py-2 text-left font-mono text-xs rounded-lg transition-all cursor-pointer ${
+                  isSelected
+                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold shadow-sm"
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
+                  <span>{opt.label}</span>
+                </div>
+                {isSelected && <span className="text-xs text-emerald-400 font-bold">✓</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Track section */}
       {topTracks.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
+        <div className="space-y-2 pt-2 border-t border-zinc-800/60">
+          <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider block font-bold">
             Hạng mục ({topTracks.length})
           </span>
-          <button
-            onClick={() => setTrackFilter(null)}
-            className={`flex items-center justify-between px-3 py-1.5 text-left font-mono text-xs transition-colors hud-clipped ${
-              !trackFilter
-                ? "bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold"
-                : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            <span>Tất cả</span>
-          </button>
-          {topTracks.map(({ track, eventCount }) => {
-            const isSelected = trackFilter === track;
-            return (
-              <button
-                key={track}
-                onClick={() => setTrackFilter(isSelected ? null : track)}
-                className={`flex items-center justify-between px-3 py-1.5 text-left font-mono text-xs transition-colors hud-clipped ${
-                  isSelected
-                    ? "bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold"
-                    : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                <span className="truncate pr-1">{track}</span>
-                <span className="text-[10px] opacity-60 shrink-0">({eventCount})</span>
-              </button>
-            );
-          })}
+          <div className="space-y-1">
+            <button
+              onClick={() => setTrackFilter(null)}
+              className={`w-full flex items-center justify-between px-3 py-1.5 text-left font-mono text-xs rounded-lg transition-all cursor-pointer ${
+                !trackFilter
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent"
+              }`}
+            >
+              <span>Tất cả bảng thi</span>
+            </button>
+            {topTracks.map(({ track, eventCount }) => {
+              const isSelected = trackFilter === track;
+              return (
+                <button
+                  key={track}
+                  onClick={() => setTrackFilter(isSelected ? null : track)}
+                  className={`w-full flex items-center justify-between px-3 py-1.5 text-left font-mono text-xs rounded-lg transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent"
+                  }`}
+                >
+                  <span className="truncate pr-1">{track}</span>
+                  <span className="text-[10px] text-zinc-500 font-mono shrink-0">({eventCount})</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </aside>
   );
 }
 
-// ─── Sort Tabs (Devpost-style inline tabs) ────────────────────────────────────
+// ─── Sort Tabs (Segmented Control Pill Bar) ───────────────────────────────────
 const SORT_OPTIONS: { value: EventSortOption; label: string }[] = [
   { value: "relevant",    label: "Liên quan nhất" },
   { value: "soonest",     label: "Sắp diễn ra" },
@@ -331,66 +358,107 @@ export function EventsDiscoveryView() {
             teamCount: 0,
             tracks: [],
             rounds: [],
+            prizes: [],
             totalPrizeVnd: 0,
           },
           Date.now(),
         )
       : null;
-  const bannerSeason = listedMine
-    ? [listedMine.season, listedMine.year].filter(Boolean).join(" ")
-    : [assignedEvent?.season || assignedEvent?.Season, assignedEvent?.year || assignedEvent?.Year]
-        .filter(Boolean)
-        .join(" ");
 
   return (
-    <main className="hud-lattice flex flex-1 flex-col">
+    <main className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8 flex flex-col">
+      <div className="max-w-7xl w-full mx-auto space-y-6 flex-1 flex flex-col">
 
-      {/* ── Page Header ── */}
-      <section className="border-b border-[var(--border-muted)] bg-[var(--bg-panel)]/60">
-        <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-8">
-          <span className="font-mono text-[10px] text-[var(--accent-primary)] tracking-[0.3em] uppercase opacity-70">
-            {"// EVENT DISCOVERY"}
-          </span>
-          <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)] mt-1">
-            Sự Kiện
-          </h1>
-          <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
-            Duyệt toàn bộ hackathon do SEAL tổ chức — đăng nhập để tham gia.
-          </p>
-        </div>
-      </section>
+        {/* ── Page Header ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-5">
+          <div>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-emerald-400 font-bold tracking-widest uppercase">
+              <Sparkles className="w-4 h-4" />
+              SEAL HACKATHON DIRECTORY
+            </div>
+            <h1 className="font-display font-bold text-2xl text-white uppercase tracking-wider mt-1">
+              Khám Phá &amp; Đăng Ký Sự Kiện
+            </h1>
+            <p className="font-mono text-xs text-zinc-400 mt-1">
+              Tra cứu toàn bộ các giải đấu lập trình RBL trên hệ thống SEAL — chọn sự kiện để xem thể lệ và đăng ký tham gia.
+            </p>
+          </div>
 
-      {/* ── Search bar ── */}
-      <div className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
-        <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-3 flex items-center gap-3">
-          <div className="relative flex-1 max-w-xl">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" strokeLinecap="round"/>
-            </svg>
+          {/* Quick Search */}
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
             <input
-              type="search"
-              id="events-search-input"
-              placeholder="Tìm sự kiện theo tên hoặc từ khóa..."
+              type="text"
+              placeholder="Tìm kiếm sự kiện hoặc chủ đề..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 border border-[var(--border-muted)] bg-[var(--bg-input)] font-mono text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/50 focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
+              className="w-full bg-[#10171a] border border-zinc-700 pl-10 pr-4 py-2.5 text-white font-mono text-xs rounded-lg placeholder:text-zinc-500 focus:border-emerald-400 outline-none transition-colors"
             />
           </div>
-          {/* Mobile: toggle sidebar */}
-          <button
-            className="md:hidden hud-clipped px-4 py-2.5 border border-[var(--border-muted)] font-mono text-xs text-[var(--text-muted)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            BỘ LỌC {sidebarOpen ? "▲" : "▼"}
-          </button>
         </div>
-      </div>
 
-      {/* ── Main Layout: Sidebar + List ── */}
-      <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-6 flex gap-6 flex-1">
+        {/* ── Admin Command Center Banner ── */}
+        {user && roleName === "Admin" && (
+          <div className="p-5 bg-gradient-to-r from-red-950/40 via-[#10171a] to-[#10171a] border border-red-500/30 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_4px_20px_rgba(239,68,68,0.06)]">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-mono text-[11px] font-bold text-red-400 uppercase tracking-wider">
+                <ShieldAlert className="w-4 h-4" />
+                TRUNG TÂM ĐIỀU HÀNH QUẢN TRỊ VIÊN
+              </div>
+              <h2 className="font-display text-lg font-bold text-white">
+                Quản Trị Toàn Diện {totalCount} Sự Kiện Hệ Thống
+              </h2>
+              <p className="font-mono text-xs text-zinc-400">
+                Khởi tạo sự kiện mới, chỉ định Event Coordinator và quản lý tài khoản người dùng toàn hệ thống.
+              </p>
+            </div>
 
-        {/* Sidebar */}
-        <div className={`${sidebarOpen ? "flex" : "hidden"} md:flex`}>
+            <Link href="/admin/dashboard" className="shrink-0">
+              <button className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-mono font-bold text-xs tracking-wider uppercase rounded-lg shadow-md shadow-red-500/20 flex items-center gap-2 transition-all cursor-pointer">
+                <span>BẢNG ĐIỀU HÀNH ADMIN</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </Link>
+          </div>
+        )}
+
+        {/* ── User Assigned Event Banner ── */}
+        {user && roleName !== "Guest" && roleName !== "Admin" && (
+          <div className="p-5 bg-gradient-to-r from-cyan-950/40 via-[#10171a] to-[#10171a] border border-cyan-500/30 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-mono text-[11px] font-bold text-cyan-400 uppercase tracking-wider">
+                <Star className="w-4 h-4 text-cyan-400" />
+                SỰ KIỆN CỦA TÔI ({roleName.toUpperCase()})
+              </div>
+              <h2 className="font-display text-lg font-bold text-white">
+                {bannerName || "Sự kiện được phân công"}
+              </h2>
+              <div className="flex items-center gap-3 font-mono text-xs text-zinc-400">
+                <span>Vai trò: <strong className="text-cyan-300">{roleName}</strong></span>
+                {bannerStatus && (
+                  <>
+                    <span>•</span>
+                    <span>Trạng thái: <strong className="text-emerald-400">{STATUS_LABEL[bannerStatus]}</strong></span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {myEventId && (
+              <Link href={`/events/${myEventId}`} className="shrink-0">
+                <button className="px-4 py-2 bg-[#141f23] border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono font-bold text-xs uppercase rounded-lg transition-all flex items-center gap-1.5 cursor-pointer">
+                  <span>Truy cập sự kiện</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* ── Main Layout: Sidebar + List ── */}
+        <div className="flex flex-col md:flex-row gap-6 flex-1">
+
+          {/* Sidebar Filters */}
           <SidebarFilter
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
@@ -400,150 +468,64 @@ export function EventsDiscoveryView() {
             isAdmin={roleName === "Admin"}
             onClear={handleClear}
           />
-        </div>
 
-        {/* Right: results + list */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
+          {/* Right Section: Sort Bar + Cards List */}
+          <div className="flex-1 min-w-0 space-y-4">
+            
+            {/* Sort & Count Control Bar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#10171a] p-3 rounded-xl border border-zinc-800">
+              <span className="font-mono text-xs text-zinc-400">
+                Tìm thấy <strong className="text-white">{events.length}</strong> sự kiện phù hợp
+              </span>
 
-          {/* ── Admin Executive Banner ── */}
-          {user && roleName === "Admin" && (
-            <div className="p-5 bg-[var(--bg-panel)] border border-[var(--color-danger)]/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(239,68,68,0.08)]">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-[var(--color-danger)] uppercase tracking-widest">
-                  <span className="w-2 h-2 rounded-full bg-[var(--color-danger)] animate-pulse" />
-                  👑 TRUNG TÂM CHỈ HUY QUẢN TRỊ VIÊN (SYSTEM ADMIN)
-                </div>
-                <h2 className="font-display text-xl font-bold text-[var(--text-primary)]">
-                  Quản Trị Toàn Bộ {totalCount} Sự Kiện Hệ Thống
-                </h2>
-                <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">
-                  Dành riêng cho System Admin: Khởi tạo sự kiện mới, phân công Event Coordinator và quản lý trường học &amp; tài khoản.
-                </p>
+              {/* Segmented Control Pill Bar */}
+              <div className="flex items-center gap-1 bg-[#090e11] p-1 rounded-lg border border-zinc-800/80 font-mono text-xs overflow-x-auto max-w-full">
+                <span className="text-zinc-500 text-[10px] uppercase font-bold px-2 flex items-center gap-1">
+                  <SlidersHorizontal className="w-3 h-3" />
+                  Sắp xếp:
+                </span>
+                {SORT_OPTIONS.map((opt) => {
+                  const isSelected = sort === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSort(opt.value)}
+                      className={`px-3 py-1 rounded-md font-mono text-xs transition-all whitespace-nowrap cursor-pointer ${
+                        isSelected
+                          ? "bg-zinc-800 text-white font-bold shadow-sm"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
               </div>
-
-              <Link href="/admin/dashboard">
-                <button className="hud-clipped px-5 py-2.5 bg-[var(--color-danger)] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm shrink-0 cursor-pointer">
-                  👑 BẢNG ĐIỀU HÀNH ADMIN ➔
-                </button>
-              </Link>
             </div>
-          )}
 
-          {/* ── My Joined Event Banner (DÀNH RIÊNG CHO CÁC VAI TRÒ KHÁC ADMIN) ── */}
-          {user && roleName !== "Guest" && roleName !== "Admin" && (
-            <div className="p-5 bg-[var(--bg-panel)] border border-[var(--accent-primary)]/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(0,217,255,0.08)]">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-[var(--accent-primary)] uppercase tracking-widest">
-                  <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-                  ⭐ SỰ KIỆN CỦA TÔI {roleName === "Mentor" ? "(VAI TRÒ: CỐ VẤN TRACK)" : roleName === "Coordinator" ? "(VAI TRÒ: BAN TỔ CHỨC)" : roleName === "Judge" ? "(VAI TRÒ: GIÁM KHẢO)" : team ? `(ĐỘI: ${team.TeamName || (team as any).teamName})` : ""}
-                </div>
-                <h2 className="font-display text-xl font-bold text-[var(--text-primary)]">
-                  {bannerName || "Sự kiện được phân công"}
-                </h2>
-                <div className="flex items-center gap-3 font-mono text-xs text-[var(--text-muted)] mt-0.5">
-                  <span>Vai trò hiện tại: <strong className="text-[var(--accent-primary)]">{roleName}</strong></span>
-                  {bannerStatus && (
-                    <>
-                      <span>·</span>
-                      <span>Trạng thái: <strong className="text-[var(--color-success)]">{STATUS_LABEL[bannerStatus]}</strong></span>
-                    </>
-                  )}
-                  {bannerSeason && (
-                    <>
-                      <span>·</span>
-                      <span>{bannerSeason}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Smart Role-Based Button Action */}
-              {roleName === "Mentor" && (
-                <Link href="/mentor/tracks">
-                  <button className="hud-clipped px-5 py-2.5 bg-[#2dd4bf] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
-                    💼 VÀO BÀN LÀM VIỆC CỐ VẤN ➔
-                  </button>
-                </Link>
-              )}
-
-              {roleName === "Coordinator" && (
-                <Link href="/coordinator/dashboard">
-                  <button className="hud-clipped px-5 py-2.5 bg-[#a855f7] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm shrink-0 cursor-pointer">
-                    🎯 CONTROL CENTER BTC ➔
-                  </button>
-                </Link>
-              )}
-
-              {roleName === "Judge" && (
-                <Link href="/judge/scoring">
-                  <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-judge)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
-                    ⚖ VÀO BÀN CHẤM GIÁM KHẢO ➔
-                  </button>
-                </Link>
-              )}
-
-
-              {(roleName === "TeamLeader" || roleName === "TeamMember") && myEventId && (
-                <Link href={`/events/${myEventId}`}>
-                  <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
-                    ↗ XEM CHI TIẾT SỰ KIỆN CỦA TÔI ➔
-                  </button>
-                </Link>
-              )}
-            </div>
-          )}
-
-          {/* Result count + Sort tabs */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[var(--border-muted)]">
-            <p className="font-mono text-sm text-[var(--text-muted)]">
-              Hiển thị{" "}
-              <span className="font-bold text-[var(--text-primary)]">{events.length}</span>
-              {" / "}
-              <span className="font-bold text-[var(--text-primary)]">{totalCount}</span>
-              {" "}sự kiện
-            </p>
-
-            {/* Sort tabs */}
-            <div className="flex items-center gap-1 flex-wrap">
-              <span className="font-mono text-xs text-[var(--text-muted)] mr-1">Sắp xếp:</span>
-              {SORT_OPTIONS.map(({ value, label }) => (
+            {/* Events Cards List */}
+            {events.length === 0 ? (
+              <div className="bg-[#10171a] border border-zinc-800 rounded-xl p-12 text-center font-mono text-xs text-zinc-400 space-y-3">
+                <p>Không tìm thấy sự kiện nào phù hợp với điều kiện tìm kiếm.</p>
                 <button
-                  key={value}
-                  onClick={() => setSort(value)}
-                  className={`font-mono text-xs px-3 py-1.5 border transition-colors ${
-                    sort === value
-                      ? "border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
-                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-muted)]"
-                  }`}
+                  onClick={handleClear}
+                  className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold rounded-lg hover:bg-emerald-500/20 transition-all cursor-pointer"
                 >
-                  {label}
+                  Xóa bộ lọc để xem tất cả sự kiện
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {events.map((ev) => (
+                  <EventCard key={ev.id} event={ev} />
+                ))}
+              </div>
+            )}
+
           </div>
 
-          {/* Event list */}
-          {events.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-              <div className="font-mono text-3xl text-[var(--border-muted)]">{"[ ]"}</div>
-              <p className="font-mono text-sm text-[var(--text-muted)]">
-                Không tìm thấy sự kiện phù hợp với bộ lọc.
-              </p>
-              <button
-                onClick={handleClear}
-                className="hud-clipped mt-2 px-4 py-2 border border-[var(--border-muted)] font-mono text-xs text-[var(--text-muted)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors"
-              >
-                [ XÓA BỘ LỌC ]
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {events.map((ev) => (
-                <EventCard key={ev.id} event={ev} />
-              ))}
-            </div>
-          )}
         </div>
+
       </div>
     </main>
   );
