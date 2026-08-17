@@ -21,8 +21,11 @@ import {
   Terminal,
   Lock,
   Radio,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { staffRepository } from "@/repositories/staffRepository";
+import { eventsRepository } from "@/repositories/eventsRepository";
 import { readApiError } from "@/repositories/submitResultsRepository";
 
 export function AdminDashboardView() {
@@ -68,6 +71,11 @@ export function AdminDashboardView() {
   const [assignSuccessMessage, setAssignSuccessMessage] = useState<string | null>(null);
   const [assignErrorMessage, setAssignErrorMessage] = useState<string | null>(null);
 
+  // Soft Delete State
+  const [deleteTargetEvent, setDeleteTargetEvent] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+
   const handleOpenAssignModal = (ev: any) => {
     setSelectedEvent(ev);
     const existing = ev.assignedCoordinatorEmail ? [ev.assignedCoordinatorEmail] : [];
@@ -75,6 +83,25 @@ export function AdminDashboardView() {
     setCurrentEmailInput("");
     setAssignSuccessMessage(null);
     setAssignErrorMessage(null);
+  };
+
+  const handleSoftDelete = async () => {
+    if (!deleteTargetEvent) return;
+    const id = deleteTargetEvent.id || deleteTargetEvent.Id;
+    setIsDeleting(true);
+    setDeleteErrorMessage(null);
+
+    try {
+      await eventsRepository.deleteEvent(id);
+      setIsDeleting(false);
+      setDeleteTargetEvent(null);
+      refetchEvents();
+    } catch (err: any) {
+      setIsDeleting(false);
+      setDeleteErrorMessage(
+        err?.response?.data?.message || err?.message || "Không thể thực hiện xóa mềm sự kiện này."
+      );
+    }
   };
 
   const handleAddEmail = () => {
@@ -473,6 +500,20 @@ export function AdminDashboardView() {
                             >
                               Gán EC
                             </button>
+
+                            {/* NÚT XÓA MỀM SỰ KIỆN */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeleteTargetEvent(evt);
+                                setDeleteErrorMessage(null);
+                              }}
+                              className="px-2.5 py-1.5 bg-red-950/30 text-red-400 border border-red-500/30 hover:bg-red-900/50 hover:text-red-300 font-mono text-xs font-bold rounded transition-all cursor-pointer flex items-center gap-1"
+                              title="Xóa mềm sự kiện (Lưu trữ và ẩn khỏi danh sách công khai)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Xóa</span>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -484,6 +525,69 @@ export function AdminDashboardView() {
           )}
         </div>
       </div>
+
+      {/* Modal Xác Nhận Xóa Mềm Sự Kiện */}
+      {deleteTargetEvent && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="max-w-md w-full bg-[#11181c] border border-red-500/40 p-6 rounded-lg space-y-4 shadow-2xl font-mono text-xs">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded bg-red-500/10 border border-red-500/30 flex items-center justify-center shrink-0 text-red-400 text-xl font-bold">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-display font-bold text-base text-red-300 uppercase tracking-wide">
+                  XÁC NHẬN XÓA MỀM SỰ KIỆN
+                </h3>
+                <p className="font-sans text-xs text-zinc-300 leading-relaxed">
+                  Bạn có chắc chắn muốn xóa mềm cuộc thi <strong className="text-white font-bold">"{deleteTargetEvent.eventName || deleteTargetEvent.EventName}"</strong>?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#162228] border border-zinc-700/70 text-[11px] text-zinc-400 space-y-1 rounded">
+              <p className="text-amber-300 font-bold flex items-center gap-1">
+                <span>🛡️</span> <span>Nguyên tắc nghiệp vụ Xóa Mềm:</span>
+              </p>
+              <ul className="list-disc pl-4 space-y-0.5 text-zinc-300">
+                <li>Sự kiện sẽ được ẩn khỏi trang danh sách công khai của thí sinh.</li>
+                <li>Toàn bộ dữ liệu điểm số, đội thi, nộp bài &amp; bảng xếp hạng vẫn được lưu giữ an toàn trong cơ sở dữ liệu.</li>
+              </ul>
+            </div>
+
+            {deleteErrorMessage && (
+              <div className="p-3 bg-red-950/50 border border-red-500/50 text-red-300 rounded font-mono text-xs">
+                {deleteErrorMessage}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setDeleteTargetEvent(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-[#1c2830] border border-zinc-700 hover:border-zinc-500 text-zinc-300 rounded font-bold transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleSoftDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-md disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <span>Đang xử lý...</span>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Xác Nhận Xóa Mềm</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Phân Công Nhiều Event Coordinator */}
       {selectedEvent && (

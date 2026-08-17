@@ -290,3 +290,23 @@ export function useGetEventRoleTypes() {
     staleTime: Infinity,
   });
 }
+
+export function useGetMyEventRoles(userId?: string) {
+  return useQuery({
+    queryKey: ["my-event-roles", userId],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<PagedResult<EventRole>>("/EventRoles", {
+          params: userId ? { UserId: userId, PageSize: 100 } : { PageSize: 100 },
+        });
+        return res.data?.data ?? [];
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/EventRoles error:", err?.message);
+        return [];
+      }
+    },
+    enabled: !!userId,
+  });
+}
+
+

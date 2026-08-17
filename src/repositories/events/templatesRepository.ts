@@ -175,3 +175,63 @@ export function useGetAllTemplates(params: GetAllTemplatesParams = {}) {
     },
   });
 }
+
+export function useGetTemplates(params?: { PageNumber?: number; PageSize?: number }) {
+  return useQuery({
+    queryKey: ["templates", params],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<PagedResult<Template>>("/Templates", {
+          params: { PageNumber: 1, PageSize: 100, ...params },
+        });
+        return res.data?.data ?? [];
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Templates error:", err?.message);
+        return [];
+      }
+    },
+  });
+}
+
+export const useGetTemplate = useGetTemplateById;
+
+export const templatesRepository = {
+  async getTemplates(): Promise<Template[]> {
+    try {
+      const res = await apiClient.get<PagedResult<Template>>("/Templates", {
+        params: { PageNumber: 1, PageSize: 100 },
+      });
+      return res.data?.data ?? [];
+    } catch {
+      return [];
+    }
+  },
+  async getTemplateById(id: string): Promise<Template | null> {
+    try {
+      const res = await apiClient.get<Template>(`/Templates/${id}`);
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+  async createTemplate(payload: CreateTemplatePayload): Promise<TemplateCreated> {
+    const res = await apiClient.post<TemplateCreated>("/Templates", payload);
+    return res.data;
+  },
+  async updateTemplate(id: string, payload: UpdateTemplatePayload): Promise<TemplateUpdated> {
+    const res = await apiClient.put<TemplateUpdated>(`/Templates/${id}`, payload);
+    return res.data;
+  },
+  async deleteTemplate(id: string): Promise<boolean> {
+    const res = await apiClient.delete<boolean>(`/Templates/${id}`);
+    return res.data;
+  },
+  async addCriteriaToTemplate(id: string, payload: AddCriteriaToTemplatePayload): Promise<boolean> {
+    const res = await apiClient.post<boolean>(`/Templates/${id}/criteria`, payload);
+    return res.data;
+  },
+  async removeCriteriaFromTemplate(id: string, criteriaId: string): Promise<boolean> {
+    const res = await apiClient.delete<boolean>(`/Templates/${id}/criteria/${criteriaId}`);
+    return res.data;
+  },
+};

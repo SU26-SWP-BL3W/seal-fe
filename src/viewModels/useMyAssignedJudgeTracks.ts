@@ -148,7 +148,8 @@ export function useMyAssignedJudgeTracks() {
   const submittedIds = useMemo(() => {
     const set = new Set<string>();
     scoreQueries.forEach((q) => {
-      (q.data ?? []).forEach((s) => {
+      const list = Array.isArray(q.data) ? q.data : ((q.data as any)?.data ?? []);
+      list.forEach((s: any) => {
         if (s.isSubmitted) set.add(s.submitResultId);
       });
     });

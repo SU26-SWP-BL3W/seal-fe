@@ -23,8 +23,7 @@ export interface CreateTeamPayload {
   description: string;
   eventId: string;
   trackId: string;
-  /** Thường = chính người gọi API (tự tạo đội thì tự làm leader) — vẫn phải gửi tường minh. */
-  leaderId: string;
+  leaderId?: string;
 }
 
 export interface TeamCreated {
@@ -130,14 +129,22 @@ export function useGetTeamById(id: string | undefined) {
 }
 
 export interface TeamListItem {
-  id: string;
-  eventId: string;
+  id?: string;
+  Id?: string;
+  eventId?: string;
+  EventId?: string;
   trackId?: string | null;
-  name: string;
-  description: string;
-  status: TeamStatusValue;
-  isActive: boolean;
-  createdTime: string;
+  TrackId?: string | null;
+  name?: string;
+  Name?: string;
+  description?: string;
+  Description?: string;
+  status?: TeamStatusValue | string | number;
+  Status?: TeamStatusValue | string | number;
+  isActive?: boolean;
+  IsActive?: boolean;
+  createdTime?: string;
+  CreatedTime?: string;
 }
 
 export interface GetTeamsParams {
@@ -269,12 +276,17 @@ export interface TeamMemberInvited {
 export function useInviteTeamMember() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ teamId, payload }: { teamId: string; payload: InviteTeamMemberPayload }) => {
+    mutationFn: async (args: any) => {
+      const teamId = args.teamId || args.TeamId;
+      const payload = args.payload || { email: args.email, notes: args.notes };
       const { data } = await apiClient.post<TeamMemberInvited>(`/Teams/${teamId}/invitations`, payload);
       return data;
     },
-    onSuccess: (_data, { teamId }) => {
+    onSuccess: (_data, args: any) => {
+      const teamId = args.teamId || args.TeamId;
       queryClient.invalidateQueries({ queryKey: ["teamInvitations", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -329,14 +341,19 @@ export function useRespondTeamInvitation() {
 export function useTransferTeamLeader() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ teamId, newLeaderUserId }: { teamId: string; newLeaderUserId: string }) => {
+    mutationFn: async (args: any) => {
+      const teamId = args.teamId || args.TeamId;
+      const newLeaderUserId = args.newLeaderUserId || args.targetUserId;
       const { data } = await apiClient.post<boolean>(`/Teams/${teamId}/transfer-leader`, {
         newLeaderUserId,
       });
       return data;
     },
-    onSuccess: (_data, { teamId }) => {
+    onSuccess: (_data, args: any) => {
+      const teamId = args.teamId || args.TeamId;
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -488,3 +505,89 @@ export function useGetMySubmissions(params: GetMySubmissionsParams = {}) {
     },
   });
 }
+
+// ─── Legacy / Compatibility Helpers & Aliases ────────────────────────────────
+
+export function useGetTeamsByEvent(eventId?: string, status?: string) {
+  return useQuery({
+    queryKey: ["teams-by-event", eventId, status],
+    queryFn: async () => {
+      const res = await apiClient.get<PagedResult<TeamListItem>>("/Teams", {
+        params: { EventId: eventId, Status: status, PageSize: 200 },
+      });
+      return res.data?.data ?? [];
+    },
+    enabled: !!eventId,
+  });
+}
+
+export function useGetTeamProgress(teamId?: string) {
+  return useQuery({
+    queryKey: ["team-progress", teamId],
+    queryFn: async () => {
+      const res = await apiClient.get<any>(`/Teams/${teamId}/progress`);
+      return res.data;
+    },
+    enabled: !!teamId,
+  });
+}
+
+export function useGetTeamsByTrack(trackId?: string) {
+  return useQuery({
+    queryKey: ["teams-by-track", trackId],
+    queryFn: async () => {
+      const res = await apiClient.get<PagedResult<TeamListItem>>("/Teams", {
+        params: { TrackId: trackId, PageSize: 200 },
+      });
+      return res.data?.data ?? [];
+    },
+    enabled: !!trackId,
+  });
+}
+
+export function useGetPendingTeams() {
+  return useQuery({
+    queryKey: ["pending-teams"],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<PagedResult<any>>("/Teams", {
+          params: { Status: "PendingApproval", PageSize: 100 },
+        });
+        return res.data?.data ?? [];
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Teams (pending) error:", err?.message);
+        return [];
+      }
+    },
+  });
+}
+
+export function useMyTeam(eventId?: string) {
+  return useQuery({
+    queryKey: ["my-team", eventId],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>("/Teams/my-team", {
+          params: eventId ? { eventId } : undefined,
+        });
+        return res.data;
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Teams/my-team error:", err?.message);
+        return null;
+      }
+    },
+  });
+}
+
+export function useTeamInvitations(teamId?: string) {
+  return useGetTeamInvitations(teamId);
+}
+
+export const useConfirmRegistration = useConfirmTeamRegistration;
+export const useTransferLeadership = useTransferTeamLeader;
+export const useCancelInvitation = useCancelTeamInvitation;
+export const useInviteMember = useInviteTeamMember;
+export const useKickMember = useRemoveTeamMember;
+export const useAcceptOrDeclineInvitation = useRespondTeamInvitation;
+export const useRejectTeam = useRejectTeamRegistration;
+export const useApproveTeam = useApproveTeamRegistration;

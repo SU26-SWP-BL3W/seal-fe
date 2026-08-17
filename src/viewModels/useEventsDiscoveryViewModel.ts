@@ -134,8 +134,13 @@ export function useEventsDiscoveryViewModel() {
         break;
       case "relevant":
       default:
-        // Ưu tiên: đang diễn ra > đang mở đăng ký > sắp diễn ra > đã kết thúc.
-        sorted.sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]);
+        // Ưu tiên cao nhất: Đang mở đăng ký (0) > Đang diễn ra (1) > Sắp diễn ra (2) > Đã kết thúc (3).
+        sorted.sort((a, b) => {
+          const pA = STATUS_PRIORITY[a.status] ?? 99;
+          const pB = STATUS_PRIORITY[b.status] ?? 99;
+          if (pA !== pB) return pA - pB;
+          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        });
     }
     return sorted;
   }, [allEvents, search, statusFilter, sort, trackFilter, myEventIds]);

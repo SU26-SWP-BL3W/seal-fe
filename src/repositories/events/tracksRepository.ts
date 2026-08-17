@@ -120,17 +120,24 @@ export function useAssignTemplateToTrack() {
 
 export interface Track {
   id: string;
+  Id?: string;
   eventId: string;
+  EventId?: string;
   trackName: string;
+  TrackName?: string;
   templateId?: string | null;
+  TemplateId?: string | null;
   description?: string | null;
+  Description?: string | null;
   submissionRuleDescription?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   scoringStartDate?: string | null;
   scoringEndDate?: string | null;
   judges?: User[] | null;
+  Judges?: User[] | null;
   mentors?: User[] | null;
+  Mentors?: User[] | null;
   createdTime: string;
   lastUpdatedTime: string;
 }
@@ -157,12 +164,41 @@ export interface GetTracksByEventParams {
 export function useGetTracksByEvent(eventId: string | undefined, params: GetTracksByEventParams = {}) {
   return useQuery({
     queryKey: ["tracksByEvent", eventId, params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<Track>>("/Tracks/event", {
-        params: { eventId, ...params },
+    queryFn: async (): Promise<TrackWithStaffModel[]> => {
+      const res = await apiClient.get<PagedResult<TrackWithStaffModel>>("/Tracks/event", {
+        params: { eventId, EventId: eventId, ...params, PageSize: 100 },
       });
-      return data;
+      if (Array.isArray(res.data?.data)) return res.data.data;
+      if (Array.isArray(res.data)) return res.data as unknown as TrackWithStaffModel[];
+      return [];
     },
     enabled: !!eventId,
   });
 }
+
+export interface TrackWithStaffModel extends Track {
+  Mentors?: any[];
+  Judges?: any[];
+  TrackName?: string;
+  Description?: string;
+  Id?: string;
+}
+
+export const tracksRepository = {
+  async assignTemplate(trackId: string, templateId: string): Promise<boolean> {
+    const res = await apiClient.patch<boolean>(`/Tracks/${trackId}/assign-template`, { templateId });
+    return res.data;
+  },
+  async assignTemplateToTrack(trackId: string, templateId: string): Promise<boolean> {
+    const res = await apiClient.patch<boolean>(`/Tracks/${trackId}/assign-template`, { templateId });
+    return res.data;
+  },
+  async getTracksByEvent(eventId: string): Promise<Track[]> {
+    const res = await apiClient.get<PagedResult<Track>>("/Tracks/event", {
+      params: { EventId: eventId, PageSize: 100 },
+    });
+    return res.data?.data ?? [];
+  },
+};
+
+

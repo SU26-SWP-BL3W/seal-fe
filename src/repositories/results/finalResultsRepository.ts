@@ -177,7 +177,9 @@ export function useDeleteFinalResult() {
 export function useAssignPrize() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, prizeId }: { id: string; prizeId: string | null }) => {
+    mutationFn: async (args: any) => {
+      const id = args.id || args.resultId;
+      const prizeId = args.prizeId ?? null;
       const { data } = await apiClient.patch<boolean>(`/FinalResults/${id}/assign-prize`, {
         prizeId,
       });
@@ -185,6 +187,7 @@ export function useAssignPrize() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finalResults"] });
+      queryClient.invalidateQueries({ queryKey: ["finalResultsByRound"] });
     },
   });
 }
@@ -230,12 +233,14 @@ export function useGetFinalResultsByRound(
 ) {
   return useQuery({
     queryKey: ["finalResultsByRound", roundId, params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<FinalResult>>(
+    queryFn: async (): Promise<FinalResult[]> => {
+      const res = await apiClient.get<PagedResult<FinalResult>>(
         `/FinalResults/round/${roundId}`,
         { params },
       );
-      return data;
+      if (Array.isArray(res.data?.data)) return res.data.data;
+      if (Array.isArray(res.data)) return res.data as unknown as FinalResult[];
+      return [];
     },
     enabled: !!roundId,
   });
@@ -255,13 +260,42 @@ export function useGetFinalResultsByTeam(
 ) {
   return useQuery({
     queryKey: ["finalResultsByTeam", teamId, params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<FinalResult>>(
+    queryFn: async (): Promise<FinalResult[]> => {
+      const res = await apiClient.get<PagedResult<FinalResult>>(
         `/FinalResults/team/${teamId}`,
         { params },
       );
-      return data;
+      if (Array.isArray(res.data?.data)) return res.data.data;
+      if (Array.isArray(res.data)) return res.data as unknown as FinalResult[];
+      return [];
     },
     enabled: !!teamId,
   });
 }
+
+export const finalResultsRepository = {
+  async calculateResults(roundId: string): Promise<any> {
+    const res = await apiClient.post<any>(`/FinalResults/calculate/${roundId}`);
+    return res.data;
+  },
+  async calculateRoundResults(roundId: string, topN?: number): Promise<any> {
+    const res = await apiClient.post<any>(`/FinalResults/calculate/${roundId}`, undefined, {
+      params: topN ? { topN } : undefined,
+    });
+    return res.data;
+  },
+  async publishResults(roundId: string, isPublished: boolean = true): Promise<any> {
+    const res = await apiClient.put<any>(`/FinalResults/round/${roundId}/publish-status`, { isPublished });
+    return res.data;
+  },
+  async setPublishStatus(roundId: string, isPublished: boolean): Promise<any> {
+    const res = await apiClient.put<any>(`/FinalResults/round/${roundId}/publish-status`, { isPublished });
+    return res.data;
+  },
+  async assignPrize(resultId: string, prizeId: string): Promise<any> {
+    const res = await apiClient.post<any>(`/FinalResults/${resultId}/assign-prize`, { prizeId });
+    return res.data;
+  },
+};
+
+
