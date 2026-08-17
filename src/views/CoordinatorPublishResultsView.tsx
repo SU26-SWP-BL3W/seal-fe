@@ -3,7 +3,10 @@
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import { useGetFinalResultsByRound, useAssignPrize, finalResultsRepository } from "@/repositories/finalResultsRepository";
-import { useMyEvents } from "@/repositories/eventsRepository";
+import { useMyEvents, useEventRounds } from "@/repositories/eventsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
+import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
 import { Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle2, Award, ChevronDown, Filter, Layers } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 
@@ -12,20 +15,48 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   const params = useParams();
 
   const { data: eventsList = [] } = useMyEvents();
-  const [selectedEventId, setSelectedEventId] = useState<string>("EV-01");
-  const [selectedRoundId, setSelectedRoundId] = useState<string>("rnd-1");
-  const [selectedTrackId, setSelectedTrackId] = useState<string>("trk-1");
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedRoundId, setSelectedRoundId] = useState<string>("");
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
 
-  const roundsList = [
-    { id: "rnd-1", name: "Vòng 1: Sơ Loại & Đánh Giá Ý Tưởng (Top 10)" },
-    { id: "rnd-2", name: "Vòng 2: Hackathon 48H & Demo Day (Chung Kết)" },
-  ];
+  React.useEffect(() => {
+    if (eventsList.length > 0 && !selectedEventId) {
+      setSelectedEventId(eventsList[0].id || eventsList[0].eventId || "");
+    }
+  }, [eventsList, selectedEventId]);
 
-  const tracksList = [
-    { id: "trk-1", name: "Advanced Cloud & Infrastructure" },
-    { id: "trk-2", name: "AI & Machine Learning Innovation" },
-    { id: "trk-3", name: "DevOps & Security Compliance" },
-  ];
+  const { data: dbTracks = [] } = useGetTracksByEvent(selectedEventId);
+  const { data: dbPrizes = [] } = useGetPrizesByEvent(selectedEventId);
+  const { data: dbRounds = [] } = useEventRounds(selectedEventId);
+  const { data: dbTeams = [] } = useGetTeamsByEvent(selectedEventId);
+
+  const teamNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of dbTeams as any[]) map.set(t.id, t.name || t.teamName || t.id);
+    return map;
+  }, [dbTeams]);
+
+  const roundsList: Array<{ id: string; name: string }> = dbRounds.map((r: any) => ({
+    id: r.id || r.Id,
+    name: r.roundName || r.RoundName || "Vòng thi",
+  }));
+
+  React.useEffect(() => {
+    if (roundsList.length > 0 && !selectedRoundId) {
+      setSelectedRoundId(roundsList[0].id);
+    }
+  }, [roundsList, selectedRoundId]);
+
+  const tracksList = dbTracks.map((t: any) => ({
+    id: t.id || t.Id || t.trackId,
+    name: t.trackName || t.Name || "Hạng mục",
+  }));
+
+  React.useEffect(() => {
+    if (tracksList.length > 0 && !selectedTrackId) {
+      setSelectedTrackId(tracksList[0].id);
+    }
+  }, [tracksList, selectedTrackId]);
 
   const { data: results = [], isLoading, refetch } = useGetFinalResultsByRound(selectedRoundId);
   const assignPrizeMutation = useAssignPrize();
@@ -37,18 +68,12 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   const [isPublishedState, setIsPublishedState] = useState(false);
 
   // Local prize assignment state map
-  const [assignedPrizesMap, setAssignedPrizesMap] = useState<Record<string, string>>({
-    "res-01": "prz-1",
-    "res-02": "prz-2",
-    "res-03": "prz-3",
-  });
+  const [assignedPrizesMap, setAssignedPrizesMap] = useState<Record<string, string>>({});
 
-  const availablePrizesList = [
-    { id: "prz-1", name: "Giải Nhất (5.000.000 VNĐ)" },
-    { id: "prz-2", name: "Giải Nhì (3.000.000 VNĐ)" },
-    { id: "prz-3", name: "Giải Ba (1.000.000 VNĐ)" },
-    { id: "prz-4", name: "Giải Sáng Tạo (2.000.000 VNĐ)" },
-  ];
+  const availablePrizesList = dbPrizes.map((p: any, idx: number) => ({
+    id: p.id || p.Id || `prz-${idx}`,
+    name: `${p.prizeName || p.PrizeName || "Giải"} (${p.value || p.Value || "chưa rõ giá trị"})`,
+  }));
 
   // Handle Prize Assignment to Team
   const handleAssignPrizeToTeam = async (resultId: string, prizeId: string, teamName: string) => {
@@ -57,7 +82,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      if (assignPrizeMutation?.mutateAsync && !resultId.startsWith("res-")) {
+      if (assignPrizeMutation?.mutateAsync) {
         await assignPrizeMutation.mutateAsync({
           resultId,
           prizeId: prizeId !== "none" ? prizeId : null,
@@ -152,11 +177,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                     </option>
                   ))
                 ) : (
-                  <>
-                    <option value="EV-01">1. SEAL Hackathon 2026: AI &amp; Cloud Nexus (Summer 2026)</option>
-                    <option value="EV-02">2. FPT Tech Innovation Challenge 2026 (Autumn 2026)</option>
-                    <option value="EV-03">3. Cyber Security Student Cup 2026 (Spring 2026)</option>
-                  </>
+                  <option value="">Chưa có sự kiện nào trong hệ thống</option>
                 )}
               </select>
               <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -268,7 +289,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           {/* Header */}
           <div className="h-10 bg-[#182024] flex items-center justify-between px-4 border-b border-[#263339] font-mono text-xs text-[#8a9ba8] font-bold tracking-widest uppercase">
             <span>
-              BẢNG XẾP HẠNG MA TRẬN ĐIỂM — [{tracksList.find((t) => t.id === selectedTrackId)?.name}]
+              BẢNG XẾP HẠNG MA TRẬN ĐIỂM{tracksList.find((t) => t.id === selectedTrackId)?.name ? ` — [ ${tracksList.find((t) => t.id === selectedTrackId)?.name} ]` : ""}
             </span>
             <span className={isPublishedState ? "text-[#10b981]" : "text-[#f59e0b]"}>
               {isPublishedState ? "ĐÃ CÔNG BỐ PUBLIC" : "CHẾ ĐỘ BẢN NHÁP"}
@@ -297,12 +318,12 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                 ) : (
                   displayResults.map((r: any, idx: number) => {
                     const rankStr = String(r.rank || idx + 1).padStart(2, "0");
-                    const name = r.teamName || r.TeamName || "Đội thi";
-                    const uid = r.uid || `MÃ NỘP: SUB-${idx + 1}09`;
+                    const name = teamNameById.get(r.teamId) || r.teamName || r.TeamName || r.teamId;
+                    const uid = `KQ: ${(r.id || "").slice(0, 8).toUpperCase()}`;
                     const score = Number(r.finalScore || r.totalScore || r.TotalScore || 0).toFixed(2);
                     const isAdv = r.isAdvanced !== undefined ? Boolean(r.isAdvanced) : idx < 2;
 
-                    const assignedPrizeId = assignedPrizesMap[r.id || `res-0${idx + 1}`] || "none";
+                    const assignedPrizeId = assignedPrizesMap[r.id] ?? r.prizeId ?? "none";
 
                     return (
                       <tr key={r.id || idx} className="hover:bg-[#182024] transition-colors">
@@ -330,7 +351,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                             <Award className="w-4 h-4 text-[#f59e0b] shrink-0" />
                             <select
                               value={assignedPrizeId}
-                              onChange={(e) => handleAssignPrizeToTeam(r.id || `res-0${idx + 1}`, e.target.value, name)}
+                              onChange={(e) => handleAssignPrizeToTeam(r.id, e.target.value, name)}
                               className="w-full px-2.5 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono text-xs font-bold focus:outline-none focus:border-[#f59e0b] cursor-pointer"
                             >
                               <option value="none">— Chưa gán giải —</option>

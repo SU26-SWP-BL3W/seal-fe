@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { ApiMissingDataBadge } from "@/components/ui";
-import { useEvents } from "@/repositories/eventsRepository";
+import { useEvents, useGetEventById, useEventRounds } from "@/repositories/eventsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
+import { useLeaderboard } from "@/repositories/leaderboardRepository";
 import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
 import { Trophy, Target } from "lucide-react";
 
@@ -23,20 +26,77 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
   const { data: eventsList = [] } = useEvents();
   const isEventScoped = Boolean(eventId && eventId !== "all");
   const [selectedEventId, setSelectedEventId] = useState<string>(eventId || "all");
-  
+
+  const activeEventId = isEventScoped ? eventId! : selectedEventId !== "all" ? selectedEventId : undefined;
+
+  const { data: eventDetail } = useGetEventById(activeEventId);
+  const { data: dbRounds = [] } = useEventRounds(activeEventId || "");
+  const { data: dbTracks = [] } = useGetTracksByEvent(activeEventId);
+  const { data: dbTeams = [] } = useGetTeamsByEvent(activeEventId);
+
   const event = {
     id: eventId || "event-seal-2026",
-    eventName: "SEAL Hackathon 2026",
+    eventName: (eventDetail as any)?.eventName || (eventDetail as any)?.EventName || "Sự kiện",
   };
 
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
   const [selectedRound, setSelectedRound] = useState<string>("all");
 
-  const realResults: TableTeam[] = [];
+  const roundsList = dbRounds.map((r: any) => ({ id: r.id || r.Id, name: r.roundName || r.RoundName || "Vòng thi" }));
+  const tracksList = dbTracks.map((t: any) => ({ id: t.id || t.Id || t.trackId, name: t.trackName || t.Name || "Hạng mục" }));
+
+  const teamById = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const t of dbTeams as any[]) map.set(t.id, t);
+    return map;
+  }, [dbTeams]);
+
+  const trackNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of tracksList) map.set(t.id, t.name);
+    return map;
+  }, [tracksList]);
+
+  const roundsToQuery = selectedRound === "all" ? roundsList : roundsList.filter((r) => r.id === selectedRound);
+
+  // Bang xep hang cong khai: goi useLeaderboard cho toi da 4 vong (gioi han hop ly cho 1 su kien),
+  // gop lai bang tay vi useLeaderboard la 1 hook rieng, khong the goi trong vong lap.
+  const r0 = useLeaderboard(roundsToQuery[0]?.id || "");
+  const r1 = useLeaderboard(roundsToQuery[1]?.id || "");
+  const r2 = useLeaderboard(roundsToQuery[2]?.id || "");
+  const r3 = useLeaderboard(roundsToQuery[3]?.id || "");
+
+  const realResults: TableTeam[] = useMemo(() => {
+    const entries = [
+      { round: roundsToQuery[0], data: r0.data },
+      { round: roundsToQuery[1], data: r1.data },
+      { round: roundsToQuery[2], data: r2.data },
+      { round: roundsToQuery[3], data: r3.data },
+    ];
+    const rows: TableTeam[] = [];
+    for (const { round, data } of entries) {
+      if (!round || !data) continue;
+      for (const entry of data as any[]) {
+        if (entry.isPublished === false) continue;
+        const team = teamById.get(entry.teamId);
+        rows.push({
+          rank: entry.rank || 0,
+          teamCode: (entry.teamId || "").slice(0, 8).toUpperCase(),
+          teamName: team?.name || team?.teamName || entry.teamName || entry.teamId,
+          projectName: team?.description || "",
+          school: "",
+          track: trackNameById.get(team?.trackId) || entry.trackName || "",
+          roundName: round.name,
+          score: entry.finalScore ?? entry.totalScore ?? entry.TotalScore ?? 0,
+          status: entry.isAdvanced ? "Thăng hạng" : "Bị loại",
+        });
+      }
+    }
+    return rows;
+  }, [roundsToQuery, r0.data, r1.data, r2.data, r3.data, teamById, trackNameById]);
 
   const filteredResults = realResults.filter((r) => {
     if (selectedTrack !== "all" && r.track !== selectedTrack) return false;
-    if (selectedRound !== "all" && !r.roundName.includes(selectedRound)) return false;
     return true;
   });
 
@@ -142,9 +202,11 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
               className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
             >
               <option value="all">Tất cả Vòng thi</option>
-              <option value="Chung Kết">Vòng 3: Chung Kết</option>
-              <option value="Bán Kết">Vòng 2: Bán Kết</option>
-              <option value="Sơ Loại">Vòng 1: Sơ Loại</option>
+              {roundsList.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
             </select>
 
             <select
@@ -153,10 +215,11 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
               className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
             >
               <option value="all">Tất cả Hạng mục (Tracks)</option>
-              <option value="AI &amp; Machine Learning">AI &amp; Machine Learning</option>
-              <option value="Bảo mật &amp; An ninh mạng">Bảo mật &amp; An ninh mạng</option>
-              <option value="IoT &amp; Phần cứng thông minh">IoT &amp; Phần cứng thông minh</option>
-              <option value="Phát triển Web">Phát triển Web</option>
+              {tracksList.map((t) => (
+                <option key={t.id} value={t.name}>
+                  {t.name}
+                </option>
+              ))}
             </select>
           </div>
 

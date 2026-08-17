@@ -3,30 +3,27 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { staffRepository, useGetEventRoles } from "@/repositories/staffRepository";
+import { useGetUsers } from "@/repositories/usersRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar } from "lucide-react";
+import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Info } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 
-export const SYSTEM_ACCOUNTS = [
-  { email: "ec.co-organizer@fpt.edu.vn", fullName: "Nguyễn Văn Điều Phối (Coordinator)" },
-  { email: "judge.ai@fpt.edu.vn", fullName: "TS. Hoàng Văn Giám Khảo (Judge AI)" },
-  { email: "tran.phuc.judge@fpt.edu.vn", fullName: "ThS. Trần Phúc (Giám Khảo RBL)" },
-  { email: "mentor.tech@fpt.edu.vn", fullName: "Lê Cố Vấn Chuyên Môn (Mentor)" },
-  { email: "hoang.nam.mentor@fpt.edu.vn", fullName: "Nguyễn Hoàng Nam (Senior Cloud Architect)" },
-  { email: "nguyenvana@fpt.edu.vn", fullName: "Nguyễn Văn A" },
-  { email: "tranthib@fpt.edu.vn", fullName: "Trần Thị B" },
-  { email: "levanc@fpt.edu.vn", fullName: "Lê Văn C" },
-];
-
-export const checkEmailInSystem = (email: string) => {
+export const checkEmailInSystem = (email: string, usersList: Array<any> = []) => {
   if (!email.trim()) return true;
-  return SYSTEM_ACCOUNTS.some((acc) => acc.email.toLowerCase() === email.trim().toLowerCase());
+  const target = email.trim().toLowerCase();
+  return usersList.some((acc: any) => {
+    const e = (acc?.email || acc?.Email || acc?.userEmail || acc?.UserEmail || "").trim().toLowerCase();
+    return e === target;
+  });
 };
 
 export const CoordinatorStaffView: React.FC = () => {
   const searchParams = useSearchParams();
   const queryEventId = searchParams.get("eventId");
+
+  const { data: usersPaged } = useGetUsers({ pageSize: 500 });
+  const systemAccounts = usersPaged?.data || [];
 
   const { data: myEvents = [] } = useMyEvents();
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId || "");
@@ -118,24 +115,38 @@ export const CoordinatorStaffView: React.FC = () => {
     setIsSubmittingJudge(true);
     setJudgeMessage(null);
 
-    const res = await staffRepository.inviteJudge({
-      eventId: selectedEventId,
-      email: judgeEmail.trim(),
-      trackId: judgeTrackId || undefined,
-    });
-
-    setIsSubmittingJudge(false);
-
-    if (res.success) {
-      setJudgeMessage({
-        text: res.message || `Đã gửi email mời Giám khảo (${judgeEmail}) thành công!`,
-        isError: false,
+    try {
+      const res = await staffRepository.inviteJudge({
+        eventId: selectedEventId,
+        email: judgeEmail.trim(),
+        trackId: judgeTrackId || undefined,
       });
-      setJudgeEmail("");
-      await refetchRoles();
-    } else {
+
+      setIsSubmittingJudge(false);
+
+      if (res?.invitationId || res?.id || res?.success || res?.status === "Pending") {
+        setJudgeMessage({
+          text: res?.message || `Đã tạo lời mời và gửi email tới (${judgeEmail}) thành công!`,
+          isError: false,
+        });
+        setJudgeEmail("");
+        await refetchRoles();
+      } else {
+        setJudgeMessage({
+          text: res?.message || "Gửi lời mời thất bại, vui lòng thử lại.",
+          isError: true,
+        });
+      }
+    } catch (err: any) {
+      setIsSubmittingJudge(false);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.title ||
+        (typeof err.response?.data === "string" ? err.response?.data : null) ||
+        err.message ||
+        "Gửi lời mời Giám khảo thất bại.";
       setJudgeMessage({
-        text: res.message || "Gửi lời mời thất bại, vui lòng thử lại.",
+        text: msg,
         isError: true,
       });
     }
@@ -164,24 +175,38 @@ export const CoordinatorStaffView: React.FC = () => {
     setIsSubmittingMentor(true);
     setMentorMessage(null);
 
-    const res = await staffRepository.inviteMentor({
-      eventId: selectedEventId,
-      email: mentorEmail.trim(),
-      trackId: mentorTrackId || undefined,
-    });
-
-    setIsSubmittingMentor(false);
-
-    if (res.success) {
-      setMentorMessage({
-        text: res.message || `Đã gửi email mời Cố vấn (${mentorEmail}) thành công!`,
-        isError: false,
+    try {
+      const res = await staffRepository.inviteMentor({
+        eventId: selectedEventId,
+        email: mentorEmail.trim(),
+        trackId: mentorTrackId || undefined,
       });
-      setMentorEmail("");
-      await refetchRoles();
-    } else {
+
+      setIsSubmittingMentor(false);
+
+      if (res?.invitationId || res?.id || res?.success || res?.status === "Pending") {
+        setMentorMessage({
+          text: res?.message || `Đã tạo lời mời và gửi email tới (${mentorEmail}) thành công!`,
+          isError: false,
+        });
+        setMentorEmail("");
+        await refetchRoles();
+      } else {
+        setMentorMessage({
+          text: res?.message || "Gửi lời mời thất bại, vui lòng thử lại.",
+          isError: true,
+        });
+      }
+    } catch (err: any) {
+      setIsSubmittingMentor(false);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.title ||
+        (typeof err.response?.data === "string" ? err.response?.data : null) ||
+        err.message ||
+        "Gửi lời mời Cố vấn thất bại.";
       setMentorMessage({
-        text: res.message || "Gửi lời mời thất bại, vui lòng thử lại.",
+        text: msg,
         isError: true,
       });
     }
@@ -198,13 +223,15 @@ export const CoordinatorStaffView: React.FC = () => {
   };
 
   const filteredRoles = eventRoles.filter((er: any) => {
-    const roleName = er.roleName || er.RoleName || "";
-    const isStaff = roleName === "Judge" || roleName === "Mentor" || roleName === "EventCoordinator";
-    if (!isStaff) return false;
+    const rawRole = er.roleName ?? er.RoleName ?? er.role ?? er.Role ?? "";
+    const isEC = rawRole === "EventCoordinator" || rawRole === "Coordinator" || rawRole === "EC" || rawRole === 0 || rawRole === "0";
+    const isJudge = rawRole === "Judge" || rawRole === 1 || rawRole === "1";
+    const isMentor = rawRole === "Mentor" || rawRole === 2 || rawRole === "2";
+    if (!isEC && !isJudge && !isMentor) return false;
     if (!staffSearch.trim()) return true;
     const query = staffSearch.toLowerCase();
-    const email = (er.user?.email || er.User?.Email || er.email || "").toLowerCase();
-    const name = (er.user?.fullName || er.User?.FullName || er.fullName || "").toLowerCase();
+    const email = (er.user?.email || er.User?.Email || er.email || er.Email || "").toLowerCase();
+    const name = (er.user?.fullName || er.User?.FullName || er.fullName || er.FullName || "").toLowerCase();
     return email.includes(query) || name.includes(query);
   });
 
@@ -249,15 +276,15 @@ export const CoordinatorStaffView: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
-            <div className="flex items-center gap-2 font-mono text-xs text-[var(--accent-coordinator)] mb-1">
-              <Shield className="w-3.5 h-3.5" />
-              <span>PHÂN CÔNG &amp; QUẢN LÝ NHÂN SỰ SU KIỆN</span>
+            <div className="flex items-center gap-2 font-mono text-xs text-[#a855f7] font-bold uppercase tracking-wider mb-1">
+              <Shield className="w-4 h-4 text-[#a855f7]" />
+              <span>QUẢN LÝ NHÂN SỰ BAN TỔ CHỨC</span>
             </div>
-            <h1 className="font-display font-bold text-2xl md:text-3xl text-[var(--text-primary)] uppercase tracking-wider">
-              Mời Giám Khảo &amp; Cố Vấn Chuyên Môn
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              MỜI VÀ PHÂN CÔNG GIÁM KHẢO &amp; CỐ VẤN
             </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-              Mời nhân sự chuyên môn tham gia sự kiện và quản lý danh sách phân công Giám khảo / Cố vấn theo từng Hạng mục.
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+              Mời nhân sự chuyên môn tham gia sự kiện và quản lý danh sách phân công Giám khảo, Cố vấn cho từng hạng mục thi đấu.
             </p>
           </div>
 
@@ -314,11 +341,18 @@ export const CoordinatorStaffView: React.FC = () => {
                     placeholder="ec.co-organizer@fpt.edu.vn"
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-coordinator)]"
                   />
-                  {coordinatorEmail.trim() && !checkEmailInSystem(coordinatorEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
-                    </p>
+                  {coordinatorEmail.trim() && (
+                    checkEmailInSystem(coordinatorEmail, systemAccounts) ? (
+                      <p className="text-[11px] font-mono text-emerald-400 mt-1 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Đã tìm thấy tài khoản trong hệ thống</span>
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                        <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>Email chưa đăng ký — Hệ thống sẽ gửi thư mời tạo tài khoản/chấp nhận role.</span>
+                      </p>
+                    )
                   )}
                 </div>
 
@@ -377,11 +411,18 @@ export const CoordinatorStaffView: React.FC = () => {
                     placeholder="judge.ai@fpt.edu.vn"
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
                   />
-                  {judgeEmail.trim() && !checkEmailInSystem(judgeEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
-                    </p>
+                  {judgeEmail.trim() && (
+                    checkEmailInSystem(judgeEmail, systemAccounts) ? (
+                      <p className="text-[11px] font-mono text-emerald-400 mt-1 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Đã tìm thấy tài khoản trong hệ thống</span>
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                        <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>Email chưa đăng ký — Hệ thống sẽ gửi thư mời tạo tài khoản/chấp nhận role.</span>
+                      </p>
+                    )
                   )}
                 </div>
 
@@ -459,11 +500,18 @@ export const CoordinatorStaffView: React.FC = () => {
                     placeholder="mentor.tech@fpt.edu.vn"
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[#2dd4bf]"
                   />
-                  {mentorEmail.trim() && !checkEmailInSystem(mentorEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
-                    </p>
+                  {mentorEmail.trim() && (
+                    checkEmailInSystem(mentorEmail, systemAccounts) ? (
+                      <p className="text-[11px] font-mono text-emerald-400 mt-1 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Đã tìm thấy tài khoản trong hệ thống</span>
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                        <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>Email chưa đăng ký — Hệ thống sẽ gửi thư mời tạo tài khoản/chấp nhận role.</span>
+                      </p>
+                    )
                   )}
                 </div>
 
@@ -553,10 +601,12 @@ export const CoordinatorStaffView: React.FC = () => {
                 <tbody className="divide-y divide-[var(--border-muted)]">
                   {filteredRoles.map((er: any, idx: number) => {
                     const roleId = er.id || er.Id || er.eventRoleId || er.EventRoleId || `er-${idx}`;
-                    const email = er.user?.email || er.User?.Email || er.email || "staff@fpt.edu.vn";
-                    const fullName = er.user?.fullName || er.User?.FullName || er.fullName || email.split("@")[0];
-                    const roleName = er.roleName || er.RoleName || "Staff";
-                    const trackName = er.track?.trackName || er.Track?.TrackName || "Toàn bộ sự kiện";
+                    const email = er.user?.email || er.User?.Email || er.email || er.Email || "staff@fpt.edu.vn";
+                    const fullName = er.user?.fullName || er.User?.FullName || er.fullName || er.FullName || email.split("@")[0];
+                    const rawRole = er.roleName ?? er.RoleName ?? er.role ?? er.Role ?? "Staff";
+                    const isEC = rawRole === "EventCoordinator" || rawRole === "Coordinator" || rawRole === "EC" || rawRole === 0 || rawRole === "0";
+                    const isJudge = rawRole === "Judge" || rawRole === 1 || rawRole === "1";
+                    const trackName = er.track?.trackName || er.Track?.TrackName || er.trackName || er.TrackName || "Toàn bộ sự kiện";
 
                     return (
                       <tr key={roleId} className="hover:bg-[var(--bg-panel)] transition-colors">
@@ -565,8 +615,8 @@ export const CoordinatorStaffView: React.FC = () => {
                           <div className="text-[10px] text-[var(--text-muted)]">{email}</div>
                         </td>
                         <td className="p-3">
-                          <Badge tone={roleName === "Judge" ? "warning" : "info"}>
-                            {roleName === "Judge" ? "Giám khảo (Judge)" : "Cố vấn (Mentor)"}
+                          <Badge tone={isEC ? "coordinator" : isJudge ? "judge" : "mentor"}>
+                            {isEC ? "Điều phối viên (EC)" : isJudge ? "Giám khảo (Judge)" : "Cố vấn (Mentor)"}
                           </Badge>
                         </td>
                         <td className="p-3 text-[var(--text-muted)]">{trackName}</td>
@@ -588,13 +638,16 @@ export const CoordinatorStaffView: React.FC = () => {
           )}
         </Card>
 
-        {/* Global Datalist for System Accounts Auto-Feed */}
         <datalist id="system-staff-accounts">
-          {SYSTEM_ACCOUNTS.map((acc) => (
-            <option key={acc.email} value={acc.email}>
-              {acc.fullName} ({acc.email})
-            </option>
-          ))}
+          {systemAccounts.map((acc: any, idx: number) => {
+            const emailVal = acc.email || acc.Email || acc.userEmail || "";
+            const nameVal = acc.fullName || acc.FullName || emailVal;
+            return (
+              <option key={acc.id || acc.Id || idx} value={emailVal}>
+                {nameVal} ({emailVal})
+              </option>
+            );
+          })}
         </datalist>
 
       </main>

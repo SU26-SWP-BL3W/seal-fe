@@ -178,12 +178,12 @@ export const AdminCreateEventView: React.FC = () => {
               <div className="pt-2 flex flex-wrap justify-center gap-4">
                 <Link href="/admin/dashboard">
                   <Button variant="primary" className="font-mono text-xs bg-[var(--color-danger)]">
-                    Về Bảng Điều Hành Admin Tổng &gt;
+                    Về Bảng Điều Hành Admin Tổng
                   </Button>
                 </Link>
                 <Link href="/coordinator/dashboard">
                   <Button variant="secondary" className="font-mono text-xs border-[var(--accent-coordinator)] text-[var(--accent-coordinator)]">
-                    Sang Bảng EC Dashboard &gt;
+                    Sang Bảng EC Dashboard
                   </Button>
                 </Link>
               </div>
@@ -272,7 +272,7 @@ export const AdminCreateEventView: React.FC = () => {
                     onEndChange={(v) => setForm((prev) => ({ ...prev, registrationEndDate: v }))}
                     startLabel="Mở cổng"
                     endLabel="Đóng cổng"
-                    hint="Chấm xanh trên lịch = ngày Khai mạc/Bế mạc sự kiện đã chọn ở trên, để cân đối mốc đăng ký cho hợp lý."
+                    hint="Cân đối mốc đăng ký so với thời gian diễn ra sự kiện đã chọn ở trên."
                     referenceRange={{
                       start: form.startDate,
                       end: form.endDate,
@@ -318,6 +318,8 @@ export const AdminCreateEventView: React.FC = () => {
                     icon={<Calendar className="w-4 h-4 text-cyan-400" />}
                     startValue={form.round1StartDate}
                     endValue={form.round1EndDate}
+                    minDate={form.startDate}
+                    maxDate={form.endDate}
                     onStartChange={(v) => setForm((prev) => ({ ...prev, round1StartDate: v }))}
                     onEndChange={(v) => setForm((prev) => ({ ...prev, round1EndDate: v }))}
                     startLabel="Mở nộp bài"

@@ -31,7 +31,7 @@ import { readApiError } from "@/repositories/submitResultsRepository";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 
 export function AdminDashboardView() {
-  const { user, loginAsDemoRole } = useAuth();
+  const { user } = useAuth();
   const { data: rawEvents = [], isLoading: loadingEvents, refetch: refetchEvents } = useEvents();
   const { data: usersResponse, isLoading: loadingUsers } = useGetUsers();
 
@@ -201,19 +201,12 @@ export function AdminDashboardView() {
             YÊU CẦU QUYỀN QUẢN TRỊ VIÊN (ADMIN)
           </h2>
           <p className="font-sans text-xs text-zinc-400 leading-relaxed">
-            Khu vực quản trị hệ thống chỉ dành riêng cho Admin. Bấm nút bên dưới để vào bằng tài khoản Admin Demo:
+            Khu vực quản trị hệ thống chỉ dành riêng cho Admin. Vui lòng đăng nhập bằng tài khoản Admin.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Admin")}
-              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer rounded"
-            >
-              [ 🛡️ Vào Bằng Tài Khoản System Admin Demo ]
-            </button>
             <Link href="/login" className="w-full">
-              <button className="w-full border border-zinc-800 text-zinc-400 py-2 uppercase hover:text-white hover:border-zinc-600 transition-colors rounded">
-                Đến trang đăng nhập chính thức
+              <button className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer rounded">
+                Đến trang đăng nhập
               </button>
             </Link>
           </div>
@@ -733,6 +726,15 @@ export function AdminDashboardView() {
                   >
                     + ec.lehoa@seal.edu.vn
                   </button>
+                </div>
+
+                <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1">
+                  <span className="font-mono text-[10px] text-[var(--accent-coordinator)] uppercase block font-bold">
+                    Ghi chú phân quyền hệ thống:
+                  </span>
+                  <p className="font-mono text-[10px] text-[var(--text-muted)]">
+                    Admin chỉ định EC quản lý sự kiện này. Tài khoản EC được gán sẽ thấy sự kiện xuất hiện trên Bảng điều hành EC của họ để cấu hình Vòng thi (Rounds), Hạng mục (Tracks) & Tiêu chí.
+                  </p>
                 </div>
               </div>
 

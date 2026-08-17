@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useEventDetail, useEventRounds } from "@/repositories/eventsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { extractTrackNames } from "./eventsMetadata";
 
 export type RoundStatus = "past" | "current" | "upcoming";
@@ -35,11 +37,19 @@ function computeRoundStatus(startIso: string, endIso: string, now: number): Roun
 export function useEventDetailViewModel(eventId: string) {
   const { data: realEvent, isLoading: loadingEvent, refetch: refetchEvent } = useEventDetail(eventId);
   const { data: realRounds = [], isLoading: loadingRounds, refetch: refetchRounds } = useEventRounds(eventId);
+  const { data: realTracks = [] } = useGetTracksByEvent(eventId);
+  const { data: realTeams = [] } = useGetTeamsByEvent(eventId);
   const [now] = useState(() => Date.now());
 
   const event = useMemo(() => {
     if (!realEvent) return null;
     const ev: any = realEvent;
+
+    // Event API khong tra ve teamCount/tracks long san — lay that tu Teams/Tracks theo eventId,
+    // extractTrackNames(ev) chi doc ev.rounds[].tracks[] nhung GET /Events/{id} luon tra rounds rong.
+    const trackNames = Array.isArray(realTracks) && realTracks.length > 0
+      ? [...new Set((realTracks as any[]).map((t) => t.trackName || t.TrackName || "").filter(Boolean))]
+      : extractTrackNames(ev);
 
     return {
       id: ev.id || ev.Id || ev.eventId || ev.EventId || eventId,
@@ -53,7 +63,7 @@ export function useEventDetailViewModel(eventId: string) {
       registrationStartDate: ev.registrationStartDate || ev.RegistrationStartDate || ev.startDate || "",
       registrationEndDate: ev.registrationEndDate || ev.RegistrationEndDate || ev.endDate || "",
       maxTeams: Number(ev.maxTeams || ev.MaxTeams || 50),
-      teamCount: Number(ev.teamCount || ev.TeamCount || 0),
+      teamCount: Array.isArray(realTeams) ? realTeams.length : Number(ev.teamCount || ev.TeamCount || 0),
       prizes: Array.isArray(ev.prizes || ev.Prizes)
         ? (ev.prizes || ev.Prizes).map((p: any) => ({
             id: p.id || p.Id || "",
@@ -62,9 +72,9 @@ export function useEventDetailViewModel(eventId: string) {
             quantity: Number(p.quantity ?? p.Quantity ?? 1),
           }))
         : [],
-      tracks: extractTrackNames(ev),
+      tracks: trackNames,
     };
-  }, [realEvent, eventId]);
+  }, [realEvent, eventId, realTracks, realTeams]);
 
   const rounds: RoundSummary[] = useMemo(() => {
     if (!event) return [];

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 export function JudgeEventsView() {
-  const { user, activeRole, loginAsDemoRole } = useAuth();
+  const { user, activeRole } = useAuth();
   const { data: rawEvents = [], isLoading } = useEvents();
   const [activeTab, setActiveTab] = useState<"all" | "ongoing" | "upcoming" | "past">("all");
 
@@ -114,19 +114,12 @@ export function JudgeEventsView() {
             YÊU CẦU QUYỀN GIÁM KHẢO
           </h2>
           <p className="font-mono text-xs text-zinc-400 leading-relaxed">
-            Vui lòng đăng nhập với tài khoản Giám khảo hoặc chọn nhanh vai trò Demo bên dưới để kiểm tra giao diện:
+            Vui lòng đăng nhập với tài khoản Giám khảo để tiếp tục.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Judge")}
-              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer"
-            >
-              Đăng Nhập Vai Trò Giám Khảo Demo
-            </button>
             <Link href="/login" className="w-full">
-              <button className="w-full border border-zinc-700 text-zinc-300 py-2 uppercase hover:border-amber-500/40 hover:text-amber-200 transition-colors cursor-pointer">
-                Đến trang đăng nhập chính thức
+              <button className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer">
+                Đến trang đăng nhập
               </button>
             </Link>
           </div>

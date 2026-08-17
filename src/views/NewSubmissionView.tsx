@@ -143,7 +143,7 @@ function TrackSubmissionCard({
         teamName: "",
         createdTime: new Date().toISOString(),
         isActive: true,
-        isEliminated: false,
+        
       };
       setIsSaved(true);
       setFormError("");
@@ -406,7 +406,7 @@ export function NewSubmissionView() {
         teamName: raw.teamName || raw.TeamName || "",
         createdTime: raw.createdTime || raw.CreatedTime || "",
         isActive: raw.isActive !== false && raw.IsActive !== false,
-        isEliminated: false,
+        
       };
     }
     return map;

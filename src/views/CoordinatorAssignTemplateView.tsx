@@ -10,7 +10,7 @@ import Link from "next/link";
 export const CoordinatorAssignTemplateView: React.FC = () => {
   const params = useParams();
   const router = useRouter();
-  const trackId = (params?.trackId as string) || "TRK-889-AC";
+  const trackId = (params?.trackId as string) || "";
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -74,7 +74,7 @@ export const CoordinatorAssignTemplateView: React.FC = () => {
 
             <div>
               <div className="text-[#bbc9ce] text-[11px]">TÊN HẠNG MỤC</div>
-              <div className="text-[#00d9ff] font-bold text-sm mt-0.5 uppercase">ADVANCED CLOUD TECH</div>
+              <div className="text-[#00d9ff] font-bold text-sm mt-0.5 uppercase">{trackId ? `HẠNG MỤC (${trackId})` : "CHƯA CHỌN HẠNG MỤC"}</div>
             </div>
 
             <div>

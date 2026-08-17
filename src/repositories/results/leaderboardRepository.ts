@@ -25,10 +25,11 @@ export interface FinalResultDTO {
 export function useLeaderboard(roundId: string) {
   return useQuery({
     queryKey: ["leaderboard", roundId],
-    queryFn: async () => {
+    queryFn: async (): Promise<LeaderboardEntry[]> => {
       try {
-        const res = await apiClient.get<LeaderboardEntry[]>(`/FinalResults/round/${roundId}`);
-        return res.data;
+        const res = await apiClient.get<any>(`/FinalResults/round/${roundId}`);
+        const items = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data) ? res.data : [];
+        return items;
       } catch (err: any) {
         console.warn("[SEAL BE-DATA MISSING] GET /api/FinalResults/round/" + roundId + " error:", err?.message);
         return [];

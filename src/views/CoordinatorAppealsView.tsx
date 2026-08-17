@@ -1,29 +1,91 @@
 "use client";
 
 import React, { useState } from "react";
-import { useParams } from "next/navigation";
-import { useAppealsByRound, appealsRepository } from "@/repositories/appealsRepository";
+import { useQuery } from "@tanstack/react-query";
+import apiClient from "@/models/apiClient";
+import { appealsRepository, AppealStatus, type Appeal } from "@/repositories/appealsRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
+import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
+import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
 import { Check, X, AlertCircle, CheckCircle2, UserPlus, Filter, ChevronDown } from "lucide-react";
 
+/** Không có endpoint "GET đơn phúc khảo theo sự kiện" — gom từ tất cả vòng thi của sự kiện đang chọn. */
+function useAppealsByEvent(eventId: string | undefined) {
+  return useQuery({
+    queryKey: ["appealsByEvent", eventId],
+    queryFn: async (): Promise<Appeal[]> => {
+      const roundsRes = await apiClient.get<any>("/Rounds/event", {
+        params: { EventId: eventId, PageSize: 100 },
+      });
+      const rounds: any[] = Array.isArray(roundsRes.data?.data)
+        ? roundsRes.data.data
+        : Array.isArray(roundsRes.data)
+          ? roundsRes.data
+          : [];
+
+      const perRound = await Promise.all(
+        rounds.map(async (r) => {
+          const roundId = r.id || r.Id;
+          if (!roundId) return [];
+          const res = await apiClient.get<any>(`/Appeals/round/${roundId}`, {
+            params: { PageSize: 200 },
+          });
+          return Array.isArray(res.data?.data) ? res.data.data : [];
+        }),
+      );
+      return perRound.flat();
+    },
+    enabled: !!eventId,
+  });
+}
+
 export const CoordinatorAppealsView: React.FC = () => {
-  const params = useParams();
-  const roundId = (params?.roundId as string) || "round-phase-02";
-
   const { data: eventsList = [] } = useMyEvents();
-  const [selectedEventId, setSelectedEventId] = useState<string>("EV-01");
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
 
-  const { data: appeals = [], isLoading, refetch } = useAppealsByRound(roundId);
+  React.useEffect(() => {
+    if (eventsList.length > 0 && !selectedEventId) {
+      setSelectedEventId(eventsList[0].id || eventsList[0].eventId || "");
+    }
+  }, [eventsList, selectedEventId]);
+
+  const { data: appeals = [], isLoading, refetch } = useAppealsByEvent(selectedEventId);
+  const { data: teams = [] } = useGetTeamsByEvent(selectedEventId);
+  const { data: tracks = [] } = useGetTracksByEvent(selectedEventId);
+
+  const teamNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of teams as any[]) map.set(t.id, t.name || t.teamName || t.id);
+    return map;
+  }, [teams]);
+
+  const judges = React.useMemo(() => {
+    const map = new Map<string, { id: string; fullName: string }>();
+    for (const track of tracks as any[]) {
+      for (const j of track.judges || track.Judges || []) {
+        if (j?.id) map.set(j.id, { id: j.id, fullName: j.fullName || j.email || j.id });
+      }
+    }
+    return Array.from(map.values());
+  }, [tracks]);
+
+  // Hàng đợi xử lý = chỉ đơn còn CHỜ XỬ LÝ (Pending).
+  const displayAppeals = React.useMemo(
+    () => appeals.filter((a) => a.status === AppealStatus.Pending),
+    [appeals],
+  );
 
   const [selectedAppealId, setSelectedAppealId] = useState<string | null>(null);
-  const [assignedJudgeId, setAssignedJudgeId] = useState("judge-01");
+  const [assignedJudgeId, setAssignedJudgeId] = useState("");
   const [rejectReason, setRejectReason] = useState("");
   const [rejectingAppealId, setRejectingAppealId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const displayAppeals = appeals;
+  React.useEffect(() => {
+    if (judges.length > 0 && !assignedJudgeId) setAssignedJudgeId(judges[0].id);
+  }, [judges, assignedJudgeId]);
 
   const handleApproveAppeal = async () => {
     if (!selectedAppealId) return;
@@ -31,10 +93,13 @@ export const CoordinatorAppealsView: React.FC = () => {
     setSuccessMessage(null);
     setErrorMessage(null);
     try {
-      if (!selectedAppealId.startsWith("APL-")) {
-        await appealsRepository.respondAppeal(selectedAppealId, true, "Chấp nhận đơn phúc khảo.", assignedJudgeId);
-      }
-      setSuccessMessage(`Đã duyệt đơn phúc khảo ${selectedAppealId} và phân công Giám khảo (${assignedJudgeId}) chấm lại.`);
+      await appealsRepository.respondAppeal(
+        selectedAppealId,
+        true,
+        "Chấp nhận đơn phúc khảo.",
+        assignedJudgeId || undefined,
+      );
+      setSuccessMessage(`Đã duyệt đơn phúc khảo và phân công giám khảo chấm lại.`);
       setSelectedAppealId(null);
       await refetch();
     } catch (err: any) {
@@ -53,10 +118,8 @@ export const CoordinatorAppealsView: React.FC = () => {
     setSuccessMessage(null);
     setErrorMessage(null);
     try {
-      if (!rejectingAppealId.startsWith("APL-")) {
-        await appealsRepository.respondAppeal(rejectingAppealId, false, rejectReason.trim());
-      }
-      setSuccessMessage(`Đã từ chối đơn phúc khảo ${rejectingAppealId} với lý do: "${rejectReason}".`);
+      await appealsRepository.respondAppeal(rejectingAppealId, false, rejectReason.trim());
+      setSuccessMessage(`Đã từ chối đơn phúc khảo với lý do: "${rejectReason}".`);
       setRejectingAppealId(null);
       setRejectReason("");
       await refetch();
@@ -71,7 +134,7 @@ export const CoordinatorAppealsView: React.FC = () => {
     <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
       {/* Main Container */}
       <div className="flex-1 p-6 space-y-6 max-w-[1500px] w-full mx-auto">
-        
+
         {/* Event Selector Filter Bar */}
         <div className="bg-[#13191c] p-4 border border-[#263339] flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
           <div className="flex items-center gap-3 flex-1">
@@ -90,11 +153,7 @@ export const CoordinatorAppealsView: React.FC = () => {
                     </option>
                   ))
                 ) : (
-                  <>
-                    <option value="EV-01">1. SEAL Hackathon 2026: AI &amp; Cloud Nexus (Summer 2026)</option>
-                    <option value="EV-02">2. FPT Tech Innovation Challenge 2026 (Autumn 2026)</option>
-                    <option value="EV-03">3. Cyber Security Student Cup 2026 (Spring 2026)</option>
-                  </>
+                  <option value="">Chưa có sự kiện nào trong hệ thống</option>
                 )}
               </select>
               <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -149,34 +208,36 @@ export const CoordinatorAppealsView: React.FC = () => {
                       Đang tải danh sách đơn phúc khảo...
                     </td>
                   </tr>
+                ) : displayAppeals.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-[#8a9ba8]">
+                      Không có đơn phúc khảo nào đang chờ xử lý.
+                    </td>
+                  </tr>
                 ) : (
-                  displayAppeals.map((apl: any) => {
-                    const id = apl.id || apl.Id || apl.appealId || "APL-9200";
-                    const team = apl.teamName || apl.TeamName || "Team";
-                    const subRef = apl.submissionRef || apl.SubmissionRef || "SUB-0000";
-                    const reason = apl.primaryReason || apl.Reason || "Lý do phúc khảo...";
-                    const time = apl.timestamp || apl.CreatedTime || "2023-10-24 14:00Z";
+                  displayAppeals.map((apl) => {
+                    const team = teamNameById.get(apl.teamId) || apl.teamId;
 
                     return (
-                      <tr key={id} className="hover:bg-[#182024] transition-colors">
-                        <td className="p-4 text-[#e1e7ec] font-bold">{id}</td>
+                      <tr key={apl.id} className="hover:bg-[#182024] transition-colors">
+                        <td className="p-4 text-[#e1e7ec] font-bold">{apl.id.slice(0, 8).toUpperCase()}</td>
                         <td className="p-4 font-sans font-bold text-sm text-[#e1e7ec]">{team}</td>
-                        <td className="p-4 text-[#8b5cf6]">{subRef}</td>
-                        <td className="p-4 text-[#8a9ba8] truncate max-w-xs">{reason}</td>
-                        <td className="p-4 text-[#8a9ba8]">{time}</td>
+                        <td className="p-4 text-[#8b5cf6]">{apl.submitResultId.slice(0, 8).toUpperCase()}</td>
+                        <td className="p-4 text-[#8a9ba8] truncate max-w-xs" title={apl.reason}>{apl.reason}</td>
+                        <td className="p-4 text-[#8a9ba8]">{new Date(apl.createdTime).toLocaleString("vi-VN")}</td>
                         <td className="p-4">
                           <span className="text-[#f59e0b] font-semibold text-[10px]">
                             [ CHỜ XỬ LÝ ]
                           </span>
                         </td>
-                        
+
                         {/* Action Buttons (DUYỆT / TỪ CHỐI) */}
                         <td className="p-4 text-right pr-6">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"
                               disabled={isSubmitting}
-                              onClick={() => setSelectedAppealId(id)}
+                              onClick={() => setSelectedAppealId(apl.id)}
                               className="px-3.5 py-1.5 bg-[#8b5cf6] text-white hover:bg-purple-600 font-mono text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                             >
                               <Check className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -186,7 +247,7 @@ export const CoordinatorAppealsView: React.FC = () => {
                             <button
                               type="button"
                               disabled={isSubmitting}
-                              onClick={() => setRejectingAppealId(id)}
+                              onClick={() => setRejectingAppealId(apl.id)}
                               className="px-3.5 py-1.5 border border-[#ef4444] text-[#ef4444] hover:bg-red-500/10 font-mono text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                             >
                               <X className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -215,7 +276,7 @@ export const CoordinatorAppealsView: React.FC = () => {
             </div>
 
             <p className="text-xs text-[#e1e7ec] font-sans">
-              Đơn phúc khảo <strong className="text-[#8b5cf6]">{selectedAppealId}</strong> sẽ được phê duyệt. Vui lòng chọn Giám khảo phụ trách chấm lại bài nộp:
+              Đơn phúc khảo <strong className="text-[#8b5cf6]">{selectedAppealId.slice(0, 8).toUpperCase()}</strong> sẽ được phê duyệt. Vui lòng chọn Giám khảo phụ trách chấm lại bài nộp:
             </p>
 
             <div className="space-y-1 font-mono text-xs">
@@ -225,9 +286,15 @@ export const CoordinatorAppealsView: React.FC = () => {
                 onChange={(e) => setAssignedJudgeId(e.target.value)}
                 className="w-full p-2.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-xs focus:outline-none focus:border-[#8b5cf6]"
               >
-                <option value="judge-01">Giám khảo 01 - Tiến sĩ Nguyễn Văn A (Cloud Expert)</option>
-                <option value="judge-02">Giám khảo 02 - Thạc sĩ Trần Thị B (Security Specialist)</option>
-                <option value="judge-03">Giám khảo 03 - Kỹ sư Lê Văn C (Senior Architect)</option>
+                {judges.length > 0 ? (
+                  judges.map((j) => (
+                    <option key={j.id} value={j.id}>
+                      {j.fullName}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Không có giám khảo nào trong sự kiện này</option>
+                )}
               </select>
             </div>
 

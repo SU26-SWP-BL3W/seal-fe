@@ -74,28 +74,40 @@ export function NavigationBar() {
     currentEvent?.eventName || currentEvent?.EventName || currentEvent?.name || "";
 
   // XÁC ĐỊNH NGHIỆP VỤ RENDER THANH NAVBAR DỌC HOẶC NGANG
+  const isAuthRoute =
+    pathname.includes("/login") ||
+    pathname.includes("/register") ||
+    pathname.includes("/verify-email") ||
+    pathname.includes("/forgot-password");
+
   const isCoordinatorRoute = pathname.includes("/coordinator");
   const isMentorRoute = pathname.includes("/mentor");
   const isJudgeRoute = pathname.includes("/judge");
   const isAdminRoute = pathname.includes("/admin");
-  const isEventDetailRoute = pathname.includes("/events/") && (pathname.split("/events/")[1] || "").length > 0;
-  const isEventInnerRoute =
-    isEventDetailRoute ||
-    pathname.includes("/my-team") ||
-    pathname.includes("/my-submissions") ||
-    pathname.includes("/appeals") ||
-    pathname.includes("/leaderboard");
 
-  const isCoordinatorRole = Boolean(user) && (roleName === "Coordinator" || roleName === "EventCoordinator");
-  const isMentorRole = Boolean(user) && roleName === "Mentor";
-  const isJudgeRole = Boolean(user) && roleName === "Judge";
-  const isCandidateRole = Boolean(user) && (roleName === "TeamLeader" || roleName === "TeamMember");
-
-  const showCoordinatorSidebar = isCoordinatorRoute;
-  const showMentorSidebar = isMentorRoute;
-  const showJudgeSidebar = isJudgeRoute;
+  const showAdminSidebar = !isAuthRoute && (roleName === "Admin" || isAdminRoute);
+  const showCoordinatorSidebar =
+    !isAuthRoute &&
+    roleName !== "Admin" &&
+    !isAdminRoute &&
+    (roleName === "Coordinator" || isCoordinatorRoute);
+  const showMentorSidebar =
+    !isAuthRoute &&
+    roleName !== "Admin" &&
+    roleName !== "Coordinator" &&
+    !isAdminRoute &&
+    !isCoordinatorRoute &&
+    (roleName === "Mentor" || isMentorRoute);
+  const showJudgeSidebar =
+    !isAuthRoute &&
+    roleName !== "Admin" &&
+    roleName !== "Coordinator" &&
+    roleName !== "Mentor" &&
+    !isAdminRoute &&
+    !isCoordinatorRoute &&
+    !isMentorRoute &&
+    (roleName === "Judge" || isJudgeRoute);
   const showParticipantSidebar = false;
-  const showAdminSidebar = isAdminRoute;
 
   // ─────────────────────────────────────────────────────────────
   // CHẾ ĐỘ 10: NAVBAR DỌC DÀNH RIÊNG CHO SYSTEM ADMIN (ADMIN WORKSPACE)
@@ -114,10 +126,10 @@ export function NavigationBar() {
               <NotificationBell align="left" />
             </div>
             <Link
-              href="/"
+              href="/admin/dashboard"
               className="font-mono text-[11px] text-[var(--text-muted)] hover:text-[var(--color-danger)] flex items-center gap-1.5 transition-colors"
             >
-              <ArrowLeft className="w-3 h-3" /> Quay lại trang chủ
+              <ArrowLeft className="w-3 h-3" /> Quay lại Dashboard
             </Link>
           </div>
 
@@ -174,6 +186,17 @@ export function NavigationBar() {
             </Link>
 
             <Link
+              href="/events"
+              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
+                pathname === "/events" || (pathname.includes("/events/") && !pathname.includes("/admin/events"))
+                  ? "bg-[var(--color-danger)] text-white shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+              }`}
+            >
+              <Compass className="w-4 h-4 shrink-0" /> Khám Phá &amp; Chi Tiết Event
+            </Link>
+
+            <Link
               href="/admin/events/new"
               className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold mt-2 border border-[var(--color-danger)]/40 ${
                 pathname.includes("/admin/events/new")
@@ -216,17 +239,17 @@ export function NavigationBar() {
           {/* Brand Logo & Notification Bell */}
           <div className="flex flex-col gap-3 pb-4 border-b border-[var(--border-muted)]">
             <div className="flex items-center justify-between">
-              <Link href="/" className="font-display font-bold text-lg text-[#a855f7] tracking-widest uppercase flex items-center gap-2">
+              <Link href="/coordinator/dashboard" className="font-display font-bold text-lg text-[#a855f7] tracking-widest uppercase flex items-center gap-2">
                 <SealShield className="h-6 w-6 text-[#a855f7]" />
                 <span>COORD PANEL</span>
               </Link>
               <NotificationBell align="left" />
             </div>
             <Link
-              href="/"
+              href="/coordinator/dashboard"
               className="font-mono text-[11px] text-[var(--text-muted)] hover:text-[#a855f7] flex items-center gap-1.5 transition-colors"
             >
-              <ArrowLeft className="w-3 h-3" /> Quay lại trang chủ
+              <ArrowLeft className="w-3 h-3" /> Quay lại Control Center
             </Link>
           </div>
 
@@ -368,6 +391,18 @@ export function NavigationBar() {
               }`}
             >
               <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444]" /> Xử Lý Phúc Khảo
+            </Link>
+
+            {/* 11. Khám Phá & Chi Tiết Sự Kiện */}
+            <Link
+              href="/events"
+              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
+                pathname === "/events" || (pathname.includes("/events/") && !pathname.includes("/coordinator/events"))
+                  ? "bg-[#8b5cf6] text-white shadow-sm"
+                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+              }`}
+            >
+              <Compass className="w-4 h-4 shrink-0 text-[#00d9ff]" /> Chi Tiết Sự Kiện &amp; Phase
             </Link>
           </nav>
         </div>

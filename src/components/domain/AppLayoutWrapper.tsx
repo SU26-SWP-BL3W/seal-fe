@@ -10,7 +10,27 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   const router = useRouter();
   const { user, activeRole } = useAuth();
-  const roleName = activeRole?.RoleName || (user?.IsAdmin ? "Admin" : "Guest");
+  const rawRole = activeRole?.roleName || activeRole?.RoleName;
+  const userEmail = (user?.email || user?.Email || "").toLowerCase();
+
+  let roleName = "";
+  if (user?.isAdmin || user?.IsAdmin) {
+    roleName = "Admin";
+  } else {
+    roleName = rawRole || "";
+    if (roleName === "EventCoordinator") roleName = "Coordinator";
+    if (!roleName) {
+      if (userEmail.includes("ec_") || userEmail.includes("ec.") || userEmail.includes("coordinator")) {
+        roleName = "Coordinator";
+      } else if (userEmail.includes("judge")) {
+        roleName = "Judge";
+      } else if (userEmail.includes("mentor")) {
+        roleName = "Mentor";
+      } else {
+        roleName = "Guest";
+      }
+    }
+  }
 
   // Tài khoản tạm chưa đổi mật khẩu — chặn mọi trang khác, kể cả gõ thẳng URL.
   const isChangePasswordRoute = pathname.includes("/change-password");
@@ -20,16 +40,22 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
     }
   }, [user?.mustChangePassword, isChangePasswordRoute, router]);
 
-  const isCoordinatorRoute = pathname.includes("/coordinator");
-  const isMentorRoute = pathname.includes("/mentor");
-  const isJudgeRoute = pathname.includes("/judge");
-  const isAdminRoute = pathname.includes("/admin");
+  const isAuthRoute =
+    pathname.includes("/login") ||
+    pathname.includes("/register") ||
+    pathname.includes("/verify-email") ||
+    pathname.includes("/forgot-password");
 
   const hasVerticalSidebar =
-    isCoordinatorRoute ||
-    isMentorRoute ||
-    isJudgeRoute ||
-    isAdminRoute;
+    !isAuthRoute &&
+    (roleName === "Admin" ||
+      roleName === "Coordinator" ||
+      roleName === "Mentor" ||
+      roleName === "Judge" ||
+      pathname.includes("/admin") ||
+      pathname.includes("/coordinator") ||
+      pathname.includes("/mentor") ||
+      pathname.includes("/judge"));
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] relative">
@@ -39,7 +65,7 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
         <main className="flex-1 flex flex-col w-full min-h-0">
           {children}
         </main>
-          <Footer />
+        <Footer />
       </div>
     </div>
   );

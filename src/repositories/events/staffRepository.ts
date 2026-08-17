@@ -7,6 +7,8 @@ export interface InviteStaffPayload {
   eventId: string;
   trackId?: string;
   email: string;
+  fullName?: string;
+  notes?: string;
 }
 
 export interface AssignRolePayload {
@@ -24,7 +26,7 @@ export function useGetEventRoles(eventId?: string) {
       if (!eventId) return [];
       try {
         const res = await apiClient.get<BaseResponse<EventRole[]>>("/EventRoles/event", {
-          params: { EventId: eventId },
+          params: { EventId: eventId, PageSize: 500 },
         });
         return res.data?.data ?? [];
       } catch (err: any) {
@@ -60,16 +62,30 @@ export const staffRepository = {
   /**
    * Mời Giám khảo (Judge) tham gia Track/Event qua Email (POST /api/Judges/invite)
    */
-  async inviteJudge(payload: InviteStaffPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Judges/invite", payload);
+  async inviteJudge(payload: InviteStaffPayload): Promise<any> {
+    const emailStr = payload.email.trim();
+    const res = await apiClient.post("/Judges/invite", {
+      eventId: payload.eventId,
+      trackId: payload.trackId || undefined,
+      judgeEmail: emailStr,
+      judgeFullName: payload.fullName || emailStr.split("@")[0],
+      notes: payload.notes,
+    });
     return res.data;
   },
 
   /**
    * Mời Cố vấn (Mentor) tham gia Track/Event qua Email (POST /api/Mentors/invite)
    */
-  async inviteMentor(payload: InviteStaffPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Mentors/invite", payload);
+  async inviteMentor(payload: InviteStaffPayload): Promise<any> {
+    const emailStr = payload.email.trim();
+    const res = await apiClient.post("/Mentors/invite", {
+      eventId: payload.eventId,
+      trackId: payload.trackId || undefined,
+      mentorEmail: emailStr,
+      mentorFullName: payload.fullName || emailStr.split("@")[0],
+      notes: payload.notes,
+    });
     return res.data;
   },
 
