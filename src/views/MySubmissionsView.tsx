@@ -103,32 +103,32 @@ export function MySubmissionsView() {
 
   if (!user) {
     return (
-          <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-[#080f11] border border-[#00d9ff] p-8 text-center glow-box space-y-4">
-              <div className="corner-accent-tl" />
-              <div className="corner-accent-tr" />
-              <div className="corner-accent-bl" />
-              <div className="corner-accent-br" />
-              <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
-              <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-                Vui lòng đăng nhập hoặc bấm nút Demo bên dưới để kiểm tra giao diện bảng bài nộp:
-              </p>
-              <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-                <button
-                  type="button"
-                  onClick={() => loginAsDemoRole("TeamLeader")}
-                  className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors"
-                >
-                  [ 🎯 Xem Bằng Tài Khoản Thí Sinh Demo ]
-                </button>
-              </div>
-            </div>
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#080f11] border border-[#00d9ff] p-8 text-center glow-box space-y-4">
+          <div className="corner-accent-tl" />
+          <div className="corner-accent-tr" />
+          <div className="corner-accent-bl" />
+          <div className="corner-accent-br" />
+          <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
+          <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
+            Vui lòng đăng nhập hoặc bấm nút Demo bên dưới để kiểm tra giao diện bảng bài nộp:
+          </p>
+          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
+            <button
+              type="button"
+              onClick={() => loginAsDemoRole("TeamLeader")}
+              className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors"
+            >
+              [ 🎯 Xem Bằng Tài Khoản Thí Sinh Demo ]
+            </button>
           </div>
-        );
-      }
+        </div>
+      </div>
+    );
+  }
 
-      return (
-        <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#00d9ff] selection:text-[#003641]">
+  return (
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#00d9ff] selection:text-[#003641]">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header Panel (Stitch T5) */}
             <div className="bg-[#1a2123] relative p-6 border-t-2 border-[#00d9ff] shadow-[inset_0_0_20px_rgba(0,217,255,0.05)] border border-white/5 glow-box">

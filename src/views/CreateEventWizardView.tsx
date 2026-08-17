@@ -18,7 +18,7 @@ export const CreateEventWizardView: React.FC = () => {
 
   // Streamlined 5-Step Event Config Wizard (Staff Assignment managed in dedicated view C8)
   const steps = [
-    { number: 1, label: "Info (Admin)", icon: Shield },
+    { number: 1, label: "Thông Tin Sự Kiện", icon: Shield },
     { number: 2, label: "Vòng Thi", icon: Layers },
     { number: 3, label: "Hạng Mục", icon: Target },
     { number: 4, label: "Tiêu Chí", icon: Sliders },
@@ -54,12 +54,19 @@ export const CreateEventWizardView: React.FC = () => {
           </div>
         </div>
 
-        {/* HUD Step Indicator Bar (5 Steps) */}
+        {/* HUD Step Indicator Bar (5 Steps - Strict Navigation Guard) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 font-mono text-xs">
           {steps.map((step) => {
             const isActive = wizard.currentStep === step.number;
             const isCompleted = step.number < wizard.currentStep || (step.number === 5 && wizard.canPublishEvent);
-            const isClickable = true;
+            
+            // Strictly disallow clicking future steps unless ALL previous steps are completed
+            const isClickable =
+              step.number === 1 ||
+              (step.number === 2 && wizard.isStep1Done) ||
+              (step.number === 3 && wizard.isStep1Done && wizard.isStep2Done) ||
+              (step.number === 4 && wizard.isStep1Done && wizard.isStep2Done && wizard.isStep3Done) ||
+              (step.number === 5 && wizard.isStep1Done && wizard.isStep2Done && wizard.isStep3Done && wizard.isStep4Done);
 
             return (
               <button
@@ -71,9 +78,9 @@ export const CreateEventWizardView: React.FC = () => {
                 }}
                 className={`p-3 border text-left transition-all duration-200 flex items-center gap-2.5 relative group ${
                   !isClickable
-                    ? "opacity-40 cursor-not-allowed bg-[#13191c]/20 border-[#263339] text-[#8a9ba8]"
+                    ? "opacity-35 cursor-not-allowed bg-[#0a0e10]/40 border-[#182024] text-[#8a9ba8]/50"
                     : isActive
-                    ? "bg-[#8b5cf6]/15 border-2 border-[#8b5cf6] text-[#e1e7ec] scale-[1.02] z-10 cursor-pointer"
+                    ? "bg-[#8b5cf6]/15 border-2 border-[#8b5cf6] text-[#e1e7ec] scale-[1.02] z-10 cursor-pointer shadow-[0_0_15px_rgba(139,92,246,0.25)]"
                     : isCompleted
                     ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 cursor-pointer"
                     : "bg-[#13191c] border-[#263339] text-[#8a9ba8] hover:border-[#8b5cf6] hover:text-[#e1e7ec] cursor-pointer"
@@ -101,6 +108,9 @@ export const CreateEventWizardView: React.FC = () => {
                     <span className="font-mono text-[9px] uppercase tracking-widest block text-[#8a9ba8]">
                       Bước {step.number}
                     </span>
+                    {!isClickable && (
+                      <span className="text-[8px] text-amber-500 font-bold uppercase">Khóa</span>
+                    )}
                   </div>
                   <div className="font-bold truncate text-xs">{step.label}</div>
                 </div>
@@ -111,9 +121,17 @@ export const CreateEventWizardView: React.FC = () => {
 
         {/* Global Error Banner */}
         {wizard.errorMessage && (
-          <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs flex items-center gap-3">
+          <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs flex items-center gap-3 animate-fadeIn">
             <AlertCircle className="w-5 h-5 shrink-0 text-[#ef4444]" />
             <span>{wizard.errorMessage}</span>
+          </div>
+        )}
+
+        {/* Global Success Draft Banner */}
+        {wizard.successMessage && (
+          <div className="p-4 bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 font-mono text-xs flex items-center gap-3 animate-fadeIn">
+            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
+            <span>{wizard.successMessage}</span>
           </div>
         )}
 
@@ -136,6 +154,7 @@ export const CreateEventWizardView: React.FC = () => {
               onUpdateRound={wizard.handleUpdateRound}
               onNext={wizard.handleNextStep}
               onPrev={wizard.handlePrevStep}
+              onSaveDraft={wizard.handleSaveDraft}
             />
           )}
 
@@ -148,6 +167,7 @@ export const CreateEventWizardView: React.FC = () => {
               onUpdateTrack={wizard.handleUpdateTrack}
               onNext={wizard.handleNextStep}
               onPrev={wizard.handlePrevStep}
+              onSaveDraft={wizard.handleSaveDraft}
             />
           )}
 
@@ -168,6 +188,7 @@ export const CreateEventWizardView: React.FC = () => {
               onUpdateCriteria={wizard.handleUpdateCriteria}
               onNext={wizard.handleNextStep}
               onPrev={wizard.handlePrevStep}
+              onSaveDraft={wizard.handleSaveDraft}
             />
           )}
 
@@ -178,6 +199,8 @@ export const CreateEventWizardView: React.FC = () => {
               rounds={wizard.rounds}
               tracks={wizard.tracks}
               criterias={wizard.criterias}
+              criteriasByTrack={wizard.criteriasByTrack}
+              templateName={wizard.templateName}
               staffInvites={wizard.staffInvites}
               canPublishEvent={wizard.canPublishEvent}
               validationMissingItems={wizard.validationMissingItems}

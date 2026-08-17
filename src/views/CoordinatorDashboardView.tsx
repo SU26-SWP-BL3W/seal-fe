@@ -69,9 +69,9 @@ export const CoordinatorDashboardView: React.FC = () => {
   const selectedEventYear = selectedEvent?.year || selectedEvent?.Year || 2026;
 
   // Dynamic Metrics linked to active event
-  const eventTeamsCount = selectedEvent ? 12 : 0;
-  const eventPendingSubmissions = selectedEvent ? 5 : 0;
-  const eventPendingAppeals = selectedEvent ? 2 : 0;
+  const eventTeamsCount = selectedEvent ? ((selectedEvent as any).teamsCount ?? (selectedEvent as any).teamCount ?? 0) : 0;
+  const eventPendingSubmissions = 0;
+  const eventPendingAppeals = appealsList.length;
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
@@ -219,7 +219,7 @@ export const CoordinatorDashboardView: React.FC = () => {
             
             {/* Shortcut 1: Event Config (Trỏ về Event Wizard Cấu Hình Vòng & Hạng Mục) */}
             <Link
-              href="/coordinator/events/new"
+              href={selectedEventId ? `/coordinator/events/new?eventId=${selectedEventId}` : "/coordinator/events/new"}
               className="bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] p-5 space-y-3 transition-all group cursor-pointer"
             >
               <div className="w-9 h-9 bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">

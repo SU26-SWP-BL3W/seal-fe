@@ -11,7 +11,13 @@ export const CoordinatorAppealsView: React.FC = () => {
   const roundId = (params?.roundId as string) || "round-phase-02";
 
   const { data: eventsList = [] } = useMyEvents();
-  const [selectedEventId, setSelectedEventId] = useState<string>("EV-01");
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+
+  React.useEffect(() => {
+    if (eventsList.length > 0 && !selectedEventId) {
+      setSelectedEventId(eventsList[0].id || eventsList[0].eventId || "");
+    }
+  }, [eventsList, selectedEventId]);
 
   const { data: appeals = [], isLoading, refetch } = useAppealsByRound(roundId);
 
@@ -90,11 +96,7 @@ export const CoordinatorAppealsView: React.FC = () => {
                     </option>
                   ))
                 ) : (
-                  <>
-                    <option value="EV-01">1. SEAL Hackathon 2026: AI &amp; Cloud Nexus (Summer 2026)</option>
-                    <option value="EV-02">2. FPT Tech Innovation Challenge 2026 (Autumn 2026)</option>
-                    <option value="EV-03">3. Cyber Security Student Cup 2026 (Spring 2026)</option>
-                  </>
+                  <option value="">Chưa có sự kiện nào trong hệ thống</option>
                 )}
               </select>
               <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />

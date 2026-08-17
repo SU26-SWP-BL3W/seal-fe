@@ -95,14 +95,17 @@ export const CoordinatorProfilesView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 font-mono text-xs text-[#00d9ff] font-bold uppercase tracking-wider mb-1">
               <IdCard className="w-4 h-4 text-[#00d9ff]" />
-              <span>HÀNG ĐỢI XÁC THỰC TÀI KHOẢN MEMBER</span>
+              <span>XÁC MINH HỒ SƠ THÍ SINH</span>
             </div>
             <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
               DUYỆT THẺ SINH VIÊN (NON-FPT)
             </h1>
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+              Duyệt ảnh thẻ sinh viên, kiểm tra mã số sinh viên (MSSV) và phê duyệt quyền tham gia cho các thí sinh trường ngoài FPT.
+            </p>
           </div>
 
-          <div className="font-mono text-xs border border-[#00d9ff]/40 bg-[#00d9ff]/10 text-[#00d9ff] px-3.5 py-1.5 font-bold uppercase tracking-wider">
+          <div className="font-mono text-xs border border-[#00d9ff]/40 bg-[#00d9ff]/10 text-[#00d9ff] px-3.5 py-1.5 font-bold uppercase tracking-wider shrink-0">
             [ {displayProfiles.length} HỒ SƠ CHỜ DUYỆT ]
           </div>
         </div>

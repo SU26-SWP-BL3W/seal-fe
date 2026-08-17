@@ -734,6 +734,15 @@ export function AdminDashboardView() {
                     + ec.lehoa@seal.edu.vn
                   </button>
                 </div>
+
+                <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1">
+                  <span className="font-mono text-[10px] text-[var(--accent-coordinator)] uppercase block font-bold">
+                    Ghi chú phân quyền hệ thống:
+                  </span>
+                  <p className="font-mono text-[10px] text-[var(--text-muted)]">
+                    Admin chỉ định EC quản lý sự kiện này. Tài khoản EC được gán sẽ thấy sự kiện xuất hiện trên Bảng điều hành EC của họ để cấu hình Vòng thi (Rounds), Hạng mục (Tracks) & Tiêu chí.
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-800">
