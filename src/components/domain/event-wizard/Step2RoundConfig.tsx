@@ -92,6 +92,29 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
 
   const hasDateError = dateErrors.length > 0;
 
+  // Advancement Rule Limit Validations across consecutive rounds
+  const advancementErrors: string[] = [];
+  const advancementWarnings: string[] = [];
+
+  if (activeRoundIndex > 0 && prevRound) {
+    const prevRule = parseRule(prevRound.advancementRule);
+    const currRule = parseRule(activeRound.advancementRule);
+
+    if (prevRule.mode === "top" && currRule.mode === "top") {
+      if (currRule.value > prevRule.value) {
+        advancementErrors.push(
+          `Vòng [${activeRound.roundName || `Vòng ${activeRoundIndex + 1}`}] thăng hạng ${currRule.value} đội — KHÔNG THỂ LỚN HƠN số lượng đội vượt qua [${prevRound.roundName || `Vòng ${activeRoundIndex}`}] (${prevRule.value} đội)!`
+        );
+      } else if (currRule.value === prevRule.value) {
+        advancementWarnings.push(
+          `Số đội thăng hạng ở [${activeRound.roundName || `Vòng ${activeRoundIndex + 1}`}] bằng đúng số đội vượt qua [${prevRound.roundName || `Vòng ${activeRoundIndex}`}] (${currRule.value} đội). Không có đội nào bị loại ở vòng này.`
+        );
+      }
+    }
+  }
+
+  const hasAdvancementError = advancementErrors.length > 0;
+
   return (
     <div className="space-y-6 text-[#e1e7ec]">
       {/* 2-Column Builder Layout */}
@@ -182,6 +205,36 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
                 <ul className="list-disc pl-5 text-[11px] space-y-0.5">
                   {dateErrors.map((err, i) => (
                     <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Red Error Banner displaying Advancement Limit Errors */}
+            {hasAdvancementError && (
+              <div className="p-3 bg-red-500/10 border border-[#ef4444]/40 text-[#ef4444] text-xs font-mono space-y-1">
+                <div className="font-bold flex items-center gap-1.5 uppercase">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444]" />
+                  <span>CẢNH BÁO LOGIC SỐ LƯỢNG ĐỘI THĂNG HẠNG VÒNG THI</span>
+                </div>
+                <ul className="list-disc pl-5 text-[11px] space-y-0.5">
+                  {advancementErrors.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Amber Warning Banner for non-eliminating round */}
+            {!hasAdvancementError && advancementWarnings.length > 0 && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono space-y-1">
+                <div className="font-bold flex items-center gap-1.5 uppercase">
+                  <Award className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span>THÔNG TIN QUY TRÌNH LOẠI ĐỘI VÒNG THI</span>
+                </div>
+                <ul className="list-disc pl-5 text-[11px] space-y-0.5">
+                  {advancementWarnings.map((warn, i) => (
+                    <li key={i}>{warn}</li>
                   ))}
                 </ul>
               </div>
