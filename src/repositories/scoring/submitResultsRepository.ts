@@ -214,6 +214,8 @@ export function useGetSubmitResults(filters: SubmitResultListFilters = {}) {
       if (Array.isArray(res.data)) return res.data as unknown as SubmitResultListItem[];
       return [];
     },
+    // BE bat buoc it nhat 1 filter (teamId/trackId/eventId), goi rong luon 400.
+    enabled: Object.values(filters).some((v) => !!v),
   });
 }
 
