@@ -11,6 +11,30 @@ export interface EventRoundItem {
   description: string;
 }
 
+/**
+ * Track KHÔNG phải field phẳng trên Event — Track nằm lồng trong Round.tracks[]
+ * (đã xác nhận qua DTO thật của BE: GET /Events/{id} trả rounds[].tracks[], không
+ * có event.tracks). Đọc thẳng ev.tracks luôn undefined → hiện "0 hạng mục" dù event
+ * có track thật. Gom tên track từ mọi Round, khử trùng lặp.
+ */
+export function extractTrackNames(ev: any): string[] {
+  const rounds = ev?.rounds || ev?.Rounds;
+  if (!Array.isArray(rounds)) return [];
+  const names = rounds.flatMap((r: any) => {
+    const tracks = r?.tracks || r?.Tracks;
+    return Array.isArray(tracks) ? tracks.map((t: any) => t?.trackName || t?.TrackName || "") : [];
+  });
+  return [...new Set(names.filter(Boolean))];
+}
+
+/** Giải thưởng thật từ BE — Value là text tự do (VD: "10.000.000 VNĐ", "Laptop + tiền mặt"), không phải số. */
+export interface PrizeItem {
+  id: string;
+  prizeName: string;
+  value: string;
+  quantity: number;
+}
+
 export interface EventItem {
   id: string;
   eventName: string;
@@ -26,7 +50,7 @@ export interface EventItem {
   teamCount: number;
   tracks: string[];
   rounds: EventRoundItem[];
-  totalPrizeVnd: number;
+  prizes: PrizeItem[];
 }
 
 export type TrackIconKey = "ai" | "web" | "security" | "iot" | "idea";

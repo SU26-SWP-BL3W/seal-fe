@@ -6,7 +6,35 @@ import type {
   ScoreBreakdownModel,
   CalibrationModel,
   FinalResult,
+  PagedResult,
 } from "@/models/entities";
+
+/** 1 phiếu chấm thật từ BE (GET /api/Scores/event-role/{id}) — SubmitResultId dùng để đối chiếu "đã chấm bài nào". */
+export interface JudgeScoreRecord {
+  id: string;
+  eventRoleId: string;
+  submitResultId: string;
+  totalScore: number;
+  comment?: string;
+  isSubmitted: boolean;
+}
+
+/** Fetcher thuần — dùng lại trong useQueries khi cần gọi song song nhiều eventRoleId (1 giám khảo có thể có nhiều EventRole, mỗi track 1 cái). */
+export async function fetchScoresByEventRole(eventRoleId: string): Promise<JudgeScoreRecord[]> {
+  const res = await apiClient.get<PagedResult<JudgeScoreRecord>>(`/Scores/event-role/${eventRoleId}`, {
+    params: { PageSize: 500 },
+  });
+  return res.data?.data ?? [];
+}
+
+/** GET /api/Scores/event-role/{eventRoleId} — toàn bộ phiếu chấm (nháp + đã chốt) của 1 EventRole. */
+export function useGetScoresByEventRole(eventRoleId?: string) {
+  return useQuery({
+    queryKey: ["scores-by-event-role", eventRoleId],
+    queryFn: () => fetchScoresByEventRole(eventRoleId!),
+    enabled: !!eventRoleId,
+  });
+}
 
 // ─── POST /api/Scores/save — Giám khảo lưu/chốt điểm ─────────
 

@@ -19,17 +19,6 @@ interface TableTeam {
   status: string;
 }
 
-const OFFICIAL_TABLE_RESULTS: TableTeam[] = [
-  { rank: 1, teamCode: "#TM-001", teamName: "CyberShield_FPT", projectName: "RBL Inter-Rater Reliability Platform", school: "Đại học FPT", track: "AI & Machine Learning", roundName: "Vòng 3: Chung Kết", score: 9.85, status: "QUÁN QUÂN" },
-  { rank: 2, teamCode: "#TM-002", teamName: "ByteKnights", projectName: "Autonomous Threat Scanner", school: "Đại học Bách Khoa", track: "Bảo mật & An ninh mạng", roundName: "Vòng 3: Chung Kết", score: 9.42, status: "Á QUÂN 1" },
-  { rank: 3, teamCode: "#TM-003", teamName: "NexusCore", projectName: "Smart Campus IoT Grid", school: "Đại học Công nghệ - ĐHQGHN", track: "IoT & Phần cứng thông minh", roundName: "Vòng 3: Chung Kết", score: 9.15, status: "Á QUÂN 2" },
-  { rank: 4, teamCode: "#TM-004", teamName: "DevPulse_HQ", projectName: "Automated Code Review Bot", school: "Đại học FPT", track: "Phát triển Web", roundName: "Vòng 3: Chung Kết", score: 8.90, status: "TOP 5" },
-  { rank: 5, teamCode: "#TM-005", teamName: "GreenPulse", projectName: "Eco Tracker App", school: "Đại học KHTN HCM", track: "Phát triển Web", roundName: "Vòng 3: Chung Kết", score: 8.75, status: "TOP 5" },
-  { rank: 6, teamCode: "#TM-006", teamName: "DeepVision", projectName: "Medical Imaging Diagnostic", school: "Đại học Y Dược HCM", track: "AI & Machine Learning", roundName: "Vòng 2: Bán Kết", score: 8.50, status: "BÁN KẾT" },
-  { rank: 7, teamCode: "#TM-007", teamName: "SecureCloud", projectName: "Zero Trust Mesh Sentinel", school: "Học viện Bưu chính Viễn thông", track: "Bảo mật & An ninh mạng", roundName: "Vòng 2: Bán Kết", score: 8.35, status: "BÁN KẾT" },
-  { rank: 8, teamCode: "#TM-008", teamName: "SmartAgri", projectName: "IoT Crop Sensor Array", school: "Đại học Nông Lâm", track: "IoT & Phần cứng thông minh", roundName: "Vòng 2: Bán Kết", score: 8.10, status: "BÁN KẾT" },
-];
-
 export function LeaderboardView({ eventId }: { eventId?: string }) {
   const { data: eventsList = [] } = useEvents();
   const isEventScoped = Boolean(eventId && eventId !== "all");
@@ -38,7 +27,6 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
   const event = {
     id: eventId || "event-seal-2026",
     eventName: "SEAL Hackathon 2026",
-    totalPrizeVnd: 200000000,
   };
 
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
@@ -75,7 +63,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
                     Bảng Xếp Hạng Kết Quả Thi Đấu
                   </h1>
                   <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
-                    Sự kiện: <strong className="text-[var(--text-primary)]">{event.eventName}</strong> · Quỹ giải thưởng: <strong className="text-[var(--accent-judge)]">{event.totalPrizeVnd ? `${(event.totalPrizeVnd / 1_000_000).toLocaleString("vi-VN")} TRIỆU ₫` : "200.000.000 ₫"}</strong>
+                    Sự kiện: <strong className="text-[var(--text-primary)]">{event.eventName}</strong>
                   </p>
                 </div>
 
@@ -137,7 +125,6 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
       <LandingLeaderboardPodium
         eventName={selectedEventId === "all" ? "HỆ THỐNG XẾP HẠNG TOÀN QUỐC" : event.eventName}
         season="MÙA HÈ 2026"
-        totalPrizeVnd={selectedEventId === "all" ? 500_000_000 : (event.totalPrizeVnd || 200_000_000)}
       />
 
       {/* ── Full Score Table Section ── */}
@@ -195,7 +182,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
               <span>📥</span> XUẤT EXCEL BẢNG XẾP HẠNG
             </button>
             <span className="font-mono text-xs text-[var(--text-muted)]">
-              Hiển thị: <strong className="text-[var(--accent-judge)]">{filteredResults.length}</strong> / {OFFICIAL_TABLE_RESULTS.length} đội
+              Hiển thị: <strong className="text-[var(--accent-judge)]">{filteredResults.length}</strong> / {realResults.length} đội
             </span>
           </div>
         </div>
@@ -203,8 +190,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
         {/* Data Grid Table */}
         {filteredResults.length === 0 ? (
           <ApiMissingDataBadge
-            endpoint="GET /api/FinalResults/round/{roundId}"
-            title="CHƯA CÓ BẢNG XẾP HẠNG TỪ BACKEND DATABASE"
+            title="Chưa có bảng xếp hạng"
             message="Ban Tổ Chức chưa công bố kết quả thi đấu công khai cho sự kiện / vòng thi này."
           />
         ) : (

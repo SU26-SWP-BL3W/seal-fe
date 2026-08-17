@@ -104,6 +104,7 @@ export interface MyTeamApiModel {
 }
 
 export function useMyTeam(eventId?: string) {
+  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken");
   return useQuery({
     queryKey: ["my-team", eventId || "any"],
     queryFn: async () => {
@@ -112,11 +113,11 @@ export function useMyTeam(eventId?: string) {
           params: eventId ? { EventId: eventId } : undefined,
         });
         return res.data ?? null;
-      } catch (err: any) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/Teams/my-team error:", err?.message);
+      } catch {
         return null;
       }
     },
+    enabled: hasToken,
   });
 }
 

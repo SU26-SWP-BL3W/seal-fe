@@ -51,21 +51,6 @@ export const eventsRepository = {
   deleteEvent,
 };
 
-export function usePublicEvents() {
-  return useQuery({
-    queryKey: ["public-events"],
-    queryFn: async () => {
-      try {
-        const res = await apiClient.get<any>("/Events/upcoming", { params: { PageSize: 50 } });
-        return res.data?.data?.data || res.data?.data || res.data || [];
-      } catch {
-        const res = await apiClient.get<any>("/Events");
-        return res.data?.data || res.data || [];
-      }
-    },
-  });
-}
-
 export interface EventDTO {
   EventId?: string;
   EventName?: string;
@@ -91,12 +76,41 @@ export interface EventDTO {
 // nuot loi roi van xoa khoi cache), hoac hien mot event "ma" chua bao gio ton tai
 // tren server. Bo toan bo lop cache gia nay, chi doc/ghi that qua API.
 
+function unwrapEventsList(resData: any): any[] {
+  if (Array.isArray(resData)) return resData;
+  if (Array.isArray(resData?.data?.data)) return resData.data.data;
+  if (Array.isArray(resData?.data?.items)) return resData.data.items;
+  if (Array.isArray(resData?.data)) return resData.data;
+  if (Array.isArray(resData?.items)) return resData.items;
+  return [];
+}
+
+export function usePublicEvents() {
+  return useQuery({
+    queryKey: ["public-events"],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>("/Events", { params: { PageSize: 100 } });
+        return unwrapEventsList(res.data);
+      } catch (err) {
+        console.error("Error fetching public events from API:", err);
+        return [];
+      }
+    },
+  });
+}
+
 export function useEvents() {
   return useQuery({
     queryKey: ["events"],
     queryFn: async () => {
-      const res = await apiClient.get<any>("/Events");
-      return (res.data?.data ?? res.data ?? []) as Event[];
+      try {
+        const res = await apiClient.get<any>("/Events", { params: { PageSize: 100 } });
+        return unwrapEventsList(res.data) as Event[];
+      } catch (err) {
+        console.error("Error fetching events from API:", err);
+        return [] as Event[];
+      }
     },
   });
 }
@@ -105,8 +119,21 @@ export function useMyEvents() {
   return useQuery({
     queryKey: ["my-events"],
     queryFn: async () => {
-      const res = await apiClient.get<any>("/Events/my-events");
-      return (res.data?.data ?? res.data ?? []) as MyEventModel[];
+      try {
+        const res = await apiClient.get<any>("/Events/my-events");
+        const list = unwrapEventsList(res.data);
+        if (list.length > 0) return list as MyEventModel[];
+      } catch {
+        // Fallback to all events if user does not have private events endpoint
+      }
+
+      try {
+        const allRes = await apiClient.get<any>("/Events", { params: { PageSize: 100 } });
+        return unwrapEventsList(allRes.data) as MyEventModel[];
+      } catch (err) {
+        console.error("Error fetching my events from API:", err);
+        return [] as MyEventModel[];
+      }
     },
   });
 }
@@ -115,8 +142,14 @@ export function useEventDetail(eventId: string) {
   return useQuery({
     queryKey: ["event-detail", eventId],
     queryFn: async () => {
-      const res = await apiClient.get<Event>(`/Events/${eventId}`);
-      return res.data;
+      if (!eventId) return null;
+      try {
+        const res = await apiClient.get<any>(`/Events/${eventId}`);
+        return (res.data?.data ?? res.data ?? null) as Event | null;
+      } catch (err) {
+        console.error("Error fetching event detail for ID:", eventId, err);
+        return null;
+      }
     },
     enabled: !!eventId,
   });
@@ -143,8 +176,8 @@ export async function createEvent(data: Partial<Event>): Promise<any> {
 
 /** DELETE /Events/{id} — xoá vĩnh viễn. Lỗi (vd còn team/track phụ thuộc) phải nổi lên thật, không được nuốt. */
 export async function deleteEvent(id: string): Promise<any> {
-  await apiClient.delete(`/Events/${id}`);
-  return { success: true };
+  const response = await apiClient.delete<any>(`/Events/${id}`);
+  return response.data ?? { success: true };
 }
 
 export async function updateEvent(id: string, data: Partial<Event>): Promise<any> {

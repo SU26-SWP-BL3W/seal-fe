@@ -1,18 +1,16 @@
-import type { Metadata } from 'next';
-import { EventDetailsView } from '@/views/EventDetailsView';
+import type { Metadata } from "next";
+import { EventDetailView } from "@/views/EventDetailView";
 
 export const metadata: Metadata = {
-  title: 'Chi tiết sự kiện - SEAL',
-  description: 'Chi tiết sự kiện hackathon SEAL',
+  title: "Chi tiết sự kiện - SEAL",
+  description: "Chi tiết sự kiện hackathon SEAL",
 };
 
-interface EventPageProps {
-  params: {
-    locale: string;
-    id: string;
-  };
-}
-
-export default function EventPage({ params }: EventPageProps) {
-  return <EventDetailsView eventId={params.id} />;
+export default async function EventDetailPage({
+  params,
+}: {
+  params: Promise<{ locale: string; id: string }>;
+}) {
+  const { id } = await params;
+  return <EventDetailView eventId={id} />;
 }

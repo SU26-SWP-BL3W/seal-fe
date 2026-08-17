@@ -91,10 +91,22 @@ export const staffRepository = {
   },
 
   /**
-   * Gán vai trò trực tiếp không qua email mời (POST /api/EventRoles/assign)
+   * Gán vai trò trực tiếp không qua email mời (POST /api/EventRoles/assign).
+   * BE nhận roleName dạng SỐ (enum EventRoleType), gửi chuỗi sẽ luôn 400 —
+   * đã verify trực tiếp: {"$.roleName":["The JSON value could not be converted..."]}.
    */
   async assignRoleDirectly(payload: AssignRolePayload): Promise<BaseResponse<EventRole>> {
-    const res = await apiClient.post<BaseResponse<EventRole>>("/EventRoles/assign", payload);
+    const ROLE_NAME_TO_ENUM: Record<AssignRolePayload["roleName"], number> = {
+      EventCoordinator: 0,
+      Judge: 1,
+      Mentor: 2,
+      TeamLeader: 3,
+      TeamMember: 4,
+    };
+    const res = await apiClient.post<BaseResponse<EventRole>>("/EventRoles/assign", {
+      ...payload,
+      roleName: ROLE_NAME_TO_ENUM[payload.roleName],
+    });
     return res.data;
   },
 

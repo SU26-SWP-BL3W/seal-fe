@@ -3,6 +3,14 @@ import apiClient from "@/models/apiClient";
 import type { SubmissionItem } from "@/viewModels/teamTypes";
 import type { PagedResult } from "@/models/types";
 
+/**
+ * SubmitResultListItemModel.cs thật ở BE chỉ có: id/teamId/trackId/
+ * submissionUrl/isActive/createdTime — KHÔNG có repoUrl/demoUrl/slideUrl/
+ * teamName/displayCode/isGraded riêng biệt (đã kiểm tra trực tiếp DTO backend).
+ * Các field dưới đây được giữ optional để không phá interface của các flow khác
+ * (Team/Mentor) đang đọc chúng — nhưng thực tế BE không bao giờ trả về, luôn
+ * undefined. Code MỚI (Judge scoring) không nên dựa vào các field này.
+ */
 export interface SubmitResultListItem {
   id?: string;
   Id?: string;
@@ -38,16 +46,19 @@ export function readApiError(err: unknown): string {
   return e.message || "Thao tác thất bại.";
 }
 
+/** Fetcher thuần (không phải hook) — dùng lại được trong useQueries khi cần gọi song song nhiều track. */
+export async function fetchSubmitResultsByTrack(trackId: string, eventId: string): Promise<SubmitResultListItem[]> {
+  const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", {
+    params: { TrackId: trackId, EventId: eventId, PageSize: 200 },
+  });
+  return res.data?.data ?? [];
+}
+
 /** Danh sách bài nộp theo hạng mục — giám khảo/mentor. Filter EventId bắt buộc với EventRoleAuthorize. */
 export function useGetSubmitResultsByTrack(trackId?: string, eventId?: string) {
   return useQuery({
     queryKey: ["submit-results-by-track", trackId, eventId],
-    queryFn: async () => {
-      const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", {
-        params: { TrackId: trackId, EventId: eventId, PageSize: 200 },
-      });
-      return res.data?.data ?? [];
-    },
+    queryFn: () => fetchSubmitResultsByTrack(trackId!, eventId!),
     enabled: !!trackId && !!eventId,
   });
 }

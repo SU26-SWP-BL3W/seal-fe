@@ -69,7 +69,7 @@ export function RegisterView() {
           </div>
 
           <h2 className="font-display text-[length:var(--fs-heading-md)] font-bold text-[var(--color-success)] mb-3 tracking-widest uppercase">
-            // XÁC THỰC EMAIL
+            XÁC THỰC EMAIL
           </h2>
           <p className="text-sm font-body text-[var(--text-muted)] mb-2 leading-relaxed">
             Chúng tôi đã gửi email xác thực tới:
@@ -125,7 +125,6 @@ export function RegisterView() {
   return (
     <div className="flex items-center justify-center min-h-[70vh] hud-lattice px-4 py-8">
       <Card className="w-full max-w-md p-[var(--space-xl)] bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-8 h-8 bg-[rgba(0,217,255,0.1)] border border-[var(--accent-primary)]/30 flex items-center justify-center">
             <Shield className="w-4 h-4 text-[var(--accent-primary)]" />
@@ -134,14 +133,13 @@ export function RegisterView() {
             <h2 className="font-display text-[length:var(--fs-heading-md)] font-bold text-[var(--accent-primary)] tracking-widest uppercase leading-none">
               SEAL
             </h2>
-            <p className="text-xs font-mono text-[var(--text-muted)] tracking-wider">
-              // TẠO TÀI KHOẢN
+            <p className="text-xs font-mono text-[var(--text-muted)] tracking-wider uppercase">
+              TẠO TÀI KHOẢN
             </p>
           </div>
         </div>
 
         <form onSubmit={handleRegister} className="flex flex-col gap-4">
-          {/* Họ và tên */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase flex items-center gap-1.5">
               <User className="w-3 h-3" />
@@ -164,7 +162,6 @@ export function RegisterView() {
             )}
           </div>
 
-          {/* Email */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase flex items-center gap-1.5">
               <Mail className="w-3 h-3" />
@@ -187,7 +184,6 @@ export function RegisterView() {
             )}
           </div>
 
-          {/* Mật khẩu */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase flex items-center gap-1.5">
               <Lock className="w-3 h-3" />
@@ -262,7 +258,7 @@ export function RegisterView() {
             disabled={isPending}
             className="mt-2 w-full justify-center"
           >
-            {isPending ? "// ĐANG XỬ LÝ..." : "// TẠO TÀI KHOẢN >"}
+            {isPending ? "Đang xử lý..." : "TẠO TÀI KHOẢN >"}
           </Button>
         </form>
 

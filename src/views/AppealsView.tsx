@@ -221,7 +221,6 @@ export function AppealsView() {
             <div className="p-8 text-center text-xs font-mono text-[var(--text-muted)]">Đang tải danh sách đơn phúc khảo...</div>
           ) : appeals.length === 0 ? (
             <ApiMissingDataBadge
-              endpoint={isEC ? "GET /api/Appeals/assigned/{eventRoleId}" : "GET /api/Appeals/team/{teamId}"}
               title="CHƯA CÓ ĐƠN PHÚC KHẢO"
               message="Chưa có bản ghi đơn phúc khảo nào phù hợp."
             />
