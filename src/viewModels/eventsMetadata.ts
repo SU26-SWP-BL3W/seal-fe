@@ -97,21 +97,42 @@ export interface EventCardData extends EventItem {
 }
 
 export const STATUS_PRIORITY: Record<EventDisplayStatus, number> = {
-  ongoing: 0,
-  registration_open: 1,
+  registration_open: 0,
+  ongoing: 1,
   upcoming: 2,
   ended: 3,
 };
 
+export function isTeamRegistrationOpen(
+  ev: { registrationStartDate?: string; registrationEndDate?: string; startDate?: string; endDate?: string },
+  now: number = Date.now()
+): boolean {
+  const regStart = ev.registrationStartDate ? new Date(ev.registrationStartDate).getTime() : (ev.startDate ? new Date(ev.startDate).getTime() : 0);
+  const regEnd = ev.registrationEndDate ? new Date(ev.registrationEndDate).getTime() : (ev.endDate ? new Date(ev.endDate).getTime() : 0);
+  if (!regEnd) return true;
+  return now >= regStart && now <= regEnd;
+}
+
+export function isTeamRegistrationExpired(
+  ev: { registrationEndDate?: string; endDate?: string },
+  now: number = Date.now()
+): boolean {
+  const regEnd = ev.registrationEndDate ? new Date(ev.registrationEndDate).getTime() : (ev.endDate ? new Date(ev.endDate).getTime() : 0);
+  if (!regEnd) return false;
+  return now > regEnd;
+}
+
 export function computeEventStatus(ev: EventItem, now: number): EventDisplayStatus {
   const start = new Date(ev.startDate).getTime();
   const end = new Date(ev.endDate).getTime();
-  const regEnd = new Date(ev.registrationEndDate).getTime();
+  const regStart = new Date(ev.registrationStartDate || ev.startDate).getTime();
+  const regEnd = new Date(ev.registrationEndDate || ev.endDate).getTime();
 
   if (now > end) return "ended";
-  if (now >= start) return "ongoing";
-  if (now <= regEnd) return "registration_open";
-  return "upcoming";
+  if (now >= regStart && now <= regEnd) return "registration_open";
+  if (now >= start && now <= end) return "ongoing";
+  if (now < regStart) return "upcoming";
+  return "ongoing";
 }
 
 export const STATUS_LABEL: Record<EventDisplayStatus, string> = {

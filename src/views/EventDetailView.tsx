@@ -31,7 +31,11 @@ import {
   Megaphone,
   HelpCircle,
   Flame,
+  Settings,
+  X,
 } from "lucide-react";
+import { roundsRepository } from "@/repositories/roundsRepository";
+import { eventsRepository } from "@/repositories/eventsRepository";
 
 function formatShortDate(iso?: string): string {
   if (!iso) return "N/A";
@@ -70,6 +74,17 @@ function formatFullDateTime(iso?: string): string {
     hour: "2-digit",
     minute: "2-digit",
   })}`;
+}
+
+function toDateTimeLocal(val?: string, defaultTime = "08:00") {
+  if (!val) return "";
+  if (val.includes("T")) {
+    const parts = val.split("T");
+    const datePart = parts[0];
+    const timePart = parts[1]?.substring(0, 5) || defaultTime;
+    return `${datePart}T${timePart}`;
+  }
+  return `${val}T${defaultTime}`;
 }
 
 export function EventDetailView({ eventId: propEventId }: { eventId?: string }) {
@@ -115,9 +130,88 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
     prizes,
     deadline,
     deadlineRoundName,
+    refetch,
   } = useEventDetailViewModel(eventId);
 
   const countdown = useCountdown(deadline);
+
+  // Modal State cho Admin / Coordinator sửa 5 Phase của vòng thi
+  const [editingRound, setEditingRound] = useState<{
+    round: RoundSummary;
+    index: number;
+  } | null>(null);
+
+  const [phase1Start, setPhase1Start] = useState("");
+  const [phase2End, setPhase2End] = useState("");
+  const [phase3Eval, setPhase3Eval] = useState("");
+  const [phase4Announce, setPhase4Announce] = useState("");
+  const [phase5Appeal, setPhase5Appeal] = useState("");
+  const [isSavingPhases, setIsSavingPhases] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null);
+
+  const handleOpenEditPhases = (round: RoundSummary, index: number) => {
+    setEditingRound({ round, index });
+    setPhase1Start(toDateTimeLocal(round.startDate, "08:00"));
+    setPhase2End(toDateTimeLocal(round.submissionDeadline || round.endDate, "23:59"));
+    setPhase3Eval(toDateTimeLocal(round.evaluationEndDate || round.endDate, "18:00"));
+    setPhase4Announce(toDateTimeLocal(round.resultAnnouncementDate || round.endDate, "09:00"));
+    setPhase5Appeal(toDateTimeLocal(round.appealDeadline || round.endDate, "23:59"));
+    setSaveSuccessMsg(null);
+    setSaveErrorMsg(null);
+  };
+
+  const handleSavePhases = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRound) return;
+    setIsSavingPhases(true);
+    setSaveSuccessMsg(null);
+    setSaveErrorMsg(null);
+
+    const { round, index } = editingRound;
+
+    try {
+      if (index === 0 || round.id === "reg-phase") {
+        // Cập nhật mốc đăng ký sự kiện
+        await eventsRepository.updateEvent(eventId, {
+          registrationStartDate: new Date(phase1Start).toISOString(),
+          registrationEndDate: new Date(phase2End).toISOString(),
+        });
+      } else {
+        // Cập nhật vòng thi cụ thể
+        const roundId = round.id;
+        const payload = {
+          startDate: new Date(phase1Start).toISOString(),
+          endDate: new Date(phase2End).toISOString(),
+          scoringStartDate: new Date(phase2End).toISOString(),
+          scoringEndDate: new Date(phase3Eval).toISOString(),
+          appealStartDate: new Date(phase4Announce).toISOString(),
+          appealEndDate: new Date(phase5Appeal).toISOString(),
+        };
+
+        if (roundId && !roundId.startsWith("rnd-") && !roundId.startsWith("main-")) {
+          await roundsRepository.updateRound(roundId, payload);
+        } else {
+          // Fallback cập nhật sự kiện
+          await eventsRepository.updateEvent(eventId, {
+            startDate: new Date(phase1Start).toISOString(),
+            endDate: new Date(phase5Appeal || phase2End).toISOString(),
+          });
+        }
+      }
+
+      setIsSavingPhases(false);
+      setSaveSuccessMsg("Đã cập nhật thành công các mốc thời gian Phase 1 đến Phase 5!");
+      refetch();
+      setTimeout(() => {
+        setEditingRound(null);
+        setSaveSuccessMsg(null);
+      }, 1000);
+    } catch (err: any) {
+      setIsSavingPhases(false);
+      setSaveErrorMsg(err?.response?.data?.message || err?.message || "Cập nhật mốc thời gian thất bại.");
+    }
+  };
 
   const activeRound = rounds[selectedRoundIndex] || rounds[0] || {
     id: "rnd-0",
@@ -227,6 +321,28 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
             </span>
           </div>
         </div>
+
+        {/* Unverified Student Alert Banner */}
+        {roleName === "Student" && !user?.isApproved && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2.5 text-amber-300">
+              <AlertCircle className="w-5 h-5 shrink-0 text-amber-400" />
+              <div>
+                <span className="font-bold uppercase tracking-wider text-amber-200">HỒ SƠ SINH VIÊN CHƯA ĐƯỢC DUYỆT:</span>{" "}
+                <span className="text-zinc-300">
+                  Bạn có thể xem chi tiết thể lệ, lịch trình và giải thưởng. Để đăng ký tạo đội hoặc nộp bài, bạn cần hoàn thiện hồ sơ sinh viên.
+                </span>
+              </div>
+            </div>
+            <Link
+              href="/onboarding/profile"
+              className="shrink-0 px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 font-bold uppercase tracking-wider rounded transition-colors text-[11px] flex items-center gap-1.5 shadow-sm"
+            >
+              <span>Cập Nhật Hồ Sơ</span>
+              <span>→</span>
+            </Link>
+          </div>
+        )}
 
         {/* Hero Event Banner */}
         <div className="bg-[#10171a] border border-zinc-800 rounded-lg p-6 md:p-8 space-y-6 shadow-sm">
@@ -365,12 +481,21 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
               )}
 
               {roleName === "Student" && (
-                <Link href="/my-team">
-                  <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5">
-                    <Upload className="w-4 h-4" />
-                    <span>Quản Lý Đội Thi / Nộp Bài</span>
-                  </button>
-                </Link>
+                user?.isApproved ? (
+                  <Link href={`/my-team?eventId=${eventId}`}>
+                    <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                      <Upload className="w-4 h-4" />
+                      <span>Quản Lý Đội Thi / Nộp Bài</span>
+                    </button>
+                  </Link>
+                ) : (
+                  <Link href="/onboarding/profile">
+                    <button className="px-5 py-2.5 bg-amber-500 text-black hover:bg-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Cần Cập Nhật Hồ Sơ Để Đăng Ký</span>
+                    </button>
+                  </Link>
+                )
               )}
             </div>
           </div>
@@ -498,17 +623,31 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                           </h3>
                         </div>
 
-                        <span
-                          className={`px-3 py-1 rounded font-mono text-xs font-bold uppercase self-start sm:self-auto ${
-                            isCurrent
-                              ? "bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 animate-pulse shadow-[0_0_12px_rgba(0,217,255,0.2)]"
-                              : isPast
-                              ? "bg-zinc-800 text-zinc-400"
-                              : "bg-cyan-950/40 text-cyan-300 border border-cyan-500/30"
-                          }`}
-                        >
-                          {isCurrent ? "Đang diễn ra" : isPast ? "Đã kết thúc" : "Sắp mở"}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                          {(roleName === "Admin" || roleName === "Coordinator") && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditPhases(round, index)}
+                              className="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black font-mono text-[11px] font-bold rounded transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+                              title="Admin / BTC có quyền chỉnh sửa thời gian Phase 1 đến Phase 5"
+                            >
+                              <Settings className="w-3.5 h-3.5" />
+                              <span>Sửa Phase 1 → 5</span>
+                            </button>
+                          )}
+
+                          <span
+                            className={`px-3 py-1 rounded font-mono text-xs font-bold uppercase ${
+                              isCurrent
+                                ? "bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 animate-pulse shadow-[0_0_12px_rgba(0,217,255,0.2)]"
+                                : isPast
+                                ? "bg-zinc-800 text-zinc-400"
+                                : "bg-cyan-950/40 text-cyan-300 border border-cyan-500/30"
+                            }`}
+                          >
+                            {isCurrent ? "Đang diễn ra" : isPast ? "Đã kết thúc" : "Sắp mở"}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Round Description */}
@@ -618,12 +757,30 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
 
                             {/* Student Action */}
                             {roleName === "Student" && (
-                              <Link href={isRegistration ? "/my-team" : "/submissions/new"}>
-                                <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <span>{isRegistration ? "Đăng Ký Đội Thi Ngay >" : "Nộp Bài Vòng Này >"}</span>
-                                </button>
-                              </Link>
+                              isRegistration ? (
+                                user?.isApproved ? (
+                                  <Link href={`/my-team?eventId=${eventId}`}>
+                                    <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                                      <Upload className="w-3.5 h-3.5" />
+                                      <span>Đăng Ký Đội Thi Ngay &gt;</span>
+                                    </button>
+                                  </Link>
+                                ) : (
+                                  <Link href="/onboarding/profile">
+                                    <button className="px-5 py-2.5 bg-amber-500 text-black hover:bg-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                                      <AlertCircle className="w-3.5 h-3.5" />
+                                      <span>Cần Cập Nhật Hồ Sơ Để Đăng Ký &gt;</span>
+                                    </button>
+                                  </Link>
+                                )
+                              ) : (
+                                <Link href="/submissions/new">
+                                  <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                                    <Upload className="w-3.5 h-3.5" />
+                                    <span>Nộp Bài Vòng Này &gt;</span>
+                                  </button>
+                                </Link>
+                              )
                             )}
 
                             {/* Judge Action */}
@@ -841,6 +998,182 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           </div>
         )}
       </div>
+
+      {/* ── Modal Admin / Coordinator Chỉnh Sửa Mốc Thời Gian (Phase 1 -> 5) ── */}
+      {editingRound && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="max-w-2xl w-full bg-[#11181c] border border-amber-500/40 p-6 rounded-lg space-y-5 shadow-2xl font-mono text-xs max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Settings className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-base text-white uppercase">
+                    CHỈNH SỬA MỐC THỜI GIAN (PHASE 1 → 5)
+                  </h3>
+                  <p className="text-[11px] text-zinc-400 font-sans">
+                    {editingRound.round.roundName} • Quyền Quản Trị Hệ Thống / Ban Tổ Chức
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEditingRound(null)}
+                className="text-zinc-400 hover:text-white p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {saveSuccessMsg && (
+              <div className="p-3 bg-emerald-950/50 border border-emerald-500/50 text-emerald-300 flex items-center gap-2 rounded">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{saveSuccessMsg}</span>
+              </div>
+            )}
+
+            {saveErrorMsg && (
+              <div className="p-3 bg-red-950/50 border border-red-500/50 text-red-300 rounded">
+                {saveErrorMsg}
+              </div>
+            )}
+
+            {/* Form 5 Phases */}
+            <form onSubmit={handleSavePhases} className="space-y-4">
+              
+              {/* Phase 1 */}
+              <div className="p-3.5 bg-[#141f24] border border-sky-500/30 rounded space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sky-400 flex items-center gap-1.5 uppercase text-[11px]">
+                    <Flame className="w-3.5 h-3.5" /> Phase 1: Mở Cổng &amp; Nhận Bài Thi
+                  </span>
+                  <span className="text-[10px] text-zinc-400">Bắt đầu vòng thi</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 block">Thời gian mở cổng (Ngày &amp; Giờ):</label>
+                  <input
+                    type="datetime-local"
+                    value={phase1Start}
+                    onChange={(e) => setPhase1Start(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-sky-400 outline-none text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Phase 2 */}
+              <div className="p-3.5 bg-[#141f24] border border-amber-500/30 rounded space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-400 flex items-center gap-1.5 uppercase text-[11px]">
+                    <Clock className="w-3.5 h-3.5" /> Phase 2: Hạn Chót &amp; Khóa Cổng Nộp Bài
+                  </span>
+                  <span className="text-[10px] text-zinc-400">Hạn chót nộp bài</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 block">Thời gian đóng form nộp (Ngày &amp; Giờ):</label>
+                  <input
+                    type="datetime-local"
+                    value={phase2End}
+                    onChange={(e) => setPhase2End(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-amber-400 outline-none text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Phase 3 */}
+              <div className="p-3.5 bg-[#141f24] border border-purple-500/30 rounded space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-purple-400 flex items-center gap-1.5 uppercase text-[11px]">
+                    <Scale className="w-3.5 h-3.5" /> Phase 3: Hội Đồng Chấm Điểm &amp; Đánh Giá
+                  </span>
+                  <span className="text-[10px] text-zinc-400">Thời hạn giám khảo chấm</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 block">Hạn chốt kết quả chấm (Ngày &amp; Giờ):</label>
+                  <input
+                    type="datetime-local"
+                    value={phase3Eval}
+                    onChange={(e) => setPhase3Eval(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-purple-400 outline-none text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Phase 4 */}
+              <div className="p-3.5 bg-[#141f24] border border-emerald-500/30 rounded space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-emerald-400 flex items-center gap-1.5 uppercase text-[11px]">
+                    <Megaphone className="w-3.5 h-3.5" /> Phase 4: Công Bố Điểm &amp; Danh Sách Xếp Hạng
+                  </span>
+                  <span className="text-[10px] text-zinc-400">Công bố công khai</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 block">Thời gian mở bảng xếp hạng (Ngày &amp; Giờ):</label>
+                  <input
+                    type="datetime-local"
+                    value={phase4Announce}
+                    onChange={(e) => setPhase4Announce(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-emerald-400 outline-none text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Phase 5 */}
+              <div className="p-3.5 bg-[#141f24] border border-pink-500/30 rounded space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-pink-400 flex items-center gap-1.5 uppercase text-[11px]">
+                    <Shield className="w-3.5 h-3.5" /> Phase 5: Khung Giờ Khiếu Nại &amp; Phúc Khảo
+                  </span>
+                  <span className="text-[10px] text-zinc-400">Hạn chót tiếp nhận phúc khảo</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-400 block">Thời hạn đóng cổng khiếu nại (Ngày &amp; Giờ):</label>
+                  <input
+                    type="datetime-local"
+                    value={phase5Appeal}
+                    onChange={(e) => setPhase5Appeal(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-[#0a0e10] border border-zinc-700 text-white rounded focus:border-pink-400 outline-none text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingRound(null)}
+                  disabled={isSavingPhases}
+                  className="px-4 py-2 bg-[#1c2830] border border-zinc-700 hover:border-zinc-500 text-zinc-300 rounded font-bold transition-colors cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPhases}
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold uppercase rounded transition-colors cursor-pointer flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                >
+                  {isSavingPhases ? (
+                    <span>Đang lưu...</span>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Lưu Cập Nhật 5 Phase</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

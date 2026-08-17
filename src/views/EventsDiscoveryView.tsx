@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 import { Badge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyTeam } from "@/repositories/teamsRepository";
@@ -11,6 +11,8 @@ import {
   STATUS_DOT_VAR,
   STATUS_TONE,
   computeEventStatus,
+  isTeamRegistrationOpen,
+  isTeamRegistrationExpired,
   type EventCardData,
 } from "@/viewModels/eventsMetadata";
 import {
@@ -68,15 +70,33 @@ function SealMark() {
 }
 
 // ─── Event Card (Devpost-style horizontal) ────────────────────────────────────
-function EventCard({ event }: { event: EventCardData }) {
+function EventCard({
+  event,
+  onSelectExpired,
+}: {
+  event: EventCardData;
+  onSelectExpired: (ev: EventCardData) => void;
+}) {
   const days = daysLeft(event.endDate);
   const isActive = event.status === "ongoing" || event.status === "registration_open";
   const statusColor = STATUS_DOT_VAR[event.status];
+  const isRegOpen = isTeamRegistrationOpen(event);
+  const isRegExpired = isTeamRegistrationExpired(event);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isRegExpired) {
+      e.preventDefault();
+      onSelectExpired(event);
+    }
+  };
 
   return (
     <Link
       href={`/events/${event.id}`}
-      className="group flex items-stretch border border-[var(--border-muted)] bg-[var(--bg-panel)] transition-all duration-200 hover:border-[var(--accent-primary)]/60 hover:shadow-[0_0_20px_rgba(0,217,255,0.06)] hud-clipped"
+      onClick={handleClick}
+      className={`group flex items-stretch border border-[var(--border-muted)] bg-[var(--bg-panel)] transition-all duration-200 hover:border-[var(--accent-primary)]/60 hover:shadow-[0_0_20px_rgba(0,217,255,0.06)] hud-clipped ${
+        isRegExpired ? "hover:border-amber-500/60" : ""
+      }`}
       style={{ borderLeft: `3px solid ${statusColor}` }}
     >
       {/* Thumbnail */}
@@ -86,12 +106,25 @@ function EventCard({ event }: { event: EventCardData }) {
 
       {/* Main content */}
       <div className="flex flex-1 flex-col justify-between p-4 min-w-0">
-        {/* Top row: title + status badge */}
+        {/* Top row: title + status badge + registration badge */}
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
           <h3 className="font-display text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
             {event.eventName}
           </h3>
           <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
+
+          {/* Registration status tag */}
+          {isRegOpen && (
+            <span className="font-mono text-[9px] px-2 py-0.5 border border-emerald-500/40 text-emerald-400 bg-emerald-500/10 uppercase tracking-wider font-bold">
+              ✓ ĐANG MỞ ĐĂNG KÝ ĐỘI
+            </span>
+          )}
+          {isRegExpired && (
+            <span className="font-mono text-[9px] px-2 py-0.5 border border-amber-500/40 text-amber-400 bg-amber-500/10 uppercase tracking-wider font-bold">
+              ⚠ ĐÃ HẾT HẠN ĐĂNG KÝ ĐỘI
+            </span>
+          )}
+
           {isActive && days > 0 && days <= 30 && (
             <span className={`font-mono text-[9px] px-2 py-0.5 border tracking-widest uppercase ${days <= 3 ? "border-[var(--color-danger)]/50 text-[var(--color-danger)] bg-[var(--color-danger)]/10 animate-pulse" : "border-[var(--color-warning)]/50 text-[var(--color-warning)] bg-[var(--color-warning)]/10"}`}>
               {days <= 0 ? "HÔM NAY" : `${days} NGÀY`}
@@ -102,7 +135,7 @@ function EventCard({ event }: { event: EventCardData }) {
         {/* Tagline */}
         <p className="text-xs text-[var(--text-muted)] truncate mb-2">{event.tagline}</p>
 
-        {/* Bottom row: prize + teams */}
+        {/* Bottom row: prize + teams + registration deadline */}
         <div className="flex flex-wrap items-center gap-4">
           {event.prizes.length > 0 && (
             <span className="font-mono text-sm font-bold text-[var(--text-primary)]">
@@ -113,6 +146,11 @@ function EventCard({ event }: { event: EventCardData }) {
             <TeamIcon />
             {event.teamCount}/{event.maxTeams} đội
           </span>
+          {event.registrationEndDate && (
+            <span className="hidden sm:inline-flex font-mono text-[11px] text-[var(--text-muted)]">
+              Hạn đăng ký: {formatShortDate(event.registrationEndDate)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -254,6 +292,7 @@ const SORT_OPTIONS: { value: EventSortOption; label: string }[] = [
 
 // ─── Main View ─────────────────────────────────────────────────────────────────
 export function EventsDiscoveryView() {
+  const router = useRouter();
   const { user, activeRole } = useAuth();
   const roleName = activeRole?.roleName || activeRole?.RoleName || (user?.isAdmin || user?.IsAdmin ? "Admin" : "Guest");
 
@@ -276,6 +315,7 @@ export function EventsDiscoveryView() {
   } = useEventsDiscoveryViewModel();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expiredModalEvent, setExpiredModalEvent] = useState<EventCardData | null>(null);
 
   const handleClear = () => {
     setStatusFilter("all");
@@ -339,6 +379,30 @@ export function EventsDiscoveryView() {
         </div>
       </section>
 
+      {/* ── Unverified Student Notice Banner ── */}
+      {user && !user.isAdmin && !user.isApproved && (
+        <div className="border-b border-amber-500/30 bg-amber-500/10 px-6 py-3">
+          <div className="mx-auto w-full max-w-[var(--container-max)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono text-xs">
+            <div className="flex items-center gap-2.5 text-amber-300">
+              <span className="text-base shrink-0">⚠️</span>
+              <div>
+                <span className="font-bold uppercase tracking-wider">Hồ sơ sinh viên chưa xác thực:</span>{" "}
+                <span className="text-zinc-300">
+                  Bạn đang xem danh sách sự kiện ở chế độ xem. Cần hoàn thiện và xác thực hồ sơ để đăng ký tham gia thi đấu.
+                </span>
+              </div>
+            </div>
+            <Link
+              href="/onboarding/profile"
+              className="shrink-0 px-3.5 py-1.5 bg-amber-500 text-black hover:bg-amber-400 font-bold uppercase tracking-wider rounded transition-colors text-[11px] flex items-center gap-1.5 shadow-sm"
+            >
+              <span>Cập Nhật Hồ Sơ</span>
+              <span>→</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* ── Search bar ── */}
       <div className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
         <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-3 flex items-center gap-3">
@@ -368,8 +432,8 @@ export function EventsDiscoveryView() {
       {/* ── Main Layout: Sidebar + List ── */}
       <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-6 flex gap-6 flex-1">
 
-        {/* Sidebar */}
-        <div className={`${sidebarOpen ? "flex" : "hidden"} md:flex`}>
+        {/* Left: Filter sidebar */}
+        <div className={`${sidebarOpen ? "block" : "hidden"} md:block`}>
           <SidebarFilter
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
@@ -500,12 +564,74 @@ export function EventsDiscoveryView() {
           ) : (
             <div className="flex flex-col gap-3">
               {events.map((ev) => (
-                <EventCard key={ev.id} event={ev} />
+                <EventCard
+                  key={ev.id}
+                  event={ev}
+                  onSelectExpired={(target) => setExpiredModalEvent(target)}
+                />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* ── Dialog thông báo khi bấm vào sự kiện đã quá thời gian đăng ký đội ── */}
+      {expiredModalEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-[#0f171d] border border-amber-500/40 p-6 shadow-2xl font-mono text-xs space-y-5 hud-clipped">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 text-xl font-bold">
+                ⚠️
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-display text-base font-bold text-amber-300 uppercase tracking-wide">
+                  ĐÃ QUÁ THỜI GIAN ĐĂNG KÝ ĐỘI
+                </h3>
+                <p className="text-zinc-300 font-sans text-xs leading-relaxed">
+                  Sự kiện <strong className="text-white font-bold">"{expiredModalEvent.eventName}"</strong> đã kết thúc thời gian mở đăng ký đội thi vào ngày{" "}
+                  <strong className="text-amber-400">{formatShortDate(expiredModalEvent.registrationEndDate || expiredModalEvent.endDate)}</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#162228] border border-zinc-700/70 text-[11px] text-zinc-400 space-y-1.5">
+              <div className="flex justify-between">
+                <span>Thời gian thi đấu:</span>
+                <span className="text-zinc-200 font-bold">{formatShortDate(expiredModalEvent.startDate)} – {formatShortDate(expiredModalEvent.endDate)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Trạng thái:</span>
+                <span className="text-cyan-300 font-bold">{STATUS_LABEL[expiredModalEvent.status]}</span>
+              </div>
+              <p className="pt-1.5 text-[10px] text-amber-400/90 border-t border-zinc-700/50 mt-1">
+                * Thí sinh không thể tạo mới hoặc đăng ký đội tham gia cho sự kiện này nữa.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setExpiredModalEvent(null)}
+                className="px-4 py-2 bg-[#1c2830] border border-zinc-700 hover:border-zinc-500 text-zinc-300 font-bold transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = expiredModalEvent.id;
+                  setExpiredModalEvent(null);
+                  router.push(`/events/${id}`);
+                }}
+                className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <span>Vẫn Xem Chi Tiết</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

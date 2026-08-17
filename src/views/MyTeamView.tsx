@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import {
   useCancelInvitation,
@@ -41,21 +42,24 @@ function pick(obj: unknown, ...keys: string[]): string {
 
 export function MyTeamView() {
   const { user, activeRole } = useAuth();
+  const searchParams = useSearchParams();
   const roleName = pick(activeRole, "RoleName", "roleName");
   const isLeader = roleName === "TeamLeader";
   const currentUserId = pick(user, "id", "userId", "UserID");
+  const eventIdFromUrl = searchParams.get("eventId") || "";
   const eventIdFromRole =
     pick(activeRole, "eventId", "EventId") ||
     ((activeRole?.assignedEventIds?.[0] as string | undefined) ?? "");
+  const targetEventId = eventIdFromUrl || eventIdFromRole;
 
-  const { data: rawTeam, isLoading } = useMyTeam(eventIdFromRole || undefined);
+  const { data: rawTeam, isLoading } = useMyTeam(targetEventId || undefined);
 
   const team: TeamView | null = rawTeam
     ? {
         id: pick(rawTeam, "id", "Id", "TeamId"),
         teamName: pick(rawTeam, "name", "Name", "TeamName") || "Đội chưa đặt tên",
         description: pick(rawTeam, "description", "Description"),
-        eventId: pick(rawTeam, "eventId", "EventId") || eventIdFromRole,
+        eventId: pick(rawTeam, "eventId", "EventId") || targetEventId,
         eventName: pick(rawTeam, "eventName", "EventName") || "Sự kiện",
         status: (pick(rawTeam, "status", "Status") || "Forming") as TeamStatus,
         createdTime: pick(rawTeam, "createdTime", "CreatedTime"),
@@ -127,7 +131,7 @@ export function MyTeamView() {
   if (!team) {
     return (
       <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)]">
-        <CreateTeamForm />
+        <CreateTeamForm defaultEventId={targetEventId} />
       </main>
     );
   }
@@ -219,7 +223,9 @@ export function MyTeamView() {
                 loadError={hasInvitationError}
                 isInviting={isInviting}
                 isCancelling={isCancelling}
-                onInvite={(email) => inviteMember({ teamId: team.id, email })}
+                onInvite={async (email) => {
+                  await inviteMember({ teamId: team.id, email });
+                }}
                 onCancel={(invitation) => {
                   setDialogError("");
                   setCancelTarget(invitation);

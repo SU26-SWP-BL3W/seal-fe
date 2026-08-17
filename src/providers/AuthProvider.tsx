@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [activeRole, setActiveRole] = useState<EventRole | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  // Khôi phục phiên từ localStorage (F5 safe)
+  // Khôi phục phiên từ localStorage (F5 safe) & đồng bộ profile mới nhất từ BE
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem("currentUser");
@@ -94,6 +94,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Lỗi khôi phục phiên từ localStorage:", e);
     } finally {
       setIsInitialized(true);
+    }
+
+    // Tự động kiểm tra và làm mới trạng thái isApproved từ server nếu có token
+    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    if (token) {
+      apiClient.get<User>("/Users/profile")
+        .then((res) => {
+          if (res.data) {
+            setUser((prev) => {
+              const updated = {
+                ...(prev || {}),
+                ...res.data,
+                isApproved: res.data.isApproved ?? prev?.isApproved ?? false,
+                isStudent: res.data.isStudent ?? prev?.isStudent ?? true,
+                isAdmin: res.data.isAdmin ?? prev?.isAdmin ?? false,
+              };
+              if (typeof window !== "undefined") {
+                localStorage.setItem("currentUser", JSON.stringify(updated));
+              }
+              return updated;
+            });
+          }
+        })
+        .catch(() => {
+          // Bỏ qua lỗi nếu offline hoặc mạng chậm
+        });
     }
   }, []);
 
@@ -191,10 +217,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!accessToken) throw new Error("Phản hồi đăng nhập thiếu token.");
 
     const userId = d.userId ?? d.UserId;
-    const isAdmin = Boolean(d.isAdmin ?? d.IsAdmin ?? d.user?.isAdmin);
-    const isStudent = Boolean(d.isStudent ?? d.IsStudent ?? d.user?.isStudent);
-    const fullName = d.fullName ?? d.FullName ?? d.user?.fullName ?? "";
-    const isApproved = Boolean(d.isApproved ?? d.IsApproved ?? d.user?.isApproved ?? false);
+    let isAdmin = Boolean(d.isAdmin ?? d.IsAdmin ?? d.user?.isAdmin);
+    let isStudent = Boolean(d.isStudent ?? d.IsStudent ?? d.user?.isStudent);
+    let fullName = d.fullName ?? d.FullName ?? d.user?.fullName ?? "";
+    let isApproved = Boolean(d.isApproved ?? d.IsApproved ?? d.user?.isApproved ?? false);
+    let studentCode = d.studentCode ?? d.StudentCode ?? d.user?.studentCode ?? null;
+    let schoolId = d.schoolId ?? d.SchoolId ?? d.user?.schoolId ?? null;
+    let photoStudentCardUrl = d.photoStudentCardUrl ?? d.PhotoStudentCardUrl ?? d.user?.photoStudentCardUrl ?? null;
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("accessToken", accessToken);
+      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+    }
+
+    // Truy vấn thông tin profile đầy đủ nhất từ BE để xét duyệt chính xác
+    try {
+      const profileRes = await apiClient.get<User>("/Users/profile");
+      if (profileRes.data) {
+        const p = profileRes.data;
+        if (p.isAdmin !== undefined) isAdmin = Boolean(p.isAdmin);
+        if (p.isStudent !== undefined) isStudent = Boolean(p.isStudent);
+        if (p.isApproved !== undefined) isApproved = Boolean(p.isApproved);
+        if (p.fullName) fullName = p.fullName;
+        if (p.studentCode) studentCode = p.studentCode;
+        if (p.schoolId) schoolId = p.schoolId;
+        if (p.photoStudentCardUrl) photoStudentCardUrl = p.photoStudentCardUrl;
+      }
+    } catch {
+      // Dùng thông tin từ response login nếu profile endpoint lỗi
+    }
+
     const authUser: User = {
       id: userId,
       userId,
@@ -203,19 +255,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin,
       isStudent,
       isApproved,
+      studentCode,
+      schoolId,
+      photoStudentCardUrl,
       isFpt: Boolean(d.isFpt ?? d.IsFpt ?? email.trim().toLowerCase().endsWith("@fpt.edu.vn")),
       UserID: userId,
       FullName: fullName,
       IsAdmin: isAdmin,
+      IsApproved: isApproved,
     };
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("accessToken", accessToken);
-      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
-    }
-
     let primaryRole: EventRole | null = null;
-    let targetPath = isAdmin ? "/admin/dashboard" : isStudent ? (isApproved ? "/events" : "/onboarding/profile") : "/events";
+    // QUY TẮC ĐIỀU HƯỚNG SAU KHI ĐĂNG NHẬP:
+    // - Admin -> /admin/dashboard
+    // - Sinh viên/User:
+    //    + ĐÃ ĐƯỢC XÁC THỰC (isApproved === true) -> /events (chọn sự kiện)
+    //    + CHƯA ĐƯỢC XÁC THỰC (isApproved === false) -> /onboarding/profile (cập nhật hồ sơ)
+    let targetPath = isAdmin
+      ? "/admin/dashboard"
+      : isApproved
+        ? "/events"
+        : "/onboarding/profile";
 
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
@@ -223,8 +283,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (primaryRole) {
-        targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""] ?? "/events";
+      if (primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
+        targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
       }
     } catch {
       // fallback targetPath
@@ -242,11 +302,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!accessToken) throw new Error("Phản hồi Google Login thiếu token xác thực.");
 
     const userId = d.userId ?? d.UserId ?? d.user?.id ?? d.user?.userId;
-    const isAdmin = Boolean(d.isAdmin ?? d.IsAdmin ?? d.user?.isAdmin);
-    const isStudent = Boolean(d.isStudent ?? d.IsStudent ?? d.user?.isStudent);
-    const fullName = d.fullName ?? d.FullName ?? d.user?.fullName ?? "";
+    let isAdmin = Boolean(d.isAdmin ?? d.IsAdmin ?? d.user?.isAdmin);
+    let isStudent = Boolean(d.isStudent ?? d.IsStudent ?? d.user?.isStudent ?? true);
+    let fullName = d.fullName ?? d.FullName ?? d.user?.fullName ?? "";
     const email = d.email ?? d.Email ?? d.user?.email ?? "";
-    const isApproved = d.isApproved ?? d.IsApproved ?? d.user?.isApproved ?? false;
+    let isApproved = Boolean(d.isApproved ?? d.IsApproved ?? d.user?.isApproved ?? false);
+    let studentCode = d.studentCode ?? d.StudentCode ?? d.user?.studentCode ?? null;
+    let schoolId = d.schoolId ?? d.SchoolId ?? d.user?.schoolId ?? null;
+    let photoStudentCardUrl = d.photoStudentCardUrl ?? d.PhotoStudentCardUrl ?? d.user?.photoStudentCardUrl ?? null;
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("accessToken", accessToken);
+      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+    }
+
+    // Truy vấn thông tin profile đầy đủ nhất từ BE để xét duyệt chính xác
+    try {
+      const profileRes = await apiClient.get<User>("/Users/profile");
+      if (profileRes.data) {
+        const p = profileRes.data;
+        if (p.isAdmin !== undefined) isAdmin = Boolean(p.isAdmin);
+        if (p.isStudent !== undefined) isStudent = Boolean(p.isStudent);
+        if (p.isApproved !== undefined) isApproved = Boolean(p.isApproved);
+        if (p.fullName) fullName = p.fullName;
+        if (p.studentCode) studentCode = p.studentCode;
+        if (p.schoolId) schoolId = p.schoolId;
+        if (p.photoStudentCardUrl) photoStudentCardUrl = p.photoStudentCardUrl;
+      }
+    } catch {
+      // Dùng thông tin từ response login nếu profile endpoint lỗi
+    }
 
     const authUser: User = {
       id: userId,
@@ -256,19 +341,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin,
       isStudent,
       isApproved,
+      studentCode,
+      schoolId,
+      photoStudentCardUrl,
       isFpt: email.toLowerCase().endsWith("@fpt.edu.vn"),
       UserID: userId,
       FullName: fullName,
       IsAdmin: isAdmin,
+      IsApproved: isApproved,
     };
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("accessToken", accessToken);
-      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
-    }
-
     let primaryRole: EventRole | null = null;
-    let targetPath = isAdmin ? "/admin/dashboard" : isStudent ? (isApproved ? "/events" : "/onboarding/profile") : "/events";
+    // QUY TẮC ĐIỀU HƯỚNG SAU KHI ĐĂNG NHẬP GOOGLE:
+    // - Admin -> /admin/dashboard
+    // - Sinh viên/User:
+    //    + ĐÃ ĐƯỢC XÁC THỰC (isApproved === true) -> /events (chọn sự kiện)
+    //    + CHƯA ĐƯỢC XÁC THỰC (isApproved === false) -> /onboarding/profile (cập nhật hồ sơ)
+    let targetPath = isAdmin
+      ? "/admin/dashboard"
+      : isApproved
+        ? "/events"
+        : "/onboarding/profile";
 
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
@@ -276,8 +369,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (primaryRole) {
-        targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""] ?? "/events";
+      if (primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
+        targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
       }
     } catch {
       // fallback targetPath

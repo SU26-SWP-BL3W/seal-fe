@@ -208,7 +208,7 @@ export function OnboardingProfileView() {
             Bước bắt buộc trước khi tham gia SEAL Hackathon
           </p>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 mb-6">
             <button
               onClick={() => setStep("fpt")}
               className="group p-5 bg-[var(--bg-base)] border border-[var(--border-muted)] hover:border-[var(--accent-primary)]/50 transition-all duration-200 text-left hud-clipped cursor-pointer"
@@ -235,6 +235,17 @@ export function OnboardingProfileView() {
               </p>
               <p className="text-xs text-[var(--text-muted)] mb-3">Upload ảnh thẻ SV để BTC duyệt.</p>
               <Badge tone="warning" className="text-[10px]">MANUAL REVIEW</Badge>
+            </button>
+          </div>
+
+          <div className="pt-4 border-t border-[var(--border-muted)] flex items-center justify-between font-mono text-xs text-[var(--text-muted)]">
+            <span>Muốn tìm hiểu các cuộc thi trước?</span>
+            <button
+              type="button"
+              onClick={() => router.push("/events")}
+              className="text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-bold cursor-pointer"
+            >
+              Xem danh sách sự kiện →
             </button>
           </div>
         </Card>

@@ -33,8 +33,8 @@ function computeRoundStatus(startIso: string, endIso: string, now: number): Roun
 
 /** Chi tiết 1 sự kiện từ Real API Backend PostgreSQL qua API. */
 export function useEventDetailViewModel(eventId: string) {
-  const { data: realEvent, isLoading: loadingEvent } = useEventDetail(eventId);
-  const { data: realRounds = [], isLoading: loadingRounds } = useEventRounds(eventId);
+  const { data: realEvent, isLoading: loadingEvent, refetch: refetchEvent } = useEventDetail(eventId);
+  const { data: realRounds = [], isLoading: loadingRounds, refetch: refetchRounds } = useEventRounds(eventId);
   const [now] = useState(() => Date.now());
 
   const event = useMemo(() => {
@@ -146,5 +146,9 @@ export function useEventDetailViewModel(eventId: string) {
     prizes: event?.prizes ?? [],
     deadline: currentRound?.endDate ?? null,
     deadlineRoundName: currentRound?.roundName ?? null,
+    refetch: () => {
+      refetchEvent();
+      refetchRounds();
+    },
   };
 }

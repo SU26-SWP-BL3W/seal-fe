@@ -228,7 +228,7 @@ export function MySubmissionsView() {
                               <div className="flex flex-wrap items-center gap-2">
                                 {(sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl) && (
                                   <a
-                                    href={sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl}
+                                    href={(sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl) || undefined}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0e1417] border border-[#00d9ff]/30 text-[#00d9ff] hover:border-[#00d9ff] text-[11px]"
@@ -239,7 +239,7 @@ export function MySubmissionsView() {
                                 )}
                                 {(sub.demoUrl || sub.DemoUrl) && (
                                   <a
-                                    href={sub.demoUrl || sub.DemoUrl}
+                                    href={(sub.demoUrl || sub.DemoUrl) || undefined}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0e1417] border border-[#f87171]/30 text-[#f87171] hover:border-[#f87171] text-[11px]"
@@ -250,7 +250,7 @@ export function MySubmissionsView() {
                                 )}
                                 {(sub.slideUrl || sub.SlideUrl) && (
                                   <a
-                                    href={sub.slideUrl || sub.SlideUrl}
+                                    href={(sub.slideUrl || sub.SlideUrl) || undefined}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0e1417] border border-[#fb923c]/30 text-[#fb923c] hover:border-[#fb923c] text-[11px]"

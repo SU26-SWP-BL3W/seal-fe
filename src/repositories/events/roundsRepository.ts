@@ -141,3 +141,24 @@ export function useGetRoundsByEvent(eventId: string | undefined, params: GetRoun
     enabled: !!eventId,
   });
 }
+
+export const roundsRepository = {
+  async createRound(payload: CreateRoundPayload): Promise<any> {
+    const res = await apiClient.post<any>("/Rounds", payload);
+    return res.data;
+  },
+  async updateRound(id: string, payload: Partial<CreateRoundPayload>): Promise<any> {
+    const res = await apiClient.put<any>(`/Rounds/${id}`, payload);
+    return res.data;
+  },
+  async deleteRound(id: string): Promise<any> {
+    const res = await apiClient.delete<any>(`/Rounds/${id}`);
+    return res.data;
+  },
+  async getRoundsByEventId(eventId: string): Promise<any> {
+    const res = await apiClient.get<any>("/Rounds/event", {
+      params: { EventId: eventId },
+    });
+    return res.data;
+  },
+};

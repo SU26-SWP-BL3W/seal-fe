@@ -69,7 +69,7 @@ export function AppealsView() {
   const assignedAppeals = useGetAssignedAppeals(isEC ? eventRoleId || undefined : undefined);
 
   const { data: appealsRaw, isLoading, refetch } = isEC ? assignedAppeals : teamAppeals;
-  const appeals: Appeal[] = appealsRaw ?? [];
+  const appeals: Appeal[] = Array.isArray(appealsRaw) ? appealsRaw : ((appealsRaw as any)?.data ?? []);
 
   const { mutateAsync: createAppeal, isPending: isSubmitting } = useCreateAppeal();
   const { mutateAsync: respondAppeal, isPending: isResponding } = useRespondAppeal();
@@ -93,7 +93,7 @@ export function AppealsView() {
     if (!detailModal || !responseText.trim()) return;
     setRespondError("");
     try {
-      await respondAppeal({ appealId: detailModal.id, status, response: responseText.trim() });
+      await respondAppeal({ id: detailModal.id, appealId: detailModal.id, status, response: responseText.trim(), payload: { status, response: responseText.trim() } } as any);
       setDetailModal(null);
       setResponseText("");
       refetch();

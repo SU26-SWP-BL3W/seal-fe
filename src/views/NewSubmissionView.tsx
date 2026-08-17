@@ -127,8 +127,8 @@ function TrackSubmissionCard({
 
     try {
       const created = existingSubmission?.id
-        ? await updateSubmission.mutateAsync({ id: existingSubmission.id, data: payload as Partial<SubmitResultRequest> })
-        : await createSubmission.mutateAsync(payload as SubmitResultRequest);
+        ? await updateSubmission.mutateAsync({ id: existingSubmission.id, data: payload } as any)
+        : await createSubmission.mutateAsync(payload as any);
       const updatedItem: SubmissionItem = {
         id: (created as { id?: string })?.id || existingSubmission?.id || `sub-${Date.now()}`,
         teamId,
