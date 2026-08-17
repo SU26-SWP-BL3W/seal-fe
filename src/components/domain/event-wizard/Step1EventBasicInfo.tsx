@@ -125,7 +125,7 @@ export const Step1EventBasicInfo: React.FC<Step1EventBasicInfoProps> = ({
           disabled={isSubmitting}
           className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono font-bold text-xs uppercase flex items-center gap-2 cursor-pointer transition-colors"
         >
-          <span>TIẾP TỤC CẤU HÌNH VÒNG THI (BƯỚC 2 &gt;)</span>
+          <span>TIẾP TỤC CẤU HÌNH VÒNG THI (BƯỚC 2)</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

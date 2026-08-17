@@ -417,7 +417,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
           onClick={onPrev}
           className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] flex items-center gap-1 cursor-pointer transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> &lt; Bước 3: Hạng Mục
+          <ArrowLeft className="w-4 h-4" /> <span>Bước 3: Hạng Mục</span>
         </button>
 
         <div className="flex items-center gap-3">
@@ -437,7 +437,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
             onClick={onNext}
             className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
           >
-            <span>TIẾP TỤC BƯỚC 5: CÔNG BỐ SỰ KIỆN &gt;</span>
+            <span>TIẾP TỤC BƯỚC 5: CÔNG BỐ SỰ KIỆN</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

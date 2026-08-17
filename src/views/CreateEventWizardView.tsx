@@ -149,6 +149,8 @@ export const CreateEventWizardView: React.FC = () => {
           {wizard.currentStep === 2 && (
             <Step2RoundConfig
               rounds={wizard.rounds}
+              eventStartDate={wizard.eventData.startDate}
+              eventEndDate={wizard.eventData.endDate}
               onAddRound={wizard.handleAddRound}
               onRemoveRound={wizard.handleRemoveRound}
               onUpdateRound={wizard.handleUpdateRound}

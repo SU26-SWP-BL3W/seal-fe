@@ -146,7 +146,7 @@ export const Step3TrackConfig: React.FC<Step3TrackConfigProps> = ({
           onClick={onPrev}
           className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] flex items-center gap-1 cursor-pointer transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> &lt; Bước 2: Vòng Thi
+          <ArrowLeft className="w-4 h-4" /> <span>Bước 2: Vòng Thi</span>
         </button>
 
         <div className="flex items-center gap-3">
@@ -166,7 +166,7 @@ export const Step3TrackConfig: React.FC<Step3TrackConfigProps> = ({
             onClick={onNext}
             className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
           >
-            <span>TIẾP TỤC BƯỚC 4: TIÊU CHÍ CHẤM &gt;</span>
+            <span>TIẾP TỤC BƯỚC 4: TIÊU CHÍ CHẤM</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

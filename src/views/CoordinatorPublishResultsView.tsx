@@ -254,7 +254,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           {/* Header */}
           <div className="h-10 bg-[#182024] flex items-center justify-between px-4 border-b border-[#263339] font-mono text-xs text-[#8a9ba8] font-bold tracking-widest uppercase">
             <span>
-              BẢNG XẾP HẠNG MA TRẬN ĐIỂM — [{tracksList.find((t) => t.id === selectedTrackId)?.name}]
+              BẢNG XẾP HẠNG MA TRẬN ĐIỂM{tracksList.find((t) => t.id === selectedTrackId)?.name ? ` — [ ${tracksList.find((t) => t.id === selectedTrackId)?.name} ]` : ""}
             </span>
             <span className={isPublishedState ? "text-[#10b981]" : "text-[#f59e0b]"}>
               {isPublishedState ? "ĐÃ CÔNG BỐ PUBLIC" : "CHẾ ĐỘ BẢN NHÁP"}

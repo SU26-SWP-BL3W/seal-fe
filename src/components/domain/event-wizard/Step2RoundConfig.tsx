@@ -8,6 +8,9 @@ interface ModernDateTimePickerFieldProps {
   onChange: (val: string) => void;
   disabled?: boolean;
   hasError?: boolean;
+  minDate?: string;
+  maxDate?: string;
+  referenceLabel?: string;
 }
 
 const ModernDateTimePickerField: React.FC<ModernDateTimePickerFieldProps> = ({
@@ -16,9 +19,15 @@ const ModernDateTimePickerField: React.FC<ModernDateTimePickerFieldProps> = ({
   onChange,
   disabled = false,
   hasError = false,
+  minDate,
+  maxDate,
+  referenceLabel,
 }) => {
   const rawIso = value ? value.substring(0, 16) : "";
   const [datePart, timePart] = rawIso.split("T");
+
+  const minDateStr = minDate ? minDate.substring(0, 10) : undefined;
+  const maxDateStr = maxDate ? maxDate.substring(0, 10) : undefined;
 
   const handleDateChange = (newDate: string) => {
     const time = timePart || "23:59";
@@ -26,21 +35,27 @@ const ModernDateTimePickerField: React.FC<ModernDateTimePickerFieldProps> = ({
   };
 
   const handleTimeChange = (newTime: string) => {
-    const date = datePart || new Date().toISOString().substring(0, 10);
+    const date = datePart || minDateStr || new Date().toISOString().substring(0, 10);
     onChange(`${date}T${newTime}`);
   };
 
   const applyPresetTime = (presetTime: string) => {
-    const date = datePart || new Date().toISOString().substring(0, 10);
+    const date = datePart || minDateStr || new Date().toISOString().substring(0, 10);
     onChange(`${date}T${presetTime}`);
   };
 
   const applyPresetDateDays = (days: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    const dateStr = d.toISOString().substring(0, 10);
+    const base = datePart ? new Date(datePart) : minDate ? new Date(minDate) : new Date();
+    base.setDate(base.getDate() + days);
+    const dateStr = base.toISOString().substring(0, 10);
     const time = timePart || "23:59";
     onChange(`${dateStr}T${time}`);
+  };
+
+  const applyMinDateMatch = () => {
+    if (!minDate) return;
+    const iso = minDate.includes("T") ? minDate.substring(0, 16) : `${minDate}T08:00`;
+    onChange(iso);
   };
 
   return (
@@ -62,6 +77,8 @@ const ModernDateTimePickerField: React.FC<ModernDateTimePickerFieldProps> = ({
         <input
           type="date"
           value={datePart || ""}
+          min={minDateStr}
+          max={maxDateStr}
           onChange={(e) => handleDateChange(e.target.value)}
           disabled={disabled}
           className={`[color-scheme:dark] flex-1 px-3 py-2 bg-[#0a0e10] border text-[#e1e7ec] text-xs font-mono focus:outline-none cursor-pointer ${
@@ -80,37 +97,13 @@ const ModernDateTimePickerField: React.FC<ModernDateTimePickerFieldProps> = ({
         />
       </div>
 
-      {!disabled && (
-        <div className="flex items-center gap-1.5 pt-0.5 overflow-x-auto text-[10px] text-[#8a9ba8]">
-          <span className="text-[9px] uppercase text-[#8a9ba8]/70 font-bold">Nhanh:</span>
-          <button
-            type="button"
-            onClick={() => applyPresetDateDays(0)}
-            className="px-1.5 py-0.5 bg-[#0a0e10] border border-[#263339] hover:border-[#8b5cf6] hover:text-[#e1e7ec] cursor-pointer transition-colors"
-          >
-            Hôm nay
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPresetDateDays(7)}
-            className="px-1.5 py-0.5 bg-[#0a0e10] border border-[#263339] hover:border-[#8b5cf6] hover:text-[#e1e7ec] cursor-pointer transition-colors"
-          >
-            +7 Ngày
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPresetTime("17:00")}
-            className="px-1.5 py-0.5 bg-[#0a0e10] border border-[#263339] hover:border-[#00d9ff] hover:text-[#00d9ff] cursor-pointer transition-colors"
-          >
-            17:00 (Chiều)
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPresetTime("23:59")}
-            className="px-1.5 py-0.5 bg-[#0a0e10] border border-[#263339] hover:border-[#00d9ff] hover:text-[#00d9ff] cursor-pointer transition-colors"
-          >
-            23:59 (Đêm)
-          </button>
+      {(minDate || maxDate || referenceLabel) && (
+        <div className="text-[10px] text-[#8a9ba8] flex flex-wrap items-center gap-1 pt-0.5">
+          <span className="text-[9px] uppercase text-[#8b5cf6] font-bold">Khung hợp lệ:</span>
+          <span className="text-zinc-300 font-bold">
+            {minDateStr ? minDateStr.split("-").reverse().join("/") : "Bất kỳ"} → {maxDateStr ? maxDateStr.split("-").reverse().join("/") : "Bất kỳ"}
+          </span>
+          {referenceLabel && <span className="text-[#00d9ff]/80">({referenceLabel})</span>}
         </div>
       )}
     </div>
@@ -126,10 +119,14 @@ interface Step2RoundConfigProps {
   onPrev: () => void;
   onSaveDraft?: () => void;
   isReadOnly?: boolean;
+  eventStartDate?: string;
+  eventEndDate?: string;
 }
 
 export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
   rounds,
+  eventStartDate,
+  eventEndDate,
   onAddRound,
   onRemoveRound,
   onUpdateRound,
@@ -185,6 +182,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
   // Comprehensive Date Logic Validations
   const activeRoundIndex = rounds.findIndex((r) => r.id === activeRound.id);
   const prevRound = activeRoundIndex > 0 ? rounds[activeRoundIndex - 1] : null;
+  const prevRoundEnd = prevRound?.scoringEndDate || prevRound?.endDate;
 
   const dateErrors: string[] = [];
 
@@ -267,6 +265,9 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
               <ModernDateTimePickerField
                 label="NGÀY BẮT ĐẦU NỘP BÀI *"
                 value={activeRound.startDate || ""}
+                minDate={prevRoundEnd || eventStartDate}
+                maxDate={eventEndDate}
+                referenceLabel={prevRoundEnd ? `Sau ${prevRound?.roundName || "vòng trước"}` : "Sau khai mạc sự kiện"}
                 onChange={(val) => onUpdateRound(activeRound.id, "startDate", val)}
                 disabled={isReadOnly}
                 hasError={hasDateError}
@@ -274,6 +275,9 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
               <ModernDateTimePickerField
                 label="HẠN CHÓT NỘP BÀI *"
                 value={activeRound.endDate || ""}
+                minDate={activeRound.startDate || prevRoundEnd || eventStartDate}
+                maxDate={eventEndDate}
+                referenceLabel="Sau ngày bắt đầu nộp bài"
                 onChange={(val) => onUpdateRound(activeRound.id, "endDate", val)}
                 disabled={isReadOnly}
                 hasError={hasDateError}
@@ -284,6 +288,9 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
               <ModernDateTimePickerField
                 label="BẮT ĐẦU CHẤM ĐIỂM *"
                 value={activeRound.scoringStartDate || ""}
+                minDate={activeRound.endDate || activeRound.startDate || prevRoundEnd || eventStartDate}
+                maxDate={eventEndDate}
+                referenceLabel="Sau hạn chót nộp bài"
                 onChange={(val) => onUpdateRound(activeRound.id, "scoringStartDate", val)}
                 disabled={isReadOnly}
                 hasError={hasDateError}
@@ -291,6 +298,9 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
               <ModernDateTimePickerField
                 label="HẠN CHÓT CHẤM ĐIỂM *"
                 value={activeRound.scoringEndDate || ""}
+                minDate={activeRound.scoringStartDate || activeRound.endDate || activeRound.startDate || prevRoundEnd || eventStartDate}
+                maxDate={eventEndDate}
+                referenceLabel="Sau ngày bắt đầu chấm điểm"
                 onChange={(val) => onUpdateRound(activeRound.id, "scoringEndDate", val)}
                 disabled={isReadOnly}
                 hasError={hasDateError}
@@ -527,7 +537,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
           onClick={onPrev}
           className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] flex items-center gap-1 cursor-pointer transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> &lt; Quay lại Bước 1
+          <ArrowLeft className="w-4 h-4" /> <span>Quay lại Bước 1</span>
         </button>
 
         <div className="flex items-center gap-3">
@@ -547,7 +557,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
             onClick={onNext}
             className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
           >
-            <span>TIẾP TỤC BƯỚC 3: HẠNG MỤC THI &gt;</span>
+            <span>TIẾP TỤC BƯỚC 3: HẠNG MỤC THI</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
