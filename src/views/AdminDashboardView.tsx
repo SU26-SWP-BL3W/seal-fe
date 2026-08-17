@@ -111,42 +111,6 @@ export const AdminDashboardView: React.FC = () => {
       alert(`Lỗi phân công EC: ${msg}`);
     }
   };
-
-<<<<<<< HEAD
-  if (!user || (!user.isAdmin && !user.IsAdmin)) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#11181c] border border-zinc-800 p-8 text-center rounded-lg space-y-4 shadow-xl">
-          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto text-amber-400">
-            <Lock className="w-6 h-6" />
-          </div>
-          <h2 className="font-display text-xl font-bold uppercase text-white">
-            YÊU CẦU QUYỀN QUẢN TRỊ VIÊN (ADMIN)
-          </h2>
-          <p className="font-sans text-xs text-zinc-400 leading-relaxed">
-            Khu vực quản trị hệ thống chỉ dành riêng cho Admin. Bấm nút bên dưới để vào bằng tài khoản Admin Demo:
-          </p>
-          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Admin")}
-              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer rounded"
-            >
-              [ 🛡️ Vào Bằng Tài Khoản System Admin Demo ]
-            </button>
-            <Link href="/login" className="w-full">
-              <button className="w-full border border-zinc-800 text-zinc-400 py-2 uppercase hover:text-white hover:border-zinc-600 transition-colors rounded">
-                Đến trang đăng nhập chính thức
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-=======
->>>>>>> fix/navigation-role-isolation-bug
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
       <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
