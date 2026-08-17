@@ -139,16 +139,22 @@ export function OnboardingProfileView() {
           </div>
 
           <div className="space-y-3">
+            {submitError && (
+              <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
+                ⚠ {submitError}
+              </div>
+            )}
             <Button
               variant="secondary"
               disabled={isUnblocking || requestUnblockSuccess}
               onClick={async () => {
                 if (!user?.email) return;
+                setSubmitError("");
                 try {
-                  await requestUnblock(user.email).catch(console.warn);
+                  await requestUnblock(user.email);
                   setRequestUnblockSuccess(true);
-                } catch {
-                  // ignored
+                } catch (err: any) {
+                  setSubmitError(err?.response?.data?.message || "Không thể gửi yêu cầu mở khóa. Vui lòng thử lại.");
                 }
               }}
               className="w-full justify-center flex items-center gap-2 border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[rgba(239,68,68,0.1)]"

@@ -8,7 +8,6 @@ import {
   useMySubmissions,
   useDeleteSubmission,
   useUpdateSubmission,
-  useMentorFeedbacks,
   readApiError,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
@@ -22,7 +21,6 @@ import {
   Edit,
   Trash2,
   Scale,
-  MessageSquare,
   ChevronDown,
   ChevronUp,
   AlertTriangle,
@@ -327,20 +325,6 @@ export function MySubmissionsView() {
               )}
             </div>
 
-            {/* Mentor Feedbacks Section for Team */}
-            {submissions.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="font-display text-lg font-bold text-[#34d399] uppercase tracking-wider flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
-                  GÓP Ý &amp; ĐÁNH GIÁ CHUYÊN MÔN TỪ CỐ VẤN (MENTOR FEEDBACK)
-                </h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {submissions.map((sub, idx) => (
-                    <TeamSubmissionFeedbackDrawer key={sub.id || sub.Id || idx} submitResultId={sub.id || sub.Id || ""} />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Edit Submission Modal */}
@@ -432,51 +416,3 @@ export function MySubmissionsView() {
         </div>
       );
     }
-
-    function TeamSubmissionFeedbackDrawer({ submitResultId }: { submitResultId: string }) {
-      const { data: feedbacks = [] } = useMentorFeedbacks(submitResultId);
-      const [isOpen, setIsOpen] = useState(false);
-
-      if (feedbacks.length === 0) return null;
-
-      return (
-        <div className="bg-[#1a2123] border border-[#34d399]/30 p-4 glow-box font-mono text-xs">
-          <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center justify-between w-full text-[#34d399] hover:text-white transition-colors"
-          >
-            <span className="flex items-center gap-2 font-bold uppercase">
-              <MessageSquare className="w-4 h-4" />
-              Nhận Xét Chuyên Môn Cố Vấn ({feedbacks.length} Lời Khuyên)
-            </span>
-            <span className="flex items-center gap-1 text-[11px] text-[#859398]">
-              {isOpen ? "Thu gọn ▲" : "Xem chi tiết ▼"}
-            </span>
-          </button>
-
-          {isOpen && (
-            <div className="mt-3 pt-3 border-t border-[#3c494d]/50 space-y-3">
-              {feedbacks.map((fb) => (
-                <div key={fb.id} className="p-3 bg-[#0e1417] border border-[#34d399]/20 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#34d399] font-bold">Mentor: {fb.mentorName || "Cố vấn"}</span>
-                    {fb.suggestedScore !== undefined && (
-                      <span className="text-[#fbbf24] font-bold">Điểm gợi ý: {fb.suggestedScore}/100</span>
-                    )}
-                  </div>
-                  <p className="font-sans text-white text-xs leading-relaxed">"{fb.feedbackContent}"</p>
-                  {fb.technicalAdvice && (
-                    <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
-                      💡 Lời khuyên kỹ thuật: {fb.technicalAdvice}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-
