@@ -1,19 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Link, useRouter } from "@/i18n/routing";
+import { useState } from "react";
+import { Link } from "@/i18n/routing";
 import { Badge } from "@/components/ui";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useEventDetail } from "@/repositories/eventsRepository";
-import { useGetEventRolesByUser } from "@/repositories/events/eventRolesRepository";
 import {
   STATUS_LABEL,
   STATUS_DOT_VAR,
   STATUS_TONE,
   computeEventStatus,
-  isTeamRegistrationOpen,
-  isTeamRegistrationExpired,
   type EventCardData,
 } from "@/viewModels/eventsMetadata";
 import {
@@ -23,6 +20,9 @@ import {
 } from "@/viewModels/useEventsDiscoveryViewModel";
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
+function formatVnd(value: number): string {
+  return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
+}
 function formatShortDate(iso: string): string {
   return new Date(iso).toLocaleDateString("vi-VN", {
     day: "2-digit",
@@ -71,35 +71,15 @@ function SealMark() {
 }
 
 // ─── Event Card (Devpost-style horizontal) ────────────────────────────────────
-function EventCard({
-  event,
-  userRole,
-  onSelectExpired,
-}: {
-  event: EventCardData;
-  userRole?: string;
-  onSelectExpired: (ev: EventCardData) => void;
-}) {
+function EventCard({ event }: { event: EventCardData }) {
   const days = daysLeft(event.endDate);
   const isActive = event.status === "ongoing" || event.status === "registration_open";
   const statusColor = STATUS_DOT_VAR[event.status];
-  const isRegOpen = isTeamRegistrationOpen(event);
-  const isRegExpired = isTeamRegistrationExpired(event);
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (isRegExpired) {
-      e.preventDefault();
-      onSelectExpired(event);
-    }
-  };
 
   return (
     <Link
       href={`/events/${event.id}`}
-      onClick={handleClick}
-      className={`group flex items-stretch border border-[var(--border-muted)] bg-[var(--bg-panel)] transition-all duration-200 hover:border-[var(--accent-primary)]/60 hover:shadow-[0_0_20px_rgba(0,217,255,0.06)] hud-clipped ${
-        isRegExpired ? "hover:border-amber-500/60" : ""
-      }`}
+      className="group flex items-stretch border border-[var(--border-muted)] bg-[var(--bg-panel)] transition-all duration-200 hover:border-[var(--accent-primary)]/60 hover:shadow-[0_0_20px_rgba(0,217,255,0.06)] hud-clipped"
       style={{ borderLeft: `3px solid ${statusColor}` }}
     >
       {/* Thumbnail */}
@@ -109,47 +89,12 @@ function EventCard({
 
       {/* Main content */}
       <div className="flex flex-1 flex-col justify-between p-4 min-w-0">
-        {/* Top row: title + status badge + registration badge + user role badge */}
+        {/* Top row: title + status badge */}
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
           <h3 className="font-display text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
             {event.eventName}
           </h3>
           <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
-
-          {/* User's event-scoped role tag */}
-          {userRole === "EventCoordinator" && (
-            <span className="font-mono text-[9px] px-2 py-0.5 border border-purple-500/40 text-purple-300 bg-purple-500/10 uppercase tracking-wider font-bold">
-              Ban Tổ Chức
-            </span>
-          )}
-          {userRole === "Judge" && (
-            <span className="font-mono text-[9px] px-2 py-0.5 border border-amber-500/40 text-amber-300 bg-amber-500/10 uppercase tracking-wider font-bold">
-              Giám Khảo
-            </span>
-          )}
-          {userRole === "Mentor" && (
-            <span className="font-mono text-[9px] px-2 py-0.5 border border-teal-500/40 text-teal-300 bg-teal-500/10 uppercase tracking-wider font-bold">
-              Cố Vấn
-            </span>
-          )}
-          {(userRole === "TeamLeader" || userRole === "TeamMember") && (
-            <span className="font-mono text-[9px] px-2 py-0.5 border border-cyan-500/40 text-cyan-300 bg-cyan-500/10 uppercase tracking-wider font-bold">
-              Đã Tham Gia
-            </span>
-          )}
-
-          {/* Registration status tag */}
-          {isRegOpen && (
-            <span className="font-mono text-[9px] px-2 py-0.5 border border-emerald-500/40 text-emerald-400 bg-emerald-500/10 uppercase tracking-wider font-bold">
-              Đang Mở Đăng Ký
-            </span>
-          )}
-          {isRegExpired && (
-            <span className="font-mono text-[9px] px-2 py-0.5 border border-amber-500/40 text-amber-400 bg-amber-500/10 uppercase tracking-wider font-bold">
-              ⚠ ĐÃ HẾT HẠN ĐĂNG KÝ ĐỘI
-            </span>
-          )}
-
           {isActive && days > 0 && days <= 30 && (
             <span className={`font-mono text-[9px] px-2 py-0.5 border tracking-widest uppercase ${days <= 3 ? "border-[var(--color-danger)]/50 text-[var(--color-danger)] bg-[var(--color-danger)]/10 animate-pulse" : "border-[var(--color-warning)]/50 text-[var(--color-warning)] bg-[var(--color-warning)]/10"}`}>
               {days <= 0 ? "HÔM NAY" : `${days} NGÀY`}
@@ -160,22 +105,15 @@ function EventCard({
         {/* Tagline */}
         <p className="text-xs text-[var(--text-muted)] truncate mb-2">{event.tagline}</p>
 
-        {/* Bottom row: prize + teams + registration deadline */}
+        {/* Bottom row: prize + teams */}
         <div className="flex flex-wrap items-center gap-4">
-          {event.prizes.length > 0 && (
-            <span className="font-mono text-sm font-bold text-[var(--text-primary)]">
-              {event.prizes[0].prizeName}: {event.prizes[0].value}
-            </span>
-          )}
+          <span className="font-mono text-sm font-bold text-[var(--text-primary)]">
+            {formatVnd(event.totalPrizeVnd)}
+          </span>
           <span className="flex items-center gap-1.5 font-mono text-xs text-[var(--text-muted)]">
             <TeamIcon />
             {event.teamCount}/{event.maxTeams} đội
           </span>
-          {event.registrationEndDate && (
-            <span className="hidden sm:inline-flex font-mono text-[11px] text-[var(--text-muted)]">
-              Hạn đăng ký: {formatShortDate(event.registrationEndDate)}
-            </span>
-          )}
         </div>
       </div>
 
@@ -209,7 +147,7 @@ function EventCard({
 }
 
 // ─── Sidebar Filter ────────────────────────────────────────────────────────────
-const STATUS_OPTIONS: { value: EventStatusFilter | "my_event"; label: string; dot: string }[] = [
+const ALL_STATUS_OPTIONS: { value: EventStatusFilter | "my_event"; label: string; dot: string }[] = [
   { value: "all",               label: "Tất cả sự kiện",   dot: "bg-[var(--text-muted)]" },
   { value: "my_event",          label: "⭐ Sự kiện của tôi",dot: "bg-[var(--accent-team)] animate-pulse" },
   { value: "registration_open", label: "Đang mở đăng ký",  dot: "bg-[var(--color-success)]" },
@@ -222,6 +160,7 @@ function SidebarFilter({
   statusFilter, setStatusFilter,
   trackFilter,  setTrackFilter,
   topTracks,
+  isAdmin,
   onClear,
 }: {
   statusFilter: EventStatusFilter;
@@ -229,9 +168,13 @@ function SidebarFilter({
   trackFilter: string | null;
   setTrackFilter: (v: string | null) => void;
   topTracks: { track: string; eventCount: number }[];
+  isAdmin?: boolean;
   onClear: () => void;
 }) {
   const activeCount = (statusFilter !== "all" ? 1 : 0) + (trackFilter ? 1 : 0);
+  const statusOptions = isAdmin
+    ? ALL_STATUS_OPTIONS.filter((opt) => opt.value !== "my_event")
+    : ALL_STATUS_OPTIONS;
 
   return (
     <aside className="w-full md:w-56 shrink-0 flex flex-col gap-5">
@@ -243,64 +186,73 @@ function SidebarFilter({
         {activeCount > 0 && (
           <button
             onClick={onClear}
-            className="font-mono text-[9px] text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-colors tracking-widest uppercase underline"
+            className="font-mono text-[10px] text-[var(--color-danger)] hover:underline"
           >
             Xóa ({activeCount})
           </button>
         )}
       </div>
 
-      {/* Status */}
-      <div>
-        <div className="font-mono text-[9px] text-[var(--text-muted)] tracking-widest uppercase mb-2 border-b border-[var(--border-muted)] pb-1.5">
-          TRẠNG THÁI
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {STATUS_OPTIONS.map(({ value, label, dot }) => (
-            <label
-              key={value}
-              className="flex items-center gap-2.5 cursor-pointer group"
+      {/* Status section */}
+      <div className="flex flex-col gap-1.5">
+        <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
+          Trạng thái
+        </span>
+        {statusOptions.map((opt) => {
+          const isSelected = statusFilter === opt.value;
+          return (
+            <button
+              key={opt.value}
+              onClick={() => setStatusFilter(opt.value)}
+              className={`group flex items-center justify-between px-3 py-2 text-left font-mono text-xs transition-colors hud-clipped ${
+                isSelected
+                  ? "bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold"
+                  : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+              }`}
             >
-              <input
-                type="radio"
-                name="status-filter"
-                checked={statusFilter === value}
-                onChange={() => setStatusFilter(value)}
-                className="accent-[var(--accent-primary)] w-3.5 h-3.5"
-              />
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
-              <span className={`font-mono text-xs transition-colors ${statusFilter === value ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"}`}>
-                {label}
-              </span>
-            </label>
-          ))}
-        </div>
+              <div className="flex items-center gap-2">
+                <span className={`h-1.5 w-1.5 rounded-full ${opt.dot}`} />
+                <span>{opt.label}</span>
+              </div>
+              {isSelected && <span className="text-[10px]">✓</span>}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Track */}
+      {/* Track section */}
       {topTracks.length > 0 && (
-        <div>
-          <div className="font-mono text-[9px] text-[var(--text-muted)] tracking-widest uppercase mb-2 border-b border-[var(--border-muted)] pb-1.5">
-            HẠNG MỤC
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {topTracks.map(({ track, eventCount }) => (
-              <label key={track} className="flex items-center gap-2.5 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={trackFilter === track}
-                  onChange={() => setTrackFilter(trackFilter === track ? null : track)}
-                  className="accent-[var(--accent-primary)] w-3.5 h-3.5"
-                />
-                <span className={`font-mono text-xs flex-1 transition-colors ${trackFilter === track ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-primary)]"}`}>
-                  {track}
-                </span>
-                <span className="font-mono text-[9px] text-[var(--text-muted)] border border-[var(--border-muted)] px-1">
-                  {eventCount}
-                </span>
-              </label>
-            ))}
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">
+            Hạng mục ({topTracks.length})
+          </span>
+          <button
+            onClick={() => setTrackFilter(null)}
+            className={`flex items-center justify-between px-3 py-1.5 text-left font-mono text-xs transition-colors hud-clipped ${
+              !trackFilter
+                ? "bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold"
+                : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            <span>Tất cả</span>
+          </button>
+          {topTracks.map(({ track, eventCount }) => {
+            const isSelected = trackFilter === track;
+            return (
+              <button
+                key={track}
+                onClick={() => setTrackFilter(isSelected ? null : track)}
+                className={`flex items-center justify-between px-3 py-1.5 text-left font-mono text-xs transition-colors hud-clipped ${
+                  isSelected
+                    ? "bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold"
+                    : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                <span className="truncate pr-1">{track}</span>
+                <span className="text-[10px] opacity-60 shrink-0">({eventCount})</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </aside>
@@ -315,42 +267,24 @@ const SORT_OPTIONS: { value: EventSortOption; label: string }[] = [
   { value: "most_teams",  label: "Nhiều đội nhất" },
 ];
 
+// ─── Main View ─────────────────────────────────────────────────────────────────
 export function EventsDiscoveryView() {
-  const router = useRouter();
   const { user, activeRole } = useAuth();
-
-  const rawRole = activeRole?.roleName || activeRole?.RoleName;
-  let roleName = rawRole || (user?.isAdmin || user?.IsAdmin ? "Admin" : "Guest");
-  if (roleName === "EventCoordinator") roleName = "Coordinator";
-
-  const { data: userRolesResult } = useGetEventRolesByUser(user?.id, { pageSize: 100 });
-  const userRoles = useMemo(() => {
-    const raw = (userRolesResult as any)?.data?.items ?? (userRolesResult as any)?.items ?? (Array.isArray(userRolesResult) ? userRolesResult : []);
-    return Array.isArray(raw) ? raw : [];
-  }, [userRolesResult]);
+  let roleName = "";
+  if (user?.isAdmin || user?.IsAdmin) {
+    roleName = "Admin";
+  } else {
+    roleName = activeRole?.roleName || activeRole?.RoleName || "Guest";
+    if (roleName === "EventCoordinator") roleName = "Coordinator";
+  }
 
   const { data: teamResponse } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
-
-  const roleByEventId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const r of userRoles) {
-      const eid = r.eventId || r.EventId;
-      const rn = r.roleName || r.RoleName;
-      if (eid && rn) map.set(eid, rn);
-    }
-    if (team?.eventId || team?.EventId) {
-      map.set(team.eventId || team.EventId, team.isLeader ? "TeamLeader" : "TeamMember");
-    }
-    return map;
-  }, [userRoles, team]);
-
   const myEventId =
     activeRole?.eventId ||
     activeRole?.EventId ||
     team?.EventId ||
     (team as { eventId?: string })?.eventId ||
-    (userRoles.length > 0 ? userRoles[0].eventId || userRoles[0].EventId : "") ||
     "";
   const { data: assignedEvent } = useEventDetail(myEventId);
 
@@ -363,7 +297,6 @@ export function EventsDiscoveryView() {
   } = useEventsDiscoveryViewModel();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [expiredModalEvent, setExpiredModalEvent] = useState<EventCardData | null>(null);
 
   const handleClear = () => {
     setStatusFilter("all");
@@ -398,7 +331,7 @@ export function EventsDiscoveryView() {
             teamCount: 0,
             tracks: [],
             rounds: [],
-            prizes: [],
+            totalPrizeVnd: 0,
           },
           Date.now(),
         )
@@ -416,7 +349,7 @@ export function EventsDiscoveryView() {
       <section className="border-b border-[var(--border-muted)] bg-[var(--bg-panel)]/60">
         <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-8">
           <span className="font-mono text-[10px] text-[var(--accent-primary)] tracking-[0.3em] uppercase opacity-70">
-            KHÁM PHÁ SỰ KIỆN
+            {"// EVENT DISCOVERY"}
           </span>
           <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)] mt-1">
             Sự Kiện
@@ -426,30 +359,6 @@ export function EventsDiscoveryView() {
           </p>
         </div>
       </section>
-
-      {/* ── Unverified Student Notice Banner ── */}
-      {user && !user.isAdmin && !user.isApproved && (
-        <div className="border-b border-amber-500/30 bg-amber-500/10 px-6 py-3">
-          <div className="mx-auto w-full max-w-[var(--container-max)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono text-xs">
-            <div className="flex items-center gap-2.5 text-amber-300">
-              <span className="text-base shrink-0">⚠️</span>
-              <div>
-                <span className="font-bold uppercase tracking-wider">Hồ sơ sinh viên chưa xác thực:</span>{" "}
-                <span className="text-zinc-300">
-                  Bạn đang xem danh sách sự kiện ở chế độ xem. Cần hoàn thiện và xác thực hồ sơ để đăng ký tham gia thi đấu.
-                </span>
-              </div>
-            </div>
-            <Link
-              href="/onboarding/profile"
-              className="shrink-0 px-3.5 py-1.5 bg-amber-500 text-black hover:bg-amber-400 font-bold uppercase tracking-wider rounded transition-colors text-[11px] flex items-center gap-1.5 shadow-sm"
-            >
-              <span>Cập Nhật Hồ Sơ</span>
-              <span>→</span>
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* ── Search bar ── */}
       <div className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
@@ -480,14 +389,15 @@ export function EventsDiscoveryView() {
       {/* ── Main Layout: Sidebar + List ── */}
       <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-6 flex gap-6 flex-1">
 
-        {/* Left: Filter sidebar */}
-        <div className={`${sidebarOpen ? "block" : "hidden"} md:block`}>
+        {/* Sidebar */}
+        <div className={`${sidebarOpen ? "flex" : "hidden"} md:flex`}>
           <SidebarFilter
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
             trackFilter={trackFilter}
             setTrackFilter={setTrackFilter}
             topTracks={topTracks}
+            isAdmin={roleName === "Admin"}
             onClear={handleClear}
           />
         </div>
@@ -495,26 +405,43 @@ export function EventsDiscoveryView() {
         {/* Right: results + list */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
 
-          {/* ── My Joined Event Banner (CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP & CÓ VAI TRÒ) ── */}
-          {/* Admin là vai trò toàn hệ thống, không gắn theo 1 sự kiện — không hiện banner "được phân công". */}
+          {/* ── Admin Executive Banner ── */}
+          {user && roleName === "Admin" && (
+            <div className="p-5 bg-[var(--bg-panel)] border border-[var(--color-danger)]/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(239,68,68,0.08)]">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-[var(--color-danger)] uppercase tracking-widest">
+                  <span className="w-2 h-2 rounded-full bg-[var(--color-danger)] animate-pulse" />
+                  👑 TRUNG TÂM CHỈ HUY QUẢN TRỊ VIÊN (SYSTEM ADMIN)
+                </div>
+                <h2 className="font-display text-xl font-bold text-[var(--text-primary)]">
+                  Quản Trị Toàn Bộ {totalCount} Sự Kiện Hệ Thống
+                </h2>
+                <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">
+                  Dành riêng cho System Admin: Khởi tạo sự kiện mới, phân công Event Coordinator và quản lý trường học &amp; tài khoản.
+                </p>
+              </div>
+
+              <Link href="/admin/dashboard">
+                <button className="hud-clipped px-5 py-2.5 bg-[var(--color-danger)] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm shrink-0 cursor-pointer">
+                  👑 BẢNG ĐIỀU HÀNH ADMIN ➔
+                </button>
+              </Link>
+            </div>
+          )}
+
+          {/* ── My Joined Event Banner (DÀNH RIÊNG CHO CÁC VAI TRÒ KHÁC ADMIN) ── */}
           {user && roleName !== "Guest" && roleName !== "Admin" && (
             <div className="p-5 bg-[var(--bg-panel)] border border-[var(--accent-primary)]/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_0_20px_rgba(0,217,255,0.08)]">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-[var(--accent-primary)] uppercase tracking-widest">
                   <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-                  SỰ KIỆN CỦA BẠN
+                  ⭐ SỰ KIỆN CỦA TÔI {roleName === "Mentor" ? "(VAI TRÒ: CỐ VẤN TRACK)" : roleName === "Coordinator" ? "(VAI TRÒ: BAN TỔ CHỨC)" : roleName === "Judge" ? "(VAI TRÒ: GIÁM KHẢO)" : team ? `(ĐỘI: ${team.TeamName || (team as any).teamName})` : ""}
                 </div>
                 <h2 className="font-display text-xl font-bold text-[var(--text-primary)]">
-                  {myEventId ? (
-                    <Link href={`/events/${myEventId}`} className="hover:text-[var(--accent-primary)] transition-colors">
-                      {bannerName || "Sự kiện được phân công"}
-                    </Link>
-                  ) : (
-                    bannerName || "Sự kiện được phân công"
-                  )}
+                  {bannerName || "Sự kiện được phân công"}
                 </h2>
                 <div className="flex items-center gap-3 font-mono text-xs text-[var(--text-muted)] mt-0.5">
-                  <span>Vai trò: <strong className="text-[var(--accent-primary)]">{roleName === "Coordinator" ? "Ban Tổ Chức" : roleName}</strong></span>
+                  <span>Vai trò hiện tại: <strong className="text-[var(--accent-primary)]">{roleName}</strong></span>
                   {bannerStatus && (
                     <>
                       <span>·</span>
@@ -530,48 +457,39 @@ export function EventsDiscoveryView() {
                 </div>
               </div>
 
-              {/* Smart Role-Based Button Actions */}
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {roleName === "Coordinator" && (
-                  <Link href="/coordinator/dashboard">
-                    <button className="hud-clipped px-5 py-2.5 bg-[#a855f7] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
-                      <span>Vào Quản Trị BTC</span>
-                    </button>
-                  </Link>
-                )}
+              {/* Smart Role-Based Button Action */}
+              {roleName === "Mentor" && (
+                <Link href="/mentor/tracks">
+                  <button className="hud-clipped px-5 py-2.5 bg-[#2dd4bf] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
+                    💼 VÀO BÀN LÀM VIỆC CỐ VẤN ➔
+                  </button>
+                </Link>
+              )}
 
-                {roleName === "Judge" && (
-                  <Link href="/judge/scoring">
-                    <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-judge)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
-                      <span>Vào Bàn Chấm Điểm</span>
-                    </button>
-                  </Link>
-                )}
+              {roleName === "Coordinator" && (
+                <Link href="/coordinator/dashboard">
+                  <button className="hud-clipped px-5 py-2.5 bg-[#a855f7] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm shrink-0 cursor-pointer">
+                    🎯 CONTROL CENTER BTC ➔
+                  </button>
+                </Link>
+              )}
 
-                {roleName === "Mentor" && (
-                  <Link href="/mentor/tracks">
-                    <button className="hud-clipped px-5 py-2.5 bg-[#2dd4bf] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
-                      <span>Vào Không Gian Cố Vấn</span>
-                    </button>
-                  </Link>
-                )}
+              {roleName === "Judge" && (
+                <Link href="/judge/scoring">
+                  <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-judge)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
+                    ⚖ VÀO BÀN CHẤM GIÁM KHẢO ➔
+                  </button>
+                </Link>
+              )}
 
-                {(roleName === "TeamLeader" || roleName === "TeamMember") && (
-                  <Link href="/my-team">
-                    <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm cursor-pointer flex items-center gap-1.5">
-                      <span>Vào Đội Thi</span>
-                    </button>
-                  </Link>
-                )}
 
-                {roleName === "Admin" && (
-                  <Link href="/admin/dashboard">
-                    <button className="hud-clipped px-5 py-2.5 bg-[var(--color-danger)] text-white font-mono font-bold text-xs tracking-wider uppercase hover:bg-white hover:text-black transition-all shadow-sm cursor-pointer">
-                      Bảng Điều Hành Admin
-                    </button>
-                  </Link>
-                )}
-              </div>
+              {(roleName === "TeamLeader" || roleName === "TeamMember") && myEventId && (
+                <Link href={`/events/${myEventId}`}>
+                  <button className="hud-clipped px-5 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase hover:bg-white transition-all shadow-sm shrink-0 cursor-pointer">
+                    ↗ XEM CHI TIẾT SỰ KIỆN CỦA TÔI ➔
+                  </button>
+                </Link>
+              )}
             </div>
           )}
 
@@ -607,88 +525,26 @@ export function EventsDiscoveryView() {
           {/* Event list */}
           {events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+              <div className="font-mono text-3xl text-[var(--border-muted)]">{"[ ]"}</div>
               <p className="font-mono text-sm text-[var(--text-muted)]">
-                Không tìm thấy sự kiện nào phù hợp với bộ lọc hiện tại.
+                Không tìm thấy sự kiện phù hợp với bộ lọc.
               </p>
               <button
                 onClick={handleClear}
-                className="hud-clipped mt-2 px-4 py-2 border border-[var(--border-muted)] font-mono text-xs text-[var(--text-primary)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors cursor-pointer"
+                className="hud-clipped mt-2 px-4 py-2 border border-[var(--border-muted)] font-mono text-xs text-[var(--text-muted)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors"
               >
-                Xóa Bộ Lọc
+                [ XÓA BỘ LỌC ]
               </button>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {events.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  userRole={roleByEventId.get(event.id)}
-                  onSelectExpired={(ev) => setExpiredModalEvent(ev)}
-                />
+              {events.map((ev) => (
+                <EventCard key={ev.id} event={ev} />
               ))}
             </div>
           )}
         </div>
       </div>
-
-      {/* ── Dialog thông báo khi bấm vào sự kiện đã quá thời gian đăng ký đội ── */}
-      {expiredModalEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-[#0f171d] border border-amber-500/40 p-6 shadow-2xl font-mono text-xs space-y-5 hud-clipped">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 text-xl font-bold">
-                ⚠️
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="font-display text-base font-bold text-amber-300 uppercase tracking-wide">
-                  ĐÃ QUÁ THỜI GIAN ĐĂNG KÝ ĐỘI
-                </h3>
-                <p className="text-zinc-300 font-sans text-xs leading-relaxed">
-                  Sự kiện <strong className="text-white font-bold">"{expiredModalEvent.eventName}"</strong> đã kết thúc thời gian mở đăng ký đội thi vào ngày{" "}
-                  <strong className="text-amber-400">{formatShortDate(expiredModalEvent.registrationEndDate || expiredModalEvent.endDate)}</strong>.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3 bg-[#162228] border border-zinc-700/70 text-[11px] text-zinc-400 space-y-1.5">
-              <div className="flex justify-between">
-                <span>Thời gian thi đấu:</span>
-                <span className="text-zinc-200 font-bold">{formatShortDate(expiredModalEvent.startDate)} – {formatShortDate(expiredModalEvent.endDate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Trạng thái:</span>
-                <span className="text-cyan-300 font-bold">{STATUS_LABEL[expiredModalEvent.status]}</span>
-              </div>
-              <p className="pt-1.5 text-[10px] text-amber-400/90 border-t border-zinc-700/50 mt-1">
-                * Thí sinh không thể tạo mới hoặc đăng ký đội tham gia cho sự kiện này nữa.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
-              <button
-                type="button"
-                onClick={() => setExpiredModalEvent(null)}
-                className="px-4 py-2 bg-[#1c2830] border border-zinc-700 hover:border-zinc-500 text-zinc-300 font-bold transition-colors cursor-pointer"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const id = expiredModalEvent.id;
-                  setExpiredModalEvent(null);
-                  router.push(`/events/${id}`);
-                }}
-                className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
-              >
-                <span>Vẫn Xem Chi Tiết</span>
-                <span>→</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
