@@ -355,27 +355,30 @@ export function MySubmissionsView() {
       <div className="max-w-[var(--container-max)] mx-auto px-6 py-8">
 
         {/* ── Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-[#263339] pb-6">
           <div>
-            <span className="font-mono text-[10px] text-[var(--accent-team)] tracking-[0.25em] uppercase font-bold">
-              SUBMISSION MANAGEMENT
-            </span>
-            <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)] mt-1">
-              Bài Nộp Của Đội
+            <div className="flex items-center gap-2 font-mono text-xs text-[#38bdf8] font-bold uppercase tracking-wider mb-1">
+              <span>QUẢN LÝ BÀI NỘP BÀI THI</span>
+            </div>
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              BÀI NỘP CỦA ĐỘI THI
             </h1>
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+              Quản lý các sản phẩm, đường dẫn repository, tài liệu demo và lịch sử nộp bài của đội thi trong các vòng đấu.
+            </p>
             {team && (
-              <p className="font-mono text-xs text-[var(--text-muted)] mt-1 flex flex-wrap items-center gap-2">
-                <span>Đội: <span className="text-[var(--accent-team)] font-bold">{pick(team, "name", "Name", "teamName", "TeamName") || "Đội thi"}</span></span>
+              <div className="font-mono text-xs text-[#8a9ba8] mt-2 flex flex-wrap items-center gap-2">
+                <span>Đội: <span className="text-[#38bdf8] font-bold">{pick(team, "name", "Name", "teamName", "TeamName") || "Đội thi"}</span></span>
                 <span>·</span>
                 <span>Sự kiện:</span>
                 <Link
                   href={`/events/${pick(team, "eventId", "EventId")}`}
-                  className="text-[var(--accent-primary)] hover:underline flex items-center gap-1 border border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 px-2 py-0.5 rounded-none font-bold"
+                  className="text-[#38bdf8] hover:underline flex items-center gap-1 border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-0.5 font-bold text-xs"
                 >
                   <span>{pick(team, "eventName", "EventName") || "Sự kiện"}</span>
                   <span className="text-[10px]">↗ XEM CHI TIẾT</span>
                 </Link>
-              </p>
+              </div>
             )}
           </div>
 

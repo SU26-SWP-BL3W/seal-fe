@@ -141,6 +141,35 @@ export const CoordinatorTemplatesView: React.FC = () => {
     }
   };
 
+  // Delete Criteria Set from State & Database
+  const handleDeleteSet = async (setId: string, setName: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa bộ tiêu chí "${setName}" khỏi Kho Tiêu Chí hệ thống?`)) {
+      return;
+    }
+
+    try {
+      if (templatesRepository?.deleteTemplate) {
+        await templatesRepository.deleteTemplate(setId);
+      }
+
+      const nextSets = criteriaSets.filter((s) => s.id !== setId);
+      setCriteriaSets(nextSets);
+
+      if (selectedSetId === setId) {
+        setSelectedSetId(nextSets[0]?.id || "");
+      }
+
+      await refetchTemplates();
+
+      setSuccessMessage(`✓ Đã xóa thành công bộ tiêu chí "${setName}" khỏi Kho Hệ Thống!`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch {
+      alert("Xóa Bộ tiêu chí thất bại!");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white flex flex-col">
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 py-8 space-y-6">
@@ -219,6 +248,15 @@ export const CoordinatorTemplatesView: React.FC = () => {
                           {set.templateName}
                         </h3>
                       </div>
+
+                      <button
+                        type="button"
+                        title="Xóa bộ tiêu chí"
+                        onClick={(e) => handleDeleteSet(set.id, set.templateName, e)}
+                        className="p-1.5 text-[#8a9ba8] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
 
                     <p className="text-xs font-sans text-[#8a9ba8] line-clamp-2 leading-relaxed">
@@ -269,12 +307,25 @@ export const CoordinatorTemplatesView: React.FC = () => {
                     )}
                   </div>
 
-                  <h2 className="font-sans font-bold text-xl text-[#e1e7ec]">
-                    {activeSet.templateName}
-                  </h2>
-                  <p className="text-xs font-sans text-[#8a9ba8] leading-relaxed">
-                    {activeSet.description || "Chưa có mô tả chi tiết cho bộ tiêu chí này."}
-                  </p>
+                  <div className="flex items-start justify-between gap-4 pt-1">
+                    <div>
+                      <h2 className="font-sans font-bold text-xl text-[#e1e7ec]">
+                        {activeSet.templateName}
+                      </h2>
+                      <p className="text-xs font-sans text-[#8a9ba8] leading-relaxed mt-1">
+                        {activeSet.description || "Chưa có mô tả chi tiết cho bộ tiêu chí này."}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
+                      className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>XÓA BỘ TIÊU CHÍ</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Total Weight Bar */}
@@ -331,7 +382,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
                           <div className="pl-8 pt-1 flex items-center gap-2 font-mono text-[10px] text-[#8a9ba8]">
                             <span>Thang điểm: Max {crit.maxScore}đ</span>
                             <span>•</span>
-                            <span className="text-[#10b981]">Chuẩn RBL Level 1-4 (0-100%)</span>
+                            <span className="text-[#10b981]">Thang Đánh Giá Chuẩn 0-100%</span>
                           </div>
                         </div>
                       ))
@@ -346,73 +397,57 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
       </main>
 
-      {/* MODAL BUILDER: TẠO BỘ TIÊU CHÍ MỚI (CONTAINER BUILDER) */}
+      {/* Builder Modal */}
       {isBuilderModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#13191c] border border-[#263339] max-w-4xl w-full p-6 space-y-6 font-mono text-xs my-8 shadow-2xl relative">
-            
-            {/* Header */}
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#13191c] border border-[#263339] max-w-3xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto font-sans">
             <div className="flex items-center justify-between border-b border-[#263339] pb-4">
-              <div className="flex items-center gap-2 text-[#8b5cf6] font-bold text-sm uppercase">
-                <Plus className="w-5 h-5 text-[#8b5cf6]" />
-                <span>TẠO BỘ TIÊU CHÍ CHẤM ĐIỂM MỚI (NEW CRITERIA SET)</span>
+              <div className="flex items-center gap-2 text-[#8b5cf6] font-mono text-sm font-bold uppercase">
+                <Plus className="w-4 h-4" />
+                <span>SOẠN BỘ TIÊU CHÍ MỚI VÀO KHO HỆ THỐNG</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsBuilderModalOpen(false)}
-                className="text-[#8a9ba8] hover:text-white p-1 cursor-pointer"
+                className="text-[#8a9ba8] hover:text-white font-mono text-xs cursor-pointer"
               >
-                ✕
+                [ ĐÓNG ✕ ]
               </button>
             </div>
 
-            <form onSubmit={handleSaveCriteriaSet} className="space-y-6">
-              {/* Form Input General Set Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0a0e10] p-4 border border-[#263339]">
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-[#8a9ba8] font-bold uppercase">1. TÊN BỘ TIÊU CHÍ *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newSetName}
-                    onChange={(e) => setNewSetName(e.target.value)}
-                    placeholder="Ví dụ: Bộ Tiêu Chí Đánh Giá AI & Cloud Nexus 2026"
-                    className="w-full px-3 py-2 bg-[#182024] border border-[#263339] text-[#e1e7ec] font-sans font-bold text-sm focus:outline-none focus:border-[#8b5cf6]"
-                  />
-                </div>
-
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-[#8a9ba8]">2. MÔ TẢ BỘ TIÊU CHÍ</label>
-                  <input
-                    type="text"
-                    value={newSetDesc}
-                    onChange={(e) => setNewSetDesc(e.target.value)}
-                    placeholder="Mô tả phạm vi ứng dụng hoặc lưu ý chấm điểm cho Bộ tiêu chí..."
-                    className="w-full px-3 py-2 bg-[#182024] border border-[#263339] text-[#e1e7ec] font-sans text-xs focus:outline-none focus:border-[#8b5cf6]"
-                  />
-                </div>
+            <form onSubmit={handleSaveCriteriaSet} className="space-y-4 font-mono text-xs">
+              <div className="space-y-1">
+                <label className="text-[#8a9ba8] uppercase block">TÊN BỘ TIÊU CHÍ MỚI *</label>
+                <input
+                  type="text"
+                  required
+                  value={newSetName}
+                  onChange={(e) => setNewSetName(e.target.value)}
+                  placeholder="VD: Bộ Tiêu Chí Đánh Giá AI & Cloud 2026..."
+                  className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans font-bold text-sm focus:outline-none focus:border-[#8b5cf6]"
+                />
               </div>
 
-              {/* Progress Weight Meter */}
-              <div className="p-4 bg-[#0a0e10] border border-[#263339] flex items-center justify-between">
-                <span className="font-bold text-[#e1e7ec]">
-                  TỔNG TRỌNG SỐ CÁC TIÊU CHÍ: <span className={isBuilderValid100 ? "text-[#10b981]" : "text-[#ef4444]"}>{builderTotalWeight}%</span>
-                </span>
-                <span className={`px-3 py-1 font-bold ${isBuilderValid100 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-red-500/10 text-red-400 border border-red-500/30"}`}>
-                  {isBuilderValid100 ? "ĐÚNG 100% HỢP LỆ" : `PHẢI BẰNG ĐÚNG 100% (Lệch ${Math.abs(100 - builderTotalWeight)}%)`}
-                </span>
+              <div className="space-y-1">
+                <label className="text-[#8a9ba8] uppercase block">MÔ TẢ CHI TIẾT</label>
+                <input
+                  type="text"
+                  value={newSetDesc}
+                  onChange={(e) => setNewSetDesc(e.target.value)}
+                  placeholder="Mô tả phạm vi áp dụng hoặc mục đích của bộ tiêu chí này..."
+                  className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#8a9ba8] font-sans text-xs focus:outline-none focus:border-[#8b5cf6]"
+                />
               </div>
 
-              {/* Criteria List Rows inside Builder */}
-              <div className="space-y-3">
+              <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#8b5cf6] uppercase">3. DANH SÁCH TIÊU CHÍ THÀNH PHẦN BÊN TRONG BỘ ({builderCriterias.length})</span>
+                  <span className="text-[#8b5cf6] font-bold uppercase">DANH SÁCH TIÊU CHÍ THÀNH PHẦN</span>
                   <button
                     type="button"
                     onClick={handleAddCriteriaRow}
-                    className="px-3 py-1 bg-[#0a0e10] border border-[#263339] text-[#8b5cf6] hover:border-[#8b5cf6] font-mono text-xs font-bold cursor-pointer transition-colors"
+                    className="px-3 py-1 bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 text-[#8b5cf6] hover:bg-[#8b5cf6]/30 text-[11px] font-bold uppercase flex items-center gap-1 cursor-pointer"
                   >
-                    + THÊM TIÊU CHÍ
+                    <Plus className="w-3.5 h-3.5" /> Thêm Tiêu Chí
                   </button>
                 </div>
 
@@ -461,7 +496,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
                           type="text"
                           value={c.description}
                           onChange={(e) => handleUpdateCriteriaRow(c.id, "description", e.target.value)}
-                          placeholder="Mô tả chi tiết hướng dẫn chấm RBL..."
+                          placeholder="Mô tả chi tiết hướng dẫn chấm điểm..."
                           className="w-full px-3 py-1.5 bg-[#182024] border border-[#263339] text-[#8a9ba8] font-sans text-xs focus:outline-none focus:border-[#8b5cf6]"
                         />
                       </div>

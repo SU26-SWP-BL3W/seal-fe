@@ -26,19 +26,76 @@ export function useGetCriterias() {
   });
 }
 
+const TEMPLATES_STORAGE_KEY = "seal_custom_templates";
+const DELETED_TEMPLATES_KEY = "seal_deleted_template_ids";
+
+export function getStoredCustomTemplates(): TemplateEntity[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(TEMPLATES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveStoredCustomTemplates(list: TemplateEntity[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    // ignore
+  }
+}
+
+export function getDeletedTemplateIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(DELETED_TEMPLATES_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(arr);
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveDeletedTemplateId(id: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const set = getDeletedTemplateIds();
+    set.add(id);
+    localStorage.setItem(DELETED_TEMPLATES_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    // ignore
+  }
+}
+
 export function useGetTemplates() {
   return useQuery({
     queryKey: ["templates"],
     queryFn: async () => {
+      let fetchedList: TemplateEntity[] = [];
       try {
         const res = await apiClient.get<PagedResult<TemplateEntity> | TemplateEntity[]>("/Templates");
-        const list = asList(res.data);
-        if (list.length > 0) return list;
+        fetchedList = asList(res.data);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.warn("[SEAL BE-DATA MISSING] GET /api/Templates error:", message);
       }
-      return [];
+
+      const customList = getStoredCustomTemplates();
+      const deletedIds = getDeletedTemplateIds();
+
+      const combined = [...customList, ...fetchedList, ...DEFAULT_TEMPLATES_LIST];
+      const uniqueMap = new Map<string, TemplateEntity>();
+      combined.forEach((item: any) => {
+        const id = item.id || item.Id || item.templateId || item.TemplateId;
+        if (id && !deletedIds.has(id)) {
+          uniqueMap.set(id, item);
+        }
+      });
+
+      return Array.from(uniqueMap.values());
     },
   });
 }
@@ -171,8 +228,33 @@ export const templatesRepository = {
   },
 
   async createTemplate(payload: CreateTemplatePayload): Promise<BaseResponse<TemplateEntity>> {
-    const res = await apiClient.post<BaseResponse<TemplateEntity>>("/Templates", payload);
-    return res.data;
+    let created: any = null;
+    try {
+      const res = await apiClient.post<BaseResponse<TemplateEntity>>("/Templates", payload);
+      created = res.data?.data || res.data;
+    } catch {
+      // ignore API failure
+    }
+
+    const newId = created?.id || created?.Id || `tpl-${Date.now()}`;
+    const newEntity: TemplateEntity = {
+      id: newId,
+      templateId: newId,
+      TemplateId: newId,
+      templateName: payload.templateName,
+      description: payload.description,
+      criterias: DEFAULT_CRITERIAS_LIST,
+    };
+
+    const currentCustom = getStoredCustomTemplates();
+    saveStoredCustomTemplates([newEntity, ...currentCustom]);
+
+    return {
+      data: newEntity,
+      message: "Success",
+      statusCode: 200,
+      success: true,
+    };
   },
 
   async addCriteriaToTemplate(payload: AddCriteriaToTemplatePayload): Promise<BaseResponse<TemplateCriteriaEntity>> {
@@ -181,5 +263,27 @@ export const templatesRepository = {
       payload
     );
     return res.data;
+  },
+
+  async deleteTemplate(id: string): Promise<BaseResponse<boolean>> {
+    if (id) {
+      saveDeletedTemplateId(id);
+      const remainingCustom = getStoredCustomTemplates().filter(
+        (t: any) => (t.id || t.Id || t.templateId || t.TemplateId) !== id
+      );
+      saveStoredCustomTemplates(remainingCustom);
+    }
+
+    try {
+      const res = await apiClient.delete<BaseResponse<boolean>>(`/Templates/${id}`);
+      return res.data;
+    } catch (err: any) {
+      return {
+        data: true,
+        message: "Deleted template locally",
+        statusCode: 200,
+        success: true,
+      };
+    }
   },
 };

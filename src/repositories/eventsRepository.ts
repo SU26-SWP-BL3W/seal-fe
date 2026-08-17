@@ -112,6 +112,27 @@ function mergeCreatedWithDb(dbList: any[]) {
     return localList;
   }
 
+  const localMap = new Map<string, any>();
+  localList.forEach((loc) => {
+    const id = loc.id || loc.Id || loc.eventId || loc.EventId;
+    if (id) localMap.set(id, loc);
+  });
+
+  const mergedDbList = dbList.map((dbItem) => {
+    const id = dbItem.id || dbItem.Id || dbItem.eventId || dbItem.EventId;
+    const localItem = id ? localMap.get(id) : null;
+    if (!localItem) return dbItem;
+
+    return {
+      ...localItem,
+      ...dbItem,
+      rounds: (Array.isArray(localItem.rounds) && localItem.rounds.length > 0) ? localItem.rounds : (dbItem.rounds || dbItem.Rounds),
+      tracks: (Array.isArray(localItem.tracks) && localItem.tracks.length > 0) ? localItem.tracks : (dbItem.tracks || dbItem.Tracks),
+      criterias: (Array.isArray(localItem.criterias) && localItem.criterias.length > 0) ? localItem.criterias : (dbItem.criterias || dbItem.Criterias),
+      criteriasByTrack: localItem.criteriasByTrack || dbItem.criteriasByTrack,
+    };
+  });
+
   const dbIds = new Set(
     dbList.map((e) => e.id || e.Id || e.eventId || e.EventId).filter(Boolean)
   );
@@ -119,7 +140,8 @@ function mergeCreatedWithDb(dbList: any[]) {
     const id = loc.id || loc.Id || loc.eventId || loc.EventId;
     return id && !dbIds.has(id);
   });
-  return [...unpersistedLocal, ...dbList];
+
+  return [...unpersistedLocal, ...mergedDbList];
 }
 
 export function useEvents() {

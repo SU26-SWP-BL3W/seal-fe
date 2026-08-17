@@ -3,7 +3,7 @@
 import React from "react";
 import { RoundFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
 import { useGetTemplates } from "@/repositories/templatesRepository";
-import { Target, Plus, Trash2, ArrowLeft, LayoutTemplate, ArrowRight } from "lucide-react";
+import { Target, Plus, Trash2, ArrowLeft, LayoutTemplate, ArrowRight, Save } from "lucide-react";
 
 interface Step3TrackConfigProps {
   rounds: RoundFormState[];
@@ -13,6 +13,7 @@ interface Step3TrackConfigProps {
   onUpdateTrack: (id: string, field: keyof TrackFormState, value: any) => void;
   onNext: () => void;
   onPrev: () => void;
+  onSaveDraft?: () => void;
   isReadOnly?: boolean;
 }
 
@@ -23,6 +24,7 @@ export const Step3TrackConfig: React.FC<Step3TrackConfigProps> = ({
   onUpdateTrack,
   onNext,
   onPrev,
+  onSaveDraft,
   isReadOnly = false,
 }) => {
   const { data: templates = [] } = useGetTemplates();
@@ -146,14 +148,28 @@ export const Step3TrackConfig: React.FC<Step3TrackConfigProps> = ({
         >
           <ArrowLeft className="w-4 h-4" /> &lt; Bước 2: Vòng Thi
         </button>
-        <button
-          type="button"
-          onClick={onNext}
-          className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
-        >
-          <span>TIẾP TỤC BƯỚC 4: TIÊU CHÍ CHẤM</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
+
+        <div className="flex items-center gap-3">
+          {onSaveDraft && (
+            <button
+              type="button"
+              onClick={onSaveDraft}
+              className="px-4 py-2 bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] text-[#8a9ba8] hover:text-[#e1e7ec] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Save className="w-4 h-4 text-[#8b5cf6]" />
+              <span>LƯU BẢN NHÁP</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onNext}
+            className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
+          >
+            <span>TIẾP TỤC BƯỚC 4: TIÊU CHÍ CHẤM &gt;</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

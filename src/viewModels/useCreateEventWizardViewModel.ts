@@ -98,34 +98,71 @@ export function useCreateEventWizardViewModel() {
       const activeEv = (targetEventId ? myEvents.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === targetEventId) : null) || myEvents[0];
       if (activeEv) {
         setCreatedEvent(activeEv as any);
+        const targetId = activeEv.id || activeEv.Id || activeEv.eventId || activeEv.EventId;
+
+        // Check if there is a dedicated local draft saved
+        let localDraft: any = null;
+        if (typeof window !== "undefined" && targetId) {
+          try {
+            const rawDraft = localStorage.getItem(`seal_wizard_draft_${targetId}`);
+            if (rawDraft) localDraft = JSON.parse(rawDraft);
+          } catch {
+            // ignore
+          }
+        }
+
+        const effectiveEv = localDraft ? { ...activeEv, ...localDraft } : activeEv;
+
         setEventData({
-          eventName: activeEv.eventName || activeEv.EventName || "",
-          season: activeEv.season || activeEv.Season || "",
-          year: activeEv.year || activeEv.Year || new Date().getFullYear(),
-          startDate: activeEv.startDate || activeEv.StartDate || "",
-          endDate: activeEv.endDate || activeEv.EndDate || "",
-          registrationStartDate: activeEv.registrationStartDate || activeEv.RegistrationStartDate || "",
-          registrationEndDate: activeEv.registrationEndDate || activeEv.RegistrationEndDate || "",
-          maxTeams: activeEv.maxTeams || activeEv.MaxTeams || 50,
+          eventName: effectiveEv.eventName || effectiveEv.EventName || "",
+          season: effectiveEv.season || effectiveEv.Season || "",
+          year: effectiveEv.year || effectiveEv.Year || new Date().getFullYear(),
+          startDate: effectiveEv.startDate || effectiveEv.StartDate || "",
+          endDate: effectiveEv.endDate || effectiveEv.EndDate || "",
+          registrationStartDate: effectiveEv.registrationStartDate || effectiveEv.RegistrationStartDate || "",
+          registrationEndDate: effectiveEv.registrationEndDate || effectiveEv.RegistrationEndDate || "",
+          maxTeams: effectiveEv.maxTeams || effectiveEv.MaxTeams || 50,
           minTeamSize: 1,
           maxTeamSize: 5,
-          tagline: activeEv.description || activeEv.Description || "",
-          description: activeEv.description || activeEv.Description || "",
+          tagline: effectiveEv.description || effectiveEv.Description || "",
+          description: effectiveEv.description || effectiveEv.Description || "",
         });
 
         // Also sync rounds if available
-        if (Array.isArray(activeEv.rounds) && activeEv.rounds.length > 0) {
-          const mappedRounds: RoundFormState[] = activeEv.rounds.map((r: any, idx: number) => ({
+        if (Array.isArray(effectiveEv.rounds) && effectiveEv.rounds.length > 0) {
+          const mappedRounds: RoundFormState[] = effectiveEv.rounds.map((r: any, idx: number) => ({
             id: r.id || r.Id || r.roundId || `rnd-${idx}`,
             roundName: r.roundName || r.RoundName || `Vòng ${idx + 1}`,
             roundNumber: r.roundNumber || r.RoundNumber || idx + 1,
             startDate: r.startDate || r.StartDate || "",
             endDate: r.endDate || r.EndDate || "",
-            advancementRule: r.advancementRule || r.AdvancementRule || "top 10",
+            advancementRule: r.advancementRule || r.AdvancementRule || "top:10",
             scoringStartDate: r.scoringStartDate || r.ScoringStartDate || "",
             scoringEndDate: r.scoringEndDate || r.ScoringEndDate || "",
           }));
           setRounds(mappedRounds);
+        }
+
+        // Also sync tracks if available
+        if (Array.isArray(effectiveEv.tracks) && effectiveEv.tracks.length > 0) {
+          const mappedTracks: TrackFormState[] = effectiveEv.tracks.map((t: any, idx: number) => ({
+            id: t.id || t.Id || t.trackId || `trk-${idx}`,
+            trackName: t.trackName || t.TrackName || t.name || `Hạng mục ${idx + 1}`,
+            templateId: t.templateId || t.TemplateId || "custom",
+            description: t.description || t.Description || "",
+          }));
+          setTracks(mappedTracks);
+        }
+
+        // Also sync criterias & criteriasByTrack if available in draft
+        if (effectiveEv.criteriasByTrack && typeof effectiveEv.criteriasByTrack === "object") {
+          setCriteriasByTrack(effectiveEv.criteriasByTrack);
+        }
+        if (Array.isArray(effectiveEv.criterias) && effectiveEv.criterias.length > 0) {
+          setCriterias(effectiveEv.criterias);
+        }
+        if (effectiveEv.templateName) {
+          setTemplateName(effectiveEv.templateName);
         }
       }
     }
@@ -173,10 +210,6 @@ export function useCreateEventWizardViewModel() {
     },
   ]);
 
-  // Total weight computed live
-  const totalWeight = criterias.reduce((acc, item) => acc + (Number(item.weight) || 0), 0);
-  const isValidWeight100 = Math.abs(totalWeight - 100) < 0.01;
-
   // Real data-based Step completion checks
   const isStep1Done = true; // Admin creates Step 1, so Step 1 is always completed by default
 
@@ -211,6 +244,10 @@ export function useCreateEventWizardViewModel() {
       return Math.abs(weight - 100) < 0.01;
     })
   );
+
+  // Total weight computed live
+  const totalWeight = criterias.reduce((acc, item) => acc + (Number(item.weight) || 0), 0);
+  const isValidWeight100 = isStep4Done;
 
   const isStep5Done = Boolean(
     staffInvites.length > 0 &&
@@ -390,14 +427,73 @@ export function useCreateEventWizardViewModel() {
       }
       setCurrentStep(4);
     } else if (currentStep === 4) {
-      if (!isValidWeight100) {
-        setErrorMessage(`Tổng trọng số tiêu chí phải đạt ĐÚNG 100%! (Hiện tại: ${totalWeight}%).`);
+      if (!isStep4Done) {
+        const invalidTracks = tracks.filter((trk) => {
+          if (trk.templateId && trk.templateId !== "__custom__") return false;
+          const list = criteriasByTrack[trk.id] ?? criterias;
+          if (!list || list.length === 0) return true;
+          const weight = list.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
+          return Math.abs(weight - 100) >= 0.01;
+        });
+
+        if (invalidTracks.length > 0) {
+          const detailMsgs = invalidTracks.map((t) => {
+            const list = criteriasByTrack[t.id] ?? criterias;
+            const w = list ? list.reduce((acc, c) => acc + (Number(c.weight) || 0), 0) : 0;
+            return `[${t.trackName}]: ${w}%`;
+          }).join(", ");
+          setErrorMessage(`Tất cả hạng mục thi đều phải đạt ĐÚNG 100% trọng số tiêu chí. Hạng mục chưa đạt: ${detailMsgs}`);
+        } else {
+          setErrorMessage("Vui lòng thiết lập ít nhất 1 tiêu chí cho từng hạng mục!");
+        }
         return;
       }
       setCurrentStep(5);
     } else if (currentStep === 5) {
       setSuccessMessage("Đã hoàn tất cấu hình nhân sự! Đang chuyển đến Bước 6 xác nhận...");
       setCurrentStep(6);
+    }
+  };
+
+  const [maxStepReached, setMaxStepReached] = useState<number>(1);
+
+  useEffect(() => {
+    setMaxStepReached((prev) => Math.max(prev, currentStep));
+  }, [currentStep]);
+
+  const handleSaveDraft = async () => {
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      const targetId = (createdEvent as any)?.id || (createdEvent as any)?.Id || (eventData as any)?.id || targetEventId || `ev-draft-${Date.now()}`;
+      
+      const fullDraftPayload = {
+        ...eventData,
+        id: targetId,
+        eventId: targetId,
+        status: false,
+        rounds,
+        tracks,
+        criterias,
+        criteriasByTrack,
+        templateName,
+        currentStep,
+      };
+
+      // 1. Update eventsRepository
+      await eventsRepository.updateEvent(targetId, fullDraftPayload);
+
+      // 2. Explicitly persist into dedicated draft localStorage key
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`seal_wizard_draft_${targetId}`, JSON.stringify(fullDraftPayload));
+      }
+
+      setIsSubmitting(false);
+      setSuccessMessage("✓ Đã lưu bản nháp tiến trình thành công! Bạn có thể thoát và quay lại làm tiếp bất cứ lúc nào.");
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setErrorMessage("Bản nháp tiến trình đã được sao lưu vào bộ nhớ tạm trình duyệt.");
     }
   };
 
@@ -449,5 +545,7 @@ export function useCreateEventWizardViewModel() {
     handleRemoveStaffInvite,
     handleNextStep,
     handlePrevStep,
+    handleSaveDraft,
+    maxStepReached,
   };
 }

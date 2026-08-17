@@ -246,15 +246,15 @@ export const CoordinatorStaffView: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
-            <div className="flex items-center gap-2 font-mono text-xs text-[var(--accent-coordinator)] mb-1">
-              <Shield className="w-3.5 h-3.5" />
-              <span>PHÂN CÔNG &amp; QUẢN LÝ NHÂN SỰ SU KIỆN</span>
+            <div className="flex items-center gap-2 font-mono text-xs text-[#a855f7] font-bold uppercase tracking-wider mb-1">
+              <Shield className="w-4 h-4 text-[#a855f7]" />
+              <span>QUẢN LÝ NHÂN SỰ BAN TỔ CHỨC</span>
             </div>
-            <h1 className="font-display font-bold text-2xl md:text-3xl text-[var(--text-primary)] uppercase tracking-wider">
-              Mời Giám Khảo &amp; Cố Vấn Chuyên Môn
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              MỜI VÀ PHÂN CÔNG GIÁM KHẢO &amp; CỐ VẤN
             </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-              Mời nhân sự chuyên môn tham gia sự kiện và quản lý danh sách phân công Giám khảo / Cố vấn theo từng Hạng mục.
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+              Mời nhân sự chuyên môn tham gia sự kiện và quản lý danh sách phân công Giám khảo, Cố vấn cho từng hạng mục thi đấu.
             </p>
           </div>
 

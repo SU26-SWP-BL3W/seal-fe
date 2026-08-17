@@ -96,31 +96,30 @@ export function CoordinatorTeamsView() {
     <div className="min-h-screen bg-[var(--bg-base)] hud-lattice px-6 py-8">
       {/* Header */}
       <div className="max-w-5xl mx-auto mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[rgba(167,139,250,0.1)] border border-[var(--accent-coordinator)]/30 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-[var(--accent-coordinator)]" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#263339] pb-6">
+          <div>
+            <div className="flex items-center gap-2 font-mono text-xs text-[#a855f7] font-bold uppercase tracking-wider mb-1">
+              <Shield className="w-4 h-4 text-[#a855f7]" />
+              <span>QUẢN LÝ ĐỘI THI BAN TỔ CHỨC</span>
             </div>
-            <div>
-              <h1 className="font-display text-xl font-bold text-[var(--accent-coordinator)] tracking-widest uppercase">
-                DUYỆT ĐĂNG KÝ ĐỘI THI
-              </h1>
-              <p className="text-xs font-mono text-[var(--text-muted)]">
-                // COORDINATOR TEAM REGISTRATION INSPECTION & APPROVAL
-              </p>
-            </div>
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              DANH SÁCH ĐỘI THI VÀ PHÊ DUYỆT ĐĂNG KÝ
+            </h1>
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+              Xem danh sách các đội thi đăng ký tham gia sự kiện, kiểm tra thông tin thành viên và duyệt phê duyệt hoặc từ chối đăng ký.
+            </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="px-3 py-1.5 bg-[rgba(245,158,11,0.1)] border border-[var(--color-warning)]/30 font-mono text-xs text-[var(--color-warning)]">
-              PENDING: {pendingTeams.length} ĐỘI
+              CHỜ DUYỆT: {pendingTeams.length} ĐỘI
             </div>
             <Button
               variant="ghost"
               onClick={() => { refetch(); refetchRegistered(); }}
               className="flex items-center gap-2 text-xs font-mono"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className="w-3.5 h-3.5" />
               Làm mới
             </Button>
           </div>

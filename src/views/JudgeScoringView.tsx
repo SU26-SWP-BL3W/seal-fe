@@ -111,22 +111,21 @@ export function JudgeScoringView() {
 
   return (
     <div className="p-6 md:p-8 max-w-[var(--container-max)] mx-auto hud-lattice min-h-[calc(100vh-4rem)]">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4 border-b border-[var(--border-muted)] pb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[rgba(251,191,36,0.1)] border border-[var(--accent-judge)]/30 flex items-center justify-center shrink-0">
-            <Award className="w-6 h-6 text-[var(--accent-judge)]" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-[var(--border-muted)] pb-6">
+        <div>
+          <div className="flex items-center gap-2 font-mono text-xs text-[#fbbf24] font-bold uppercase tracking-wider mb-1">
+            <Award className="w-4 h-4 text-[#fbbf24]" />
+            <span>HỘI ĐỒNG GIÁM KHẢO CHẤM ĐIỂM</span>
           </div>
-          <div>
-            <h1 className="font-display text-xl md:text-2xl font-bold text-[var(--accent-judge)] tracking-widest uppercase">
-              Chấm điểm bài thi
-            </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)]">
-              Hạng mục: {selectedTrack?.name || "—"} · Tên đội ẩn với giám khảo
-            </p>
-          </div>
+          <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+            GIAO DIỆN CHẤM ĐIỂM CHUYÊN MÔN BÀI THI
+          </h1>
+          <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+            Đánh giá chi tiết bài nộp của đội thi theo các tiêu chí và trọng số quy định (Tên đội thi được ẩn danh để bảo đảm tính khách quan).
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <Link href={`/events/${eventId}/leaderboard`}>
             <Button variant="ghost" accent="judge" className="border border-[var(--accent-judge)]/40 text-[var(--accent-judge)] text-xs font-mono font-bold">
               Bảng xếp hạng

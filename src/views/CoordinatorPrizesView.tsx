@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useGetPrizesByEvent, useCreatePrize } from "@/repositories/results/prizesRepository";
+import { useGetPrizesByEvent, useCreatePrize, saveStoredPrizesForEvent } from "@/repositories/results/prizesRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
 
@@ -64,35 +64,32 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   React.useEffect(() => {
     if (Array.isArray(dbPrizes) && dbPrizes.length > 0) {
-      // Deduplicate DB prizes by name to prevent duplication on re-fetch
+      // Deduplicate DB prizes by clean lowercased name to collapse all historic duplicates
       const uniqueMap = new Map<string, any>();
       dbPrizes.forEach((p: any) => {
-        const nameKey = (p.prizeName || p.PrizeName || p.name || "").trim();
+        const rawName = p.prizeName || p.PrizeName || p.name || "";
+        const cleanName = rawName.replace(/\s*\([^)]*\)/g, "").trim() || rawName;
+        const nameKey = cleanName.toLowerCase();
         if (nameKey && !uniqueMap.has(nameKey)) {
-          uniqueMap.set(nameKey, p);
+          uniqueMap.set(nameKey, { ...p, cleanName });
         }
       });
       const uniqueList = Array.from(uniqueMap.values());
 
       const mapped = uniqueList.map((p: any, idx: number) => {
-        const rawName = p.prizeName || p.PrizeName || p.name || "Giải thưởng";
-        // Strip duplicate track suffix if already appended previously
-        const cleanName = rawName.replace(/\s*\([^)]+\)\s*$/, "").trim() || rawName;
         const valStr = p.prizeValueVnd
           ? formatCurrencyNumber(String(p.prizeValueVnd))
           : (p.value ? formatCurrencyNumber(String(p.value)) : "1.000.000");
 
         return {
           id: p.id || p.Id || `prz-${idx}`,
-          prizeName: cleanName,
+          prizeName: p.cleanName || "Giải thưởng",
           quantity: p.quantity || p.Quantity || 1,
           value: valStr,
           trackName: p.trackName || p.TrackName || "Toàn Sự Kiện (Chung)",
         };
       });
       setPrizes(mapped);
-    } else {
-      setPrizes([]);
     }
   }, [activeEventId, dbPrizes.length]);
 
@@ -114,7 +111,11 @@ export const CoordinatorPrizesView: React.FC = () => {
   // Handle Remove Prize Row
   const handleRemovePrize = (id: string) => {
     if (prizes.length <= 1) return;
-    setPrizes((prev) => prev.filter((p) => p.id !== id));
+    const updated = prizes.filter((p) => p.id !== id);
+    setPrizes(updated);
+    if (activeEventId) {
+      saveStoredPrizesForEvent(activeEventId, updated);
+    }
   };
 
   // Handle Update Prize Field
@@ -146,25 +147,33 @@ export const CoordinatorPrizesView: React.FC = () => {
 
     try {
       if (activeEventId) {
-        for (const p of prizes) {
-          try {
-            const hasSuffix = p.prizeName.includes("(");
-            const finalPrizeName = hasSuffix ? p.prizeName : `${p.prizeName} (${p.trackName})`;
+        // Clean prize names before saving (strip duplicate suffixes)
+        const cleanedPrizes = prizes.map(p => ({
+          ...p,
+          prizeName: p.prizeName.replace(/\s*\([^)]*\)/g, "").trim() || p.prizeName,
+        }));
 
+        // 1. Overwrite stored prize list to prevent geometric duplication (2 -> 4 -> 8)
+        saveStoredPrizesForEvent(activeEventId, cleanedPrizes);
+        setPrizes(cleanedPrizes);
+
+        // 2. Sync to API
+        for (const p of cleanedPrizes) {
+          try {
             await createPrizeMutation.mutateAsync({
               eventId: activeEventId,
               payload: {
-                prizeName: finalPrizeName,
+                prizeName: `${p.prizeName} (${p.trackName})`,
                 value: p.value,
                 quantity: p.quantity,
               },
             });
           } catch (e) {
-            // Ignore API network errors in dev preview
+            // Ignore API network errors
           }
         }
       }
-      setSuccessMessage(`Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
+      setSuccessMessage(`✓ Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
     } catch (err: any) {
       setErrorMessage(`Lưu cấu hình thất bại: ${err?.message}`);
     } finally {
@@ -177,51 +186,51 @@ export const CoordinatorPrizesView: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
         
-        {/* Event Selector Filter Bar */}
-        <div className="bg-[#13191c] p-4 border border-[#263339] flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
-          <div className="flex items-center gap-3 flex-1">
-            <Award className="w-4 h-4 text-[#f59e0b] shrink-0" />
-            <span className="text-[#f59e0b] font-bold uppercase tracking-wider shrink-0">SỰ KIỆN ĐANG QUẢN LÝ:</span>
-            <div className="relative flex-1 max-w-xl">
-              <select
-                value={selectedEventId}
-                onChange={(e) => setSelectedEventId(e.target.value)}
-                className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#f59e0b]"
-              >
-                {eventsList.length > 0 ? (
-                  eventsList.map((ev, idx) => (
-                    <option key={ev.id || idx} value={ev.id || ev.eventId}>
-                      {ev.eventName || ev.EventName} ({ev.season} {ev.year})
-                    </option>
-                  ))
-                ) : (
-                  <option value="">Chưa có sự kiện nào trong hệ thống</option>
-                )}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Title Header */}
-        <div className="border-b border-[#263339] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Unified Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#263339] pb-6">
           <div>
             <div className="flex items-center gap-2 font-mono text-xs text-[#f59e0b] font-bold uppercase tracking-wider mb-1">
               <Award className="w-4 h-4 text-[#f59e0b]" />
-              <span>CẤU HÌNH NGHIỆP VỤ BAN TỔ CHỨC</span>
+              <span>QUẢN LÝ GIẢI THƯỞNG BAN TỔ CHỨC</span>
             </div>
             <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
               THIẾT LẬP CƠ CẤU GIẢI THƯỞNG SỰ KIỆN
             </h1>
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+              Cấu hình các giải thưởng, giá trị tiền thưởng (VNĐ) và phân bổ theo từng hạng mục thi đấu cho sự kiện.
+            </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleAddPrize}
-            className="px-4 py-2 bg-[#f59e0b] hover:bg-amber-400 text-[#0a0e10] font-mono text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>THÊM GIẢI THƯỞNG MỚI</span>
-          </button>
+          {/* Header Right Actions: Event Filter Dropdown + Add Button */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 bg-[#13191c] border border-[#263339] px-3 py-2 font-mono text-xs">
+              <span className="text-[#8a9ba8] font-bold uppercase text-[11px] shrink-0">Sự kiện:</span>
+              <select
+                value={selectedEventId}
+                onChange={(e) => setSelectedEventId(e.target.value)}
+                className="bg-transparent text-[#f59e0b] font-bold focus:outline-none cursor-pointer max-w-[220px] truncate"
+              >
+                {eventsList.length > 0 ? (
+                  eventsList.map((ev, idx) => (
+                    <option key={ev.id || idx} value={ev.id || ev.eventId} className="bg-[#13191c] text-[#e1e7ec]">
+                      {ev.eventName || ev.EventName}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" className="bg-[#13191c]">Chưa có sự kiện</option>
+                )}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddPrize}
+              className="px-4 py-2 bg-[#f59e0b] hover:bg-amber-400 text-[#0a0e10] font-mono text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer transition-colors shadow-md"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>THÊM GIẢI THƯỞNG</span>
+            </button>
+          </div>
         </div>
 
         {/* Banners */}
@@ -249,9 +258,7 @@ export const CoordinatorPrizesView: React.FC = () => {
                 <Award className="w-4 h-4 text-[#f59e0b]" />
                 <span>DANH SÁCH GIẢI THƯỞNG VÀ GIÁ TRỊ ({prizes.length} Giải)</span>
               </div>
-              <span className="text-[#8a9ba8] text-[11px]">
-                Nhập tên giải, số lượng &amp; gán Hạng mục trực tiếp bên dưới
-              </span>
+              <span className="text-[10px] text-[#8a9ba8]">Nhập tên giải, số lượng &amp; gán Hạng mục trực tiếp bên dưới</span>
             </div>
 
             {/* Interactive Editable Table */}
@@ -295,18 +302,30 @@ export const CoordinatorPrizesView: React.FC = () => {
                         />
                       </td>
 
-                      {/* Giá trị VNĐ editable input */}
+                      {/* Giá trị VNĐ editable input (Strictly numeric digits only) */}
                       <td className="p-3">
                         <div className="relative flex items-center">
                           <input
                             type="text"
                             inputMode="numeric"
+                            pattern="[0-9]*"
                             value={p.value}
+                            onKeyDown={(e) => {
+                              // Allow control keys (Backspace, Delete, arrows, Tab, Ctrl/Cmd shortcuts)
+                              if (
+                                !/[0-9]/.test(e.key) &&
+                                !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Home", "End"].includes(e.key) &&
+                                !e.ctrlKey &&
+                                !e.metaKey
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
                             onChange={(e) => handleUpdatePrize(p.id, "value", e.target.value)}
                             placeholder="1.000.000"
-                            className="w-full pl-3 pr-11 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono font-bold text-xs focus:outline-none focus:border-[#f59e0b]"
+                            className="w-full px-3 py-1.5 pr-10 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono font-bold text-xs focus:outline-none focus:border-[#f59e0b]"
                           />
-                          <span className="absolute right-2.5 text-[10px] font-mono text-[#8a9ba8] font-bold pointer-events-none select-none">
+                          <span className="absolute right-3 text-[10px] font-bold text-[#8a9ba8] pointer-events-none">
                             VNĐ
                           </span>
                         </div>
@@ -361,7 +380,7 @@ export const CoordinatorPrizesView: React.FC = () => {
               </div>
 
               <p className="text-[11px] text-[#8a9ba8] leading-relaxed">
-                Tự động tính tổng ngân sách dựa trên số lượng x giá trị của tất cả giải thưởng.
+                Tổng ngân sách được tính tự động dựa trên số lượng và giá trị từng giải thưởng.
               </p>
             </div>
 

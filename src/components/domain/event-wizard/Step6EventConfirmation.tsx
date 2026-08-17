@@ -28,6 +28,8 @@ interface Step6EventConfirmationProps {
   rounds: any[];
   tracks: any[];
   criterias: any[];
+  criteriasByTrack?: Record<string, any[]>;
+  templateName?: string;
   staffInvites: any[];
   canPublishEvent?: boolean;
   validationMissingItems?: string[];
@@ -40,6 +42,8 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
   rounds,
   tracks,
   criterias,
+  criteriasByTrack,
+  templateName,
   staffInvites,
   canPublishEvent = false,
   validationMissingItems = [],
@@ -55,15 +59,26 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
     try {
       const targetId = eventId || (eventData as any)?.id || `ev-draft-${Date.now()}`;
       
-      // 1. Persist full event payload (with rounds and tracks) into Local Storage & API
-      await eventsRepository.updateEvent(targetId, {
+      const fullPayload = {
         ...eventData,
         id: targetId,
         eventId: targetId,
         status: isPublic,
         rounds,
         tracks,
-      });
+        criterias,
+        criteriasByTrack,
+        templateName,
+        staffInvites,
+      };
+
+      // 1. Persist full event payload (with rounds, tracks, criteriasByTrack) into Local Storage & API
+      await eventsRepository.updateEvent(targetId, fullPayload);
+
+      // 2. Persist to dedicated draft localStorage key
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`seal_wizard_draft_${targetId}`, JSON.stringify(fullPayload));
+      }
 
       // 2. Persist rounds to backend API
       if (Array.isArray(rounds) && rounds.length > 0) {
