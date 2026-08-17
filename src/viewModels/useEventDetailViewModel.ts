@@ -72,6 +72,15 @@ export function useEventDetailViewModel(eventId: string) {
             quantity: Number(p.quantity ?? p.Quantity ?? 1),
           }))
         : [],
+      totalPrizeVnd: (() => {
+        const raw = ev.totalPrizeVnd ?? ev.TotalPrizeVnd;
+        if (typeof raw === "number") return raw;
+        if (typeof raw === "string") {
+          const digits = raw.replace(/[^\d]/g, "");
+          return digits ? Number(digits) : 0;
+        }
+        return 0;
+      })(),
       tracks: trackNames,
     };
   }, [realEvent, eventId, realTracks, realTeams]);
@@ -154,6 +163,7 @@ export function useEventDetailViewModel(eventId: string) {
     teamCount: event?.teamCount ?? 0,
     maxTeams: event?.maxTeams ?? 0,
     prizes: event?.prizes ?? [],
+    totalPrizeVnd: event?.totalPrizeVnd ?? 0,
     deadline: currentRound?.endDate ?? null,
     deadlineRoundName: currentRound?.roundName ?? null,
     refetch: () => {
