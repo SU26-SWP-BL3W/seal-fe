@@ -54,13 +54,10 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const isCoordinatorRoute = pathname.includes("/coordinator");
   const isMentorRoute = pathname.includes("/mentor");
   const isJudgeRoute = pathname.includes("/judge");
-  const isEventDetailRoute = pathname.includes("/events/") && (pathname.split("/events/")[1] || "").length > 0;
-  const isEventInnerRoute =
-    isEventDetailRoute ||
+  const isCandidateRoute =
     pathname.includes("/my-team") ||
     pathname.includes("/my-submissions") ||
-    pathname.includes("/appeals") ||
-    pathname.includes("/leaderboard");
+    pathname.includes("/my-invitations");
 
   // Role flags
   const isAdminRole = roleName === "Admin";
@@ -69,19 +66,20 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const isJudgeRole = roleName === "Judge";
   const isCandidateRole = roleName === "TeamLeader" || roleName === "TeamMember";
 
-  // Sidebar dọc: dùng route OR (eventInnerRoute AND role)
-  // Fix: Admin gõ /judge/scoring -> KHÔNG hiện sidebar vì isAdminRole=false
+  // Sidebar dọc: Chỉ hiện ở các trang quản trị / dashboard nội bộ, không bao giờ hiện ở trang public (/events, /events/[id], /events/[id]/leaderboard)
+  const showAdminSidebar = isAdminRoute || (isAdminRole && isCoordinatorRoute);
+  const showCoordinatorSidebar = (isCoordinatorRoute && !isAdminRole) || (isCoordinatorRole && (pathname.includes("/coordinator") || pathname.includes("/appeals")));
+  const showMentorSidebar = isMentorRoute;
+  const showJudgeSidebar = isJudgeRoute;
+  const showParticipantSidebar = isCandidateRoute && isCandidateRole;
+
   const hasVerticalSidebar =
     !isAuthRoute && (
-      // Role dashboards
-      (isAdminRoute && isAdminRole) ||
-      (isCoordinatorRoute && isCoordinatorRole) ||
-      (isMentorRoute && isMentorRole) ||
-      (isJudgeRoute && isJudgeRole) ||
-      // Event inner routes với role check
-      (isEventInnerRoute && (isCoordinatorRole || isMentorRole || isJudgeRole || isCandidateRole)) ||
-      // Event inner routes không cần role (xem thông tin)
-      isEventInnerRoute
+      showAdminSidebar ||
+      showCoordinatorSidebar ||
+      showMentorSidebar ||
+      showJudgeSidebar ||
+      showParticipantSidebar
     );
 
   return (

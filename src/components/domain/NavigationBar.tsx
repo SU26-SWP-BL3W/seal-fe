@@ -78,23 +78,20 @@ export function NavigationBar() {
   const isMentorRoute = pathname.includes("/mentor");
   const isJudgeRoute = pathname.includes("/judge");
   const isAdminRoute = pathname.includes("/admin");
-  const isEventDetailRoute = pathname.includes("/events/") && (pathname.split("/events/")[1] || "").length > 0;
-  const isEventInnerRoute =
-    isEventDetailRoute ||
+  const isCandidateRoute =
     pathname.includes("/my-team") ||
     pathname.includes("/my-submissions") ||
-    pathname.includes("/appeals") ||
-    pathname.includes("/leaderboard");
+    pathname.includes("/my-invitations");
 
   const isCoordinatorRole = roleName === "Coordinator" || roleName === "EventCoordinator";
   const isMentorRole = roleName === "Mentor";
   const isJudgeRole = roleName === "Judge";
   const isCandidateRole = roleName === "TeamLeader" || roleName === "TeamMember";
 
-  const showCoordinatorSidebar = (isCoordinatorRoute && roleName !== "Admin") || (isEventInnerRoute && isCoordinatorRole);
-  const showMentorSidebar = isMentorRoute || (isEventInnerRoute && isMentorRole);
-  const showJudgeSidebar = isJudgeRoute || (isEventInnerRoute && isJudgeRole);
-  const showParticipantSidebar = isEventInnerRoute && isCandidateRole;
+  const showCoordinatorSidebar = (isCoordinatorRoute && roleName !== "Admin") || (isCoordinatorRole && (pathname.includes("/coordinator") || pathname.includes("/appeals")));
+  const showMentorSidebar = isMentorRoute;
+  const showJudgeSidebar = isJudgeRoute;
+  const showParticipantSidebar = isCandidateRoute && isCandidateRole;
   const showAdminSidebar = isAdminRoute || (roleName === "Admin" && isCoordinatorRoute);
 
   // ─────────────────────────────────────────────────────────────
