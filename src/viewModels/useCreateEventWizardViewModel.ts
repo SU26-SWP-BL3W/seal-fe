@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { eventsRepository } from "@/repositories/eventsRepository";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { eventsRepository, useMyEvents } from "@/repositories/eventsRepository";
 import { roundsRepository } from "@/repositories/roundsRepository";
 import { tracksRepository } from "@/repositories/tracksRepository";
 import { templatesRepository } from "@/repositories/templatesRepository";
@@ -86,6 +87,49 @@ export function useCreateEventWizardViewModel() {
 
   // Created Event Entity after Step 1 submit
   const [createdEvent, setCreatedEvent] = useState<EventEntity | null>(null);
+
+  // Sync real Event data from Backend API / myEvents
+  const searchParams = useSearchParams();
+  const targetEventId = searchParams?.get("eventId");
+  const { data: myEvents = [] } = useMyEvents();
+
+  useEffect(() => {
+    if (Array.isArray(myEvents) && myEvents.length > 0) {
+      const activeEv = (targetEventId ? myEvents.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === targetEventId) : null) || myEvents[0];
+      if (activeEv) {
+        setCreatedEvent(activeEv as any);
+        setEventData({
+          eventName: activeEv.eventName || activeEv.EventName || "",
+          season: activeEv.season || activeEv.Season || "",
+          year: activeEv.year || activeEv.Year || new Date().getFullYear(),
+          startDate: activeEv.startDate || activeEv.StartDate || "",
+          endDate: activeEv.endDate || activeEv.EndDate || "",
+          registrationStartDate: activeEv.registrationStartDate || activeEv.RegistrationStartDate || "",
+          registrationEndDate: activeEv.registrationEndDate || activeEv.RegistrationEndDate || "",
+          maxTeams: activeEv.maxTeams || activeEv.MaxTeams || 50,
+          minTeamSize: 1,
+          maxTeamSize: 5,
+          tagline: activeEv.description || activeEv.Description || "",
+          description: activeEv.description || activeEv.Description || "",
+        });
+
+        // Also sync rounds if available
+        if (Array.isArray(activeEv.rounds) && activeEv.rounds.length > 0) {
+          const mappedRounds: RoundFormState[] = activeEv.rounds.map((r: any, idx: number) => ({
+            id: r.id || r.Id || r.roundId || `rnd-${idx}`,
+            roundName: r.roundName || r.RoundName || `Vòng ${idx + 1}`,
+            roundNumber: r.roundNumber || r.RoundNumber || idx + 1,
+            startDate: r.startDate || r.StartDate || "",
+            endDate: r.endDate || r.EndDate || "",
+            advancementRule: r.advancementRule || r.AdvancementRule || "top 10",
+            scoringStartDate: r.scoringStartDate || r.ScoringStartDate || "",
+            scoringEndDate: r.scoringEndDate || r.ScoringEndDate || "",
+          }));
+          setRounds(mappedRounds);
+        }
+      }
+    }
+  }, [myEvents, targetEventId]);
 
   // Step 2 State: Initial Rounds for Coordinator to configure
   const [rounds, setRounds] = useState<RoundFormState[]>([]);
