@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button, Card, Badge, Table, Input } from "@/components/ui";
 import type { EventItem } from "@/viewModels/eventsMetadata";
+import type { User } from "@/models/entities";
 import { staffRepository } from "@/repositories/staffRepository";
 import {
   ShieldAlert,
@@ -104,7 +105,13 @@ export const AdminDashboardView: React.FC = () => {
     const eventId = selectedEvent.id || selectedEvent.Id || selectedEvent.eventId || selectedEvent.EventId || "";
     const eventName = selectedEvent.eventName || selectedEvent.EventName || "Sự kiện";
 
-    const foundUser = await usersRepository.findUserByEmail(ecEmail.trim());
+    const targetEmail = ecEmail.trim().toLowerCase();
+    let foundUser: User | null | undefined = usersList.find(
+      (u: any) => (u.email || u.Email || "").toLowerCase() === targetEmail
+    );
+    if (!foundUser) {
+      foundUser = await usersRepository.findUserByEmail(targetEmail);
+    }
     if (!foundUser) {
       setIsSubmitting(false);
       alert(`Không tìm thấy tài khoản người dùng với email "${ecEmail}". Vui lòng kiểm tra lại chính tả.`);

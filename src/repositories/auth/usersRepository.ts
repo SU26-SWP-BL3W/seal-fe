@@ -205,13 +205,41 @@ export function useFptStudentLookup(studentCode: string | null) {
 export const usersRepository = {
   async findUserByEmail(email: string): Promise<User | null> {
     if (!email) return null;
+    const cleanEmail = email.trim().toLowerCase();
     try {
-      const res = await apiClient.get<PagedResult<User>>("/Users");
-      const list = res.data?.data ?? [];
+      // 1. Tìm kiếm trực tiếp qua tham số Search của Backend
+      const res = await apiClient.get<PagedResult<User>>("/Users", {
+        params: { Search: cleanEmail, PageSize: 50 },
+      });
+      const rawData = res.data as any;
+      const list: User[] = Array.isArray(rawData?.data)
+        ? rawData.data
+        : Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.data?.data)
+        ? rawData.data.data
+        : [];
       const found = list.find(
-        (u) => u.email?.toLowerCase() === email.toLowerCase() || (u as any).Email?.toLowerCase() === email.toLowerCase()
+        (u) => (u.email || (u as any).Email || "").toLowerCase() === cleanEmail
       );
       if (found) return found;
+
+      // 2. Dự phòng quét toàn bộ danh sách 500 bản ghi nếu Search backend không khớp exact
+      const resAll = await apiClient.get<PagedResult<User>>("/Users", {
+        params: { PageSize: 500, PageNumber: 1 },
+      });
+      const rawAll = resAll.data as any;
+      const listAll: User[] = Array.isArray(rawAll?.data)
+        ? rawAll.data
+        : Array.isArray(rawAll)
+        ? rawAll
+        : Array.isArray(rawAll?.data?.data)
+        ? rawAll.data.data
+        : [];
+      const foundInAll = listAll.find(
+        (u) => (u.email || (u as any).Email || "").toLowerCase() === cleanEmail
+      );
+      if (foundInAll) return foundInAll;
     } catch (err: any) {
       console.warn("[SEAL BE-DATA MISSING] GET /api/Users error:", err?.message);
     }
