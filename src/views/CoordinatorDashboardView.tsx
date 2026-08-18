@@ -31,6 +31,7 @@ import {
   Zap,
   CheckCircle2,
   Calendar,
+  Search,
 } from "lucide-react";
 
 export const CoordinatorDashboardView: React.FC = () => {

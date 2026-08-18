@@ -184,24 +184,6 @@ export function useDeleteUser() {
   });
 }
 
-/** GET /api/fpt-mock/students/{studentCode} — Xác minh SV FPT (FptMockController thật). */
-export function useFptStudentLookup(studentCode: string | null) {
-  return useQuery({
-    queryKey: ["fptStudent", studentCode],
-    queryFn: async () => {
-      try {
-        const res = await apiClient.get(`/fpt-mock/students/${studentCode}`);
-        return res.data?.data ?? res.data;
-      } catch (err: any) {
-        console.warn("[SEAL BE-DATA MISSING] GET /api/fpt-mock/students/" + studentCode + " error:", err?.message);
-        return null;
-      }
-    },
-    enabled: !!studentCode && studentCode.length >= 5,
-    retry: false,
-  });
-}
-
 export const usersRepository = {
   async findUserByEmail(email: string): Promise<User | null> {
     if (!email) return null;
