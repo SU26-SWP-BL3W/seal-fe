@@ -466,85 +466,138 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
 
   return (
     <div className="space-y-6 font-mono text-xs text-[var(--text-primary)]">
+      {/* 1. TOP HEADER & PROGRESS SUMMARY */}
       <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-5 hud-clipped flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 ${isPublished ? "bg-emerald-500" : "bg-amber-500"}`} />
             <span className="text-[10px] text-[#c084fc] font-bold tracking-widest uppercase">
               CẤU HÌNH CUỘC THI • [{isPublished ? "ĐANG MỞ ĐĂNG KÝ (OPEN)" : "BẢN NHÁP (DRAFT)"}]
             </span>
           </div>
-          <div className="text-sm font-bold text-white uppercase tracking-wider">
+          <div className="text-base font-bold text-white uppercase tracking-wider">
             {eventName || "SỰ KIỆN CHƯA ĐẶT TÊN"} ({season} {year})
           </div>
+        </div>
+
+        <div className="text-left md:text-right space-y-1.5">
           <div className="text-[11px] font-mono text-zinc-400">
-            TIẾN ĐỘ THIẾT LẬP: <span className="text-white font-bold">{progressPercent}%</span> ({completedStepsCount}/3 BƯỚC HOÀN TẤT) •{" "}
-            <span className={progressPercent === 100 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-              {progressPercent === 100 ? "[SẴN SÀNG MỞ ĐĂNG KÝ]" : "[CẦN BỔ SUNG THÔNG TIN]"}
+            TIẾN ĐỘ THIẾT LẬP: <span className="text-white font-bold">{progressPercent}%</span> ({completedStepsCount}/3 BƯỚC HOÀN TẤT)
+          </div>
+          <div>
+            <span className={`px-2.5 py-1 text-[10px] font-mono font-bold uppercase hud-clipped inline-block ${
+              progressPercent === 100
+                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+            }`}>
+              {progressPercent === 100 ? "[SẴN SÀNG MỞ ĐĂNG KÝ]" : "[CẦN BỔ SUNG DỮ LIỆU]"}
             </span>
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-2 bg-[#090e11] p-1.5 border border-zinc-800 hud-clipped">
-          <button
-            type="button"
-            onClick={() => setActiveSubSection("general")}
-            className={`px-4 py-2.5 font-bold uppercase transition-all cursor-pointer hud-clipped text-xs flex items-center gap-2 ${
+      {/* 2. FULL-WIDTH 3-COLUMN STEPPER TAB BAR */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono">
+        {/* Tab 1: Thông Tin Chung */}
+        <button
+          type="button"
+          onClick={() => setActiveSubSection("general")}
+          className={`p-4 border transition-all cursor-pointer hud-clipped flex flex-col justify-between gap-2.5 text-left ${
+            activeSubSection === "general"
+              ? "bg-[#a855f7] border-[#c084fc] text-white shadow-lg shadow-[#a855f7]/25"
+              : "bg-[var(--bg-panel)] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+              activeSubSection === "general" ? "text-purple-200" : "text-zinc-500"
+            }`}>
+              PHÂN KHU 01
+            </span>
+            <span className={`px-2 py-0.5 text-[9px] font-bold uppercase hud-clipped ${
               activeSubSection === "general"
-                ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
-                : "bg-[#090e11] text-zinc-400 hover:text-white border border-zinc-800"
-            }`}
-          >
-            <span>01. THÔNG TIN CHUNG</span>
-            <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase hud-clipped ${
-              isGeneralComplete
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                ? isGeneralComplete
+                  ? "bg-black/40 text-emerald-300 border border-emerald-400/50"
+                  : "bg-black/40 text-amber-300 border border-amber-400/50"
+                : isGeneralComplete
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                  : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
             }`}>
-              {isGeneralComplete ? "[HOÀN TẤT]" : "[THIẾU THÔNG TIN]"}
+              {isGeneralComplete ? "● HOÀN TẤT" : "○ THIẾU DỮ LIỆU"}
             </span>
-          </button>
+          </div>
+          <div className="font-bold text-xs uppercase tracking-wide">
+            01. THÔNG TIN CHUNG
+          </div>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveSubSection("rounds")}
-            className={`px-4 py-2.5 font-bold uppercase transition-all cursor-pointer hud-clipped text-xs flex items-center gap-2 ${
+        {/* Tab 2: Vòng Thi */}
+        <button
+          type="button"
+          onClick={() => setActiveSubSection("rounds")}
+          className={`p-4 border transition-all cursor-pointer hud-clipped flex flex-col justify-between gap-2.5 text-left ${
+            activeSubSection === "rounds"
+              ? "bg-[#a855f7] border-[#c084fc] text-white shadow-lg shadow-[#a855f7]/25"
+              : "bg-[var(--bg-panel)] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+              activeSubSection === "rounds" ? "text-purple-200" : "text-zinc-500"
+            }`}>
+              PHÂN KHU 02
+            </span>
+            <span className={`px-2 py-0.5 text-[9px] font-bold uppercase hud-clipped ${
               activeSubSection === "rounds"
-                ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
-                : "bg-[#090e11] text-zinc-400 hover:text-white border border-zinc-800"
-            }`}
-          >
-            <span>02. VÒNG THI ({rounds.length})</span>
-            <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase hud-clipped ${
-              isRoundsComplete
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                ? isRoundsComplete
+                  ? "bg-black/40 text-emerald-300 border border-emerald-400/50"
+                  : "bg-black/40 text-amber-300 border border-amber-400/50"
+                : isRoundsComplete
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                  : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
             }`}>
-              {isRoundsComplete ? "[HOÀN TẤT]" : "[CHƯA CẤU HÌNH]"}
+              {isRoundsComplete ? "● HOÀN TẤT" : "○ CHƯA CẤU HÌNH"}
             </span>
-          </button>
+          </div>
+          <div className="font-bold text-xs uppercase tracking-wide">
+            02. VÒNG THI ({rounds.length})
+          </div>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveSubSection("tracks")}
-            className={`px-4 py-2.5 font-bold uppercase transition-all cursor-pointer hud-clipped text-xs flex items-center gap-2 ${
+        {/* Tab 3: Hạng Mục & Rubric */}
+        <button
+          type="button"
+          onClick={() => setActiveSubSection("tracks")}
+          className={`p-4 border transition-all cursor-pointer hud-clipped flex flex-col justify-between gap-2.5 text-left ${
+            activeSubSection === "tracks"
+              ? "bg-[#a855f7] border-[#c084fc] text-white shadow-lg shadow-[#a855f7]/25"
+              : "bg-[var(--bg-panel)] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+              activeSubSection === "tracks" ? "text-purple-200" : "text-zinc-500"
+            }`}>
+              PHÂN KHU 03
+            </span>
+            <span className={`px-2 py-0.5 text-[9px] font-bold uppercase hud-clipped ${
               activeSubSection === "tracks"
-                ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
-                : "bg-[#090e11] text-zinc-400 hover:text-white border border-zinc-800"
-            }`}
-          >
-            <span>03. HẠNG MỤC ({tracks.length})</span>
-            <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase hud-clipped ${
-              isTracksComplete
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                ? isTracksComplete
+                  ? "bg-black/40 text-emerald-300 border border-emerald-400/50"
+                  : "bg-black/40 text-amber-300 border border-amber-400/50"
+                : isTracksComplete
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                  : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
             }`}>
               {isTracksComplete
-                ? `[${assignedTracksRubricsCount}/${tracks.length} RUBRIC • HOÀN TẤT]`
-                : `[${assignedTracksRubricsCount}/${tracks.length} RUBRIC • CHƯA XONG]`}
+                ? `● ${assignedTracksRubricsCount}/${tracks.length} ĐÃ GÁN`
+                : `○ ${assignedTracksRubricsCount}/${tracks.length} ĐÃ GÁN`}
             </span>
-          </button>
-        </div>
+          </div>
+          <div className="font-bold text-xs uppercase tracking-wide">
+            03. HẠNG MỤC ({tracks.length})
+          </div>
+        </button>
       </div>
 
       {activeSubSection === "general" && (
