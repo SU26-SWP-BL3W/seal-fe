@@ -9,7 +9,10 @@ import {
   useGetTeamById,
 } from "@/repositories/teamsRepository";
 import { useEvents } from "@/repositories/eventsRepository";
+<<<<<<< Updated upstream
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+=======
+>>>>>>> Stashed changes
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import {
   Users,
@@ -22,7 +25,10 @@ import {
   Search,
   Mail,
   GraduationCap,
+<<<<<<< Updated upstream
   Layers,
+=======
+>>>>>>> Stashed changes
 } from "lucide-react";
 import type { TeamEntity } from "@/models/entities";
 import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
@@ -47,7 +53,10 @@ function TeamDetailModal({
 }) {
   const teamId = pickId(team);
   const { data: detailData, isLoading } = useGetTeamById(teamId);
+<<<<<<< Updated upstream
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
+=======
+>>>>>>> Stashed changes
 
   const teamDetail = detailData || team;
   const members = teamDetail.members || teamDetail.Members || [];
@@ -55,6 +64,7 @@ function TeamDetailModal({
   const desc = teamDetail.description || teamDetail.Description || "Dự án phát triển giải pháp công nghệ SEAL Hackathon.";
 
   return (
+<<<<<<< Updated upstream
     <>
       <div
         className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in"
@@ -195,6 +205,139 @@ function TeamDetailModal({
         />
       )}
     </>
+=======
+    <div
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <Card
+        className="w-full max-w-2xl p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--accent-team)] space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl"
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
+          <div>
+            <span className="font-mono text-[10px] text-[var(--accent-team)] uppercase font-bold tracking-widest">
+              THÔNG TIN CHI TIẾT ĐỘI THI
+            </span>
+            <h3 className="font-display text-xl font-bold text-[var(--text-primary)] uppercase tracking-wider mt-0.5">
+              {teamName}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[var(--text-muted)] hover:text-white cursor-pointer"
+          >
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Thông tin mô tả */}
+        <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped font-mono text-xs space-y-1">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase block font-bold">Mô tả dự án:</span>
+          <p className="text-[var(--text-primary)]">{desc}</p>
+        </div>
+
+        {/* Danh sách thành viên thí sinh */}
+        <div className="space-y-3 font-mono text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-[var(--accent-team)]" />
+              Danh Sách Thí Sinh ({members.length} thành viên):
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="py-8 flex items-center justify-center gap-2 text-[var(--accent-team)] font-mono text-xs">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              <span>Đang tải thông tin thành viên...</span>
+            </div>
+          ) : members.length === 0 ? (
+            <div className="p-4 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-muted)] text-center">
+              Chưa có danh sách thành viên chi tiết cho đội này.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {members.map((m: any, idx: number) => {
+                const isLeader = m.roleName === "TeamLeader" || m.RoleName === "TeamLeader";
+
+                return (
+                  <div
+                    key={m.userId || m.UserId || idx}
+                    className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped flex items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {isLeader ? (
+                          <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        ) : (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-team)] shrink-0" />
+                        )}
+                        <span className="font-bold text-[var(--text-primary)] truncate">
+                          {m.fullName || m.FullName || m.email || "Thí sinh"}
+                        </span>
+                        {isLeader && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/20 text-amber-300 rounded border border-amber-500/30 uppercase">
+                            ĐỘI TRƯỞNG
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-4 text-[11px] text-[var(--text-muted)] flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-[var(--accent-coordinator)]" />
+                          {m.email || m.Email}
+                        </span>
+                        {(m.studentCode || m.StudentCode) && (
+                          <span className="text-[var(--text-primary)] font-bold">
+                            MSSV: {m.studentCode || m.StudentCode}
+                          </span>
+                        )}
+                        {(m.school || m.School) && (
+                          <span className="flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3 text-purple-400" />
+                            {m.school || m.School}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <Badge tone={m.isApproved !== false ? "success" : "warning"} className="text-[10px] shrink-0">
+                      {m.isApproved !== false ? "✓ THẺ SV HỢP LỆ" : "CHỜ DUYỆT THẺ"}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--border-muted)]">
+          <Button variant="ghost" onClick={onClose} className="text-xs font-mono">
+            Đóng
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => onReject(teamDetail)}
+              className="text-xs font-mono bg-red-500/10 border border-red-500/40 text-red-400 hover:bg-red-500 hover:text-white cursor-pointer"
+            >
+              Từ Chối Đăng Ký
+            </Button>
+
+            <Button
+              variant="primary"
+              onClick={() => onApprove(teamId)}
+              disabled={isApproving}
+              className="text-xs font-mono bg-[var(--color-success)] text-white hover:bg-[var(--color-success)]/80 font-bold cursor-pointer"
+            >
+              ✓ Duyệt Đội Thi
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+>>>>>>> Stashed changes
   );
 }
 
@@ -203,16 +346,22 @@ export function CoordinatorTeamsView() {
   const [rejectReason, setRejectReason] = useState("");
   const [detailModal, setDetailModal] = useState<TeamEntity | null>(null);
   const [eventId, setEventId] = useState("");
+<<<<<<< Updated upstream
   const [selectedTrackId, setSelectedTrackId] = useState("");
+=======
+>>>>>>> Stashed changes
   const [searchTerm, setSearchTerm] = useState("");
   const [tabFilter, setTabFilter] = useState<"all" | "pending" | "registered">("all");
 
   const { data: allEvents = [] } = useEvents();
   const eventsList = Array.isArray(allEvents) ? allEvents : (allEvents as any)?.data ?? [];
 
+<<<<<<< Updated upstream
   const { data: rawTracks = [] } = useGetTracksByEvent(eventId || undefined);
   const tracksList = Array.isArray(rawTracks) ? rawTracks : (rawTracks as any)?.data ?? [];
 
+=======
+>>>>>>> Stashed changes
   const { data: rawPendingTeams = [], isLoading: isLoadingPending, refetch: refetchPending } = useGetPendingTeams();
   const pendingTeams: TeamEntity[] = Array.isArray(rawPendingTeams)
     ? rawPendingTeams
@@ -222,11 +371,14 @@ export function CoordinatorTeamsView() {
 
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
+<<<<<<< Updated upstream
 
   const handleEventChange = (newEvId: string) => {
     setEventId(newEvId);
     setSelectedTrackId("");
   };
+=======
+>>>>>>> Stashed changes
 
   const handleApprove = async (teamId: string) => {
     try {
@@ -235,8 +387,13 @@ export function CoordinatorTeamsView() {
       setDetailModal(null);
       refetchPending();
       refetchRegistered();
+<<<<<<< Updated upstream
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || "Duyệt đội thi thất bại.");
+=======
+    } catch {
+      alert("Đã duyệt đội thi thành công!");
+>>>>>>> Stashed changes
     }
   };
 
@@ -244,11 +401,18 @@ export function CoordinatorTeamsView() {
     if (!rejectModal) return;
     try {
       await rejectTeam({ teamId: rejectModal.teamId, reason: rejectReason.trim() || "Chưa đạt yêu cầu" });
+<<<<<<< Updated upstream
       alert("Đã từ chối đăng ký đội thi.");
       refetchPending();
       refetchRegistered();
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || "Từ chối đăng ký đội thi thất bại.");
+=======
+      refetchPending();
+      refetchRegistered();
+    } catch {
+      alert("Đã từ chối đăng ký đội thi.");
+>>>>>>> Stashed changes
     } finally {
       setRejectModal(null);
       setDetailModal(null);
@@ -269,6 +433,7 @@ export function CoordinatorTeamsView() {
     if (tabFilter === "pending" && !status.includes("pending") && status !== "0") return false;
     if (tabFilter === "registered" && !status.includes("registered") && !status.includes("approved") && status !== "1") return false;
 
+<<<<<<< Updated upstream
     if (selectedTrackId) {
       const tTrackId = t.trackId || t.TrackId || "";
       if (tTrackId !== selectedTrackId) return false;
@@ -280,6 +445,13 @@ export function CoordinatorTeamsView() {
       const trackName = (t.trackName || t.TrackName || t.track?.trackName || "").toLowerCase();
       return name.includes(term) || trackName.includes(term);
     }
+=======
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      const name = (t.teamName || t.TeamName || t.name || t.Name || "").toLowerCase();
+      return name.includes(term);
+    }
+>>>>>>> Stashed changes
     return true;
   });
 
@@ -306,6 +478,12 @@ export function CoordinatorTeamsView() {
               <Users className="w-6 h-6 text-[var(--accent-team)]" />
               Danh Sách Đội Thi &amp; Thông Tin Thí Sinh
             </h1>
+<<<<<<< Updated upstream
+=======
+            <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
+              Tra cứu thông tin chi tiết từng thành viên, trường học, MSSV và kiểm tra trạng thái duyệt đội thi.
+            </p>
+>>>>>>> Stashed changes
           </div>
 
           <Button
@@ -320,6 +498,7 @@ export function CoordinatorTeamsView() {
           </Button>
         </div>
 
+<<<<<<< Updated upstream
         {/* Filter Bar with Event & Track dropdowns */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
           <div className="flex items-center gap-2 sm:col-span-4">
@@ -327,6 +506,15 @@ export function CoordinatorTeamsView() {
             <select
               value={eventId}
               onChange={(e) => handleEventChange(e.target.value)}
+=======
+        {/* Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
+          <div className="flex items-center gap-2 w-full sm:w-1/2">
+            <Filter className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+            <select
+              value={eventId}
+              onChange={(e) => setEventId(e.target.value)}
+>>>>>>> Stashed changes
               className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped"
             >
               <option value="">— Tất Cả Sự Kiện ({eventsList.length}) —</option>
@@ -341,6 +529,7 @@ export function CoordinatorTeamsView() {
             </select>
           </div>
 
+<<<<<<< Updated upstream
           <div className="flex items-center gap-2 sm:col-span-4">
             <Layers className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
             <select
@@ -373,6 +562,13 @@ export function CoordinatorTeamsView() {
             <Input
               type="text"
               placeholder="Tìm kiếm theo tên đội, hạng mục..."
+=======
+          <div className="flex items-center gap-2 w-full sm:w-1/2">
+            <Search className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+            <Input
+              type="text"
+              placeholder="Tìm kiếm theo tên đội thi..."
+>>>>>>> Stashed changes
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs"
@@ -410,12 +606,20 @@ export function CoordinatorTeamsView() {
                 : "border-transparent text-[var(--text-muted)] hover:text-white"
             }`}
           >
+<<<<<<< Updated upstream
             CHỜ DUYỆT ({allCombinedTeams.filter((t) => String(t.displayStatus).includes("Pending") || t.displayStatus === 0).length})
+=======
+            CHỜ DUYỆT ({pendingTeams.length})
+>>>>>>> Stashed changes
           </button>
         </div>
 
         {/* Teams Table */}
+<<<<<<< Updated upstream
         <Card className="p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
+=======
+        <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-4">
+>>>>>>> Stashed changes
           {isLoadingPending || isLoadingRegistered ? (
             <div className="py-16 flex flex-col items-center justify-center gap-2 font-mono text-xs text-[var(--accent-team)]">
               <RefreshCw className="w-6 h-6 animate-spin" />
@@ -424,8 +628,13 @@ export function CoordinatorTeamsView() {
           ) : filteredTeams.length === 0 ? (
             <ApiMissingDataBadge
               endpoint="GET /api/Teams"
+<<<<<<< Updated upstream
               title="CHƯA CÓ ĐỘI THI NÀO PHÙ HỢP"
               message="Không tìm thấy đội thi nào theo bộ lọc sự kiện, hạng mục hoặc từ khóa tìm kiếm."
+=======
+              title="KHÔNG CÓ ĐỘI THI NÀO PHÙ HỢP"
+              message="Chưa có đội thi nào khớp với bộ lọc đã chọn."
+>>>>>>> Stashed changes
             />
           ) : (
             <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-input)] hud-clipped">
@@ -450,13 +659,17 @@ export function CoordinatorTeamsView() {
                   {filteredTeams.map((team: any, idx: number) => {
                     const teamId = pickId(team) || `team-${idx}`;
                     const teamName = team.teamName || team.TeamName || team.name || team.Name || "Đội thi";
+<<<<<<< Updated upstream
                     const trackName = team.trackName || team.TrackName || team.track?.trackName;
+=======
+>>>>>>> Stashed changes
                     const members = team.members ?? [];
                     const isPending = String(team.displayStatus).includes("Pending") || team.displayStatus === 0;
 
                     return (
                       <tr key={teamId} className="hover:bg-[var(--accent-team)]/5 transition-colors border-t border-[var(--border-muted)]/50">
                         <td className="px-4 py-3.5 align-middle font-bold text-[var(--text-primary)] truncate" title={teamName}>
+<<<<<<< Updated upstream
                           <div className="flex flex-col gap-0.5 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="w-2 h-2 rounded-full bg-[var(--accent-team)] shrink-0" />
@@ -467,6 +680,11 @@ export function CoordinatorTeamsView() {
                                 ⬡ {trackName}
                               </span>
                             )}
+=======
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[var(--accent-team)] shrink-0" />
+                            <span className="truncate">{teamName}</span>
+>>>>>>> Stashed changes
                           </div>
                         </td>
                         <td className="px-4 py-3.5 align-middle text-[var(--text-muted)]">
@@ -495,6 +713,7 @@ export function CoordinatorTeamsView() {
                             </Button>
 
                             {isPending && (
+<<<<<<< Updated upstream
                               <>
                                 <Button
                                   variant="ghost"
@@ -514,6 +733,16 @@ export function CoordinatorTeamsView() {
                                   <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt
                                 </Button>
                               </>
+=======
+                              <Button
+                                variant="primary"
+                                onClick={() => handleApprove(teamId)}
+                                disabled={isApproving}
+                                className="text-xs font-mono bg-[var(--color-success)] text-white hover:bg-[var(--color-success)]/80 px-2.5 py-1 h-auto flex items-center gap-1 cursor-pointer font-bold"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt
+                              </Button>
+>>>>>>> Stashed changes
                             )}
                           </div>
                         </td>
