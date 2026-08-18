@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import { useEvents } from "@/repositories/eventsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import { PagedResult } from "@/models/types";
@@ -14,6 +15,8 @@ import {
   RefreshCw,
   Code2,
   Filter,
+  Layers,
+  Search,
 } from "lucide-react";
 
 export const CoordinatorDashboardView: React.FC = () => {
@@ -21,7 +24,16 @@ export const CoordinatorDashboardView: React.FC = () => {
   const eventsList = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
 
   const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const { data: rawTracks = [] } = useGetTracksByEvent(selectedEventId || undefined);
+  const tracksList = Array.isArray(rawTracks) ? rawTracks : (rawTracks as any)?.data ?? [];
+
+  const handleEventChange = (newEvId: string) => {
+    setSelectedEventId(newEvId);
+    setSelectedTrackId("");
+  };
 
   // Query submissions
   const {
@@ -40,8 +52,13 @@ export const CoordinatorDashboardView: React.FC = () => {
 
   const submissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
 
-  // Filtered submissions by search term
+  // Filtered submissions by track and search term
   const displaySubmissions = submissions.filter((sub: any) => {
+    if (selectedTrackId) {
+      const sTrackId = sub.trackId || sub.TrackId || "";
+      if (sTrackId !== selectedTrackId) return false;
+    }
+
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
     const teamName = (sub.teamName || sub.TeamName || "").toLowerCase();
@@ -50,7 +67,7 @@ export const CoordinatorDashboardView: React.FC = () => {
     return teamName.includes(term) || eventName.includes(term) || trackName.includes(term);
   });
 
-  const uniqueTeamsCount = new Set(submissions.map((s: any) => s.teamId || s.TeamId)).size;
+  const uniqueTeamsCount = new Set(displaySubmissions.map((s: any) => s.teamId || s.TeamId)).size;
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
@@ -93,16 +110,18 @@ export const CoordinatorDashboardView: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
           <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-1">
             <span className="text-[10px] text-[var(--text-muted)] uppercase block">Tổng Số Lượt Nộp Bài</span>
-            <div className="text-2xl font-bold text-[var(--text-primary)]">{submissions.length} Lượt</div>
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{displaySubmissions.length} Lượt</div>
           </Card>
           <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--color-success)]/30 hud-clipped space-y-1">
             <span className="text-[10px] text-[var(--color-success)] uppercase block font-bold">Số Đội Đã Nộp Dự Án</span>
             <div className="text-2xl font-bold text-[var(--color-success)]">{uniqueTeamsCount} Đội</div>
           </Card>
           <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-team)]/30 hud-clipped space-y-1">
-            <span className="text-[10px] text-[var(--accent-team)] uppercase block font-bold">Sự Kiện Đang Theo Dõi</span>
-            <div className="text-2xl font-bold text-[var(--accent-team)]">
-              {selectedEventId
+            <span className="text-[10px] text-[var(--accent-team)] uppercase block font-bold">Phạm Vi Đang Lọc</span>
+            <div className="text-sm font-bold text-[var(--accent-team)] truncate">
+              {selectedTrackId
+                ? tracksList.find((t: any) => (t.id || t.Id || t.trackId || t.TrackId) === selectedTrackId)?.trackName || "1 Hạng Mục"
+                : selectedEventId
                 ? eventsList.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId)?.eventName || "1 Sự Kiện"
                 : `${eventsList.length} Sự Kiện`}
             </div>
@@ -110,12 +129,12 @@ export const CoordinatorDashboardView: React.FC = () => {
         </div>
 
         {/* Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
-          <div className="flex items-center gap-2 w-full sm:w-1/2">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
+          <div className="flex items-center gap-2 sm:col-span-4">
             <Filter className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
             <select
               value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
+              onChange={(e) => handleEventChange(e.target.value)}
               className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped"
             >
               <option value="">— Tất cả sự kiện ({eventsList.length}) —</option>
@@ -131,10 +150,38 @@ export const CoordinatorDashboardView: React.FC = () => {
             </select>
           </div>
 
-          <div className="w-full sm:w-1/2">
+          <div className="flex items-center gap-2 sm:col-span-4">
+            <Layers className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+            <select
+              value={selectedTrackId}
+              onChange={(e) => setSelectedTrackId(e.target.value)}
+              disabled={!selectedEventId || tracksList.length === 0}
+              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">
+                {!selectedEventId
+                  ? "— Chọn Sự Kiện Để Lọc Hạng Mục —"
+                  : tracksList.length === 0
+                  ? "— Sự Kiện Chưa Có Hạng Mục —"
+                  : `— Tất Cả Hạng Mục (${tracksList.length}) —`}
+              </option>
+              {tracksList.map((tr: any) => {
+                const trId = tr.id || tr.Id || tr.trackId || tr.TrackId;
+                const trName = tr.trackName || tr.TrackName || "Hạng mục";
+                return (
+                  <option key={trId} value={trId}>
+                    {trName}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 sm:col-span-4">
+            <Search className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
             <Input
               type="text"
-              placeholder="Tìm kiếm theo tên đội, sự kiện, hạng mục..."
+              placeholder="Tìm kiếm theo tên đội, hạng mục..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs"
