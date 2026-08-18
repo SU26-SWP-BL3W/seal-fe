@@ -7,9 +7,11 @@ import {
   useRejectTeamRegistration,
   useGetTeamsByEvent,
   useGetTeamById,
+  useDisqualifyTeam,
 } from "@/repositories/teamsRepository";
-import { useEvents } from "@/repositories/eventsRepository";
+import { useEvents, useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useAuth } from "@/providers/AuthProvider";
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import {
   Users,
@@ -23,6 +25,7 @@ import {
   Mail,
   GraduationCap,
   Layers,
+  Ban,
 } from "lucide-react";
 import type { TeamEntity } from "@/models/entities";
 import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
@@ -75,7 +78,7 @@ function TeamDetailModal({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 border border-[var(--border-muted)] hover:border-white text-[var(--text-muted)] hover:text-white rounded cursor-pointer"
+              className="p-1.5 border border-[var(--border-muted)] hover:border-white text-[var(--text-muted)] hover:text-white rounded cursor-pointer font-mono"
             >
               ✕
             </button>
@@ -83,29 +86,30 @@ function TeamDetailModal({
 
           {/* Project Abstract */}
           <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1">
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase block">
+            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase block font-bold">
               Mô tả đề tài / Giải pháp dự thi:
             </span>
-            <p className="text-xs text-[var(--text-primary)] leading-relaxed">{desc}</p>
+            <p className="text-xs text-[var(--text-primary)] leading-relaxed font-mono">{desc}</p>
           </div>
 
           {/* Members List */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[var(--text-primary)] uppercase">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-[var(--accent-team)]" />
                 DANH SÁCH THÀNH VIÊN ({members.length})
               </span>
-              <span className="font-mono text-[10px] text-[var(--text-muted)]">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 Bấm vào thành viên để kiểm tra Thẻ SV
               </span>
             </div>
 
             {isLoading ? (
               <div className="p-6 text-center font-mono text-xs text-[var(--text-muted)] animate-pulse">
-                Đang nạp dữ liệu thành viên từ Backend...
+                Đang nạp dữ liệu thành viên...
               </div>
             ) : members.length === 0 ? (
-              <div className="p-4 text-center font-mono text-xs text-zinc-500 bg-[var(--bg-input)] border border-[var(--border-muted)]">
+              <div className="p-4 text-center font-mono text-xs text-[var(--text-muted)] bg-[var(--bg-input)] border border-[var(--border-muted)]">
                 Chưa có dữ liệu thành viên
               </div>
             ) : (
@@ -143,12 +147,15 @@ function TeamDetailModal({
                           </span>
                         )}
                       </div>
+
                       <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-1 truncate">
-                        <Mail className="w-3 h-3 shrink-0" /> {uEmail}
+                        <Mail className="w-3 h-3 shrink-0 text-[var(--accent-coordinator)]" /> {uEmail}
                       </div>
                       <div className="text-[10px] text-[var(--text-muted)] flex items-center justify-between pt-1 border-t border-[var(--border-muted)]/50">
-                        <span className="truncate">{uSchool}</span>
-                        <span className="text-[var(--accent-team)] font-bold">{uCode}</span>
+                        <span className="truncate flex items-center gap-1">
+                          <GraduationCap className="w-3 h-3 text-purple-400" /> {uSchool}
+                        </span>
+                        <span className="text-[var(--accent-team)] font-bold">MSSV: {uCode}</span>
                       </div>
                     </div>
                   );
@@ -159,7 +166,7 @@ function TeamDetailModal({
 
           {/* Actions Bottom */}
           <div className="flex items-center justify-end gap-3 border-t border-[var(--border-muted)] pt-4 font-mono text-xs">
-            <Button variant="ghost" onClick={onClose} className="border border-[var(--border-muted)]">
+            <Button variant="ghost" onClick={onClose} className="border border-[var(--border-muted)] font-mono text-xs cursor-pointer">
               Đóng
             </Button>
             {String(team.displayStatus).includes("Pending") && (
@@ -167,7 +174,7 @@ function TeamDetailModal({
                 <Button
                   variant="ghost"
                   onClick={() => onReject(team)}
-                  className="border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
+                  className="border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 font-mono text-xs cursor-pointer"
                 >
                   <XCircle className="w-3.5 h-3.5" /> Từ Chối
                 </Button>
@@ -175,7 +182,7 @@ function TeamDetailModal({
                   variant="primary"
                   onClick={() => onApprove(teamId)}
                   disabled={isApproving}
-                  className="bg-[var(--color-success)] text-black font-bold hover:bg-emerald-400"
+                  className="bg-[var(--color-success)] text-white font-bold hover:bg-[var(--color-success)]/80 font-mono text-xs cursor-pointer"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt Đội Thi
                 </Button>
@@ -200,16 +207,23 @@ function TeamDetailModal({
 }
 
 export function CoordinatorTeamsView() {
+  const { user: currentUser } = useAuth();
   const [rejectModal, setRejectModal] = useState<{ teamId: string; teamName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [disqualifyModal, setDisqualifyModal] = useState<{ teamId: string; teamName: string } | null>(null);
+  const [disqualifyReason, setDisqualifyReason] = useState("");
   const [detailModal, setDetailModal] = useState<TeamEntity | null>(null);
   const [eventId, setEventId] = useState("");
   const [selectedTrackId, setSelectedTrackId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [tabFilter, setTabFilter] = useState<"all" | "pending" | "registered">("all");
 
-  const { data: allEvents = [] } = useEvents();
-  const eventsList = Array.isArray(allEvents) ? allEvents : (allEvents as any)?.data ?? [];
+  const { data: myEvents = [] } = useMyEvents();
+  const { data: rawAllEvents = [] } = useEvents();
+  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allEvents
+    : myEvents;
 
   const { data: rawTracks = [] } = useGetTracksByEvent(eventId || undefined);
   const tracksList = Array.isArray(rawTracks) ? rawTracks : (rawTracks as any)?.data ?? [];
@@ -223,6 +237,7 @@ export function CoordinatorTeamsView() {
 
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
+  const { mutateAsync: disqualifyTeam, isPending: isDisqualifying } = useDisqualifyTeam();
 
   const handleEventChange = (newEvId: string) => {
     setEventId(newEvId);
@@ -254,6 +269,22 @@ export function CoordinatorTeamsView() {
       setRejectModal(null);
       setDetailModal(null);
       setRejectReason("");
+    }
+  };
+
+  const handleDisqualify = async () => {
+    if (!disqualifyModal || !disqualifyReason.trim()) return;
+    try {
+      await disqualifyTeam({ teamId: disqualifyModal.teamId, reason: disqualifyReason.trim() });
+      alert("Đã loại đội thi khỏi giải.");
+      refetchPending();
+      refetchRegistered();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Loại đội thi thất bại.");
+    } finally {
+      setDisqualifyModal(null);
+      setDetailModal(null);
+      setDisqualifyReason("");
     }
   };
 
@@ -454,6 +485,7 @@ export function CoordinatorTeamsView() {
                     const trackName = team.trackName || team.TrackName || team.track?.trackName;
                     const members = team.members ?? [];
                     const isPending = String(team.displayStatus).includes("Pending") || team.displayStatus === 0;
+                    const isDisqualified = String(team.displayStatus).includes("Disqualified") || team.displayStatus === 2;
 
                     return (
                       <tr key={teamId} className="hover:bg-[var(--accent-team)]/5 transition-colors border-t border-[var(--border-muted)]/50">
@@ -476,12 +508,14 @@ export function CoordinatorTeamsView() {
                         <td className="px-4 py-3.5 align-middle">
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded ${
-                              !isPending
+                              isDisqualified
+                                ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
+                                : !isPending
                                 ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] border border-[var(--color-success)]/30"
                                 : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
                             }`}
                           >
-                            {!isPending ? "✓ ĐÃ DUYỆT" : "● CHỜ DUYỆT"}
+                            {isDisqualified ? "✗ BỊ LOẠI" : !isPending ? "✓ ĐÃ DUYỆT" : "● CHỜ DUYỆT"}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 align-middle text-right">
@@ -515,6 +549,17 @@ export function CoordinatorTeamsView() {
                                   <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt
                                 </Button>
                               </>
+                            )}
+
+                            {!isPending && !isDisqualified && (
+                              <Button
+                                variant="ghost"
+                                onClick={() => setDisqualifyModal({ teamId, teamName })}
+                                className="text-xs font-mono border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 px-2.5 py-1 h-auto flex items-center gap-1 cursor-pointer"
+                                title="Loại đội thi khỏi giải vì vi phạm quy chế"
+                              >
+                                <Ban className="w-3.5 h-3.5" /> Loại Đội
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -578,6 +623,48 @@ export function CoordinatorTeamsView() {
                   className="text-xs font-mono bg-[var(--color-danger)] text-white font-bold cursor-pointer"
                 >
                   Xác Nhận Từ Chối
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Modal Loại Đội */}
+        {disqualifyModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+            <Card className="w-full max-w-md p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)] space-y-4 shadow-2xl">
+              <div className="flex items-center gap-2 text-[var(--color-danger)]">
+                <Ban className="w-5 h-5" />
+                <h3 className="font-display text-base font-bold uppercase">
+                  Loại Đội Thi — {disqualifyModal.teamName}
+                </h3>
+              </div>
+
+              <p className="font-mono text-xs text-[var(--text-muted)]">
+                Đội sẽ bị loại khỏi giải, mọi bài nộp hiện có bị vô hiệu hoá và không thể nộp bài mới. Hành động này chỉ áp dụng cho đội đang ở trạng thái Đã Duyệt và không thể tự hoàn tác.
+              </p>
+
+              <div className="space-y-1.5 font-mono text-xs">
+                <label className="text-[10px] text-[var(--text-muted)] uppercase">Lý do loại đội (bắt buộc):</label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Vi phạm quy chế thi, gian lận bài nộp..."
+                  value={disqualifyReason}
+                  onChange={(e) => setDisqualifyReason(e.target.value)}
+                  className="w-full text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-muted)]">
+                <Button variant="ghost" onClick={() => setDisqualifyModal(null)} className="text-xs font-mono">
+                  Hủy Bỏ
+                </Button>
+                <Button
+                  onClick={handleDisqualify}
+                  disabled={isDisqualifying || !disqualifyReason.trim()}
+                  className="text-xs font-mono bg-[var(--color-danger)] text-white font-bold cursor-pointer"
+                >
+                  Xác Nhận Loại Đội
                 </Button>
               </div>
             </Card>
