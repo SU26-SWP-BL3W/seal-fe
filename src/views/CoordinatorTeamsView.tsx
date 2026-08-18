@@ -7,6 +7,7 @@ import {
   useRejectTeamRegistration,
   useGetTeamsByEvent,
   useGetTeamById,
+  useDisqualifyTeam,
 } from "@/repositories/teamsRepository";
 import { useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
@@ -23,6 +24,7 @@ import {
   Mail,
   GraduationCap,
   Layers,
+  Ban,
 } from "lucide-react";
 import type { TeamEntity } from "@/models/entities";
 import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
@@ -202,6 +204,8 @@ function TeamDetailModal({
 export function CoordinatorTeamsView() {
   const [rejectModal, setRejectModal] = useState<{ teamId: string; teamName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [disqualifyModal, setDisqualifyModal] = useState<{ teamId: string; teamName: string } | null>(null);
+  const [disqualifyReason, setDisqualifyReason] = useState("");
   const [detailModal, setDetailModal] = useState<TeamEntity | null>(null);
   const [eventId, setEventId] = useState("");
   const [selectedTrackId, setSelectedTrackId] = useState("");
@@ -223,6 +227,7 @@ export function CoordinatorTeamsView() {
 
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
+  const { mutateAsync: disqualifyTeam, isPending: isDisqualifying } = useDisqualifyTeam();
 
   const handleEventChange = (newEvId: string) => {
     setEventId(newEvId);
@@ -254,6 +259,22 @@ export function CoordinatorTeamsView() {
       setRejectModal(null);
       setDetailModal(null);
       setRejectReason("");
+    }
+  };
+
+  const handleDisqualify = async () => {
+    if (!disqualifyModal || !disqualifyReason.trim()) return;
+    try {
+      await disqualifyTeam({ teamId: disqualifyModal.teamId, reason: disqualifyReason.trim() });
+      alert("Đã loại đội thi khỏi giải.");
+      refetchPending();
+      refetchRegistered();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Loại đội thi thất bại.");
+    } finally {
+      setDisqualifyModal(null);
+      setDetailModal(null);
+      setDisqualifyReason("");
     }
   };
 
@@ -454,6 +475,7 @@ export function CoordinatorTeamsView() {
                     const trackName = team.trackName || team.TrackName || team.track?.trackName;
                     const members = team.members ?? [];
                     const isPending = String(team.displayStatus).includes("Pending") || team.displayStatus === 0;
+                    const isDisqualified = String(team.displayStatus).includes("Disqualified") || team.displayStatus === 2;
 
                     return (
                       <tr key={teamId} className="hover:bg-[var(--accent-team)]/5 transition-colors border-t border-[var(--border-muted)]/50">
@@ -476,12 +498,14 @@ export function CoordinatorTeamsView() {
                         <td className="px-4 py-3.5 align-middle">
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded ${
-                              !isPending
+                              isDisqualified
+                                ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
+                                : !isPending
                                 ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] border border-[var(--color-success)]/30"
                                 : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
                             }`}
                           >
-                            {!isPending ? "✓ ĐÃ DUYỆT" : "● CHỜ DUYỆT"}
+                            {isDisqualified ? "✗ BỊ LOẠI" : !isPending ? "✓ ĐÃ DUYỆT" : "● CHỜ DUYỆT"}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 align-middle text-right">
@@ -515,6 +539,17 @@ export function CoordinatorTeamsView() {
                                   <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt
                                 </Button>
                               </>
+                            )}
+
+                            {!isPending && !isDisqualified && (
+                              <Button
+                                variant="ghost"
+                                onClick={() => setDisqualifyModal({ teamId, teamName })}
+                                className="text-xs font-mono border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 px-2.5 py-1 h-auto flex items-center gap-1 cursor-pointer"
+                                title="Loại đội thi khỏi giải vì vi phạm quy chế"
+                              >
+                                <Ban className="w-3.5 h-3.5" /> Loại Đội
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -578,6 +613,48 @@ export function CoordinatorTeamsView() {
                   className="text-xs font-mono bg-[var(--color-danger)] text-white font-bold cursor-pointer"
                 >
                   Xác Nhận Từ Chối
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Modal Loại Đội */}
+        {disqualifyModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+            <Card className="w-full max-w-md p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)] space-y-4 shadow-2xl">
+              <div className="flex items-center gap-2 text-[var(--color-danger)]">
+                <Ban className="w-5 h-5" />
+                <h3 className="font-display text-base font-bold uppercase">
+                  Loại Đội Thi — {disqualifyModal.teamName}
+                </h3>
+              </div>
+
+              <p className="font-mono text-xs text-[var(--text-muted)]">
+                Đội sẽ bị loại khỏi giải, mọi bài nộp hiện có bị vô hiệu hoá và không thể nộp bài mới. Hành động này chỉ áp dụng cho đội đang ở trạng thái Đã Duyệt và không thể tự hoàn tác.
+              </p>
+
+              <div className="space-y-1.5 font-mono text-xs">
+                <label className="text-[10px] text-[var(--text-muted)] uppercase">Lý do loại đội (bắt buộc):</label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Vi phạm quy chế thi, gian lận bài nộp..."
+                  value={disqualifyReason}
+                  onChange={(e) => setDisqualifyReason(e.target.value)}
+                  className="w-full text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-muted)]">
+                <Button variant="ghost" onClick={() => setDisqualifyModal(null)} className="text-xs font-mono">
+                  Hủy Bỏ
+                </Button>
+                <Button
+                  onClick={handleDisqualify}
+                  disabled={isDisqualifying || !disqualifyReason.trim()}
+                  className="text-xs font-mono bg-[var(--color-danger)] text-white font-bold cursor-pointer"
+                >
+                  Xác Nhận Loại Đội
                 </Button>
               </div>
             </Card>

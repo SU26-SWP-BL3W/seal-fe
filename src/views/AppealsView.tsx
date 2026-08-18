@@ -6,7 +6,7 @@ import { useMyTeam } from "@/repositories/teamsRepository";
 import { useMySubmissions } from "@/repositories/submitResultsRepository";
 import {
   useGetAppealsByTeam,
-  useGetAssignedAppeals,
+  useGetAppealsByEvent,
   useCreateAppeal,
   useRespondAppeal,
   readApiError,
@@ -57,18 +57,17 @@ export function AppealsView() {
   const roleName = pick(activeRole, "roleName", "RoleName");
   const isLeader = roleName === "TeamLeader";
   const isEC = roleName === "EventCoordinator" || roleName === "Coordinator" || Boolean(user?.isAdmin || user?.IsAdmin);
-  const eventRoleId = pick(activeRole, "eventRoleId", "EventRoleId", "id", "Id");
   const eventIdFromRole = pick(activeRole, "eventId", "EventId");
 
-  // Team members: đơn phúc khảo của đội mình. EC/staff: đơn được phân công xử lý.
+  // Team members: đơn phúc khảo của đội mình. EC: toàn bộ đơn trong sự kiện (gộp mọi vòng thi).
   const { data: myTeam } = useMyTeam(eventIdFromRole || undefined);
   const teamId = pick(myTeam, "id", "Id", "TeamId");
   const { data: mySubmissions = [] } = useMySubmissions();
 
   const teamAppeals = useGetAppealsByTeam(!isEC ? teamId || undefined : undefined);
-  const assignedAppeals = useGetAssignedAppeals(isEC ? eventRoleId || undefined : undefined);
+  const eventAppeals = useGetAppealsByEvent(isEC ? eventIdFromRole || undefined : undefined);
 
-  const { data: appealsRaw, isLoading, refetch } = isEC ? assignedAppeals : teamAppeals;
+  const { data: appealsRaw, isLoading, refetch } = isEC ? eventAppeals : teamAppeals;
   const appeals: Appeal[] = Array.isArray(appealsRaw) ? appealsRaw : ((appealsRaw as any)?.data ?? []);
 
   const { mutateAsync: createAppeal, isPending: isSubmitting } = useCreateAppeal();

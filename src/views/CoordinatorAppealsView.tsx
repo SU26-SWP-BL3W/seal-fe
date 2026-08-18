@@ -1,44 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import apiClient from "@/models/apiClient";
-import { appealsRepository, AppealStatus, type Appeal } from "@/repositories/appealsRepository";
+import { appealsRepository, AppealStatus, useGetAppealsByEvent } from "@/repositories/appealsRepository";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
 import { Check, X, AlertCircle, CheckCircle2, UserPlus, Filter, ChevronDown } from "lucide-react";
-
-/** Không có endpoint "GET đơn phúc khảo theo sự kiện" — gom từ tất cả vòng thi của sự kiện đang chọn. */
-function useAppealsByEvent(eventId: string | undefined) {
-  return useQuery({
-    queryKey: ["appealsByEvent", eventId],
-    queryFn: async (): Promise<Appeal[]> => {
-      const roundsRes = await apiClient.get<any>("/Rounds/event", {
-        params: { EventId: eventId, PageSize: 100 },
-      });
-      const rounds: any[] = Array.isArray(roundsRes.data?.data)
-        ? roundsRes.data.data
-        : Array.isArray(roundsRes.data)
-          ? roundsRes.data
-          : [];
-
-      const perRound = await Promise.all(
-        rounds.map(async (r) => {
-          const roundId = r.id || r.Id;
-          if (!roundId) return [];
-          const res = await apiClient.get<any>(`/Appeals/round/${roundId}`, {
-            params: { PageSize: 200 },
-          });
-          return Array.isArray(res.data?.data) ? res.data.data : [];
-        }),
-      );
-      return perRound.flat();
-    },
-    enabled: !!eventId,
-  });
-}
 
 export const CoordinatorAppealsView: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -59,7 +27,7 @@ export const CoordinatorAppealsView: React.FC = () => {
     }
   }, [eventsList, selectedEventId]);
 
-  const { data: appeals = [], isLoading, refetch } = useAppealsByEvent(selectedEventId);
+  const { data: appeals = [], isLoading, refetch } = useGetAppealsByEvent(selectedEventId);
   const { data: teams = [] } = useGetTeamsByEvent(selectedEventId);
   const { data: tracks = [] } = useGetTracksByEvent(selectedEventId);
 
