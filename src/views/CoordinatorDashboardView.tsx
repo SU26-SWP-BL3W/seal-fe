@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Link } from "@/i18n/routing";
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import { useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
@@ -8,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import { PagedResult } from "@/models/types";
 import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
+import { AdminMonitoringBanner } from "@/components/domain/AdminMonitoringBanner";
 import {
   FileCode,
   Globe,
@@ -20,15 +23,29 @@ import {
 } from "lucide-react";
 
 export const CoordinatorDashboardView: React.FC = () => {
+  const searchParams = useSearchParams();
+  const queryEventId = searchParams.get("eventId") || "";
+
   const { data: rawEvents = [] } = useEvents();
   const eventsList = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
 
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId);
   const [selectedTrackId, setSelectedTrackId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
+  useEffect(() => {
+    if (queryEventId && queryEventId !== selectedEventId) {
+      setSelectedEventId(queryEventId);
+    }
+  }, [queryEventId]);
+
   const { data: rawTracks = [] } = useGetTracksByEvent(selectedEventId || undefined);
   const tracksList = Array.isArray(rawTracks) ? rawTracks : (rawTracks as any)?.data ?? [];
+
+  const selectedEventObj = eventsList.find(
+    (e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId
+  );
+  const selectedEventName = selectedEventObj?.eventName || selectedEventObj?.EventName || "";
 
   const handleEventChange = (newEvId: string) => {
     setSelectedEventId(newEvId);
@@ -71,12 +88,32 @@ export const CoordinatorDashboardView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
+      {/* Banner Giám sát nổi bật khi Admin truy cập */}
+      <AdminMonitoringBanner
+        eventId={selectedEventId || undefined}
+        eventName={selectedEventName || undefined}
+      />
+
       <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
-        {/* Breadcrumb Navigation */}
+        {/* Breadcrumb Navigation with Back Links */}
         <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase">
-          <span className="text-[var(--color-danger)] font-bold">SEAL SYSTEM</span>
+          <Link href="/admin/events" className="text-[var(--color-danger)] font-bold hover:underline">
+            SEAL ADMIN
+          </Link>
           <span>&gt;</span>
-          <span className="text-[var(--text-primary)] font-bold">TỔNG HỢP BÀI THI &amp; SUBMISSIONS</span>
+          <Link href="/admin/events" className="text-[var(--text-muted)] hover:text-white transition-colors">
+            QUẢN LÝ SỰ KIỆN
+          </Link>
+          {selectedEventId && (
+            <>
+              <span>&gt;</span>
+              <Link href={`/admin/events/${selectedEventId}`} className="text-red-400 hover:text-white transition-colors truncate max-w-xs">
+                {selectedEventName || selectedEventId}
+              </Link>
+            </>
+          )}
+          <span>&gt;</span>
+          <span className="text-[var(--text-primary)] font-bold">GIÁM SÁT BÀI THI &amp; SUBMISSIONS</span>
         </div>
 
         {/* Page Header */}

@@ -1,35 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Card, Badge, Table, Input } from "@/components/ui";
-import type { EventItem } from "@/viewModels/eventsMetadata";
-import type { User } from "@/models/entities";
-import { staffRepository } from "@/repositories/staffRepository";
+import React from "react";
+import { Button, Card, Badge, ApiMissingDataBadge } from "@/components/ui";
 import {
-  ShieldAlert,
+  Shield,
   Plus,
   Users,
   School,
   Activity,
   ArrowRight,
-  Shield,
   UserCheck,
-  X,
-  CheckCircle2,
-  Edit,
+  Calendar,
   ExternalLink,
   RefreshCw,
+  Building2,
+  Sliders,
+  Eye,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
-
 import { useEvents } from "@/repositories/eventsRepository";
-import { usersRepository, useGetUsers } from "@/repositories/usersRepository";
+import { useGetUsers } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
 import { useGetAllEventsCoordinators } from "@/repositories/staffRepository";
-import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
-import { AdminCoordinatorModal } from "@/components/domain/AdminCoordinatorModal";
-
-import { ApiMissingDataBadge } from "@/components/ui";
 
 function HudLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -39,29 +31,21 @@ function HudLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2 pb-3 border-b border-[var(--border-muted)]">
-      <span className="w-1.5 h-4 bg-[var(--color-danger)] inline-block" aria-hidden="true" />
-      <h2 className="font-mono text-sm font-bold text-[var(--text-primary)] tracking-widest uppercase">
-        {children}
-      </h2>
-    </div>
-  );
+function pickId(ev: any): string {
+  return ev?.id || ev?.Id || ev?.eventId || ev?.EventId || "";
 }
 
-export const AdminDashboardView: React.FC = () => {
+export function AdminDashboardView() {
   const { data: rawEvents = [], isLoading: isLoadingEvents, refetch: refetchEvents } = useEvents();
-  const realEvents = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
-  const displayEvents = realEvents;
+  const realEvents: any[] = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
 
-  const { data: ecMap = {}, refetch: refetchEcs } = useGetAllEventsCoordinators(displayEvents);
+  const { data: ecMap = {}, refetch: refetchEcs } = useGetAllEventsCoordinators(realEvents);
 
-  const { data: rawUsersData } = useGetUsers({ pageSize: 500 });
+  const { data: rawUsersData, refetch: refetchUsers } = useGetUsers({ pageSize: 500 });
   const usersList = rawUsersData?.data ?? [];
   const totalUsersCount = rawUsersData?.totalItems ?? usersList.length;
 
-  const { data: schoolsList = [] } = useGetSchools();
+  const { data: schoolsList = [], refetch: refetchSchools } = useGetSchools();
   const totalSchoolsCount = schoolsList.length;
 
   const availableCoordinators = usersList.filter((u: any) => {
@@ -70,7 +54,6 @@ export const AdminDashboardView: React.FC = () => {
     const isAdmin = Boolean(u.isAdmin || u.IsAdmin || em.includes("admin") || role.includes("admin"));
     if (isAdmin) return false;
 
-    // Sinh viên / Thí sinh không được phép gán làm EC
     const isStudent = Boolean(u.isStudent || u.IsStudent || u.studentCode || u.StudentCode);
     if (isStudent) return false;
 
@@ -87,260 +70,273 @@ export const AdminDashboardView: React.FC = () => {
 
   const ecCount = availableCoordinators.length;
 
-  const [editingEvent, setEditingEvent] = useState<any | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const handleRefreshAll = () => {
+    refetchEvents();
+    refetchEcs();
+    refetchUsers();
+    refetchSchools();
+  };
+
+  const recentEvents = realEvents.slice(0, 4);
+
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
-      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase">
-          <span className="text-[var(--color-danger)] font-bold">ADMIN // EXECUTIVE CONTROL</span>
+        <div className="flex items-center gap-2 font-mono text-[10px] text-zinc-500 tracking-widest uppercase">
+          <span className="text-red-400 font-bold">ADMIN // EXECUTIVE CONTROL</span>
           <span>&gt;</span>
-          <span className="text-[var(--text-primary)] font-bold">BẢNG ĐIỀU HÀNH TỔNG QUAN</span>
+          <span className="text-zinc-300 font-bold">BẢNG ĐIỀU HÀNH TỔNG QUAN</span>
         </div>
 
         {/* Admin Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
           <div>
-            <HudLabel>// SYSTEM ADMIN OPERATIONS HUB</HudLabel>
-            <h1 className="font-display font-bold text-3xl text-[var(--color-danger)] uppercase tracking-wider mt-1 flex items-center gap-2.5">
-              <Shield className="w-7 h-7 text-[var(--color-danger)]" />
+            <div className="font-mono text-[11px] text-amber-400 uppercase tracking-wider mb-1">
+              SYSTEM ADMIN OPERATIONS HUB
+            </div>
+            <h1 className="font-display font-bold text-2xl md:text-3xl text-white uppercase tracking-wider flex items-center gap-2.5">
+              <Shield className="w-7 h-7 text-red-500" />
               Bảng Điều Hành Admin Tổng
             </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-              Trung tâm chỉ huy tối cao: Giám sát toàn hệ thống, khởi tạo sự kiện & chỉ định Event Coordinator.
+            <p className="text-xs font-mono text-zinc-400 mt-1">
+              Trung tâm chỉ huy tối cao: Giám sát toàn hệ thống, quản trị tài khoản, danh mục trường &amp; quản lý sự kiện.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 self-start md:self-auto">
-            <Button
-              variant="ghost"
-              onClick={() => refetchEvents()}
-              className="hud-clipped font-mono text-xs border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer text-zinc-300 hover:text-white"
+          <div className="flex items-center gap-2.5 self-start md:self-auto">
+            <button
+              onClick={handleRefreshAll}
+              className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white font-mono text-xs uppercase transition-colors rounded cursor-pointer flex items-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Làm Mới
-            </Button>
+            </button>
             <Link href="/admin/events/new">
-              <Button variant="primary" className="hud-clipped flex items-center gap-2 bg-[var(--color-danger)] text-white hover:bg-white hover:text-[var(--bg-base)] font-mono text-xs font-bold shadow-lg shadow-[var(--color-danger)]/20 transition-all duration-200 cursor-pointer">
+              <button
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold uppercase transition-all shadow-md shadow-red-950/40 rounded cursor-pointer flex items-center gap-2"
+              >
                 <Plus className="w-4 h-4" /> Tạo Sự Kiện Mới
-              </Button>
+              </button>
             </Link>
           </div>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-5 space-y-2 border-l-4 border-l-[var(--color-danger)] bg-[var(--bg-panel)] hud-clipped hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[var(--color-danger)]/10 transition-all duration-200 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--color-danger)]/5 rounded-full blur-xl pointer-events-none group-hover:bg-[var(--color-danger)]/10 transition-colors" />
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
-              Tổng Sự Kiện Hệ Thống
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-3xl text-[var(--color-danger)]">
-                {displayEvents.length}
+        {/* 4 KPI Metrics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+          <Link href="/admin/events" className="block group">
+            <div className="p-5 bg-[#0f171c] border border-zinc-800 hover:border-red-500/50 hover:bg-[#141f23] transition-all rounded space-y-2 relative overflow-hidden h-full">
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                TỔNG SỰ KIỆN HỆ THỐNG
               </span>
-              <Shield className="w-5 h-5 text-[var(--color-danger)] opacity-70 group-hover:scale-110 transition-transform" />
+              <div className="flex items-baseline justify-between">
+                <span className="font-bold text-3xl text-red-400">
+                  {realEvents.length}
+                </span>
+                <Calendar className="w-5 h-5 text-red-500/70 group-hover:scale-110 transition-transform" />
+              </div>
+              <span className="text-[10px] text-zinc-500 group-hover:text-red-400 flex items-center gap-1 pt-1 transition-colors">
+                Xem tất cả sự kiện <ArrowRight className="w-3 h-3" />
+              </span>
             </div>
-            <span className="font-mono text-[10px] text-[var(--color-success)] flex items-center gap-1.5 pt-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse" />
-              {displayEvents.length} Sự kiện đang vận hành
-            </span>
-          </Card>
+          </Link>
 
-          <Card className="p-5 space-y-2 border-l-4 border-l-[var(--accent-coordinator)] bg-[var(--bg-panel)] hud-clipped hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[var(--accent-coordinator)]/10 transition-all duration-200 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--accent-coordinator)]/5 rounded-full blur-xl pointer-events-none group-hover:bg-[var(--accent-coordinator)]/10 transition-colors" />
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
-              Event Coordinators (EC)
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-3xl text-[var(--accent-coordinator)]">
-                {ecCount}
+          <Link href="/admin/events/coordinators" className="block group">
+            <div className="p-5 bg-[#0f171c] border border-zinc-800 hover:border-red-500/50 hover:bg-[#141f23] transition-all rounded space-y-2 relative overflow-hidden h-full">
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                EVENT COORDINATORS (EC)
               </span>
-              <Users className="w-5 h-5 text-[var(--accent-coordinator)] opacity-70 group-hover:scale-110 transition-transform" />
+              <div className="flex items-baseline justify-between">
+                <span className="font-bold text-3xl text-red-400">
+                  {ecCount}
+                </span>
+                <UserCheck className="w-5 h-5 text-red-500/70 group-hover:scale-110 transition-transform" />
+              </div>
+              <span className="text-[10px] text-zinc-500 group-hover:text-red-400 flex items-center gap-1 pt-1 transition-colors">
+                Phân công điều phối <ArrowRight className="w-3 h-3" />
+              </span>
             </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)] flex items-center gap-1.5 pt-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-coordinator)]" />
-              Tài khoản điều phối sự kiện
-            </span>
-          </Card>
+          </Link>
 
-          <Card className="p-5 space-y-2 border-l-4 border-l-[var(--accent-judge)] bg-[var(--bg-panel)] hud-clipped hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[var(--accent-judge)]/10 transition-all duration-200 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--accent-judge)]/5 rounded-full blur-xl pointer-events-none group-hover:bg-[var(--accent-judge)]/10 transition-colors" />
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
-              Tổng Người Dùng Hệ Thống
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-3xl text-[var(--accent-judge)]">
-                {totalUsersCount}
+          <Link href="/admin/users" className="block group">
+            <div className="p-5 bg-[#0f171c] border border-zinc-800 hover:border-red-500/50 hover:bg-[#141f23] transition-all rounded space-y-2 relative overflow-hidden h-full">
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                TỔNG NGƯỜI DÙNG
               </span>
-              <Activity className="w-5 h-5 text-[var(--accent-judge)] opacity-70 group-hover:scale-110 transition-transform" />
+              <div className="flex items-baseline justify-between">
+                <span className="font-bold text-3xl text-red-400">
+                  {totalUsersCount}
+                </span>
+                <Users className="w-5 h-5 text-red-500/70 group-hover:scale-110 transition-transform" />
+              </div>
+              <span className="text-[10px] text-zinc-500 group-hover:text-red-400 flex items-center gap-1 pt-1 transition-colors">
+                Quản lý tài khoản <ArrowRight className="w-3 h-3" />
+              </span>
             </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)] flex items-center gap-1.5 pt-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-judge)]" />
-              Sinh viên, Giám khảo & Cố vấn
-            </span>
-          </Card>
+          </Link>
 
-          <Card className="p-5 space-y-2 border-l-4 border-l-[#2dd4bf] bg-[var(--bg-panel)] hud-clipped hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#2dd4bf]/10 transition-all duration-200 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-[#2dd4bf]/5 rounded-full blur-xl pointer-events-none group-hover:bg-[#2dd4bf]/10 transition-colors" />
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
-              Trường Đại Học Đối Tác
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-3xl text-[#2dd4bf]">
-                {totalSchoolsCount}
+          <Link href="/admin/schools" className="block group">
+            <div className="p-5 bg-[#0f171c] border border-zinc-800 hover:border-red-500/50 hover:bg-[#141f23] transition-all rounded space-y-2 relative overflow-hidden h-full">
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                TRƯỜNG ĐẠI HỌC ĐỐI TÁC
               </span>
-              <School className="w-5 h-5 text-[#2dd4bf] opacity-70 group-hover:scale-110 transition-transform" />
+              <div className="flex items-baseline justify-between">
+                <span className="font-bold text-3xl text-red-400">
+                  {totalSchoolsCount}
+                </span>
+                <School className="w-5 h-5 text-red-500/70 group-hover:scale-110 transition-transform" />
+              </div>
+              <span className="text-[10px] text-zinc-500 group-hover:text-red-400 flex items-center gap-1 pt-1 transition-colors">
+                Danh mục trường ĐH <ArrowRight className="w-3 h-3" />
+              </span>
             </div>
-            <span className="font-mono text-[10px] text-[var(--text-muted)] flex items-center gap-1.5 pt-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2dd4bf]" />
-              Danh mục trường đại học đối tác
-            </span>
-          </Card>
+          </Link>
         </div>
 
-        {/* All Events Admin Table */}
-        <Card className="p-6 space-y-4 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
-          <div className="flex items-center justify-between">
-            <SectionTitle>DANH SÁCH TẤT CẢ SỰ KIỆN TRONG HỆ THỐNG ({displayEvents.length})</SectionTitle>
-            <button
-              type="button"
-              onClick={() => {
-                refetchEvents();
-                refetchEcs();
-              }}
-              className="text-xs font-mono text-[var(--text-muted)] hover:text-white flex items-center gap-1.5 px-3 py-1.5 border border-[var(--border-muted)] hover:border-[var(--accent-primary)] rounded bg-[var(--bg-base)] cursor-pointer transition-colors"
-              title="Tải lại danh sách sự kiện và điều phối viên"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Làm Mới</span>
-            </button>
+        {/* Quick Operations Command Hub */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
+          <Link
+            href="/admin/events/new"
+            className="p-4 bg-[#0f171c] border border-zinc-800 hover:border-zinc-700 hover:bg-[#141f23] rounded flex items-center gap-3 transition-all group"
+          >
+            <div className="w-9 h-9 rounded bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors shrink-0">
+              <Plus className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-white truncate uppercase">Tạo Sự Kiện Mới</div>
+              <div className="text-[10px] text-zinc-400 truncate">Thiết lập cuộc thi Hackathon</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/events"
+            className="p-4 bg-[#0f171c] border border-zinc-800 hover:border-zinc-700 hover:bg-[#141f23] rounded flex items-center gap-3 transition-all group"
+          >
+            <div className="w-9 h-9 rounded bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors shrink-0">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-white truncate uppercase">Quản Lý Sự Kiện</div>
+              <div className="text-[10px] text-zinc-400 truncate">Danh sách, lọc &amp; can thiệp</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/users"
+            className="p-4 bg-[#0f171c] border border-zinc-800 hover:border-zinc-700 hover:bg-[#141f23] rounded flex items-center gap-3 transition-all group"
+          >
+            <div className="w-9 h-9 rounded bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors shrink-0">
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-white truncate uppercase">Quản Lý Tài Khoản</div>
+              <div className="text-[10px] text-zinc-400 truncate">Phân quyền, duyệt &amp; khóa</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/schools"
+            className="p-4 bg-[#0f171c] border border-zinc-800 hover:border-zinc-700 hover:bg-[#141f23] rounded flex items-center gap-3 transition-all group"
+          >
+            <div className="w-9 h-9 rounded bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors shrink-0">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-white truncate uppercase">Danh Mục Trường ĐH</div>
+              <div className="text-[10px] text-zinc-400 truncate">Thêm, sửa trường đại học</div>
+            </div>
+          </Link>
+        </div>
+
+        {/* Recent Events Command Deck */}
+        <div className="p-6 bg-[#0f171c] border border-zinc-800 rounded font-mono space-y-4">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-red-500 inline-block" />
+              <h2 className="text-sm font-bold text-white tracking-widest uppercase">
+                SỰ KIỆN GẦN ĐÂY // RECENT EVENTS ({recentEvents.length} / {realEvents.length})
+              </h2>
+            </div>
+
+            <Link href="/admin/events">
+              <button
+                className="text-xs font-mono text-red-400 hover:text-white bg-red-950/20 hover:bg-red-950/40 border border-red-500/40 px-3 py-1 rounded flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <span>Xem Tất Cả Sự Kiện</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </Link>
           </div>
 
           {isLoadingEvents ? (
-            <div className="p-12 text-center font-mono text-xs text-zinc-400 animate-pulse">
-              Đang tải danh sách sự kiện toàn hệ thống...
+            <div className="p-12 text-center text-xs text-zinc-400 animate-pulse">
+              Đang tải dữ liệu sự kiện gần đây...
             </div>
-          ) : displayEvents.length === 0 ? (
+          ) : realEvents.length === 0 ? (
             <ApiMissingDataBadge
               endpoint="GET /api/Events"
-              title="CHƯA CÓ SỰ KIỆN TỪ BACKEND DATABASE"
-              message="Chưa có bản ghi sự kiện nào được trả về từ Backend API. Vui lòng bấm 'Khởi Tạo Sự Kiện Mới' để tạo sự kiện."
+              title="CHƯA CÓ SỰ KIỆN NÀO"
+              message="Chưa có bản ghi sự kiện nào trong hệ thống. Bấm 'Tạo Sự Kiện Mới' để bắt đầu."
             />
           ) : (
-            <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-panel)] hud-clipped">
-              <table className="w-full table-fixed min-w-[950px] text-left border-collapse">
-                <thead className="bg-[var(--bg-base)] border-b border-[var(--border-muted)]">
+            <div className="w-full overflow-x-auto border border-zinc-800 bg-[#090e11] rounded">
+              <table className="w-full table-fixed min-w-[850px] text-left border-collapse text-xs">
+                <thead className="bg-[#0c1216] border-b border-zinc-800 text-zinc-400">
                   <tr>
-                    <th className="w-[24%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                      TÊN SỰ KIỆN
-                    </th>
-                    <th className="w-[12%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                      MÙA GIẢI
-                    </th>
-                    <th className="w-[10%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                      SỐ VÒNG
-                    </th>
-                    <th className="w-[18%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                      EVENT COORDINATOR
-                    </th>
-                    <th className="w-[10%] px-2 py-3.5 text-center font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                      TRẠNG THÁI
-                    </th>
-                    <th className="w-[26%] px-4 py-3.5 text-right font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
-                      THAO TÁC
-                    </th>
+                    <th className="w-[35%] px-4 py-3 text-left uppercase">TÊN SỰ KIỆN</th>
+                    <th className="w-[18%] px-4 py-3 text-left uppercase">MÙA GIẢI</th>
+                    <th className="w-[22%] px-4 py-3 text-left uppercase">COORDINATOR PHỤ TRÁCH</th>
+                    <th className="w-[12%] px-4 py-3 text-center uppercase">TRẠNG THÁI</th>
+                    <th className="w-[13%] px-4 py-3 text-right uppercase">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {displayEvents.map((ev: any, index: number) => {
-                    const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-admin-${index}`;
-                    const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
-                    const season = ev.season || ev.Season || "Mùa Hè";
+                  {recentEvents.map((ev: any, idx: number) => {
+                    const id = pickId(ev) || `ev-${idx}`;
+                    const name = ev.eventName || ev.EventName || "Sự kiện SEAL";
+                    const season = ev.season || ev.Season || "Summer";
                     const year = ev.year || ev.Year || 2026;
-                    const roundsCount = ev.rounds?.length ?? ev.Rounds?.length ?? 1;
-                    
                     const assignedEcs = ecMap[id] || [];
-                    const fallbackEc = ev.coordinatorEmail || ev.CoordinatorEmail;
-                    const ecSummaryTitle = assignedEcs.length > 0
-                      ? assignedEcs.map((x) => x.name ? `${x.name} (${x.email})` : x.email).join(", ")
-                      : fallbackEc || "Chưa gán EC";
+                    const ecLabel =
+                      assignedEcs.length > 0
+                        ? assignedEcs[0].name || assignedEcs[0].email
+                        : ev.coordinatorEmail || "Chưa gán EC";
+                    const isActive = ev.status !== false && ev.Status !== false;
 
                     return (
-                      <tr key={id} className="hover:bg-[var(--color-danger)]/5 transition-colors group">
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          <div className="font-mono font-bold text-sm text-[var(--text-primary)] group-hover:text-[var(--color-danger)] transition-colors truncate" title={name}>
-                            {name}
-                          </div>
+                      <tr
+                        key={id}
+                        className="hover:bg-white/[0.03] transition-colors border-t border-zinc-800/60"
+                      >
+                        <td className="px-4 py-3 font-bold text-white truncate" title={name}>
+                          {name}
                         </td>
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          <span className="inline-block max-w-full truncate px-2.5 py-1 text-xs font-mono font-bold bg-[var(--accent-team)]/10 text-[var(--accent-team)] border border-[var(--accent-team)]/30 rounded" title={`${season} ${year}`}>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-red-950/40 text-red-300 border border-red-500/30 rounded">
                             {season} {year}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          <span className="font-mono text-xs text-[var(--text-primary)]">
-                            {roundsCount} Vòng Thi
+                        <td className="px-4 py-3 text-purple-300 truncate" title={ecLabel}>
+                          {assignedEcs.length > 0 ? `👤 ${ecLabel}` : <span className="text-zinc-500 italic">Chưa gán EC</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded ${
+                              isActive
+                                ? "bg-emerald-950/40 text-emerald-300 border border-emerald-500/40"
+                                : "bg-zinc-800/50 text-zinc-400 border border-zinc-700"
+                            }`}
+                          >
+                            {isActive ? "● MỞ" : "○ ĐÓNG"}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          {assignedEcs.length > 0 ? (
-                            <div className="flex items-center gap-1.5 max-w-full" title={ecSummaryTitle}>
-                              <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
-                              <span className="font-mono text-xs font-bold text-purple-300 truncate">
-                                {assignedEcs[0].name || assignedEcs[0].email}
-                              </span>
-                              {assignedEcs.length > 1 && (
-                                <span className="px-1.5 py-0.2 bg-purple-950/60 text-purple-300 border border-purple-500/40 rounded text-[9px] font-mono shrink-0 font-bold">
-                                  +{assignedEcs.length - 1}
-                                </span>
-                              )}
-                            </div>
-                          ) : fallbackEc ? (
-                            <div className="flex items-center gap-1.5 max-w-full" title={fallbackEc}>
-                              <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
-                              <span className="font-mono text-xs font-bold text-purple-300 truncate">
-                                {fallbackEc}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="font-mono text-xs text-zinc-500 italic">
-                              Chưa gán EC
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-3.5 align-middle border-t border-[var(--border-muted)]/50 text-center">
-                          <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border border-[var(--color-success)]/20 uppercase rounded whitespace-nowrap">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse shrink-0" />
-                            ACTIVE
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50 text-right">
-                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                            <Button
-                              variant="ghost"
-                              onClick={() => setEditingEvent(ev)}
-                              className="text-xs font-mono border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
-                              title="Chỉnh sửa toàn diện sự kiện & các vòng thi"
-                            >
-                              <Edit className="w-3.5 h-3.5" /> Sửa
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              onClick={() => setSelectedEvent(ev)}
-                              className="text-xs font-mono border-[var(--accent-coordinator)] text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/10 px-2.5 py-0.5 h-7 cursor-pointer inline-flex items-center gap-1"
-                              title="Quản lý & phân công Event Coordinator"
-                            >
-                              <UserCheck className="w-3.5 h-3.5" /> Quản lý EC
-                            </Button>
-                            <Link href={`/events/${id}`}>
-                              <Button
-                                variant="ghost"
-                                className="text-xs font-mono border-[var(--border-muted)] text-[var(--text-muted)] hover:text-white hover:border-[var(--accent-primary)] px-2 py-0.5 h-7 w-7 flex items-center justify-center cursor-pointer"
-                                title="Xem trang thể lệ công khai"
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Link href={`/admin/events/${id}`}>
+                              <button
+                                className="text-[10px] font-mono border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer bg-[#141f23]"
                               >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </Button>
+                                <Eye className="w-3 h-3" /> Chi Tiết
+                              </button>
                             </Link>
                           </div>
                         </td>
@@ -351,33 +347,10 @@ export const AdminDashboardView: React.FC = () => {
               </table>
             </div>
           )}
-        </Card>
-
-        {/* Trung Tâm Quản Lý & Phân Công Event Coordinator (EC HUB) */}
-        {selectedEvent && (
-          <AdminCoordinatorModal
-            event={selectedEvent}
-            allUsers={usersList}
-            onClose={() => setSelectedEvent(null)}
-            onSuccess={() => {
-              refetchEvents();
-              refetchEcs();
-            }}
-          />
-        )}
-
-        {/* Modal Chỉnh Sửa Toàn Diện Sự Kiện Cho Admin */}
-        {editingEvent && (
-          <ComprehensiveEventEditModal
-            event={editingEvent}
-            onClose={() => setEditingEvent(null)}
-            onSuccess={() => {
-              refetchEvents();
-              setEditingEvent(null);
-            }}
-          />
-        )}
-      </main>
+        </div>
+      </div>
     </div>
   );
-};
+}
+
+export default AdminDashboardView;
