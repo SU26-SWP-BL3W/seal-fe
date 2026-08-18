@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   Activity,
   LayoutDashboard,
+  UserCheck,
 } from "lucide-react";
 
 export function NavigationBar() {
@@ -99,8 +100,8 @@ export function NavigationBar() {
   // ─────────────────────────────────────────────────────────────
   if (showAdminSidebar) {
     return (
-      <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--color-danger)]/40 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
-        <div className="flex flex-col gap-6">
+      <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--color-danger)]/40 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0 overflow-y-auto">
+        <div className="flex flex-col gap-5">
           {/* Brand Logo & Notification Bell */}
           <div className="flex flex-col gap-3 pb-4 border-b border-[var(--border-muted)]">
             <div className="flex items-center justify-between">
@@ -131,92 +132,101 @@ export function NavigationBar() {
             </span>
           </div>
 
-          {/* Vertical Navigation Menu */}
-          <nav className="flex flex-col gap-1.5 font-mono text-xs">
-            <span className="text-[10px] text-[var(--text-muted)] tracking-widest uppercase mb-1">
-              MENU QUẢN TRỊ ADMIN
-            </span>
+          {/* Vertical Navigation Menu Sections */}
+          <nav className="flex flex-col gap-4 font-mono text-xs">
+            {/* Section A: Quản Trị Hệ Thống */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] text-[var(--color-danger)] font-bold tracking-widest uppercase px-2 mb-0.5">
+                A. QUẢN TRỊ HỆ THỐNG
+              </span>
 
-            <Link
-              href="/admin/dashboard"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/admin/dashboard") || (pathname.includes("/admin") && !pathname.includes("/admin/users") && !pathname.includes("/admin/schools") && !pathname.includes("/admin/events"))
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
-                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
-              }`}
-            >
-              <Globe className="w-4 h-4 shrink-0" /> Tổng Quan Sự Kiện
-            </Link>
+              <Link
+                href="/admin/dashboard"
+                className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold ${
+                  pathname === "/admin/dashboard" || pathname === "/admin"
+                    ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                    : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4 shrink-0" /> Tổng Quan Dashboard
+              </Link>
 
-            <Link
-              href="/admin/users"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/admin/users")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
-                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
-              }`}
-            >
-              <Users className="w-4 h-4 shrink-0" /> Quản Lý Tài Khoản
-            </Link>
+              <Link
+                href="/admin/users"
+                className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold ${
+                  pathname.includes("/admin/users")
+                    ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                    : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                }`}
+              >
+                <Users className="w-4 h-4 shrink-0" /> Quản Lý Tài Khoản
+              </Link>
 
-            <Link
-              href="/admin/schools"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/admin/schools")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
-                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
-              }`}
-            >
-              <Building2 className="w-4 h-4 shrink-0" /> Danh Mục Trường Học
-            </Link>
+              <Link
+                href="/admin/schools"
+                className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold ${
+                  pathname.includes("/admin/schools")
+                    ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                    : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                }`}
+              >
+                <Building2 className="w-4 h-4 shrink-0" /> Danh Mục Trường ĐH
+              </Link>
+            </div>
 
-            <Link
-              href="/coordinator/teams"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/coordinator/teams")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
-                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4 shrink-0" /> Đội Thi &amp; Thí Sinh
-            </Link>
+            {/* Section B: Quản Lý Sự Kiện */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] text-[var(--color-danger)] font-bold tracking-widest uppercase px-2 mb-0.5">
+                B. QUẢN LÝ SỰ KIỆN
+              </span>
 
-            <Link
-              href="/coordinator/dashboard"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/coordinator/dashboard") || pathname.includes("/coordinator/results")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
-                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
-              }`}
-            >
-              <FileText className="w-4 h-4 shrink-0" /> Điều Hành EC &amp; Bài Thi
-            </Link>
+              <Link
+                href="/admin/events/new"
+                className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold ${
+                  pathname.includes("/admin/events/new")
+                    ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/30"
+                    : "text-[var(--color-danger)] bg-[var(--color-danger)]/5 hover:bg-[var(--color-danger)]/15 border border-[var(--color-danger)]/30"
+                }`}
+              >
+                <PlusCircle className="w-4 h-4 shrink-0" /> Tạo Sự Kiện Mới
+              </Link>
 
-            <Link
-              href="/admin/events/new"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold mt-2 border border-[var(--color-danger)]/50 ${
-                pathname.includes("/admin/events/new")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/30"
-                  : "text-[var(--color-danger)] bg-[var(--color-danger)]/5 hover:bg-[var(--color-danger)]/15"
-              }`}
-            >
-              <PlusCircle className="w-4 h-4 shrink-0" /> Tạo Event Mới
-            </Link>
+              <Link
+                href="/admin/events"
+                className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold ${
+                  pathname === "/admin/events" || (pathname.includes("/admin/events/") && !pathname.includes("/admin/events/new") && !pathname.includes("/admin/events/coordinators"))
+                    ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                    : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                }`}
+              >
+                <Calendar className="w-4 h-4 shrink-0" /> Danh Sách Sự Kiện
+              </Link>
+
+              <Link
+                href="/admin/events/coordinators"
+                className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold ${
+                  pathname.includes("/admin/events/coordinators")
+                    ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                    : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                }`}
+              >
+                <UserCheck className="w-4 h-4 shrink-0" /> Phân Công EC
+              </Link>
+            </div>
           </nav>
         </div>
 
         {/* Bottom User Info & Role Switcher */}
-        <div className="flex flex-col gap-2.5 pt-3 border-t border-[var(--border-muted)]">
+        <div className="flex flex-col gap-2.5 pt-3 border-t border-[var(--border-muted)] mt-4">
           <div className="flex items-center justify-between font-mono text-xs">
             <span className="text-[var(--text-muted)]">Vai trò:</span>
             <span className="text-[var(--color-danger)] font-bold">System Admin</span>
           </div>
 
-
           <button
             type="button"
             onClick={logout}
-            className="w-full py-2 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/50 text-[var(--color-danger)] font-mono text-xs font-bold uppercase hover:bg-[var(--color-danger)] hover:text-white transition-all hud-clipped cursor-pointer relative z-50 mb-4 flex items-center justify-center gap-1.5"
+            className="w-full py-2 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/50 text-[var(--color-danger)] font-mono text-xs font-bold uppercase hover:bg-[var(--color-danger)] hover:text-white transition-all hud-clipped cursor-pointer relative z-50 flex items-center justify-center gap-1.5"
           >
             <LogOut className="w-3.5 h-3.5" /> ĐĂNG XUẤT
           </button>

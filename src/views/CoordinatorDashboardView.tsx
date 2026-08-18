@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Link } from "@/i18n/routing";
+import { Button, Card } from "@/components/ui";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
@@ -11,17 +13,12 @@ import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import { PagedResult } from "@/models/types";
 import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
-import { Link } from "@/i18n/routing";
+import { AdminMonitoringBanner } from "@/components/domain/AdminMonitoringBanner";
 import {
   FileCode,
   Globe,
   FileSpreadsheet,
-  RefreshCw,
   Code2,
-  Filter,
-  Layers,
-  AlertTriangle,
-  ExternalLink,
   Users,
   Shield,
   FolderGit2,
@@ -31,10 +28,12 @@ import {
   Zap,
   CheckCircle2,
   Calendar,
-  Search,
 } from "lucide-react";
 
 export const CoordinatorDashboardView: React.FC = () => {
+  const searchParams = useSearchParams();
+  const queryEventId = searchParams.get("eventId") || "";
+
   const { user: currentUser } = useAuth();
   const { data: myEvents = [] } = useMyEvents();
   const { data: rawAllEvents = [] } = useEvents();
@@ -43,23 +42,29 @@ export const CoordinatorDashboardView: React.FC = () => {
     ? allEvents
     : myEvents;
 
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId);
 
-  React.useEffect(() => {
-    if (eventsList.length > 0 && !selectedEventId) {
-      setSelectedEventId(eventsList[0].id || eventsList[0].eventId || "");
+  useEffect(() => {
+    if (queryEventId) {
+      setSelectedEventId(queryEventId);
+    } else if (eventsList.length > 0 && !selectedEventId) {
+      setSelectedEventId(eventsList[0].id || eventsList[0].Id || eventsList[0].eventId || eventsList[0].EventId || "");
     }
-  }, [eventsList, selectedEventId]);
+  }, [queryEventId, eventsList, selectedEventId]);
 
-  const { data: tracks = [] } = useGetTracksByEvent(selectedEventId);
-  const { data: teams = [] } = useGetTeamsByEvent(selectedEventId);
-  const { data: prizes = [] } = useGetPrizesByEvent(selectedEventId);
+  const { data: tracks = [] } = useGetTracksByEvent(selectedEventId || undefined);
+  const { data: teams = [] } = useGetTeamsByEvent(selectedEventId || undefined);
+  const { data: prizes = [] } = useGetPrizesByEvent(selectedEventId || undefined);
+
+  const selectedEventObj = eventsList.find(
+    (e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId
+  );
+  const selectedEventName = selectedEventObj?.eventName || selectedEventObj?.EventName || "";
 
   // Query submissions
   const {
     data: rawSubmissions = [],
     isLoading: isLoadingSubmissions,
-    refetch: refetchSubmissions,
   } = useQuery({
     queryKey: ["all-submissions", selectedEventId, eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
     queryFn: async () => {
@@ -81,7 +86,7 @@ export const CoordinatorDashboardView: React.FC = () => {
         return evId ? allowedEventIds.has(evId) : true;
       });
 
-  const currentEvent = eventsList.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId) || eventsList[0];
+  const currentEvent = selectedEventObj || eventsList[0];
 
   const MODULES = [
     {
@@ -148,12 +153,32 @@ export const CoordinatorDashboardView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
-      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-8">
-        {/* Breadcrumb Navigation */}
+      {/* Banner Giám sát nổi bật khi Admin truy cập */}
+      <AdminMonitoringBanner
+        eventId={selectedEventId || undefined}
+        eventName={selectedEventName || undefined}
+      />
+
+      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
+        {/* Breadcrumb Navigation with Back Links */}
         <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase">
-          <span className="text-[#a855f7] font-bold">SEAL SYSTEM</span>
+          <Link href="/admin/events" className="text-[var(--color-danger)] font-bold hover:underline">
+            SEAL ADMIN
+          </Link>
           <span>&gt;</span>
-          <span className="text-[var(--text-primary)] font-bold">COORDINATOR COMMAND CENTER</span>
+          <Link href="/admin/events" className="text-[var(--text-muted)] hover:text-white transition-colors">
+            QUẢN LÝ SỰ KIỆN
+          </Link>
+          {selectedEventId && (
+            <>
+              <span>&gt;</span>
+              <Link href={`/admin/events/${selectedEventId}`} className="text-red-400 hover:text-white transition-colors truncate max-w-xs">
+                {selectedEventName || selectedEventId}
+              </Link>
+            </>
+          )}
+          <span>&gt;</span>
+          <span className="text-[var(--text-primary)] font-bold">GIÁM SÁT BÀI THI &amp; SUBMISSIONS</span>
         </div>
 
         {/* Header with Event Selector */}
