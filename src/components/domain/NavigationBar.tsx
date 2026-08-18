@@ -359,15 +359,15 @@ export function NavigationBar() {
 
             {/* 05. Quản lý bài nộp & Phúc khảo */}
             <Link
-              href="/coordinator/dashboard"
+              href="/coordinator/submissions"
               className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
-                (pathname === "/coordinator/dashboard" || pathname.includes("/coordinator/appeals"))
+                (pathname.includes("/coordinator/submissions") || pathname.includes("/coordinator/appeals"))
                   ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
                   : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
               }`}
             >
               <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
-                (pathname === "/coordinator/dashboard" || pathname.includes("/coordinator/appeals"))
+                (pathname.includes("/coordinator/submissions") || pathname.includes("/coordinator/appeals"))
                   ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
                   : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
               }`}>
@@ -375,7 +375,7 @@ export function NavigationBar() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Quản Lý Bài Nộp</div>
-                <div className="text-[10px] text-zinc-400 truncate">Lọc Track/Judge • Đơn Phúc khảo</div>
+                <div className="text-[10px] text-zinc-400 truncate">GitHub • Demo • Phúc Khảo</div>
               </div>
             </Link>
 

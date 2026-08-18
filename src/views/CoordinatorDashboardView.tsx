@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
+import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
@@ -20,6 +22,15 @@ import {
   Layers,
   AlertTriangle,
   ExternalLink,
+  Users,
+  Shield,
+  FolderGit2,
+  Award,
+  ArrowRight,
+  Sparkles,
+  Zap,
+  CheckCircle2,
+  Calendar,
 } from "lucide-react";
 
 export const CoordinatorDashboardView: React.FC = () => {
@@ -32,10 +43,16 @@ export const CoordinatorDashboardView: React.FC = () => {
     : myEvents;
 
   const [selectedEventId, setSelectedEventId] = useState<string>("");
-  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
-  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  React.useEffect(() => {
+    if (eventsList.length > 0 && !selectedEventId) {
+      setSelectedEventId(eventsList[0].id || eventsList[0].eventId || "");
+    }
+  }, [eventsList, selectedEventId]);
 
   const { data: tracks = [] } = useGetTracksByEvent(selectedEventId);
+  const { data: teams = [] } = useGetTeamsByEvent(selectedEventId);
+  const { data: prizes = [] } = useGetPrizesByEvent(selectedEventId);
 
   // Query submissions
   const {
@@ -43,14 +60,11 @@ export const CoordinatorDashboardView: React.FC = () => {
     isLoading: isLoadingSubmissions,
     refetch: refetchSubmissions,
   } = useQuery({
-    queryKey: ["all-submissions", selectedEventId, selectedTrackId, eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
+    queryKey: ["all-submissions", selectedEventId, eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
     queryFn: async () => {
       const params: Record<string, any> = { PageSize: 200 };
       if (selectedEventId) {
         params.EventId = selectedEventId;
-      }
-      if (selectedTrackId) {
-        params.TrackId = selectedTrackId;
       }
       const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", { params });
       return res.data?.data ?? [];
@@ -58,7 +72,6 @@ export const CoordinatorDashboardView: React.FC = () => {
   });
 
   const allSubmissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
-  // For non-admin ECs, filter submissions to only those belonging to the EC's assigned events
   const allowedEventIds = new Set(eventsList.map((e: any) => e.id || e.Id || e.eventId || e.EventId));
   const submissions = (currentUser?.isAdmin || currentUser?.IsAdmin)
     ? allSubmissions
@@ -67,258 +80,284 @@ export const CoordinatorDashboardView: React.FC = () => {
         return evId ? allowedEventIds.has(evId) : true;
       });
 
-  // Filtered submissions by track and search term
-  const displaySubmissions = submissions.filter((sub: any) => {
-    if (selectedTrackId) {
-      const subTrackId = sub.trackId || sub.TrackId;
-      if (subTrackId && subTrackId !== selectedTrackId) return false;
-    }
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    const teamName = (sub.teamName || sub.TeamName || "").toLowerCase();
-    const eventName = (sub.eventName || sub.EventName || "").toLowerCase();
-    const trackName = (sub.trackName || sub.TrackName || "").toLowerCase();
-    return teamName.includes(term) || eventName.includes(term) || trackName.includes(term);
-  });
+  const currentEvent = eventsList.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId) || eventsList[0];
 
-  const uniqueTeamsCount = new Set(submissions.map((s: any) => s.teamId || s.TeamId)).size;
+  const MODULES = [
+    {
+      num: "01",
+      title: "QUẢN LÝ SỰ KIỆN & NHÂN SỰ",
+      desc: "Mời & phân bổ Giám khảo, Cố vấn vào các Hạng mục (Tracks) và cấu hình thể lệ.",
+      href: `/coordinator/staff?eventId=${selectedEventId}`,
+      icon: Shield,
+      accent: "text-[#a855f7]",
+      border: "hover:border-[#a855f7]",
+      tag: "Vòng thi & Nhân sự",
+    },
+    {
+      num: "02",
+      title: "QUẢN LÝ ĐỘI THI",
+      desc: "Xem roster đội hình, duyệt đăng ký tham gia thi đấu và theo dõi sĩ số thành viên.",
+      href: "/coordinator/teams",
+      icon: Users,
+      accent: "text-[var(--accent-team)]",
+      border: "hover:border-[var(--accent-team)]",
+      tag: `${teams.length} Đội tham gia`,
+    },
+    {
+      num: "03",
+      title: "DUYỆT HỒ SƠ THÍ SINH",
+      desc: "Xét duyệt ảnh thẻ sinh viên 3x4, xác minh mã số sinh viên MSSV toàn diện.",
+      href: "/coordinator/profiles",
+      icon: CheckCircle2,
+      accent: "text-emerald-400",
+      border: "hover:border-emerald-400",
+      tag: "Hồ sơ thẻ SV",
+    },
+    {
+      num: "04",
+      title: "KHO BỘ TIÊU CHÍ (RUBRICS)",
+      desc: "Soạn thảo ngân hàng mẫu tiêu chí chấm điểm, đảm bảo phân bổ trọng số 100%.",
+      href: "/coordinator/templates",
+      icon: FolderGit2,
+      accent: "text-blue-400",
+      border: "hover:border-blue-400",
+      tag: "Ngân hàng Rubric",
+    },
+    {
+      num: "05",
+      title: "QUẢN LÝ BÀI NỘP (SUBMISSIONS)",
+      desc: "Tổng hợp mã nguồn GitHub, Live Demo và Slide thuyết trình từ tất cả các đội thi.",
+      href: "/coordinator/submissions",
+      icon: FileCode,
+      accent: "text-[#f59e0b]",
+      border: "hover:border-[#f59e0b]",
+      tag: `${submissions.length} Bài nộp`,
+    },
+    {
+      num: "06",
+      title: "XÉT KẾT QUẢ & CÔNG BỐ",
+      desc: "Tự động tính điểm xếp hạng Top N, gán cơ cấu giải thưởng và công bố công khai.",
+      href: "/coordinator/publish-results",
+      icon: Award,
+      accent: "text-amber-400",
+      border: "hover:border-amber-400",
+      tag: `${prizes.length} Giải thưởng`,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
-      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
+      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-8">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase">
-          <span className="text-[var(--color-danger)] font-bold">SEAL SYSTEM</span>
+          <span className="text-[#a855f7] font-bold">SEAL SYSTEM</span>
           <span>&gt;</span>
-          <span className="text-[var(--text-primary)] font-bold">TỔNG HỢP BÀI THI &amp; SUBMISSIONS</span>
+          <span className="text-[var(--text-primary)] font-bold">COORDINATOR COMMAND CENTER</span>
         </div>
 
-        {/* Page Header */}
+        {/* Header with Event Selector */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--color-danger)] animate-pulse" />
-              <span className="font-mono text-[10px] text-[var(--color-danger)] font-bold tracking-widest uppercase">
-                SUBMISSIONS &amp; DELIVERABLES HUB
+              <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse" />
+              <span className="font-mono text-[10px] text-[#a855f7] font-bold tracking-widest uppercase">
+                COORDINATOR CONTROL DECK v2.0
               </span>
             </div>
             <h1 className="font-display font-bold text-2xl text-[var(--text-primary)] uppercase tracking-wider mt-1 flex items-center gap-2.5">
-              <FileCode className="w-6 h-6 text-[var(--color-danger)]" />
-              Tổng Hợp Bài Nộp Của Các Đội Thi
+              <Zap className="w-6 h-6 text-[#a855f7]" />
+              Trung Tâm Điều Hành Sự Kiện &amp; Ban Tổ Chức
             </h1>
             <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-              Theo dõi trực tiếp toàn bộ mã nguồn GitHub, bản chạy thử Demo URL và Slide thuyết trình của các đội thi.
+              Quản lý toàn bộ 6 phân hệ cốt lõi: Sự kiện, Nhân sự, Đội thi, Tiêu chí Rubric, Bài nộp và Công bố kết quả.
             </p>
           </div>
 
-          <Button
-            variant="ghost"
-            onClick={() => refetchSubmissions()}
-            className="font-mono text-xs border border-[var(--border-muted)] flex items-center gap-1.5 self-start md:self-auto cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Làm Mới
-          </Button>
-        </div>
-
-        {/* Metrics Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
-          <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-1">
-            <span className="text-[10px] text-[var(--text-muted)] uppercase block">Tổng Số Lượt Nộp Bài</span>
-            <div className="text-2xl font-bold text-[var(--text-primary)]">{submissions.length} Lượt</div>
-          </Card>
-          <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--color-success)]/30 hud-clipped space-y-1">
-            <span className="text-[10px] text-[var(--color-success)] uppercase block font-bold">Số Đội Đã Nộp Dự Án</span>
-            <div className="text-2xl font-bold text-[var(--color-success)]">{uniqueTeamsCount} Đội</div>
-          </Card>
-          <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-team)]/30 hud-clipped space-y-1">
-            <span className="text-[10px] text-[var(--accent-team)] uppercase block font-bold">Sự Kiện Đang Theo Dõi</span>
-            <div className="text-2xl font-bold text-[var(--accent-team)]">
-              {selectedEventId
-                ? eventsList.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId)?.eventName || "1 Sự Kiện"
-                : `${eventsList.length} Sự Kiện`}
-            </div>
-          </Card>
-        </div>
-
-        {/* Filter Bar with Track and Appeals Navigation */}
-        <div className="flex flex-col md:flex-row items-center gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
-          {/* Event Filter */}
-          <div className="flex items-center gap-2 w-full md:w-1/3">
-            <Filter className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+          {/* Event Dropdown */}
+          <div className="flex items-center gap-2 bg-[var(--bg-panel)] border border-[var(--border-muted)] px-3 py-2 hud-clipped font-mono text-xs">
+            <Calendar className="w-4 h-4 text-[#a855f7] shrink-0" />
             <select
               value={selectedEventId}
-              onChange={(e) => {
-                setSelectedEventId(e.target.value);
-                setSelectedTrackId("");
-              }}
-              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped cursor-pointer"
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="bg-transparent text-[var(--text-primary)] font-bold focus:outline-none cursor-pointer max-w-[260px] truncate"
             >
-              <option value="">— Tất cả sự kiện ({eventsList.length}) —</option>
-              {eventsList.map((ev: any, idx: number) => {
-                const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
+              {eventsList.map((ev: any) => {
+                const id = ev.id || ev.Id || ev.eventId || ev.EventId;
                 const name = ev.eventName || ev.EventName || "Sự kiện";
                 return (
-                  <option key={id} value={id}>
-                    {name}
+                  <option key={id} value={id} className="bg-[var(--bg-panel)] text-[var(--text-primary)]">
+                    {name} ({ev.season || ev.Season || ""} {ev.year || ev.Year || ""})
                   </option>
                 );
               })}
             </select>
           </div>
+        </div>
 
-          {/* Track Filter */}
-          <div className="flex items-center gap-2 w-full md:w-1/3">
-            <Layers className="w-4 h-4 text-[#a855f7] shrink-0" />
-            <select
-              value={selectedTrackId}
-              onChange={(e) => setSelectedTrackId(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped cursor-pointer"
-            >
-              <option value="">— Tất cả Hạng Mục / Track ({tracks.length}) —</option>
-              {tracks.map((t: any) => {
-                const tId = t.id || t.Id || t.trackId || t.TrackId;
-                const tName = t.trackName || t.TrackName || t.name || t.Name || "Track";
-                return (
-                  <option key={tId} value={tId}>
-                    {tName}
-                  </option>
-                );
-              })}
-            </select>
+        {/* 4 Stat Overview Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
+          <Card className="p-4 bg-[var(--bg-panel)] border border-[#a855f7]/40 hud-clipped space-y-1">
+            <span className="text-[10px] text-[#a855f7] uppercase block font-bold">Sự Kiện Đang Phụ Trách</span>
+            <div className="text-2xl font-bold text-[var(--text-primary)] truncate">
+              {currentEvent?.eventName || currentEvent?.EventName || "Chưa chọn sự kiện"}
+            </div>
+            <span className="text-[10px] text-[var(--text-muted)] block">
+              Mùa giải: {currentEvent?.season || "Spring"} {currentEvent?.year || "2026"}
+            </span>
+          </Card>
+
+          <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-team)]/30 hud-clipped space-y-1">
+            <span className="text-[10px] text-[var(--accent-team)] uppercase block font-bold">Tổng Số Đội Thi</span>
+            <div className="text-2xl font-bold text-[var(--accent-team)]">{teams.length} Đội</div>
+            <span className="text-[10px] text-[var(--text-muted)] block">
+              Phân bổ trên {tracks.length} Hạng mục (Tracks)
+            </span>
+          </Card>
+
+          <Card className="p-4 bg-[var(--bg-panel)] border border-emerald-500/30 hud-clipped space-y-1">
+            <span className="text-[10px] text-emerald-400 uppercase block font-bold">Bài Nộp Thu Thập</span>
+            <div className="text-2xl font-bold text-emerald-400">{submissions.length} Bài nộp</div>
+            <span className="text-[10px] text-[var(--text-muted)] block">
+              Gồm GitHub repo, Live Demo &amp; Slides
+            </span>
+          </Card>
+
+          <Card className="p-4 bg-[var(--bg-panel)] border border-amber-500/30 hud-clipped space-y-1">
+            <span className="text-[10px] text-amber-400 uppercase block font-bold">Cơ Cấu Giải Thưởng</span>
+            <div className="text-2xl font-bold text-amber-400">{prizes.length} Giải thưởng</div>
+            <span className="text-[10px] text-[var(--text-muted)] block">
+              Sẵn sàng gán cho Top N khi công bố
+            </span>
+          </Card>
+        </div>
+
+        {/* 6 Core Modules Quick Action Deck */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-2 font-mono text-xs">
+            <span className="font-bold text-[#a855f7] uppercase tracking-wider flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#a855f7]" />
+              LUỒNG CÔNG VIỆC ĐIỀU PHỐI (6 MODULES WORKFLOW)
+            </span>
+            <span className="text-[10px] text-[var(--text-muted)]">Bấm vào từng module để truy cập nhanh</span>
           </div>
 
-          {/* Search Term */}
-          <div className="w-full md:w-1/3 flex items-center gap-2">
-            <Input
-              type="text"
-              placeholder="Tìm kiếm theo tên đội, bài nộp..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs"
-            />
-            <Link href="/coordinator/appeals">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {MODULES.map((mod) => {
+              const Icon = mod.icon;
+              return (
+                <Link
+                  key={mod.num}
+                  href={mod.href}
+                  className={`p-5 bg-[var(--bg-panel)] border border-[var(--border-muted)] ${mod.border} transition-all duration-200 hud-clipped flex flex-col justify-between space-y-4 group hover:bg-[var(--bg-input)]`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-[#a855f7]/20 text-[#a855f7] font-mono text-xs font-bold rounded">
+                          {mod.num}
+                        </span>
+                        <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+                          {mod.tag}
+                        </span>
+                      </div>
+                      <Icon className={`w-5 h-5 ${mod.accent}`} />
+                    </div>
+
+                    <h3 className="font-display font-bold text-sm text-[var(--text-primary)] uppercase tracking-wide group-hover:text-white transition-colors">
+                      {mod.title}
+                    </h3>
+
+                    <p className="font-mono text-xs text-[var(--text-muted)] leading-relaxed">
+                      {mod.desc}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-[var(--border-muted)] flex items-center justify-between font-mono text-[11px] text-[var(--text-muted)] group-hover:text-white">
+                    <span>Truy cập module</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Recent Submissions Quick Table */}
+        <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-4 font-mono text-xs">
+          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
+            <div>
+              <h3 className="font-display font-bold text-sm text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                <FileCode className="w-4 h-4 text-[#f59e0b]" />
+                Bài Nộp Mới Nhất ({submissions.slice(0, 5).length}/{submissions.length})
+              </h3>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                Các sản phẩm dự thi mới nộp gần đây nhất của các đội.
+              </p>
+            </div>
+
+            <Link href="/coordinator/submissions">
               <Button
                 variant="ghost"
-                className="whitespace-nowrap font-mono text-xs border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 flex items-center gap-1 cursor-pointer"
-                title="Xem danh sách đơn phúc khảo"
+                className="text-xs font-mono border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer hover:border-white"
               >
-                <AlertTriangle className="w-3.5 h-3.5" /> Phúc Khảo
+                <span>Xem Toàn Bộ Bài Nộp</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </Link>
           </div>
-        </div>
-
-        {/* Submissions Table */}
-        <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-4">
-          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
-            <h3 className="font-display font-bold text-sm text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-              <FileCode className="w-4 h-4 text-[var(--color-danger)]" />
-              Danh Sách Bài Nộp Chi Tiết ({displaySubmissions.length})
-            </h3>
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              Bấm vào các nút liên kết để kiểm tra trực tiếp sản phẩm của đội thi
-            </span>
-          </div>
 
           {isLoadingSubmissions ? (
-            <div className="py-16 flex flex-col items-center justify-center gap-2 font-mono text-xs text-[var(--color-danger)]">
-              <RefreshCw className="w-6 h-6 animate-spin" />
-              <span>Đang tải danh sách bài làm từ hệ thống...</span>
+            <div className="py-12 text-center text-xs text-[var(--text-muted)]">
+              Đang tải danh sách bài làm...
             </div>
-          ) : displaySubmissions.length === 0 ? (
-            <ApiMissingDataBadge
-              endpoint="GET /api/SubmitResults"
-              title="CHƯA CÓ BÀI NỘP NÀO ĐƯỢC GHI NHẬN"
-              message="Chưa có đội thi nào nộp bài làm trong phạm vi sự kiện đã chọn. Khi các thí sinh nộp liên kết GitHub/Demo/Slides, dữ liệu sẽ hiển thị ngay tại đây."
-            />
+          ) : submissions.length === 0 ? (
+            <div className="p-8 text-center text-xs text-[var(--text-muted)] bg-[var(--bg-input)] rounded">
+              Chưa có bài nộp nào trong sự kiện này.
+            </div>
           ) : (
-            <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-input)] hud-clipped">
-              <table className="w-full table-fixed min-w-[850px] text-left border-collapse font-mono text-xs">
-                <thead className="bg-[var(--bg-panel)] border-b border-[var(--border-muted)]">
-                  <tr>
-                    <th className="w-[24%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
-                      ĐỘI THI
-                    </th>
-                    <th className="w-[18%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
-                      HẠNG MỤC (TRACK)
-                    </th>
-                    <th className="w-[38%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
-                      LIÊN KẾT BÀI LÀM (DELIVERABLES)
-                    </th>
-                    <th className="w-[20%] px-4 py-3.5 text-right text-[var(--text-muted)] uppercase tracking-wider">
-                      THỜI GIAN NỘP
-                    </th>
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed min-w-[700px] text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--border-muted)] bg-[var(--bg-input)] text-[var(--text-muted)] uppercase text-[10px]">
+                    <th className="w-[30%] p-3">Đội Thi</th>
+                    <th className="w-[20%] p-3">Hạng Mục</th>
+                    <th className="w-[35%] p-3">Liên Kết Bài Làm</th>
+                    <th className="w-[15%] p-3 text-right">Thời Gian</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {displaySubmissions.map((sub: any, idx: number) => {
-                    const subId = sub.id || sub.Id || `sub-${idx}`;
-                    const teamName = sub.teamName || sub.TeamName || `Đội #${(sub.teamId || sub.TeamId)?.slice(-4) || idx + 1}`;
+                <tbody className="divide-y divide-[var(--border-muted)]">
+                  {submissions.slice(0, 5).map((sub: any, idx: number) => {
+                    const teamName = sub.teamName || sub.TeamName || `Đội #${idx + 1}`;
                     const trackName = sub.trackName || sub.TrackName || "Chung";
                     const repoUrl = sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl;
                     const demoUrl = sub.demoUrl || sub.DemoUrl;
                     const slideUrl = sub.slideUrl || sub.SlideUrl;
-                    const createdTime = sub.createdTime || sub.CreatedTime;
 
                     return (
-                      <tr key={subId} className="hover:bg-[var(--color-danger)]/5 transition-colors border-t border-[var(--border-muted)]/50">
-                        <td className="px-4 py-3.5 align-middle font-bold text-[var(--text-primary)] truncate" title={teamName}>
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[var(--accent-team)] shrink-0" />
-                            <span className="truncate">{teamName}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 align-middle text-[var(--accent-team)] truncate font-semibold" title={trackName}>
-                          {trackName}
-                        </td>
-                        <td className="px-4 py-3.5 align-middle">
+                      <tr key={sub.id || idx} className="hover:bg-[var(--bg-input)] transition-colors">
+                        <td className="p-3 font-bold text-[var(--text-primary)] truncate">{teamName}</td>
+                        <td className="p-3 text-[var(--accent-team)] truncate">{trackName}</td>
+                        <td className="p-3">
                           <div className="flex items-center gap-2 flex-wrap">
-                            {repoUrl ? (
-                              <a
-                                href={repoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-2.5 py-1 bg-[var(--bg-base)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:border-white hover:text-white rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
-                                title={repoUrl}
-                              >
-                                <Code2 className="w-3.5 h-3.5 text-blue-400" />
-                                <span>GitHub Repo</span>
+                            {repoUrl && (
+                              <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-[var(--bg-base)] border border-[var(--border-muted)] rounded text-[10px] flex items-center gap-1 hover:text-white">
+                                <Code2 className="w-3 h-3 text-blue-400" /> Repo
                               </a>
-                            ) : null}
-
-                            {demoUrl ? (
-                              <a
-                                href={demoUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-2.5 py-1 bg-[rgba(16,185,129,0.1)] border border-[var(--color-success)]/40 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
-                                title={demoUrl}
-                              >
-                                <Globe className="w-3.5 h-3.5" />
-                                <span>Live Demo</span>
+                            )}
+                            {demoUrl && (
+                              <a href={demoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded text-[10px] flex items-center gap-1 hover:bg-emerald-500/20">
+                                <Globe className="w-3 h-3" /> Demo
                               </a>
-                            ) : null}
-
-                            {slideUrl ? (
-                              <a
-                                href={slideUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/40 text-purple-300 hover:bg-purple-500/20 rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
-                                title={slideUrl}
-                              >
-                                <FileSpreadsheet className="w-3.5 h-3.5" />
-                                <span>Slides Pitch</span>
+                            )}
+                            {slideUrl && (
+                              <a href={slideUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-purple-500/10 border border-purple-500/30 text-purple-300 rounded text-[10px] flex items-center gap-1 hover:bg-purple-500/20">
+                                <FileSpreadsheet className="w-3 h-3" /> Slides
                               </a>
-                            ) : null}
-
-                            {!repoUrl && !demoUrl && !slideUrl && (
-                              <span className="text-[11px] text-[var(--text-muted)] italic">Đang cập nhật link</span>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3.5 align-middle text-right text-[11px] text-[var(--text-muted)] whitespace-nowrap">
-                          {createdTime ? new Date(createdTime).toLocaleString("vi-VN") : "Vừa xong"}
+                        <td className="p-3 text-right text-[11px] text-[var(--text-muted)]">
+                          {sub.createdTime ? new Date(sub.createdTime).toLocaleDateString("vi-VN") : "Vừa xong"}
                         </td>
                       </tr>
                     );
