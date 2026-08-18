@@ -10,6 +10,7 @@ import {
   useDisqualifyTeam,
   useDeleteTeam,
   useAddTeamMember,
+  useUpdateTeam,
 } from "@/repositories/teamsRepository";
 import { useEvents, useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
@@ -60,6 +61,12 @@ function TeamDetailModal({
   const [addMemberError, setAddMemberError] = useState("");
   const { mutateAsync: addMember, isPending: isAddingMember } = useAddTeamMember();
 
+  const [showEditTeam, setShowEditTeam] = useState(false);
+  const [editTeamName, setEditTeamName] = useState("");
+  const [editTeamDesc, setEditTeamDesc] = useState("");
+  const [editTeamError, setEditTeamError] = useState("");
+  const { mutateAsync: updateTeam, isPending: isUpdatingTeam } = useUpdateTeam();
+
   const handleAddMember = async () => {
     if (!addMemberUserId.trim()) return;
     setAddMemberError("");
@@ -76,6 +83,23 @@ function TeamDetailModal({
   const members = teamDetail.members || teamDetail.Members || [];
   const teamName = teamDetail.teamName || teamDetail.TeamName || teamDetail.name || teamDetail.Name || "Đội thi";
   const desc = teamDetail.description || teamDetail.Description || "Dự án phát triển giải pháp công nghệ SEAL Hackathon.";
+
+  const openEditTeam = () => {
+    setEditTeamName(teamName);
+    setEditTeamDesc(teamDetail.description || teamDetail.Description || "");
+    setEditTeamError("");
+    setShowEditTeam(true);
+  };
+  const handleSaveEditTeam = async () => {
+    if (!editTeamName.trim()) return;
+    setEditTeamError("");
+    try {
+      await updateTeam({ id: teamId, payload: { name: editTeamName.trim(), description: editTeamDesc.trim() } });
+      setShowEditTeam(false);
+    } catch (err: any) {
+      setEditTeamError(err?.response?.data?.message || err?.message || "Không cập nhật được thông tin đội.");
+    }
+  };
 
   return (
     <>
@@ -181,6 +205,54 @@ function TeamDetailModal({
                   );
                 })}
               </div>
+            )}
+          </div>
+
+          {/* Sửa thông tin đội (EC — hoạt động cả khi đội đã khóa) */}
+          <div className="space-y-2 border-t border-[var(--border-muted)] pt-3">
+            {showEditTeam ? (
+              <div className="space-y-2 font-mono text-xs">
+                <label className="text-[10px] uppercase text-[var(--text-muted)]">Tên đội:</label>
+                <Input
+                  type="text"
+                  value={editTeamName}
+                  onChange={(e) => setEditTeamName(e.target.value)}
+                  className="w-full text-xs"
+                />
+                <label className="text-[10px] uppercase text-[var(--text-muted)]">Mô tả:</label>
+                <textarea
+                  rows={2}
+                  value={editTeamDesc}
+                  onChange={(e) => setEditTeamDesc(e.target.value)}
+                  className="w-full border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveEditTeam}
+                    disabled={isUpdatingTeam || !editTeamName.trim()}
+                    className="text-xs font-mono cursor-pointer"
+                  >
+                    {isUpdatingTeam ? "Đang lưu..." : "Lưu"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => { setShowEditTeam(false); setEditTeamError(""); }}
+                    className="text-xs font-mono cursor-pointer"
+                  >
+                    Hủy
+                  </Button>
+                </div>
+                {editTeamError && <p className="text-[var(--color-danger)]">{editTeamError}</p>}
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                onClick={openEditTeam}
+                className="text-xs font-mono border border-[var(--border-muted)] cursor-pointer"
+              >
+                Sửa Thông Tin Đội (BTC)
+              </Button>
             )}
           </div>
 
