@@ -32,9 +32,7 @@ export const CoordinatorStaffView: React.FC = () => {
   const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
   const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
     ? allEvents
-    : myEvents.length > 0
-    ? myEvents
-    : allEvents;
+    : myEvents;
 
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId || "");
 

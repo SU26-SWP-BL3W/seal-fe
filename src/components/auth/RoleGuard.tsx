@@ -24,14 +24,15 @@ interface RoleGuardProps {
 }
 
 // Lấy dashboard URL theo role
-function getRoleDashboardUrl(user: { isAdmin?: boolean; IsAdmin?: boolean } | null, activeRole: { roleName?: string; RoleName?: string } | null): string {
+function getRoleDashboardUrl(user: { isAdmin?: boolean; IsAdmin?: boolean; isStudent?: boolean; IsStudent?: boolean } | null, activeRole: { roleName?: string; RoleName?: string } | null): string {
   const roleName = getRoleName(activeRole);
 
   if (user?.isAdmin || user?.IsAdmin) return "/admin/dashboard";
-  if (roleName === "Judge") return "/judge/tracks";
   if (roleName === "EventCoordinator" || roleName === "Coordinator") return "/coordinator/dashboard";
+  if (roleName === "Judge") return "/judge/scoring";
   if (roleName === "Mentor") return "/mentor/tracks";
   if (roleName === "TeamLeader" || roleName === "TeamMember") return "/my-team";
+  if (user?.isStudent || user?.IsStudent) return "/events";
   return "/login";
 }
 

@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
-import { useEvents } from "@/repositories/eventsRepository";
+import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
+import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import { PagedResult } from "@/models/types";
@@ -17,8 +18,13 @@ import {
 } from "lucide-react";
 
 export const CoordinatorDashboardView: React.FC = () => {
-  const { data: rawEvents = [] } = useEvents();
-  const eventsList = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
+  const { user: currentUser } = useAuth();
+  const { data: myEvents = [] } = useMyEvents();
+  const { data: rawAllEvents = [] } = useEvents();
+  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allEvents
+    : myEvents;
 
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -29,16 +35,26 @@ export const CoordinatorDashboardView: React.FC = () => {
     isLoading: isLoadingSubmissions,
     refetch: refetchSubmissions,
   } = useQuery({
-    queryKey: ["all-submissions", selectedEventId],
+    queryKey: ["all-submissions", selectedEventId, eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
     queryFn: async () => {
       const params: Record<string, any> = { PageSize: 200 };
-      if (selectedEventId) params.EventId = selectedEventId;
+      if (selectedEventId) {
+        params.EventId = selectedEventId;
+      }
       const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", { params });
       return res.data?.data ?? [];
     },
   });
 
-  const submissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
+  const allSubmissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
+  // For non-admin ECs, filter submissions to only those belonging to the EC's assigned events
+  const allowedEventIds = new Set(eventsList.map((e: any) => e.id || e.Id || e.eventId || e.EventId));
+  const submissions = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allSubmissions
+    : allSubmissions.filter((sub: any) => {
+        const evId = sub.eventId || sub.EventId;
+        return evId ? allowedEventIds.has(evId) : true;
+      });
 
   // Filtered submissions by search term
   const displaySubmissions = submissions.filter((sub: any) => {

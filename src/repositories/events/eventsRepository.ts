@@ -185,16 +185,9 @@ export function useMyEvents() {
       try {
         const res = await apiClient.get<any>("/Events/my-events");
         const list = unwrapEventsList(res.data);
-        if (list.length > 0) return list as MyEventModel[];
-      } catch {
-        // Fallback
-      }
-
-      try {
-        const allRes = await apiClient.get<any>("/Events", { params: { PageSize: 100 } });
-        return unwrapEventsList(allRes.data) as MyEventModel[];
-      } catch (err) {
-        console.error("Error fetching my events from API:", err);
+        return list as MyEventModel[];
+      } catch (err: any) {
+        console.warn("Error fetching my events from /Events/my-events:", err?.message || err);
         return [] as MyEventModel[];
       }
     },
