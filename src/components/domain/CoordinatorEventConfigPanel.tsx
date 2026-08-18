@@ -623,8 +623,8 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-            <div className="md:col-span-8 space-y-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-8 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Tên Sự Kiện / Cuộc Thi *
               </label>
@@ -633,18 +633,18 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
                 placeholder="VD: FPT TECH HACKATHON 2026"
-                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white font-bold text-sm focus:border-[#a855f7] focus:outline-none"
+                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white font-bold text-xs focus:border-[#a855f7] focus:outline-none"
               />
             </div>
 
-            <div className="md:col-span-2 space-y-1.5">
+            <div className="md:col-span-2 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Mùa Giải (Season) *
               </label>
               <select
                 value={season}
                 onChange={(e) => setSeason(e.target.value)}
-                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none"
+                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none cursor-pointer"
               >
                 <option value="Spring">Spring</option>
                 <option value="Summer">Summer</option>
@@ -653,7 +653,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
               </select>
             </div>
 
-            <div className="md:col-span-2 space-y-1.5">
+            <div className="md:col-span-2 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Năm Tổ Chức *
               </label>
@@ -661,11 +661,11 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                 type="number"
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
-                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none"
+                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs font-mono focus:border-[#a855f7] focus:outline-none"
               />
             </div>
 
-            <div className="md:col-span-3 space-y-1.5">
+            <div className="md:col-span-3 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Mở Cổng Đăng Ký *
               </label>
@@ -673,11 +673,11 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                 type="datetime-local"
                 value={registrationStartDate}
                 onChange={(e) => setRegistrationStartDate(e.target.value)}
-                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
               />
             </div>
 
-            <div className="md:col-span-3 space-y-1.5">
+            <div className="md:col-span-3 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Đóng Cổng Đăng Ký *
               </label>
@@ -685,11 +685,11 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                 type="datetime-local"
                 value={registrationEndDate}
                 onChange={(e) => setRegistrationEndDate(e.target.value)}
-                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
               />
             </div>
 
-            <div className="md:col-span-3 space-y-1.5">
+            <div className="md:col-span-3 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Bắt Đầu Sự Kiện *
               </label>
@@ -697,11 +697,11 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                 type="datetime-local"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
               />
             </div>
 
-            <div className="md:col-span-3 space-y-1.5">
+            <div className="md:col-span-3 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Kết Thúc Sự Kiện *
               </label>
@@ -709,11 +709,11 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                 type="datetime-local"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
               />
             </div>
 
-            <div className="md:col-span-4 space-y-1.5">
+            <div className="md:col-span-4 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Giới Hạn Số Lượng Đội (Max Teams) *
               </label>
@@ -721,19 +721,19 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                 type="number"
                 value={maxTeams}
                 onChange={(e) => setMaxTeams(Number(e.target.value))}
-                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none"
+                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs font-mono focus:border-[#a855f7] focus:outline-none"
               />
             </div>
 
-            <div className="md:col-span-8 space-y-1.5">
+            <div className="md:col-span-8 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Trạng Thái Công Bố Sự Kiện
               </label>
-              <div className="p-2.5 bg-[var(--bg-input)] border border-zinc-700 flex items-center justify-between text-xs">
-                <span className="text-zinc-300 font-mono">
+              <div className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 flex items-center justify-between text-xs">
+                <span className="text-zinc-300 font-mono text-xs truncate">
                   {isPublished ? "SỰ KIỆN ĐANG MỞ CÔNG KHAI (OPEN)" : "SỰ KIỆN ĐANG Ở BẢN NHÁP NỘI BỘ (DRAFT)"}
                 </span>
-                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase hud-clipped ${
+                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase hud-clipped shrink-0 ${
                   isPublished ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
                 }`}>
                   {isPublished ? "OPEN" : "DRAFT"}
@@ -741,7 +741,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
               </div>
             </div>
 
-            <div className="md:col-span-12 space-y-1.5">
+            <div className="md:col-span-12 space-y-1">
               <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Mô Tả Thể Lệ &amp; Giới Thiệu Cuộc Thi
               </label>
