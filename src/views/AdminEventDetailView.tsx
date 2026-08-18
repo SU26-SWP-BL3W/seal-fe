@@ -7,7 +7,7 @@ import { useEventDetail } from "@/repositories/eventsRepository";
 import { useGetRoundsByEvent } from "@/repositories/events/roundsRepository";
 import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
-import { useGetEventRoles } from "@/repositories/staffRepository";
+import { useGetEventRoles, staffRepository } from "@/repositories/staffRepository";
 import { Link, useRouter } from "@/i18n/routing";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 import { RevokeDraftConfirmModal } from "@/components/domain/RevokeDraftConfirmModal";
@@ -48,6 +48,10 @@ export function AdminEventDetailView() {
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [isRevokingDraft, setIsRevokingDraft] = useState(false);
   const [isActivatingPublic, setIsActivatingPublic] = useState(false);
+  const [isEmergencyOverrideOpen, setIsEmergencyOverrideOpen] = useState(false);
+  const [emergencyEcEmail, setEmergencyEcEmail] = useState("");
+  const [isSubmittingEmergency, setIsSubmittingEmergency] = useState(false);
+  const [emergencyMessage, setEmergencyMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   // Load Event Detail
   const { data: event, isLoading: isLoadingEvent, refetch: refetchEvent } = useEventDetail(eventId);
@@ -129,6 +133,36 @@ export function AdminEventDetailView() {
     refetchTracks();
     refetchTeams();
     refetchStaff();
+  };
+
+  const handleAssignEmergencyEc = async () => {
+    if (!emergencyEcEmail.trim()) {
+      setEmergencyMessage({ text: "Vui lòng nhập Email của Event Coordinator mới.", isError: true });
+      return;
+    }
+
+    setIsSubmittingEmergency(true);
+    setEmergencyMessage(null);
+
+    try {
+      await staffRepository.inviteCoordinator({
+        eventId,
+        email: emergencyEcEmail.trim(),
+        fullName: emergencyEcEmail.trim().split("@")[0],
+        notes: "Gán khẩn cấp bởi System Admin (Emergency Override)",
+      });
+
+      setEmergencyMessage({ text: "Đã chỉ định Event Coordinator mới thành công!", isError: false });
+      setIsSubmittingEmergency(false);
+      handleRefreshAll();
+      setTimeout(() => {
+        setIsEmergencyOverrideOpen(false);
+      }, 1500);
+    } catch (err: any) {
+      setIsSubmittingEmergency(false);
+      const msg = err?.response?.data?.message || err?.message || "Lỗi khi chỉ định Event Coordinator khẩn cấp.";
+      setEmergencyMessage({ text: msg, isError: true });
+    }
   };
 
   return (
@@ -228,6 +262,19 @@ export function AdminEventDetailView() {
                 PHÂN CÔNG EC
               </button>
             </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmergencyMessage(null);
+                setEmergencyEcEmail("");
+                setIsEmergencyOverrideOpen(true);
+              }}
+              className="text-xs border border-amber-500/40 bg-amber-950/20 text-amber-300 hover:bg-amber-950/40 font-bold cursor-pointer h-10 px-4 rounded transition-colors"
+              title="Can thiệp khẩn cấp: Đổi hoặc gán EC mới cho sự kiện khi EC cũ gặp sự cố"
+            >
+              CAN THIỆP EC
+            </button>
 
             <Link href={`/coordinator/dashboard?eventId=${eventId}`}>
               <button
@@ -725,6 +772,80 @@ export function AdminEventDetailView() {
               setIsEditingEvent(false);
             }}
           />
+        )}
+
+        {/* Modal Can Thiệp EC Khẩn Cấp (Admin Emergency Override) */}
+        {isEmergencyOverrideOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm font-mono text-xs">
+            <div className="bg-[#0f171c] border border-amber-500/40 p-6 max-w-lg w-full space-y-4 hud-clipped shadow-2xl">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-amber-400" />
+                  <span className="font-bold text-sm text-white uppercase tracking-wider">
+                    CAN THIỆP KHẨN CẤP: CHỈ ĐỊNH EC
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEmergencyOverrideOpen(false)}
+                  className="text-zinc-500 hover:text-white cursor-pointer font-bold"
+                >
+                  [X]
+                </button>
+              </div>
+
+              <div className="space-y-3 font-sans text-xs text-zinc-300">
+                <p className="text-zinc-400">
+                  Sử dụng tính năng này khi tài khoản Event Coordinator (EC) phụ trách sự kiện bị khóa hoặc gặp sự cố bất khả kháng.
+                </p>
+
+                <div className="space-y-1 font-mono">
+                  <label className="text-[11px] font-bold text-zinc-300 uppercase block">
+                    EMAIL EVENT COORDINATOR MỚI:
+                  </label>
+                  <input
+                    type="email"
+                    value={emergencyEcEmail}
+                    onChange={(e) => setEmergencyEcEmail(e.target.value)}
+                    placeholder="coordinator@fpt.edu.vn"
+                    className="w-full px-3 py-2 bg-[#141f23] border border-zinc-700 focus:border-amber-500 text-white rounded outline-none"
+                  />
+                </div>
+
+                {emergencyMessage && (
+                  <div
+                    className={`p-2.5 rounded font-mono text-[11px] border ${
+                      emergencyMessage.isError
+                        ? "bg-red-500/10 border-red-500/30 text-red-400"
+                        : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                    }`}
+                  >
+                    {emergencyMessage.text}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-zinc-800 font-mono">
+                <button
+                  type="button"
+                  disabled={isSubmittingEmergency}
+                  onClick={() => setIsEmergencyOverrideOpen(false)}
+                  className="px-4 py-2 bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white font-bold uppercase text-xs rounded transition-all cursor-pointer"
+                >
+                  [HỦY BỎ]
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isSubmittingEmergency}
+                  onClick={handleAssignEmergencyEc}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-xs rounded transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-amber-600/30"
+                >
+                  {isSubmittingEmergency ? "ĐANG XỬ LÝ..." : "[XÁC NHẬN CHỈ ĐỊNH EC]"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

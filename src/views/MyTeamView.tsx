@@ -28,6 +28,8 @@ import {
   type TeamStatus,
   type TeamView,
 } from "@/components/domain/team";
+import { TeamCountdownTimer } from "@/components/domain/TeamCountdownTimer";
+import { useEventRounds } from "@/repositories/eventsRepository";
 import type { MemberItem } from "@/viewModels/teamTypes";
 
 // BE trả camelCase, một vài endpoint cũ trả PascalCase — đọc cả hai để không
@@ -106,6 +108,10 @@ export function MyTeamView() {
   const { mutateAsync: confirmRegistration, isPending: isRegistering } = useConfirmRegistration();
   const { mutateAsync: transferLeadership, isPending: isTransferring } = useTransferLeadership();
   const { mutateAsync: leaveTeam, isPending: isLeaving } = useLeaveTeam();
+
+  const { data: rawDbRounds = [] } = useEventRounds(team?.eventId || targetEventId);
+  const eventRounds: any[] = Array.isArray(rawDbRounds) ? rawDbRounds : [];
+  const activeRound = eventRounds.length > 0 ? eventRounds[0] : null;
 
   const [transferTarget, setTransferTarget] = useState<{ id: string; name: string } | null>(null);
   const [cancelTarget, setCancelTarget] = useState<InvitationView | null>(null);
@@ -201,6 +207,20 @@ export function MyTeamView() {
             </h2>
             <RegistrationChecklist requirements={requirements} />
           </Card>
+        )}
+
+        {/* TEAM COUNTDOWN TIMER WIDGET */}
+        {activeRound && (
+          <TeamCountdownTimer
+            roundName={activeRound.roundName || activeRound.RoundName || "VÒNG 1: Ý TƯỞNG & ĐỀ XUẤT"}
+            startDate={activeRound.startDate || activeRound.StartDate}
+            deadline={activeRound.endDate || activeRound.EndDate}
+            deliverables={[
+              { key: "github", label: "MÃ NGUỒN REPO", isSubmitted: true },
+              { key: "slides", label: "SLIDE THUYẾT TRÌNH", isSubmitted: false },
+              { key: "demo_video", label: "VIDEO DEMO", isSubmitted: false },
+            ]}
+          />
         )}
 
         <div className="grid grid-cols-1 gap-[var(--space-lg)] lg:grid-cols-3">

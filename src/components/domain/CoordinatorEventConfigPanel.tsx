@@ -141,6 +141,9 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
     );
   }, [tracks, assignedTracksRubricsCount]);
 
+  const unassignedTracks = useMemo(() => tracks.filter((t) => !t.templateId), [tracks]);
+  const [showGuardClauseModal, setShowGuardClauseModal] = useState(false);
+
   const completedStepsCount = useMemo(() => {
     let count = 0;
     if (isGeneralComplete) count++;
@@ -1211,13 +1214,83 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
           <button
             type="button"
             disabled={isSaving}
-            onClick={() => handleSaveAll(true)}
+            onClick={() => {
+              if (unassignedTracks.length > 0) {
+                setShowGuardClauseModal(true);
+              } else {
+                handleSaveAll(true);
+              }
+            }}
             className="px-6 py-2.5 bg-[#a855f7] hover:bg-[#9333ea] text-white font-bold uppercase tracking-wider hud-clipped transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-[#a855f7]/30"
           >
             <span>{isSaving ? "ĐANG LƯU DỮ LIỆU..." : "[LƯU & MỞ ĐĂNG KÝ CUỘC THI]"}</span>
           </button>
         </div>
       </div>
+
+      {/* EC GUARD CLAUSE MODAL */}
+      {showGuardClauseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#0f171c] border border-amber-500/40 p-6 max-w-lg w-full space-y-4 hud-clipped shadow-2xl font-mono">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-amber-400" />
+                <span className="font-bold text-sm text-white uppercase tracking-wider">
+                  CẢNH BÁO: CHƯA GÁN BỘ TIÊU CHÍ (RUBRIC)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGuardClauseModal(false)}
+                className="text-zinc-500 hover:text-white text-xs cursor-pointer font-bold"
+              >
+                [X]
+              </button>
+            </div>
+
+            <div className="text-xs text-zinc-300 font-sans space-y-2">
+              <p>
+                Hiện tại có <span className="text-amber-400 font-bold font-mono">{unassignedTracks.length}/{tracks.length}</span> Hạng mục (Track) chưa được liên kết Bộ tiêu chí chấm điểm:
+              </p>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto p-2.5 bg-[#141f23] border border-zinc-800 hud-clipped font-mono text-[11px]">
+                {unassignedTracks.map((t, idx) => (
+                  <div key={t.id || idx} className="text-amber-300/90 flex items-center justify-between">
+                    <span>• {t.trackName || `Hạng mục ${idx + 1}`}</span>
+                    <span className="text-zinc-500 text-[10px]">[CHƯA GÁN RUBRIC]</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-zinc-400 text-[11px] mt-2">
+                Nếu mở đăng ký khi chưa gán Rubric, Giám khảo sẽ không thể thực hiện chấm điểm bài thi của các hạng mục này.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGuardClauseModal(false);
+                  handleSaveAll(false);
+                }}
+                className="px-4 py-2 bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white font-bold uppercase text-xs hud-clipped transition-all cursor-pointer"
+              >
+                [LƯU BẢN NHÁP TẠM THỜI]
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGuardClauseModal(false);
+                  setActiveSubSection("tracks");
+                }}
+                className="px-4 py-2 bg-[#a855f7] hover:bg-[#9333ea] text-white font-bold uppercase text-xs hud-clipped transition-all cursor-pointer shadow-md shadow-[#a855f7]/30"
+              >
+                [ĐẾN HẠNG MỤC ĐỂ GÁN RUBRIC]
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
