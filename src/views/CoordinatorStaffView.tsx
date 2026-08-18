@@ -7,9 +7,10 @@ import { staffRepository, useGetEventRoles } from "@/repositories/staffRepositor
 import { useGetUsers } from "@/repositories/usersRepository";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Info, Edit3, PlusCircle } from "lucide-react";
+import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Info, Edit3, PlusCircle, Layers, Users } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
+import { CoordinatorEventConfigPanel } from "@/components/domain/CoordinatorEventConfigPanel";
 
 export const checkEmailInSystem = (email: string, usersList: Array<any> = []) => {
   if (!email.trim()) return true;
@@ -36,6 +37,7 @@ export const CoordinatorStaffView: React.FC = () => {
     : myEvents;
 
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId || "");
+  const [activeTab, setActiveTab] = useState<"config" | "staff">("config");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   React.useEffect(() => {
@@ -295,27 +297,19 @@ export const CoordinatorStaffView: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
-            <div className="flex items-center gap-2 font-mono text-xs text-[#a855f7] font-bold uppercase tracking-wider mb-1">
-              <Shield className="w-4 h-4 text-[#a855f7]" />
-              <span>QUẢN LÝ NHÂN SỰ BAN TỔ CHỨC</span>
+            <div className="flex items-center gap-2 font-mono text-xs text-[#c084fc] font-bold uppercase tracking-wider mb-1">
+              <Shield className="w-4 h-4 text-[#c084fc]" />
+              <span>MODULE 01 • QUẢN LÝ &amp; ĐIỀU HÀNH SỰ KIỆN</span>
             </div>
             <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
-              MỜI VÀ PHÂN CÔNG GIÁM KHẢO &amp; CỐ VẤN
+              TRUNG TÂM CẤU HÌNH SỰ KIỆN &amp; NHÂN SỰ
             </h1>
             <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
-              Mời nhân sự chuyên môn tham gia sự kiện và quản lý danh sách phân công Giám khảo, Cố vấn cho từng hạng mục thi đấu.
+              Quản lý toàn diện thông tin cuộc thi, thời hạn nộp bài các vòng thi, hạng mục chuyên môn và phân bổ hội đồng Giám khảo, Cố vấn.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="primary"
-              onClick={() => setIsEditModalOpen(true)}
-              className="bg-[#a855f7] hover:bg-[#9333ea] text-white font-mono text-xs font-bold uppercase flex items-center gap-1.5 shadow-md cursor-pointer"
-            >
-              <Edit3 className="w-4 h-4" /> ⚙️ Chỉnh Sửa Sự Kiện &amp; Cấu Hình Vòng Thi
-            </Button>
-
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs text-[var(--text-muted)]">Sự kiện:</span>
               <select
@@ -337,7 +331,47 @@ export const CoordinatorStaffView: React.FC = () => {
           </div>
         </div>
 
-        {/* 3 Invitation Form Cards */}
+        {/* 2 Main Operation Tabs */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-muted)] pb-2 font-mono text-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("config")}
+            className={`px-5 py-2.5 font-bold uppercase flex items-center gap-2 hud-clipped transition-all cursor-pointer ${
+              activeTab === "config"
+                ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-white border border-zinc-800"
+            }`}
+          >
+            <span>[01] CẤU HÌNH SỰ KIỆN, VÒNG THI &amp; HẠNG MỤC</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("staff")}
+            className={`px-5 py-2.5 font-bold uppercase flex items-center gap-2 hud-clipped transition-all cursor-pointer ${
+              activeTab === "staff"
+                ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-white border border-zinc-800"
+            }`}
+          >
+            <span>[02] MỜI &amp; PHÂN CÔNG GIÁM KHẢO / CỐ VẤN ({filteredRoles.length})</span>
+          </button>
+        </div>
+
+        {/* TAB 1: EVENT, ROUNDS & TRACKS CONFIGURATION */}
+        {activeTab === "config" && (
+          <CoordinatorEventConfigPanel
+            event={currentEvent}
+            onUpdated={() => {
+              refetchRoles();
+            }}
+          />
+        )}
+
+        {/* TAB 2: STAFF INVITATION & ROSTER ASSIGNMENT */}
+        {activeTab === "staff" && (
+          <div className="space-y-8">
+            {/* 3 Invitation Form Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Card Form 1: Invite Coordinator */}
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-6 hud-clipped flex flex-col justify-between space-y-6">
@@ -401,15 +435,15 @@ export const CoordinatorStaffView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingCoordinator}
-                  className="w-full py-2.5 bg-[var(--accent-coordinator)] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 bg-[#a855f7]/15 border border-[#a855f7] text-[#c084fc] hover:bg-[#a855f7] hover:text-white font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_12px_rgba(168,85,247,0.15)] hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmittingCoordinator ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Điều Phối Viên"}</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmittingCoordinator ? "ĐANG GỬI LỜI MỜI..." : "GỬI LỜI MỜI ĐIỀU PHỐI VIÊN"}</span>
                 </button>
               </form>
             </div>
           </div>
-          {/* Card Form 1: Invite Judge */}
+          {/* Card Form 2: Invite Judge */}
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-6 hud-clipped flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center gap-3 border-b border-[var(--border-muted)] pb-4 mb-6">
@@ -489,16 +523,16 @@ export const CoordinatorStaffView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingJudge}
-                  className="w-full py-2.5 bg-[var(--accent-judge)] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 bg-amber-500/15 border border-amber-500 text-amber-300 hover:bg-amber-500 hover:text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_12px_rgba(245,158,11,0.15)] hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmittingJudge ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Giám Khảo"}</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmittingJudge ? "ĐANG GỬI LỜI MỜI..." : "GỬI LỜI MỜI GIÁM KHẢO"}</span>
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Card Form 2: Invite Mentor */}
+          {/* Card Form 3: Invite Mentor */}
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-6 hud-clipped flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center gap-3 border-b border-[var(--border-muted)] pb-4 mb-6">
@@ -578,10 +612,10 @@ export const CoordinatorStaffView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingMentor}
-                  className="w-full py-2.5 bg-[#2dd4bf] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 bg-emerald-500/15 border border-emerald-500 text-emerald-300 hover:bg-emerald-500 hover:text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_12px_rgba(16,185,129,0.15)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmittingMentor ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Cố Vấn"}</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmittingMentor ? "ĐANG GỬI LỜI MỜI..." : "GỬI LỜI MỜI CỐ VẤN"}</span>
                 </button>
               </form>
             </div>
@@ -673,17 +707,19 @@ export const CoordinatorStaffView: React.FC = () => {
           )}
         </Card>
 
-        <datalist id="system-staff-accounts">
-          {systemAccounts.map((acc: any, idx: number) => {
-            const emailVal = acc.email || acc.Email || acc.userEmail || "";
-            const nameVal = acc.fullName || acc.FullName || emailVal;
-            return (
-              <option key={acc.id || acc.Id || idx} value={emailVal}>
-                {nameVal} ({emailVal})
-              </option>
-            );
-          })}
-        </datalist>
+            <datalist id="system-staff-accounts">
+              {systemAccounts.map((acc: any, idx: number) => {
+                const emailVal = acc.email || acc.Email || acc.userEmail || "";
+                const nameVal = acc.fullName || acc.FullName || emailVal;
+                return (
+                  <option key={acc.id || acc.Id || idx} value={emailVal}>
+                    {nameVal} ({emailVal})
+                  </option>
+                );
+              })}
+            </datalist>
+          </div>
+        )}
 
         {/* Modal Chỉnh Sửa Sự Kiện & Cấu Hình Vòng Thi (1.1.1 & 1.1.2 & 1.1.2.1) */}
         {isEditModalOpen && currentEvent && (

@@ -282,132 +282,144 @@ export function NavigationBar() {
             {/* 01. Quản lý sự kiện */}
             <Link
               href="/coordinator/staff"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
+              className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
+                  ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] border border-transparent hover:border-zinc-800"
               }`}
             >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
+              <div className={`w-7 h-7 hud-clipped flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-all ${
                 pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
+                  ? "bg-white text-[#a855f7]"
+                  : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
                 01
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Quản Lý Sự Kiện</div>
-                <div className="text-[10px] text-zinc-400 truncate">Vòng thi • Mentor • Judge Track</div>
+                <div className="text-xs uppercase tracking-wide truncate">Quản Lý Sự Kiện</div>
+                <div className={`text-[10px] truncate ${pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events") ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
+                  Vòng thi • Mentor • Judge
+                </div>
               </div>
             </Link>
 
             {/* 02. Quản lý đội thi */}
             <Link
               href="/coordinator/teams"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
+              className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/coordinator/teams")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
+                  ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] border border-transparent hover:border-zinc-800"
               }`}
             >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
+              <div className={`w-7 h-7 hud-clipped flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-all ${
                 pathname.includes("/coordinator/teams")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
+                  ? "bg-white text-[#a855f7]"
+                  : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
                 02
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Quản Lý Đội Thi</div>
-                <div className="text-[10px] text-zinc-400 truncate">Roster thành viên • Duyệt/Từ chối</div>
+                <div className="text-xs uppercase tracking-wide truncate">Quản Lý Đội Thi</div>
+                <div className={`text-[10px] truncate ${pathname.includes("/coordinator/teams") ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
+                  Roster thành viên • Duyệt đội
+                </div>
               </div>
             </Link>
 
             {/* 03. Duyệt tài khoản sinh viên */}
             <Link
               href="/coordinator/profiles"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
+              className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/coordinator/profiles")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
+                  ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] border border-transparent hover:border-zinc-800"
               }`}
             >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
+              <div className={`w-7 h-7 hud-clipped flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-all ${
                 pathname.includes("/coordinator/profiles")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
+                  ? "bg-white text-[#a855f7]"
+                  : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
                 03
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Duyệt Tài Khoản</div>
-                <div className="text-[10px] text-zinc-400 truncate">Role Sinh viên • Thẻ SV 3x4</div>
+                <div className="text-xs uppercase tracking-wide truncate">Duyệt Tài Khoản</div>
+                <div className={`text-[10px] truncate ${pathname.includes("/coordinator/profiles") ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
+                  Role Sinh viên • Thẻ SV 3x4
+                </div>
               </div>
             </Link>
 
             {/* 04. Kho tiêu chí Rubric */}
             <Link
               href="/coordinator/templates"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
+              className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/coordinator/templates") || pathname.includes("/assign-template")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
+                  ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] border border-transparent hover:border-zinc-800"
               }`}
             >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
+              <div className={`w-7 h-7 hud-clipped flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-all ${
                 pathname.includes("/coordinator/templates") || pathname.includes("/assign-template")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
+                  ? "bg-white text-[#a855f7]"
+                  : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
                 04
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Kho Tiêu Chí</div>
-                <div className="text-[10px] text-zinc-400 truncate">Rubric chấm thi • Trọng số %</div>
+                <div className="text-xs uppercase tracking-wide truncate">Kho Tiêu Chí</div>
+                <div className={`text-[10px] truncate ${pathname.includes("/coordinator/templates") || pathname.includes("/assign-template") ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
+                  Rubric chấm thi • Trọng số %
+                </div>
               </div>
             </Link>
 
             {/* 05. Quản lý bài nộp & Phúc khảo */}
             <Link
               href="/coordinator/submissions"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
+              className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
                 (pathname.includes("/coordinator/submissions") || pathname.includes("/coordinator/appeals"))
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
+                  ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] border border-transparent hover:border-zinc-800"
               }`}
             >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
+              <div className={`w-7 h-7 hud-clipped flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-all ${
                 (pathname.includes("/coordinator/submissions") || pathname.includes("/coordinator/appeals"))
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
+                  ? "bg-white text-[#a855f7]"
+                  : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
                 05
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Quản Lý Bài Nộp</div>
-                <div className="text-[10px] text-zinc-400 truncate">GitHub • Demo • Phúc Khảo</div>
+                <div className="text-xs uppercase tracking-wide truncate">Quản Lý Bài Nộp</div>
+                <div className={`text-[10px] truncate ${(pathname.includes("/coordinator/submissions") || pathname.includes("/coordinator/appeals")) ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
+                  GitHub • Demo • Phúc Khảo
+                </div>
               </div>
             </Link>
 
             {/* 06. Công bố kết quả & Giải thưởng */}
             <Link
               href="/coordinator/publish-results"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
+              className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/coordinator/publish-results") || pathname.includes("/coordinator/prizes") || pathname.includes("/coordinator/calibration")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
+                  ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] border border-transparent hover:border-zinc-800"
               }`}
             >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
+              <div className={`w-7 h-7 hud-clipped flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-all ${
                 pathname.includes("/coordinator/publish-results") || pathname.includes("/coordinator/prizes") || pathname.includes("/coordinator/calibration")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
+                  ? "bg-white text-[#a855f7]"
+                  : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
                 06
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Công Bố Kết Quả</div>
-                <div className="text-[10px] text-zinc-400 truncate">Bảng xếp hạng • Giải thưởng</div>
+                <div className="text-xs uppercase tracking-wide truncate">Công Bố Kết Quả</div>
+                <div className={`text-[10px] truncate ${pathname.includes("/coordinator/publish-results") || pathname.includes("/coordinator/prizes") || pathname.includes("/coordinator/calibration") ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
+                  Bảng xếp hạng • Giải thưởng
+                </div>
               </div>
             </Link>
           </nav>

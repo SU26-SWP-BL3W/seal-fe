@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
-import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles } from "lucide-react";
+import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles, Copy } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
 export interface CriteriaInsideSet {
@@ -54,8 +54,9 @@ export const CoordinatorTemplatesView: React.FC = () => {
   }, [dbTemplates.length]);
 
   const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
 
-  // New Criteria Set Form State
+  // New/Edit Criteria Set Form State
   const [newSetName, setNewSetName] = useState("");
   const [newSetDesc, setNewSetDesc] = useState("");
   const [builderCriterias, setBuilderCriterias] = useState<CriteriaInsideSet[]>([]);
@@ -70,6 +71,62 @@ export const CoordinatorTemplatesView: React.FC = () => {
   // Active Selected Set
   const activeSet = criteriaSets.find((s) => s.id === selectedSetId) || criteriaSets[0];
   const activeSetTotalWeight = activeSet ? activeSet.criterias.reduce((acc, c) => acc + c.weight, 0) : 0;
+
+  // Open Create Modal
+  const handleOpenCreateModal = () => {
+    setEditingSetId(null);
+    setNewSetName("");
+    setNewSetDesc("");
+    setBuilderCriterias([
+      {
+        id: `new-${Date.now()}-1`,
+        criterionName: "Tính Sáng Tạo & Đột Phá",
+        weight: 30,
+        maxScore: 10,
+        description: "Đánh giá tính mới, sự độc đáo của ý tưởng và giải pháp công nghệ.",
+      },
+      {
+        id: `new-${Date.now()}-2`,
+        criterionName: "Tính Khả Thi & Hoàn Thiện",
+        weight: 40,
+        maxScore: 10,
+        description: "Khả năng ứng dụng thực tế, kiến trúc kỹ thuật và độ hoàn thiện của sản phẩm.",
+      },
+      {
+        id: `new-${Date.now()}-3`,
+        criterionName: "Kỹ Năng Thuyết Trình & Phản Biện",
+        weight: 30,
+        maxScore: 10,
+        description: "Trình bày rõ ràng, slide trực quan và giải đáp phản biện thuyết phục.",
+      },
+    ]);
+    setIsBuilderModalOpen(true);
+  };
+
+  // Open Edit Modal
+  const handleOpenEditModal = (setId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const target = criteriaSets.find((s) => s.id === setId);
+    if (!target) return;
+
+    setEditingSetId(target.id);
+    setNewSetName(target.templateName);
+    setNewSetDesc(target.description);
+    setBuilderCriterias(
+      target.criterias.length > 0
+        ? target.criterias.map((c) => ({ ...c }))
+        : [
+            {
+              id: `crit-${Date.now()}-1`,
+              criterionName: "Tiêu chí 01",
+              weight: 100,
+              maxScore: 10,
+              description: "Mô tả tiêu chí chấm điểm...",
+            },
+          ]
+    );
+    setIsBuilderModalOpen(true);
+  };
 
   // Add Row inside Builder
   const handleAddCriteriaRow = () => {
@@ -99,11 +156,11 @@ export const CoordinatorTemplatesView: React.FC = () => {
     );
   };
 
-  // Save New Criteria Set into State & Database
+  // Save New/Edited Criteria Set into State & Database
   const handleSaveCriteriaSet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSetName.trim()) {
-      alert("Vui lòng nhập tên cho Bộ Tiêu Chí mới!");
+      alert("Vui lòng nhập tên cho Bộ Tiêu Chí!");
       return;
     }
     if (!isBuilderValid100) {
@@ -113,27 +170,64 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      if (templatesRepository?.createTemplate) {
-        await templatesRepository.createTemplate({
+      if (editingSetId) {
+        // Edit Mode
+        if (templatesRepository?.updateTemplate) {
+          try {
+            await templatesRepository.updateTemplate(editingSetId, {
+              templateName: newSetName,
+              description: newSetDesc,
+            });
+          } catch {
+            // Non-blocking if mock or offline
+          }
+        }
+
+        setCriteriaSets((prev) =>
+          prev.map((s) =>
+            s.id === editingSetId
+              ? {
+                  ...s,
+                  templateName: newSetName,
+                  description: newSetDesc,
+                  criterias: builderCriterias,
+                }
+              : s
+          )
+        );
+
+        setSuccessMessage(`✓ Đã cập nhật thành công bộ tiêu chí "${newSetName}"!`);
+      } else {
+        // Create Mode
+        if (templatesRepository?.createTemplate) {
+          try {
+            await templatesRepository.createTemplate({
+              templateName: newSetName,
+              description: newSetDesc,
+            });
+          } catch {
+            // Non-blocking
+          }
+        }
+
+        const newSet: CriteriaSetItem = {
+          id: `set-${Date.now()}`,
           templateName: newSetName,
-          description: newSetDesc,
-        });
+          description: newSetDesc || "Bộ tiêu chí đánh giá chuẩn cho sự kiện.",
+          createdDate: new Date().toISOString().split("T")[0],
+          criterias: builderCriterias,
+        };
+
+        setCriteriaSets((prev) => [newSet, ...prev]);
+        setSelectedSetId(newSet.id);
+        setSuccessMessage(`✓ Đã tạo và lưu thành công "${newSetName}" vào Kho Bộ Tiêu Chí!`);
       }
 
-      const newSet: CriteriaSetItem = {
-        id: `set-${Date.now()}`,
-        templateName: newSetName,
-        description: newSetDesc || "Bộ tiêu chí đánh giá chuẩn cho sự kiện.",
-        createdDate: new Date().toISOString().split("T")[0],
-        criterias: builderCriterias,
-      };
-
-      setCriteriaSets((prev) => [newSet, ...prev]);
-      setSelectedSetId(newSet.id);
       setIsBuilderModalOpen(false);
+      setEditingSetId(null);
       setNewSetName("");
       setNewSetDesc("");
-      setSuccessMessage(`Đã tạo và lưu thành công "${newSetName}" vào Kho Bộ Tiêu Chí!`);
+      setTimeout(() => setSuccessMessage(null), 4000);
     } catch {
       alert("Lưu Bộ tiêu chí thất bại.");
     } finally {
@@ -170,6 +264,28 @@ export const CoordinatorTemplatesView: React.FC = () => {
     }
   };
 
+  // LOI_04: Clone/Fork Template - Copy existing set as a new template
+  const handleCloneTemplate = (setId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    const sourceSet = criteriaSets.find((s) => s.id === setId);
+    if (!sourceSet) return;
+
+    // Pre-fill builder with cloned data
+    setEditingSetId(null);
+    setNewSetName(`[Bản sao] ${sourceSet.templateName}`);
+    setNewSetDesc(sourceSet.description);
+    setBuilderCriterias(
+      sourceSet.criterias.map((c, idx) => ({
+        ...c,
+        id: `clone-${Date.now()}-${idx}`,
+      }))
+    );
+    setIsBuilderModalOpen(true);
+    setSuccessMessage(`✓ Đã sao chép "${sourceSet.templateName}" - Vui lòng chỉnh sửa và lưu!`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white flex flex-col">
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 py-8 space-y-6">
@@ -191,7 +307,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setIsBuilderModalOpen(true)}
+            onClick={handleOpenCreateModal}
             className="px-5 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono text-xs font-bold uppercase flex items-center gap-2 cursor-pointer transition-colors shadow-lg shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
@@ -217,7 +333,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
                 <FolderGit2 className="w-4 h-4 text-[#8b5cf6]" />
                 CÁC BỘ TIÊU CHÍ ĐÃ LƯU ({criteriaSets.length})
               </span>
-              <span className="text-[10px] text-[#8a9ba8]">Bấm chọn để xem tiêu chí</span>
+              <span className="text-[10px] text-[#8a9ba8]">Bấm chọn để xem & sửa</span>
             </div>
 
             {/* List of Criteria Sets Cards */}
@@ -249,14 +365,34 @@ export const CoordinatorTemplatesView: React.FC = () => {
                         </h3>
                       </div>
 
-                      <button
-                        type="button"
-                        title="Xóa bộ tiêu chí"
-                        onClick={(e) => handleDeleteSet(set.id, set.templateName, e)}
-                        className="p-1.5 text-[#8a9ba8] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {/* Edit button on card */}
+                        <button
+                          type="button"
+                          title="Chỉnh sửa bộ tiêu chí này"
+                          onClick={(e) => handleOpenEditModal(set.id, e)}
+                          className="p-1.5 text-[#8a9ba8] hover:text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        {/* LOI_04: Clone button */}
+                        <button
+                          type="button"
+                          title="Nhân bản bộ tiêu chí (Clone/Fork)"
+                          onClick={(e) => handleCloneTemplate(set.id, e)}
+                          className="p-1.5 text-[#8a9ba8] hover:text-[#8b5cf6] hover:bg-[#8b5cf6]/10 transition-colors cursor-pointer"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Xóa bộ tiêu chí"
+                          onClick={(e) => handleDeleteSet(set.id, set.templateName, e)}
+                          className="p-1.5 text-[#8a9ba8] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs font-sans text-[#8a9ba8] line-clamp-2 leading-relaxed">
@@ -317,14 +453,37 @@ export const CoordinatorTemplatesView: React.FC = () => {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
-                      className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>XÓA BỘ TIÊU CHÍ</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Edit Button on Detail Header */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenEditModal(activeSet.id, e)}
+                        className="px-3 py-1.5 bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                        title="Chỉnh sửa tên, mô tả và cấu hình các tiêu chí thành phần"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>SỬA BỘ TIÊU CHÍ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleCloneTemplate(activeSet.id, e)}
+                        className="px-3 py-1.5 bg-[#8b5cf6]/10 border border-[#8b5cf6]/40 hover:bg-[#8b5cf6]/20 text-[#c084fc] font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                        title="Sao chép toàn bộ tiêu chí sang mẫu mới để tùy biến độc lập"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>NHÂN BẢN (CLONE)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
+                        className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>XÓA BỘ TIÊU CHÍ</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -346,15 +505,24 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
                 {/* List of Component Criteria inside the Set */}
                 <div className="space-y-4">
-                  <h3 className="font-mono font-bold text-xs text-[#8a9ba8] uppercase tracking-wider">
-                    DANH SÁCH {activeSet.criterias.length} TIÊU CHÍ THÀNH PHẦN BÊN TRONG BỘ:
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-mono font-bold text-xs text-[#8a9ba8] uppercase tracking-wider">
+                      DANH SÁCH {activeSet.criterias.length} TIÊU CHÍ THÀNH PHẦN BÊN TRONG BỘ:
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenEditModal(activeSet.id, e)}
+                      className="text-[11px] font-mono font-bold text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit3 className="w-3 h-3" /> [CHỈNH SỬA TIÊU CHÍ]
+                    </button>
+                  </div>
 
                   <div className="space-y-3">
                     {activeSet.criterias.length === 0 ? (
                       <div className="p-6 bg-[#0a0e10] border border-[#263339] text-center text-[#8a9ba8] font-mono text-xs space-y-1">
                         <p className="font-semibold text-amber-400">⚠️ Bộ tiêu chí này chưa có tiêu chí thành phần nào</p>
-                        <p className="text-[11px] text-[#8a9ba8]/70">Dữ liệu hiện tại trên hệ thống chưa tạo các tiêu chí nhỏ cho bộ này.</p>
+                        <p className="text-[11px] text-[#8a9ba8]/70">Bấm "SỬA BỘ TIÊU CHÍ" ở trên để thêm các tiêu chí chấm điểm.</p>
                       </div>
                     ) : (
                       activeSet.criterias.map((crit, idx) => (
@@ -375,7 +543,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
                           </div>
 
                           <p className="text-xs font-sans text-[#8a9ba8] pl-8 leading-relaxed">
-                            {crit.description}
+                            {crit.description || "Chưa có hướng dẫn chấm chi tiết cho tiêu chí này."}
                           </p>
 
                           {/* Rubric level scale guide badge */}
@@ -397,14 +565,16 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
       </main>
 
-      {/* Builder Modal */}
+      {/* Builder Modal (Create & Edit Mode) */}
       {isBuilderModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#13191c] border border-[#263339] max-w-3xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto font-sans">
             <div className="flex items-center justify-between border-b border-[#263339] pb-4">
               <div className="flex items-center gap-2 text-[#8b5cf6] font-mono text-sm font-bold uppercase">
-                <Plus className="w-4 h-4" />
-                <span>SOẠN BỘ TIÊU CHÍ MỚI VÀO KHO HỆ THỐNG</span>
+                {editingSetId ? <Edit3 className="w-4 h-4 text-amber-400" /> : <Plus className="w-4 h-4" />}
+                <span className={editingSetId ? "text-amber-300" : "text-[#8b5cf6]"}>
+                  {editingSetId ? "CHỈNH SỬA BỘ TIÊU CHÍ HỆ THỐNG" : "SOẠN BỘ TIÊU CHÍ MỚI VÀO KHO HỆ THỐNG"}
+                </span>
               </div>
               <button
                 type="button"
@@ -417,7 +587,9 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
             <form onSubmit={handleSaveCriteriaSet} className="space-y-4 font-mono text-xs">
               <div className="space-y-1">
-                <label className="text-[#8a9ba8] uppercase block">TÊN BỘ TIÊU CHÍ MỚI *</label>
+                <label className="text-[#8a9ba8] uppercase block">
+                  TÊN BỘ TIÊU CHÍ {editingSetId ? "" : "MỚI"} *
+                </label>
                 <input
                   type="text"
                   required
@@ -439,9 +611,21 @@ export const CoordinatorTemplatesView: React.FC = () => {
                 />
               </div>
 
+              {/* Progress Weight Tracker */}
+              <div className="p-3 bg-[#0a0e10] border border-[#263339] flex items-center justify-between text-xs">
+                <span className="text-zinc-400">TỔNG TRỌNG SỐ HIỆN TẠI:</span>
+                <span className={`font-bold px-2 py-0.5 hud-clipped ${
+                  isBuilderValid100
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                    : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                }`}>
+                  {builderTotalWeight}% / 100% {isBuilderValid100 ? "✓ HỢP LỆ" : "⚠️ CẦN BẰNG 100%"}
+                </span>
+              </div>
+
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[#8b5cf6] font-bold uppercase">DANH SÁCH TIÊU CHÍ THÀNH PHẦN</span>
+                  <span className="text-[#8b5cf6] font-bold uppercase">DANH SÁCH TIÊU CHÍ THÀNH PHẦN ({builderCriterias.length})</span>
                   <button
                     type="button"
                     onClick={handleAddCriteriaRow}
@@ -482,7 +666,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
                           <span className="text-[#8a9ba8] text-[10px] shrink-0">Trọng số (%):</span>
                           <input
                             type="number"
-                            min={5}
+                            min={1}
                             max={100}
                             value={c.weight}
                             onChange={(e) => handleUpdateCriteriaRow(c.id, "weight", Number(e.target.value))}
@@ -517,9 +701,15 @@ export const CoordinatorTemplatesView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!isBuilderValid100 || isSubmitting}
-                  className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono font-bold text-xs uppercase cursor-pointer disabled:opacity-40"
+                  className={`px-6 py-2.5 font-mono font-bold text-xs uppercase cursor-pointer disabled:opacity-40 text-white ${
+                    editingSetId ? "bg-amber-600 hover:bg-amber-500" : "bg-[#8b5cf6] hover:bg-purple-600"
+                  }`}
                 >
-                  {isSubmitting ? "ĐANG LƯU BỘ TIÊU CHÍ..." : "LƯU BỘ TIÊU CHÍ VÀO KHO"}
+                  {isSubmitting
+                    ? "ĐANG LƯU..."
+                    : editingSetId
+                    ? "LƯU CẬP NHẬT BỘ TIÊU CHÍ"
+                    : "LƯU BỘ TIÊU CHÍ VÀO KHO"}
                 </button>
               </div>
 
