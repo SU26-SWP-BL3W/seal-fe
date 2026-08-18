@@ -10,6 +10,7 @@ import {
   useUpdateSubmission,
   useMentorFeedbacks,
   readApiError,
+  parseMentorFeedbackComment,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
 import {
@@ -457,22 +458,25 @@ export function MySubmissionsView() {
 
           {isOpen && (
             <div className="mt-3 pt-3 border-t border-[#3c494d]/50 space-y-3">
-              {feedbacks.map((fb) => (
-                <div key={fb.id} className="p-3 bg-[#0e1417] border border-[#34d399]/20 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#34d399] font-bold">Mentor: {fb.mentorName || "Cố vấn"}</span>
-                    {fb.suggestedScore !== undefined && (
-                      <span className="text-[#fbbf24] font-bold">Điểm gợi ý: {fb.suggestedScore}/100</span>
+              {feedbacks.map((fb) => {
+                const parsed = parseMentorFeedbackComment(fb.comment);
+                return (
+                  <div key={fb.id} className="p-3 bg-[#0e1417] border border-[#34d399]/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#34d399] font-bold">Mentor: {fb.mentorName || "Cố vấn"}</span>
+                      {parsed.suggestedScore !== undefined && (
+                        <span className="text-[#fbbf24] font-bold">Điểm gợi ý: {parsed.suggestedScore}/100</span>
+                      )}
+                    </div>
+                    <p className="font-sans text-white text-xs leading-relaxed">"{parsed.text}"</p>
+                    {parsed.technicalAdvice && (
+                      <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
+                        💡 Lời khuyên kỹ thuật: {parsed.technicalAdvice}
+                      </div>
                     )}
                   </div>
-                  <p className="font-sans text-white text-xs leading-relaxed">"{fb.feedbackContent}"</p>
-                  {fb.technicalAdvice && (
-                    <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
-                      💡 Lời khuyên kỹ thuật: {fb.technicalAdvice}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
