@@ -385,8 +385,8 @@ export function CoordinatorTeamsView() {
                 {!eventId
                   ? "— Chọn Sự Kiện Để Lọc Hạng Mục —"
                   : tracksList.length === 0
-                  ? "— Sự Kiện Chưa Có Hạng Mục —"
-                  : `— Tất Cả Hạng Mục (${tracksList.length}) —`}
+                    ? "— Sự Kiện Chưa Có Hạng Mục —"
+                    : `— Tất Cả Hạng Mục (${tracksList.length}) —`}
               </option>
               {tracksList.map((tr: any) => {
                 const trId = tr.id || tr.Id || tr.trackId || tr.TrackId;
@@ -416,31 +416,28 @@ export function CoordinatorTeamsView() {
         <div className="flex border-b border-[var(--border-muted)] gap-2 font-mono text-xs">
           <button
             onClick={() => setTabFilter("all")}
-            className={`pb-2 px-3 border-b-2 font-bold cursor-pointer transition-colors ${
-              tabFilter === "all"
+            className={`pb-2 px-3 border-b-2 font-bold cursor-pointer transition-colors ${tabFilter === "all"
                 ? "border-[var(--color-danger)] text-white"
                 : "border-transparent text-[var(--text-muted)] hover:text-white"
-            }`}
+              }`}
           >
             TẤT CẢ ĐỘI THI ({allCombinedTeams.length})
           </button>
           <button
             onClick={() => setTabFilter("registered")}
-            className={`pb-2 px-3 border-b-2 font-bold cursor-pointer transition-colors ${
-              tabFilter === "registered"
+            className={`pb-2 px-3 border-b-2 font-bold cursor-pointer transition-colors ${tabFilter === "registered"
                 ? "border-[var(--color-success)] text-[var(--color-success)]"
                 : "border-transparent text-[var(--text-muted)] hover:text-white"
-            }`}
+              }`}
           >
             ĐÃ DUYỆT CHÍNH THỨC ({allCombinedTeams.filter((t) => String(t.displayStatus).includes("Registered") || String(t.displayStatus).includes("Approved") || t.displayStatus === 1).length})
           </button>
           <button
             onClick={() => setTabFilter("pending")}
-            className={`pb-2 px-3 border-b-2 font-bold cursor-pointer transition-colors ${
-              tabFilter === "pending"
+            className={`pb-2 px-3 border-b-2 font-bold cursor-pointer transition-colors ${tabFilter === "pending"
                 ? "border-amber-400 text-amber-300"
                 : "border-transparent text-[var(--text-muted)] hover:text-white"
-            }`}
+              }`}
           >
             CHỜ DUYỆT ({allCombinedTeams.filter((t) => String(t.displayStatus).includes("Pending") || t.displayStatus === 0).length})
           </button>
@@ -507,13 +504,12 @@ export function CoordinatorTeamsView() {
                         </td>
                         <td className="px-4 py-3.5 align-middle">
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded ${
-                              isDisqualified
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded ${isDisqualified
                                 ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
                                 : !isPending
-                                ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] border border-[var(--color-success)]/30"
-                                : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-                            }`}
+                                  ? "bg-[rgba(16,185,129,0.15)] text-[var(--color-success)] border border-[var(--color-success)]/30"
+                                  : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                              }`}
                           >
                             {isDisqualified ? "✗ BỊ LOẠI" : !isPending ? "✓ ĐÃ DUYỆT" : "● CHỜ DUYỆT"}
                           </span>

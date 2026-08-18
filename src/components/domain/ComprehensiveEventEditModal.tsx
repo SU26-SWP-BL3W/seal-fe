@@ -5,13 +5,36 @@ import {
   X,
   CheckCircle2,
   AlertTriangle,
+  Edit3,
   Calendar,
   Clock,
+  Plus,
+  Trash2,
+  Layers,
+  Settings,
+  Shield,
+  Briefcase,
+  Sliders,
+  Check,
   AlertCircle,
-  RefreshCw,
 } from "lucide-react";
 import { eventsRepository } from "@/repositories/eventsRepository";
+import { roundsRepository } from "@/repositories/roundsRepository";
 import { useToast } from "@/providers/ToastProvider";
+
+export interface RoundEditState {
+  id?: string;
+  roundName: string;
+  roundNumber: number;
+  startDate: string;
+  endDate: string;
+  scoringStartDate: string;
+  scoringEndDate: string;
+  appealStartDate: string;
+  appealEndDate: string;
+  advancementRule?: string;
+  isNew?: boolean;
+}
 
 interface ComprehensiveEventEditModalProps {
   event: any;
@@ -19,11 +42,25 @@ interface ComprehensiveEventEditModalProps {
   onSuccess?: () => void;
 }
 
+function parseDateOnly(dateStr?: string): string {
+  if (!dateStr) return "";
+  return dateStr.split("T")[0];
+}
+
+function addDaysToDate(dateStr: string, days: number): string {
+  const base = parseDateOnly(dateStr);
+  if (!base) return "";
+  const d = new Date(base);
+  if (isNaN(d.getTime())) return base;
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
 function formatDateTimeInput(dateStr?: string, explicitTime?: string): string {
   if (!dateStr) return "";
   const datePart = dateStr.split("T")[0];
   if (!datePart) return "";
-  if (explicitTime && !dateStr.includes("T")) {
+  if (explicitTime) {
     return `${datePart}T${explicitTime}`;
   }
   if (dateStr.includes("T")) {
@@ -47,8 +84,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
   const toast = useToast();
   const eventId = event?.id || event?.Id || event?.eventId || event?.EventId || "";
 
-  // Loading state for fetching full details
-  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<"general" | "rounds">("general");
 
   // Form Thông Tin Sự Kiện
   const [eventName, setEventName] = useState(event?.eventName || event?.EventName || "");
@@ -68,55 +104,147 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
     event?.status !== undefined ? Boolean(event.status) : (event?.Status !== undefined ? Boolean(event.Status) : true)
   );
 
-  // Fetch đầy đủ toàn bộ dữ liệu mới nhất của sự kiện từ Backend API khi mở modal
-  useEffect(() => {
-    if (!eventId) {
-      setIsLoadingDetail(false);
-      return;
-    }
-    let isMounted = true;
-    setIsLoadingDetail(true);
-
-    eventsRepository
-      .getEventById(eventId)
-      .then((res: any) => {
-        if (!isMounted) return;
-        const ev = res?.data ?? res;
-        if (ev) {
-          if (ev.eventName || ev.EventName) setEventName(ev.eventName || ev.EventName);
-          if (ev.season !== undefined || ev.Season !== undefined) setSeason(ev.season || ev.Season || "");
-          if (ev.year !== undefined || ev.Year !== undefined) setYear(Number(ev.year || ev.Year) || new Date().getFullYear());
-          if (ev.maxTeams !== undefined || ev.MaxTeams !== undefined) setMaxTeams(Number(ev.maxTeams || ev.MaxTeams) || 50);
-          if (ev.description !== undefined || ev.Description !== undefined) setDescription(ev.description || ev.Description || "");
-          if (ev.startDate || ev.StartDate) setStartDate(formatDateTimeInput(ev.startDate || ev.StartDate, "08:00"));
-          if (ev.endDate || ev.EndDate) setEndDate(formatDateTimeInput(ev.endDate || ev.EndDate, "23:59"));
-          if (ev.registrationStartDate || ev.RegistrationStartDate) {
-            setRegistrationStartDate(formatDateTimeInput(ev.registrationStartDate || ev.RegistrationStartDate, "08:00"));
-          }
-          if (ev.registrationEndDate || ev.RegistrationEndDate) {
-            setRegistrationEndDate(formatDateTimeInput(ev.registrationEndDate || ev.RegistrationEndDate, "23:59"));
-          }
-          if (ev.status !== undefined || ev.Status !== undefined) {
-            setIsPublished(Boolean(ev.status ?? ev.Status));
-          }
-        }
-      })
-      .catch((err) => {
-        console.warn("Could not fetch latest event details, using existing state:", err);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoadingDetail(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [eventId]);
+  // Form Danh Sách Vòng Thi
+  const [rounds, setRounds] = useState<RoundEditState[]>([]);
+  const [deletedRoundIds, setDeletedRoundIds] = useState<string[]>([]);
+  const [isLoadingRounds, setIsLoadingRounds] = useState<boolean>(true);
 
   // Status message
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Tải danh sách Vòng thi của sự kiện
+  useEffect(() => {
+    if (!eventId) return;
+    let isMounted = true;
+    setIsLoadingRounds(true);
+
+    roundsRepository
+      .getRoundsByEventId(eventId)
+      .then((res) => {
+        if (!isMounted) return;
+        const items = res?.data?.items ?? res?.items ?? (Array.isArray(res) ? res : []);
+        if (items.length > 0) {
+          setRounds(
+            items.map((r: any, idx: number) => {
+              const rStart = r.startDate || r.StartDate || event?.startDate || new Date().toISOString();
+              const rEnd = r.endDate || r.EndDate || rStart;
+              const startFormatted = formatDateTimeInput(rStart, "08:00");
+              const endFormatted = formatDateTimeInput(rEnd, "23:59");
+
+              // Phân định mốc thời gian chấm điểm & phúc khảo logic không trùng lặp
+              const scoringStartRaw = r.scoringStartDate || r.ScoringStartDate;
+              const scoringEndRaw = r.scoringEndDate || r.ScoringEndDate;
+              const appealStartRaw = r.appealStartDate || r.AppealStartDate;
+              const appealEndRaw = r.appealEndDate || r.AppealEndDate;
+
+              const defaultScoringStart = scoringStartRaw
+                ? formatDateTimeInput(scoringStartRaw)
+                : `${addDaysToDate(endFormatted, 1)}T08:00`;
+
+              const defaultScoringEnd = scoringEndRaw
+                ? formatDateTimeInput(scoringEndRaw)
+                : `${addDaysToDate(defaultScoringStart, 3)}T18:00`;
+
+              const defaultAppealStart = appealStartRaw
+                ? formatDateTimeInput(appealStartRaw)
+                : `${addDaysToDate(defaultScoringEnd, 1)}T09:00`;
+
+              const defaultAppealEnd = appealEndRaw
+                ? formatDateTimeInput(appealEndRaw)
+                : `${addDaysToDate(defaultAppealStart, 3)}T23:59`;
+
+              return {
+                id: r.id || r.Id,
+                roundName: r.roundName || r.RoundName || `Vòng thi ${idx + 1}`,
+                roundNumber: r.roundNumber || r.RoundNumber || idx + 1,
+                startDate: startFormatted,
+                endDate: endFormatted,
+                scoringStartDate: defaultScoringStart,
+                scoringEndDate: defaultScoringEnd,
+                appealStartDate: defaultAppealStart,
+                appealEndDate: defaultAppealEnd,
+                advancementRule: r.advancementRule || r.AdvancementRule || "",
+              };
+            })
+          );
+        } else {
+          const evStart = event?.startDate || event?.StartDate || new Date().toISOString();
+          const evEnd = event?.endDate || event?.EndDate || addDaysToDate(evStart, 30);
+          const startFmt = formatDateTimeInput(evStart, "08:00");
+          const endFmt = formatDateTimeInput(evEnd, "23:59");
+
+          setRounds([
+            {
+              id: undefined,
+              isNew: true,
+              roundName: "Vòng Tuyển Chọn & Đánh Giá",
+              roundNumber: 1,
+              startDate: startFmt,
+              endDate: endFmt,
+              scoringStartDate: `${addDaysToDate(endFmt, 1)}T08:00`,
+              scoringEndDate: `${addDaysToDate(endFmt, 4)}T18:00`,
+              appealStartDate: `${addDaysToDate(endFmt, 5)}T09:00`,
+              appealEndDate: `${addDaysToDate(endFmt, 7)}T23:59`,
+            },
+          ]);
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setRounds([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingRounds(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId, event]);
+
+  const handleAddRound = () => {
+    const nextNumber = rounds.length + 1;
+    const prevRound = rounds[rounds.length - 1];
+
+    // Khởi tạo ngày cho vòng tiếp theo sau vòng trước
+    const baseStartDate = prevRound?.endDate
+      ? addDaysToDate(prevRound.endDate, 1)
+      : (endDate ? addDaysToDate(endDate, 1) : new Date().toISOString().split("T")[0]);
+    const baseEndDate = addDaysToDate(baseStartDate, 7);
+
+    setRounds([
+      ...rounds,
+      {
+        id: `temp-${Date.now()}`,
+        isNew: true,
+        roundName: `Vòng thi số ${nextNumber}`,
+        roundNumber: nextNumber,
+        startDate: `${baseStartDate}T08:00`,
+        endDate: `${baseEndDate}T23:59`,
+        scoringStartDate: `${addDaysToDate(baseEndDate, 1)}T08:00`,
+        scoringEndDate: `${addDaysToDate(baseEndDate, 4)}T18:00`,
+        appealStartDate: `${addDaysToDate(baseEndDate, 5)}T09:00`,
+        appealEndDate: `${addDaysToDate(baseEndDate, 7)}T23:59`,
+      },
+    ]);
+  };
+
+  const handleRemoveRound = (index: number) => {
+    const target = rounds[index];
+    if (target?.id && !target.id.startsWith("temp-")) {
+      setDeletedRoundIds([...deletedRoundIds, target.id]);
+    }
+    const updated = rounds.filter((_, i) => i !== index);
+    setRounds(updated);
+  };
+
+  const handleRoundChange = (index: number, field: keyof RoundEditState, value: any) => {
+    const updated = [...rounds];
+    updated[index] = { ...updated[index], [field]: value };
+    setRounds(updated);
+  };
 
   const handleSaveAll = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,27 +255,55 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
       return;
     }
 
-    // Kiểm tra tính hợp lệ ngày sự kiện
+    // 1. Kiểm tra ngày sự kiện
     if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
       const msg = "Ngày kết thúc sự kiện phải sau ngày bắt đầu sự kiện!";
       setErrorMsg(msg);
       toast.error(msg);
+      setActiveTab("general");
       return;
     }
 
-    // Kiểm tra tính hợp lệ ngày tuyển sinh
-    if (registrationStartDate && registrationEndDate && new Date(registrationStartDate) >= new Date(registrationEndDate)) {
-      const msg = "Thời gian khóa đăng ký phải sau thời gian mở đăng ký!";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
-    }
+    // 2. Kiểm tra tính hợp lệ của từng vòng thi
+    for (let i = 0; i < rounds.length; i++) {
+      const r = rounds[i];
+      const rName = r.roundName.trim() || `Vòng thi số ${i + 1}`;
 
-    if (registrationEndDate && endDate && new Date(registrationEndDate) > new Date(endDate)) {
-      const msg = "Thời gian khóa đăng ký không thể diễn ra sau khi sự kiện đã kết thúc!";
-      setErrorMsg(msg);
-      toast.error(msg);
-      return;
+      if (!r.startDate || !r.endDate) {
+        const msg = `${rName}: Vui lòng nhập đầy đủ ngày Mở đề (Phase 1) và Hạn nộp bài (Phase 2)!`;
+        setErrorMsg(msg);
+        toast.error(msg);
+        setActiveTab("rounds");
+        return;
+      }
+
+      if (new Date(r.startDate) >= new Date(r.endDate)) {
+        const msg = `${rName}: Hạn nộp bài (Phase 2) phải sau ngày Mở đề bài (Phase 1)!`;
+        setErrorMsg(msg);
+        toast.error(msg);
+        setActiveTab("rounds");
+        return;
+      }
+
+      if (r.scoringStartDate && r.scoringEndDate) {
+        if (new Date(r.scoringStartDate) >= new Date(r.scoringEndDate)) {
+          const msg = `${rName}: Thời gian kết thúc chấm điểm phải sau thời gian bắt đầu chấm điểm (Phase 3)!`;
+          setErrorMsg(msg);
+          toast.error(msg);
+          setActiveTab("rounds");
+          return;
+        }
+      }
+
+      if (r.appealStartDate && r.appealEndDate) {
+        if (new Date(r.appealStartDate) >= new Date(r.appealEndDate)) {
+          const msg = `${rName}: Hạn nộp phúc khảo phải sau ngày bắt đầu công bố/phúc khảo (Phase 4 & 5)!`;
+          setErrorMsg(msg);
+          toast.error(msg);
+          setActiveTab("rounds");
+          return;
+        }
+      }
     }
 
     setIsSaving(true);
@@ -155,7 +311,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
     setSuccessMsg(null);
 
     try {
-      // Cập nhật Thông Tin Sự Kiện & Ngày Giờ
+      // 1. Cập nhật Thông Tin Sự Kiện
       await eventsRepository.updateEvent(eventId, {
         eventName: eventName.trim(),
         season: season.trim(),
@@ -169,15 +325,47 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
         status: isPublished,
       });
 
+      // 2. Xóa các vòng thi bị gỡ
+      for (const delId of deletedRoundIds) {
+        try {
+          await roundsRepository.deleteRound(delId);
+        } catch (delErr) {
+          console.warn("Could not delete round:", delId, delErr);
+        }
+      }
+
+      // 3. Cập nhật hoặc Tạo mới các Vòng thi
+      for (let i = 0; i < rounds.length; i++) {
+        const r = rounds[i];
+        const payload = {
+          eventId,
+          roundName: r.roundName.trim() || `Vòng thi ${i + 1}`,
+          roundNumber: i + 1,
+          startDate: toValidIso(r.startDate) || new Date().toISOString(),
+          endDate: toValidIso(r.endDate) || new Date().toISOString(),
+          scoringStartDate: toValidIso(r.scoringStartDate),
+          scoringEndDate: toValidIso(r.scoringEndDate),
+          appealStartDate: toValidIso(r.appealStartDate),
+          appealEndDate: toValidIso(r.appealEndDate),
+          advancementRule: r.advancementRule || undefined,
+        };
+
+        if (r.id && !r.id.startsWith("temp-") && !r.isNew) {
+          await roundsRepository.updateRound(r.id, payload);
+        } else {
+          await roundsRepository.createRound(payload);
+        }
+      }
+
       setIsSaving(false);
-      const okMsg = "Đã cập nhật thông tin và thời gian sự kiện thành công!";
+      const okMsg = "Đã lưu thành công toàn bộ thông tin sự kiện & lộ trình các vòng thi!";
       setSuccessMsg(okMsg);
       toast.success(okMsg);
       if (onSuccess) onSuccess();
 
       setTimeout(() => {
         onClose();
-      }, 700);
+      }, 1000);
     } catch (err: any) {
       setIsSaving(false);
       const data = err?.response?.data;
@@ -193,6 +381,9 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
       if (!apiMsg) {
         apiMsg = data?.message || data?.title || (typeof data === "string" ? data : "") || err?.message || "Lưu thay đổi thất bại.";
       }
+      if (apiMsg.includes("BadRequestException") || apiMsg.includes("SEAL_Domain.Base")) {
+        apiMsg = "Dữ liệu mốc thời gian của các vòng thi không hợp lệ (thời gian kết thúc phải sau thời gian bắt đầu và các giai đoạn không được trùng nhau). Vui lòng kiểm tra lại.";
+      }
       setErrorMsg(apiMsg);
       toast.error(apiMsg);
     }
@@ -200,36 +391,46 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
-      <div className="bg-[#10171a] border border-[#00d9ff]/50 rounded-xl w-full max-w-3xl space-y-4 relative shadow-[0_0_50px_rgba(0,217,255,0.15)] my-8 font-sans text-[#e1e7ec]">
-        
+      <div className="bg-[#10171a] border border-[#00d9ff]/50 rounded-xl w-full max-w-4xl space-y-4 relative shadow-[0_0_50px_rgba(0,217,255,0.15)] my-8 font-sans text-[#e1e7ec]">
+
         {/* Modal Header */}
         <div className="flex items-center justify-between p-5 border-b border-zinc-800">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded bg-[#00d9ff]/15 border border-[#00d9ff]/30 text-[#00d9ff]">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-display font-bold text-lg sm:text-xl text-white uppercase tracking-wide">
-                  Chỉnh Sửa Thông Tin Sự Kiện
-                </h2>
-                {isLoadingDetail && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-500/40 px-2 py-0.5 rounded animate-pulse">
-                    <RefreshCw className="w-3 h-3 animate-spin" /> Đang tải dữ liệu...
-                  </span>
-                )}
-              </div>
-              <p className="text-xs font-mono text-zinc-400">
-                Cập nhật thông tin, quy mô & thời gian tổ chức sự kiện
-              </p>
-            </div>
-          </div>
+          <h2 className="font-display font-bold text-xl text-white uppercase tracking-wide">
+            Chỉnh Sửa Sự Kiện &amp; Lộ Trình
+          </h2>
           <button
             type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-lg border border-zinc-700 bg-zinc-800/60 hover:bg-zinc-700 flex items-center justify-center text-zinc-400 hover:text-white transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="px-5 flex items-center gap-2 border-b border-zinc-800 font-mono text-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("general")}
+            className={`px-4 py-2.5 font-bold uppercase border-b-2 transition-all cursor-pointer flex items-center gap-2 ${activeTab === "general"
+                ? "border-[#00d9ff] text-[#00d9ff] bg-[#00d9ff]/10"
+                : "border-transparent text-zinc-400 hover:text-white"
+              }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Thông Tin Sự Kiện</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("rounds")}
+            className={`px-4 py-2.5 font-bold uppercase border-b-2 transition-all cursor-pointer flex items-center gap-2 ${activeTab === "rounds"
+                ? "border-[#00d9ff] text-[#00d9ff] bg-[#00d9ff]/10"
+                : "border-transparent text-zinc-400 hover:text-white"
+              }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Vòng Thi ({rounds.length})</span>
           </button>
         </div>
 
@@ -249,12 +450,8 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
             </div>
           )}
 
-          {isLoadingDetail ? (
-            <div className="p-12 text-center space-y-3 font-mono text-xs text-zinc-400 border border-zinc-800 rounded-lg bg-[#0b1013]">
-              <RefreshCw className="w-6 h-6 mx-auto text-[#00d9ff] animate-spin" />
-              <p>Đang đồng bộ toàn bộ dữ liệu mới nhất của sự kiện từ máy chủ...</p>
-            </div>
-          ) : (
+          {/* TAB 1: THÔNG TIN TỔNG QUAN & ĐĂNG KÝ */}
+          {activeTab === "general" && (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               <div className="space-y-1.5">
                 <label className="text-xs font-mono font-bold text-zinc-300 uppercase block">
@@ -378,6 +575,144 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
             </div>
           )}
 
+          {/* TAB 2: QUẢN LÝ VÒNG THI & PHASE 1 -> 5 */}
+          {activeTab === "rounds" && (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="flex items-center justify-between pb-2 border-b border-zinc-800 font-mono text-xs">
+                <span className="text-[11px] text-zinc-400">
+                  Lưu ý: Thời gian các giai đoạn (Phase) phải có khoảng cách và kết thúc sau bắt đầu.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAddRound}
+                  className="px-3.5 py-1.5 bg-[#00d9ff]/20 text-[#00d9ff] border border-[#00d9ff]/40 hover:bg-[#00d9ff] hover:text-black font-mono text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Thêm Vòng Thi</span>
+                </button>
+              </div>
+
+              {isLoadingRounds ? (
+                <div className="p-8 text-center font-mono text-xs text-zinc-400 italic">
+                  Đang tải danh sách vòng thi...
+                </div>
+              ) : rounds.length === 0 ? (
+                <div className="p-8 text-center font-mono text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
+                  Sự kiện chưa có vòng thi nào. Hãy bấm &quot;Thêm Vòng Thi&quot; để thiết lập.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {rounds.map((round, idx) => (
+                    <div
+                      key={round.id || idx}
+                      className="p-4 bg-[#0b1013] border border-zinc-800 hover:border-zinc-700 rounded-lg space-y-3 font-mono text-xs relative"
+                    >
+                      {/* Round Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-zinc-800/60">
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="w-6 h-6 rounded bg-[#00d9ff]/10 text-[#00d9ff] border border-[#00d9ff]/30 flex items-center justify-center font-bold text-xs shrink-0">
+                            {idx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={round.roundName}
+                            onChange={(e) => handleRoundChange(idx, "roundName", e.target.value)}
+                            placeholder={`Tên vòng thi ${idx + 1}`}
+                            className="bg-transparent border-b border-zinc-700 text-white font-bold text-sm px-1 py-0.5 focus:border-[#00d9ff] outline-none flex-1 max-w-sm"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRound(idx)}
+                          className="px-2 py-1 text-red-400 hover:bg-red-950/40 hover:text-red-300 rounded text-xs transition-colors flex items-center gap-1 cursor-pointer self-end sm:self-auto"
+                          title="Xóa vòng thi này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Gỡ vòng</span>
+                        </button>
+                      </div>
+
+                      {/* Phase 1 & 2: Mở Đề & Hạn Nộp Bài */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#10171a] p-3 rounded border border-zinc-800/80">
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-cyan-300 font-bold block">
+                            Phase 1: Mở Đề Bài
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={round.startDate}
+                            onChange={(e) => handleRoundChange(idx, "startDate", e.target.value)}
+                            className="w-full bg-[#0b1013] border border-zinc-700 px-2.5 py-1.5 text-white rounded focus:border-[#00d9ff] outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-cyan-300 font-bold block">
+                            Phase 2: Hạn Nộp Bài
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={round.endDate}
+                            onChange={(e) => handleRoundChange(idx, "endDate", e.target.value)}
+                            className="w-full bg-[#0b1013] border border-zinc-700 px-2.5 py-1.5 text-white rounded focus:border-[#00d9ff] outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Phase 3, 4, 5: Chấm Điểm & Phúc Khảo */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#10171a] p-3 rounded border border-zinc-800/80">
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-amber-300 font-bold block">
+                            Phase 3: Chấm Điểm
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <input
+                              type="datetime-local"
+                              value={round.scoringStartDate}
+                              onChange={(e) => handleRoundChange(idx, "scoringStartDate", e.target.value)}
+                              title="Bắt đầu chấm"
+                              className="w-full bg-[#0b1013] border border-zinc-700 px-2 py-1 text-white text-[11px] rounded focus:border-amber-400 outline-none"
+                            />
+                            <input
+                              type="datetime-local"
+                              value={round.scoringEndDate}
+                              onChange={(e) => handleRoundChange(idx, "scoringEndDate", e.target.value)}
+                              title="Khóa chấm"
+                              className="w-full bg-[#0b1013] border border-zinc-700 px-2 py-1 text-white text-[11px] rounded focus:border-amber-400 outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-purple-300 font-bold block">
+                            Phase 4 &amp; 5: Công Bố &amp; Phúc Khảo
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <input
+                              type="datetime-local"
+                              value={round.appealStartDate}
+                              onChange={(e) => handleRoundChange(idx, "appealStartDate", e.target.value)}
+                              title="Ngày công bố kết quả"
+                              className="w-full bg-[#0b1013] border border-zinc-700 px-2 py-1 text-white text-[11px] rounded focus:border-purple-400 outline-none"
+                            />
+                            <input
+                              type="datetime-local"
+                              value={round.appealEndDate}
+                              onChange={(e) => handleRoundChange(idx, "appealEndDate", e.target.value)}
+                              title="Hạn nộp phúc khảo"
+                              className="w-full bg-[#0b1013] border border-zinc-700 px-2 py-1 text-white text-[11px] rounded focus:border-purple-400 outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action-Anchored Error Banner */}
           {errorMsg && (
             <div className="p-3.5 bg-rose-950/70 border border-rose-500/80 text-rose-200 font-mono text-xs rounded-lg flex items-center gap-2.5 animate-in slide-in-from-bottom-2 shadow-[0_0_20px_rgba(244,63,94,0.25)]">
@@ -403,7 +738,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
 
             <button
               type="submit"
-              disabled={isSaving || isLoadingDetail}
+              disabled={isSaving}
               className="px-6 py-2.5 bg-[#00d9ff] text-black font-extrabold uppercase hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] transition-all rounded-lg cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
             >
               {isSaving ? "Đang lưu..." : "Lưu Thay Đổi"}
