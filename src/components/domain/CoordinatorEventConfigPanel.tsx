@@ -623,136 +623,176 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            <div className="md:col-span-8 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Tên Sự Kiện / Cuộc Thi *
-              </label>
-              <input
-                type="text"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                placeholder="VD: FPT TECH HACKATHON 2026"
-                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white font-bold text-xs focus:border-[#a855f7] focus:outline-none"
-              />
+          {/* Section 1: NHẬN DIỆN & QUY MÔ SỰ KIỆN */}
+          <div className="space-y-3">
+            <div className="text-[11px] font-bold text-[#c084fc] uppercase tracking-wider border-b border-zinc-800 pb-1.5 flex items-center justify-between">
+              <span>[01] THÔNG TIN NHẬN DIỆN & QUY MÔ SỰ KIỆN</span>
             </div>
 
-            <div className="md:col-span-2 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Mùa Giải (Season) *
-              </label>
-              <select
-                value={season}
-                onChange={(e) => setSeason(e.target.value)}
-                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none cursor-pointer"
-              >
-                <option value="Spring">Spring</option>
-                <option value="Summer">Summer</option>
-                <option value="Fall">Fall</option>
-                <option value="Winter">Winter</option>
-              </select>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              {/* Cột trái: Tên sự kiện (6 cols) */}
+              <div className="md:col-span-6 space-y-1">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                  Tên Sự Kiện / Cuộc Thi *
+                </label>
+                <input
+                  type="text"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  placeholder="VD: FPT TECH HACKATHON 2026"
+                  className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white font-bold text-xs focus:border-[#a855f7] focus:outline-none"
+                />
+              </div>
 
-            <div className="md:col-span-2 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Năm Tổ Chức *
-              </label>
-              <input
-                type="number"
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs font-mono focus:border-[#a855f7] focus:outline-none"
-              />
-            </div>
+              {/* Cột phải: Mùa giải & Năm tổ chức (6 cols chia đôi) */}
+              <div className="md:col-span-6 grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                    Mùa Giải (Season) *
+                  </label>
+                  <select
+                    value={season}
+                    onChange={(e) => setSeason(e.target.value)}
+                    className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none cursor-pointer"
+                  >
+                    <option value="Spring">Spring</option>
+                    <option value="Summer">Summer</option>
+                    <option value="Fall">Fall</option>
+                    <option value="Winter">Winter</option>
+                  </select>
+                </div>
 
-            <div className="md:col-span-3 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Mở Cổng Đăng Ký *
-              </label>
-              <input
-                type="datetime-local"
-                value={registrationStartDate}
-                onChange={(e) => setRegistrationStartDate(e.target.value)}
-                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
-              />
-            </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                    Năm Tổ Chức *
+                  </label>
+                  <input
+                    type="number"
+                    value={year}
+                    onChange={(e) => setYear(Number(e.target.value))}
+                    className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs font-mono focus:border-[#a855f7] focus:outline-none"
+                  />
+                </div>
+              </div>
 
-            <div className="md:col-span-3 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Đóng Cổng Đăng Ký *
-              </label>
-              <input
-                type="datetime-local"
-                value={registrationEndDate}
-                onChange={(e) => setRegistrationEndDate(e.target.value)}
-                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
-              />
-            </div>
+              {/* Hàng 2: Giới hạn đội (6 cols) & Trạng thái công bố (6 cols) */}
+              <div className="md:col-span-6 space-y-1">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                  Giới Hạn Số Lượng Đội (Max Teams) *
+                </label>
+                <input
+                  type="number"
+                  value={maxTeams}
+                  onChange={(e) => setMaxTeams(Number(e.target.value))}
+                  className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs font-mono focus:border-[#a855f7] focus:outline-none"
+                />
+              </div>
 
-            <div className="md:col-span-3 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Bắt Đầu Sự Kiện *
-              </label>
-              <input
-                type="datetime-local"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
-              />
-            </div>
-
-            <div className="md:col-span-3 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Kết Thúc Sự Kiện *
-              </label>
-              <input
-                type="datetime-local"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
-              />
-            </div>
-
-            <div className="md:col-span-4 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Giới Hạn Số Lượng Đội (Max Teams) *
-              </label>
-              <input
-                type="number"
-                value={maxTeams}
-                onChange={(e) => setMaxTeams(Number(e.target.value))}
-                className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs font-mono focus:border-[#a855f7] focus:outline-none"
-              />
-            </div>
-
-            <div className="md:col-span-8 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Trạng Thái Công Bố Sự Kiện
-              </label>
-              <div className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 flex items-center justify-between text-xs">
-                <span className="text-zinc-300 font-mono text-xs truncate">
-                  {isPublished ? "SỰ KIỆN ĐANG MỞ CÔNG KHAI (OPEN)" : "SỰ KIỆN ĐANG Ở BẢN NHÁP NỘI BỘ (DRAFT)"}
-                </span>
-                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase hud-clipped shrink-0 ${
-                  isPublished ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                }`}>
-                  {isPublished ? "OPEN" : "DRAFT"}
-                </span>
+              <div className="md:col-span-6 space-y-1">
+                <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                  Trạng Thái Công Bố Sự Kiện
+                </label>
+                <div className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 flex items-center justify-between text-xs">
+                  <span className="text-zinc-300 font-mono text-xs truncate">
+                    {isPublished ? "SỰ KIỆN ĐANG MỞ CÔNG KHAI (OPEN)" : "SỰ KIỆN ĐANG Ở BẢN NHÁP NỘI BỘ (DRAFT)"}
+                  </span>
+                  <span className={`px-2 py-0.5 text-[9px] font-bold uppercase hud-clipped shrink-0 ${
+                    isPublished ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                  }`}>
+                    {isPublished ? "OPEN" : "DRAFT"}
+                  </span>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div className="md:col-span-12 space-y-1">
-              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                Mô Tả Thể Lệ &amp; Giới Thiệu Cuộc Thi
-              </label>
-              <textarea
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Nhập thể lệ cuộc thi, đối tượng tham gia, quyền lợi của thí sinh..."
-                className="w-full p-3 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-sans leading-relaxed"
-              />
+          {/* Section 2: KHUNG THỜI GIAN CHÍNH THỨC */}
+          <div className="space-y-3 pt-2">
+            <div className="text-[11px] font-bold text-[#c084fc] uppercase tracking-wider border-b border-zinc-800 pb-1.5">
+              <span>[02] CÁC MỐC THỜI GIAN QUAN TRỌNG</span>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              {/* Khối Cổng đăng ký (6 cols) */}
+              <div className="md:col-span-6 p-4 bg-[var(--bg-input)]/50 border border-zinc-800 space-y-3 hud-clipped">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>CỔNG ĐĂNG KÝ THÍ SINH</span>
+                  <span className="text-[9px] text-zinc-500 font-mono">GIAI ĐOẠN 01</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                      Mở Cổng Đăng Ký *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={registrationStartDate}
+                      onChange={(e) => setRegistrationStartDate(e.target.value)}
+                      className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                      Đóng Cổng Đăng Ký *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={registrationEndDate}
+                      onChange={(e) => setRegistrationEndDate(e.target.value)}
+                      className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Khối Thời gian sự kiện (6 cols) */}
+              <div className="md:col-span-6 p-4 bg-[var(--bg-input)]/50 border border-zinc-800 space-y-3 hud-clipped">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>THỜI GIAN DIỄN RA CUỘC THI</span>
+                  <span className="text-[9px] text-zinc-500 font-mono">GIAI ĐOẠN 02</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                      Bắt Đầu Sự Kiện *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                      Kết Thúc Sự Kiện *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full h-10 px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: THỂ LỆ & GIỚI THIỆU */}
+          <div className="space-y-1 pt-2">
+            <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+              Mô Tả Thể Lệ &amp; Giới Thiệu Cuộc Thi
+            </label>
+            <textarea
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Nhập thể lệ cuộc thi, đối tượng tham gia, quyền lợi của thí sinh..."
+              className="w-full p-3 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-sans leading-relaxed"
+            />
           </div>
         </Card>
       )}
