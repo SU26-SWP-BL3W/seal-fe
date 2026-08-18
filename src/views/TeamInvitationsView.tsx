@@ -43,7 +43,9 @@ export function TeamInvitationsView() {
 
   const titleOf = (inv: MyInvitationItem) =>
     inv.type === "TEAM"
-      ? `Lời mời gia nhập đội ${inv.targetName}`
+      ? inv.role === "Trưởng nhóm"
+        ? `Yêu cầu chuyển quyền Trưởng nhóm đội ${inv.targetName}`
+        : `Lời mời gia nhập đội ${inv.targetName}`
       : `Lời mời làm ${inv.role} — ${inv.targetName}${inv.trackName ? ` · ${inv.trackName}` : ""}`;
 
   return (

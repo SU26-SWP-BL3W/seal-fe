@@ -129,6 +129,41 @@ export function useGetAssignedAppeals(eventRoleId: string | undefined) {
 export const useAppealsByRound = useGetAppealsByRound;
 export { readApiError } from "../shared/errorHelper";
 
+/**
+ * Không có endpoint "GET đơn phúc khảo theo sự kiện" trên BE — gom từ tất cả vòng thi
+ * của sự kiện đang chọn (GET /Rounds/event rồi GET /Appeals/round/{roundId} cho từng vòng).
+ * Dùng cho màn EC quản lý phúc khảo (không dùng useGetAssignedAppeals — endpoint đó chỉ trả
+ * về đơn ĐÃ Approved và đã gán cho đúng eventRoleId, không phải hàng đợi đơn Pending cần xử lý).
+ */
+export function useGetAppealsByEvent(eventId: string | undefined) {
+  return useQuery({
+    queryKey: ["appealsByEvent", eventId],
+    queryFn: async (): Promise<Appeal[]> => {
+      const roundsRes = await apiClient.get<any>("/Rounds/event", {
+        params: { EventId: eventId, PageSize: 100 },
+      });
+      const rounds: any[] = Array.isArray(roundsRes.data?.data)
+        ? roundsRes.data.data
+        : Array.isArray(roundsRes.data)
+          ? roundsRes.data
+          : [];
+
+      const perRound = await Promise.all(
+        rounds.map(async (r) => {
+          const roundId = r.id || r.Id;
+          if (!roundId) return [];
+          const res = await apiClient.get<PagedResult<Appeal>>(`/Appeals/round/${roundId}`, {
+            params: { PageSize: 200 },
+          });
+          return Array.isArray(res.data?.data) ? res.data.data : [];
+        }),
+      );
+      return perRound.flat();
+    },
+    enabled: !!eventId,
+  });
+}
+
 export const appealsRepository = {
   async respondAppeal(
     id: string,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useMentorWorkspaceViewModel, useMentorSubmissionDetailViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
+import { encodeMentorFeedbackComment, parseMentorFeedbackComment } from "@/repositories/submitResultsRepository";
 import { Card, Button, Badge } from "@/components/ui";
 import {
   ChevronRight,
@@ -87,11 +88,11 @@ export function MentorSubmissionsView() {
     try {
       await createFeedback.mutateAsync({
         submitResultId: subId,
-        data: {
-          feedbackContent: feedbackContent.trim(),
+        comment: encodeMentorFeedbackComment({
+          text: feedbackContent.trim(),
           technicalAdvice: technicalAdvice.trim() || undefined,
           suggestedScore: typeof suggestedScore === "number" ? suggestedScore : undefined,
-        },
+        }),
       });
       setFeedbackContent("");
       setTechnicalAdvice("");
@@ -477,42 +478,45 @@ export function MentorSubmissionsView() {
                   <p className="text-on-surface-variant/70 italic">Chưa có nhận xét nào từ Cố vấn cho bài nộp này.</p>
                 ) : (
                   <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                    {feedbacks.map((fb) => (
-                      <div key={fb.id} className="p-4 bg-surface border border-outline-variant rounded space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge tone="mentor">Mentor: {fb.mentorName || "Cố vấn"}</Badge>
-                            {fb.suggestedScore !== undefined && fb.suggestedScore !== null && (
-                              <span className="text-[#00d9ff] font-bold">
-                                Điểm gợi ý: {fb.suggestedScore}/100
+                    {feedbacks.map((fb) => {
+                      const parsed = parseMentorFeedbackComment(fb.comment);
+                      return (
+                        <div key={fb.id} className="p-4 bg-surface border border-outline-variant rounded space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge tone="mentor">Mentor: {fb.mentorName || "Cố vấn"}</Badge>
+                              {parsed.suggestedScore !== undefined && (
+                                <span className="text-[#00d9ff] font-bold">
+                                  Điểm gợi ý: {parsed.suggestedScore}/100
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-on-surface-variant">
+                                {new Date(fb.createdTime).toLocaleString("vi-VN")}
                               </span>
-                            )}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteFeedback(fb.id)}
+                                disabled={deleteFeedback.isPending}
+                                className="text-on-surface-variant hover:text-red-400 transition-colors p-1"
+                                title="Xóa nhận xét này"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-on-surface-variant">
-                              {new Date(fb.createdTime).toLocaleString("vi-VN")}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteFeedback(fb.id)}
-                              disabled={deleteFeedback.isPending}
-                              className="text-on-surface-variant hover:text-red-400 transition-colors p-1"
-                              title="Xóa nhận xét này"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+
+                          <p className="font-sans text-xs text-on-surface leading-relaxed">{parsed.text}</p>
+
+                          {parsed.technicalAdvice && (
+                            <div className="p-2.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 text-[#2dd4bf] text-[11px] rounded">
+                              💡 Khuyên dùng: {parsed.technicalAdvice}
+                            </div>
+                          )}
                         </div>
-
-                        <p className="font-sans text-xs text-on-surface leading-relaxed">{fb.feedbackContent}</p>
-
-                        {fb.technicalAdvice && (
-                          <div className="p-2.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 text-[#2dd4bf] text-[11px] rounded">
-                            💡 Khuyên dùng: {fb.technicalAdvice}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
