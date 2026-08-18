@@ -9,8 +9,9 @@ import {
   useGetTeamById,
   useDisqualifyTeam,
 } from "@/repositories/teamsRepository";
-import { useEvents } from "@/repositories/eventsRepository";
+import { useEvents, useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useAuth } from "@/providers/AuthProvider";
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import {
   Users,
@@ -77,7 +78,7 @@ function TeamDetailModal({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 border border-[var(--border-muted)] hover:border-white text-[var(--text-muted)] hover:text-white rounded cursor-pointer"
+              className="p-1.5 border border-[var(--border-muted)] hover:border-white text-[var(--text-muted)] hover:text-white rounded cursor-pointer font-mono"
             >
               ✕
             </button>
@@ -85,29 +86,30 @@ function TeamDetailModal({
 
           {/* Project Abstract */}
           <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1">
-            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase block">
+            <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase block font-bold">
               Mô tả đề tài / Giải pháp dự thi:
             </span>
-            <p className="text-xs text-[var(--text-primary)] leading-relaxed">{desc}</p>
+            <p className="text-xs text-[var(--text-primary)] leading-relaxed font-mono">{desc}</p>
           </div>
 
           {/* Members List */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-[var(--text-primary)] uppercase">
+            <div className="flex items-center justify-between font-mono">
+              <span className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-[var(--accent-team)]" />
                 DANH SÁCH THÀNH VIÊN ({members.length})
               </span>
-              <span className="font-mono text-[10px] text-[var(--text-muted)]">
+              <span className="text-[10px] text-[var(--text-muted)]">
                 Bấm vào thành viên để kiểm tra Thẻ SV
               </span>
             </div>
 
             {isLoading ? (
               <div className="p-6 text-center font-mono text-xs text-[var(--text-muted)] animate-pulse">
-                Đang nạp dữ liệu thành viên từ Backend...
+                Đang nạp dữ liệu thành viên...
               </div>
             ) : members.length === 0 ? (
-              <div className="p-4 text-center font-mono text-xs text-zinc-500 bg-[var(--bg-input)] border border-[var(--border-muted)]">
+              <div className="p-4 text-center font-mono text-xs text-[var(--text-muted)] bg-[var(--bg-input)] border border-[var(--border-muted)]">
                 Chưa có dữ liệu thành viên
               </div>
             ) : (
@@ -145,12 +147,15 @@ function TeamDetailModal({
                           </span>
                         )}
                       </div>
+
                       <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-1 truncate">
-                        <Mail className="w-3 h-3 shrink-0" /> {uEmail}
+                        <Mail className="w-3 h-3 shrink-0 text-[var(--accent-coordinator)]" /> {uEmail}
                       </div>
                       <div className="text-[10px] text-[var(--text-muted)] flex items-center justify-between pt-1 border-t border-[var(--border-muted)]/50">
-                        <span className="truncate">{uSchool}</span>
-                        <span className="text-[var(--accent-team)] font-bold">{uCode}</span>
+                        <span className="truncate flex items-center gap-1">
+                          <GraduationCap className="w-3 h-3 text-purple-400" /> {uSchool}
+                        </span>
+                        <span className="text-[var(--accent-team)] font-bold">MSSV: {uCode}</span>
                       </div>
                     </div>
                   );
@@ -161,7 +166,7 @@ function TeamDetailModal({
 
           {/* Actions Bottom */}
           <div className="flex items-center justify-end gap-3 border-t border-[var(--border-muted)] pt-4 font-mono text-xs">
-            <Button variant="ghost" onClick={onClose} className="border border-[var(--border-muted)]">
+            <Button variant="ghost" onClick={onClose} className="border border-[var(--border-muted)] font-mono text-xs cursor-pointer">
               Đóng
             </Button>
             {String(team.displayStatus).includes("Pending") && (
@@ -169,7 +174,7 @@ function TeamDetailModal({
                 <Button
                   variant="ghost"
                   onClick={() => onReject(team)}
-                  className="border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
+                  className="border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 font-mono text-xs cursor-pointer"
                 >
                   <XCircle className="w-3.5 h-3.5" /> Từ Chối
                 </Button>
@@ -177,7 +182,7 @@ function TeamDetailModal({
                   variant="primary"
                   onClick={() => onApprove(teamId)}
                   disabled={isApproving}
-                  className="bg-[var(--color-success)] text-black font-bold hover:bg-emerald-400"
+                  className="bg-[var(--color-success)] text-white font-bold hover:bg-[var(--color-success)]/80 font-mono text-xs cursor-pointer"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt Đội Thi
                 </Button>
@@ -202,6 +207,7 @@ function TeamDetailModal({
 }
 
 export function CoordinatorTeamsView() {
+  const { user: currentUser } = useAuth();
   const [rejectModal, setRejectModal] = useState<{ teamId: string; teamName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [disqualifyModal, setDisqualifyModal] = useState<{ teamId: string; teamName: string } | null>(null);
@@ -212,8 +218,12 @@ export function CoordinatorTeamsView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [tabFilter, setTabFilter] = useState<"all" | "pending" | "registered">("all");
 
-  const { data: allEvents = [] } = useEvents();
-  const eventsList = Array.isArray(allEvents) ? allEvents : (allEvents as any)?.data ?? [];
+  const { data: myEvents = [] } = useMyEvents();
+  const { data: rawAllEvents = [] } = useEvents();
+  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
+    ? allEvents
+    : myEvents;
 
   const { data: rawTracks = [] } = useGetTracksByEvent(eventId || undefined);
   const tracksList = Array.isArray(rawTracks) ? rawTracks : (rawTracks as any)?.data ?? [];

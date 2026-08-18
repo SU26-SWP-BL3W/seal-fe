@@ -5,12 +5,14 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { User, EventRole } from "@/models/entities";
 import apiClient from "@/models/apiClient";
 
-// Trang đích sau khi đăng nhập thật, theo vai trò backend trả về.
-// Chỉ trỏ route THẬT SỰ tồn tại (có page.tsx) — EventCoordinator/Mentor/Team* trước
-// đây trỏ vào route rỗng (404 khi đăng nhập thật, xác nhận sống với tài khoản
-// ec_demo@yopmail.com). Chưa có trang Coordinator/Mentor/Team riêng nên về /events.
+// Trang đích sau khi đăng nhập cho từng vai trò
 const REDIRECT_BY_ROLE: Record<string, string> = {
-  Judge: "/judge/tracks",
+  EventCoordinator: "/coordinator/dashboard",
+  Coordinator: "/coordinator/dashboard",
+  Judge: "/judge/scoring",
+  Mentor: "/mentor/tracks",
+  TeamLeader: "/my-team",
+  TeamMember: "/my-team",
 };
 
 const ROLE_RANK = ["EventCoordinator", "Judge", "Mentor", "TeamLeader", "TeamMember"];
@@ -192,28 +194,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     let primaryRole: EventRole | null = null;
-    // QUY TẮC ĐIỀU HƯỚNG SAU KHI ĐĂNG NHẬP:
-    // - Admin -> /admin/dashboard
-    // - Sinh viên/User:
-    //    + ĐÃ ĐƯỢC XÁC THỰC (isApproved === true) -> /events (chọn sự kiện)
-    //    + CHƯA ĐƯỢC XÁC THỰC (isApproved === false) -> /onboarding/profile (cập nhật hồ sơ)
-    let targetPath = isAdmin
-      ? "/admin/dashboard"
-      : isApproved
-        ? "/events"
-        : "/onboarding/profile";
-
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
         params: { UserId: userId, PageSize: 200 },
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (!isAdmin && primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
-        targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
-      }
     } catch {
-      // fallback targetPath
+      // fallback
+    }
+
+    // Nhận diện vai trò từ email fallback nếu DB role mapping chưa trả về kịp
+    const lowerEmail = (d.email ?? d.Email ?? email.trim()).toLowerCase();
+    let detectedRole = primaryRole?.roleName;
+    if (!detectedRole) {
+      if (lowerEmail.includes("ec_") || lowerEmail.includes("ec.") || lowerEmail.includes("coordinator")) {
+        detectedRole = "EventCoordinator";
+      } else if (lowerEmail.includes("judge")) {
+        detectedRole = "Judge";
+      } else if (lowerEmail.includes("mentor")) {
+        detectedRole = "Mentor";
+      }
+    }
+
+    // QUY TẮC ĐIỀU HƯỚNG THEO ĐÚNG ACTOR:
+    // 1. Admin -> /admin/dashboard
+    // 2. Coordinator -> /coordinator/dashboard
+    // 3. Judge -> /judge/scoring
+    // 4. Mentor -> /mentor/tracks
+    // 5. TeamLeader / TeamMember -> /my-team
+    // 6. Sinh viên (Student): Nếu chưa duyệt thẻ -> /onboarding/profile, nếu đã duyệt -> /events
+    // 7. Khác -> /events
+    let targetPath = "/events";
+    if (isAdmin) {
+      targetPath = "/admin/dashboard";
+    } else if (detectedRole && REDIRECT_BY_ROLE[detectedRole]) {
+      targetPath = REDIRECT_BY_ROLE[detectedRole];
+    } else if (isStudent) {
+      targetPath = isApproved ? "/events" : "/onboarding/profile";
+    } else {
+      targetPath = "/events";
     }
 
     // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
@@ -286,28 +306,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     let primaryRole: EventRole | null = null;
-    // QUY TẮC ĐIỀU HƯỚNG SAU KHI ĐĂNG NHẬP GOOGLE:
-    // - Admin -> /admin/dashboard
-    // - Sinh viên/User:
-    //    + ĐÃ ĐƯỢC XÁC THỰC (isApproved === true) -> /events (chọn sự kiện)
-    //    + CHƯA ĐƯỢC XÁC THỰC (isApproved === false) -> /onboarding/profile (cập nhật hồ sơ)
-    let targetPath = isAdmin
-      ? "/admin/dashboard"
-      : isApproved
-        ? "/events"
-        : "/onboarding/profile";
-
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
         params: { UserId: userId, PageSize: 200 },
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (!isAdmin && primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
-        targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
-      }
     } catch {
-      // fallback targetPath
+      // fallback
+    }
+
+    // Nhận diện vai trò từ email fallback nếu DB role mapping chưa trả về kịp
+    const lowerEmail = email.toLowerCase();
+    let detectedRole = primaryRole?.roleName;
+    if (!detectedRole) {
+      if (lowerEmail.includes("ec_") || lowerEmail.includes("ec.") || lowerEmail.includes("coordinator")) {
+        detectedRole = "EventCoordinator";
+      } else if (lowerEmail.includes("judge")) {
+        detectedRole = "Judge";
+      } else if (lowerEmail.includes("mentor")) {
+        detectedRole = "Mentor";
+      }
+    }
+
+    // QUY TẮC ĐIỀU HƯỚNG GOOGLE THEO ĐÚNG ACTOR:
+    // 1. Admin -> /admin/dashboard
+    // 2. Coordinator -> /coordinator/dashboard
+    // 3. Judge -> /judge/scoring
+    // 4. Mentor -> /mentor/tracks
+    // 5. TeamLeader / TeamMember -> /my-team
+    // 6. Sinh viên (Student): Nếu chưa duyệt thẻ -> /onboarding/profile, nếu đã duyệt -> /events
+    // 7. Khác -> /events
+    let targetPath = "/events";
+    if (isAdmin) {
+      targetPath = "/admin/dashboard";
+    } else if (detectedRole && REDIRECT_BY_ROLE[detectedRole]) {
+      targetPath = REDIRECT_BY_ROLE[detectedRole];
+    } else if (isStudent) {
+      targetPath = isApproved ? "/events" : "/onboarding/profile";
+    } else {
+      targetPath = "/events";
     }
 
     // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
