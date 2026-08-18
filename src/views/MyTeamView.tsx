@@ -12,6 +12,7 @@ import {
   useTeamInvitations,
   useTransferLeadership,
   useRemoveTeamMember,
+  useUpdateTeam,
 } from "@/repositories/teamsRepository";
 import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
 import {
@@ -108,6 +109,10 @@ export function MyTeamView() {
   const { mutateAsync: confirmRegistration, isPending: isRegistering } = useConfirmRegistration();
   const { mutateAsync: transferLeadership, isPending: isTransferring } = useTransferLeadership();
   const { mutateAsync: leaveTeam, isPending: isLeaving } = useLeaveTeam();
+  const { mutateAsync: updateTeam, isPending: isUpdatingTeam } = useUpdateTeam();
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
   const { data: rawDbRounds = [] } = useEventRounds(team?.eventId || targetEventId);
   const eventRounds: any[] = Array.isArray(rawDbRounds) ? rawDbRounds : [];
@@ -155,6 +160,7 @@ export function MyTeamView() {
   const closeDialogs = () => {
     setShowRegisterDialog(false);
     setShowLeaveDialog(false);
+    setShowEditDialog(false);
     setTransferTarget(null);
     setCancelTarget(null);
     setDialogError("");
@@ -186,6 +192,12 @@ export function MyTeamView() {
           onLeave={() => {
             setDialogError("");
             setShowLeaveDialog(true);
+          }}
+          onEdit={() => {
+            setDialogError("");
+            setEditName(team.teamName);
+            setEditDescription(team.description || "");
+            setShowEditDialog(true);
           }}
         />
 
@@ -346,6 +358,57 @@ export function MyTeamView() {
         }
         onCancel={() => { setKickTarget(null); setDialogError(""); }}
       />
+
+      {showEditDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <Card className="w-full max-w-md space-y-4 p-6">
+            <h3 className="font-display text-base font-bold uppercase text-[color:var(--accent-team)]">
+              Sửa Thông Tin Đội
+            </h3>
+            <div className="space-y-3 font-mono text-xs">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase text-[color:var(--text-muted)]">Tên đội</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 text-[color:var(--text-primary)]"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase text-[color:var(--text-muted)]">Mô tả</label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 text-[color:var(--text-primary)]"
+                />
+              </div>
+              {dialogError && <p className="text-[color:var(--color-danger)]">{dialogError}</p>}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[var(--border-muted)] pt-3">
+              <button
+                onClick={closeDialogs}
+                className="px-3 py-1.5 font-mono text-xs text-[color:var(--text-muted)] hover:text-white"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() =>
+                  runAction(
+                    () => updateTeam({ id: team.id, payload: { name: editName.trim(), description: editDescription.trim() } }),
+                    "Không cập nhật được thông tin đội.",
+                  )
+                }
+                disabled={isUpdatingTeam || !editName.trim()}
+                className="bg-[color:var(--accent-team)] px-4 py-1.5 font-mono text-xs font-bold text-black hover:brightness-110 disabled:opacity-50"
+              >
+                {isUpdatingTeam ? "Đang lưu..." : "Lưu Thay Đổi"}
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
     </main>
   );
 }
