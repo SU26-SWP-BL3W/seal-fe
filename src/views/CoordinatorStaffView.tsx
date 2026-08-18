@@ -7,9 +7,8 @@ import { staffRepository, useGetEventRoles } from "@/repositories/staffRepositor
 import { useGetUsers } from "@/repositories/usersRepository";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Info, Edit3, PlusCircle } from "lucide-react";
+import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Info } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
-import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 
 export const checkEmailInSystem = (email: string, usersList: Array<any> = []) => {
   if (!email.trim()) return true;
@@ -33,20 +32,17 @@ export const CoordinatorStaffView: React.FC = () => {
   const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
   const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
     ? allEvents
-    : myEvents;
+    : myEvents.length > 0
+    ? myEvents
+    : allEvents;
 
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId || "");
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   React.useEffect(() => {
     if (queryEventId && queryEventId !== selectedEventId) {
       setSelectedEventId(queryEventId);
-    } else if (!selectedEventId && eventsList.length > 0) {
-      setSelectedEventId(eventsList[0].id || eventsList[0].eventId || "");
     }
-  }, [queryEventId, eventsList, selectedEventId]);
-
-  const currentEvent = eventsList.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId) || (eventsList.length > 0 ? eventsList[0] : { id: selectedEventId });
+  }, [queryEventId]);
 
   const { data: eventRoles = [], refetch: refetchRoles } = useGetEventRoles(selectedEventId);
   const { data: tracks = [] } = useGetTracksByEvent(selectedEventId);
@@ -226,12 +222,7 @@ export const CoordinatorStaffView: React.FC = () => {
     }
   };
 
-  const handleRemoveRole = async (roleId: string, roleName?: any, email?: string) => {
-    const isEC = roleName === "EventCoordinator" || roleName === "Coordinator" || roleName === "EC" || roleName === 0 || roleName === "0";
-    if (isEC && !(currentUser?.isAdmin || currentUser?.IsAdmin)) {
-      alert("Điều phối viên (EC) không có quyền gỡ vai trò của Điều phối viên khác. Chỉ Quản trị viên (Admin) mới có quyền này.");
-      return;
-    }
+  const handleRemoveRole = async (roleId: string, email?: string) => {
     if (!confirm(`Bạn có chắc chắn muốn gỡ vai trò nhân sự này khỏi sự kiện?`)) return;
     try {
       await staffRepository.removeEventRole(roleId);
@@ -307,33 +298,23 @@ export const CoordinatorStaffView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="primary"
-              onClick={() => setIsEditModalOpen(true)}
-              className="bg-[#a855f7] hover:bg-[#9333ea] text-white font-mono text-xs font-bold uppercase flex items-center gap-1.5 shadow-md cursor-pointer"
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs text-[var(--text-muted)]">Sự kiện:</span>
+            <select
+              value={selectedEventId}
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="bg-[var(--bg-input)] border border-[var(--border-muted)] px-4 py-2 font-mono text-xs text-[var(--accent-coordinator)] hud-clipped font-bold focus:outline-none"
             >
-              <Edit3 className="w-4 h-4" /> ⚙️ Chỉnh Sửa Sự Kiện &amp; Cấu Hình Vòng Thi
-            </Button>
-
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-[var(--text-muted)]">Sự kiện:</span>
-              <select
-                value={selectedEventId}
-                onChange={(e) => setSelectedEventId(e.target.value)}
-                className="bg-[var(--bg-input)] border border-[var(--border-muted)] px-4 py-2 font-mono text-xs text-[var(--accent-coordinator)] hud-clipped font-bold focus:outline-none cursor-pointer"
-              >
-                {myEvents.map((ev: any) => {
-                  const id = ev.id || ev.Id || ev.eventId || ev.EventId || "";
-                  const name = ev.eventName || ev.EventName || "Sự kiện";
-                  return (
-                    <option key={id} value={id}>
-                      {name}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+              {myEvents.map((ev: any) => {
+                const id = ev.id || ev.Id || ev.eventId || ev.EventId || "";
+                const name = ev.eventName || ev.EventName || "Sự kiện";
+                return (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                );
+              })}
+            </select>
           </div>
         </div>
 
@@ -650,19 +631,13 @@ export const CoordinatorStaffView: React.FC = () => {
                         </td>
                         <td className="p-3 text-[var(--text-muted)]">{trackName}</td>
                         <td className="p-3 text-right">
-                          {isEC && !(currentUser?.isAdmin || currentUser?.IsAdmin) ? (
-                            <span className="text-[10px] font-mono text-zinc-500 italic px-2 py-1 bg-zinc-900/60 rounded border border-zinc-800">
-                              🔒 Quản lý bởi Admin
-                            </span>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleRemoveRole(roleId, rawRole, email)}
-                              className="text-[11px] font-mono text-[var(--color-danger)] hover:bg-red-500/10 cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Gỡ vai trò
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleRemoveRole(roleId, email)}
+                            className="text-[11px] font-mono text-[var(--color-danger)] hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Gỡ vai trò
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -684,17 +659,6 @@ export const CoordinatorStaffView: React.FC = () => {
             );
           })}
         </datalist>
-
-        {/* Modal Chỉnh Sửa Sự Kiện & Cấu Hình Vòng Thi (1.1.1 & 1.1.2 & 1.1.2.1) */}
-        {isEditModalOpen && currentEvent && (
-          <ComprehensiveEventEditModal
-            event={currentEvent}
-            onClose={() => setIsEditModalOpen(false)}
-            onSuccess={() => {
-              setIsEditModalOpen(false);
-            }}
-          />
-        )}
 
       </main>
     </div>

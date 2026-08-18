@@ -6,21 +6,21 @@ import axios, {
 import type { ApiError, BaseResponse } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://seal-bl3w-backend.onrender.com/api";
-const TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 20_000;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  // Render free-tier backend sleeps when inactive and needs ~15-30s to cold-boot.
-  // 20s default timeout allows cold-start without throwing immediate timeout errors.
-  timeout: TIMEOUT_MS,
+  // 15s x retry lam moi trang treo ~30s khi backend chet. 6s du cho request
+  // that (backend khoe tra ve <1s) va cat ngan han cho khi backend sap.
+  timeout: 6_000,
   headers: { "Content-Type": "application/json" },
 });
 
 // ─── Circuit breaker: backend chet thi fail nhanh, khong bat nguoi dung cho ───
-// Backend deploy tren Render free-tier co the can thoi gian spin-up. Sau 3 lan
-// loi ket noi lien tiep, cho fail nhanh trong 15s de tranh lam treo UI.
-const BREAKER_THRESHOLD = 3;
-const BREAKER_COOLDOWN_MS = 15_000;
+// Backend deploy tren Render free-tier co the crash-loop (SIGSEGV/OOM). Khi do
+// MOI query deu cho het timeout roi moi fallback -> web "loading rat lau" o
+// tat ca cac trang. Sau 2 lan loi mang lien tiep, cho fail tuc thi trong 20s.
+const BREAKER_THRESHOLD = 2;
+const BREAKER_COOLDOWN_MS = 20_000;
 let consecutiveNetworkFailures = 0;
 let breakerOpenUntil = 0;
 

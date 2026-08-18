@@ -185,9 +185,16 @@ export function useMyEvents() {
       try {
         const res = await apiClient.get<any>("/Events/my-events");
         const list = unwrapEventsList(res.data);
-        return list as MyEventModel[];
-      } catch (err: any) {
-        console.warn("Error fetching my events from /Events/my-events:", err?.message || err);
+        if (list.length > 0) return list as MyEventModel[];
+      } catch {
+        // Fallback
+      }
+
+      try {
+        const allRes = await apiClient.get<any>("/Events", { params: { PageSize: 100 } });
+        return unwrapEventsList(allRes.data) as MyEventModel[];
+      } catch (err) {
+        console.error("Error fetching my events from API:", err);
         return [] as MyEventModel[];
       }
     },
@@ -202,10 +209,8 @@ export function useEventDetail(eventId: string) {
       try {
         const res = await apiClient.get<any>(`/Events/${eventId}`);
         return (res.data?.data ?? res.data ?? null) as EntityEvent | null;
-      } catch (err: any) {
-        if (err?.name !== "CanceledError" && !err?.message?.includes("canceled")) {
-          console.warn("Could not fetch event detail for ID:", eventId, err?.message || err);
-        }
+      } catch (err) {
+        console.error("Error fetching event detail for ID:", eventId, err);
         return null;
       }
     },

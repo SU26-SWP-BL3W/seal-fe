@@ -82,9 +82,6 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
       showParticipantSidebar
     );
 
-  // Footer chỉ hiển thị ở các trang Public / Landing Portal, không hiện ở các trang Dashboard / Workspace / Auth
-  const showFooter = !hasVerticalSidebar && !isAuthRoute && !isChangePasswordRoute && (pathname === "/" || pathname.endsWith("/events") || pathname === "/en" || pathname === "/vi");
-
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] relative">
       <NavigationBar />
@@ -93,7 +90,7 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
         <main className="flex-1 flex flex-col w-full min-h-0">
           {children}
         </main>
-        {showFooter && <Footer />}
+        <Footer />
       </div>
     </div>
   );

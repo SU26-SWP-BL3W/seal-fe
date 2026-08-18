@@ -29,15 +29,10 @@ import type { User } from "@/models/entities";
 import { readApiError } from "@/repositories/submitResultsRepository";
 import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
 
-export interface AdminUsersViewProps {
-  mode?: "admin" | "coordinator";
-}
-
-export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }) => {
+export const AdminUsersView: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const isCoordinator = mode === "coordinator" || (!currentUser?.isAdmin && !currentUser?.IsAdmin);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState(isCoordinator ? "student" : "all");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Modals state
@@ -127,11 +122,6 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
 
   const handleDeleteUser = async () => {
     if (!deleteUserModal) return;
-    if (!currentUser?.isAdmin && !currentUser?.IsAdmin) {
-      alert("Chỉ Quản trị viên (Admin) mới có quyền xóa tài khoản người dùng!");
-      setDeleteUserModal(null);
-      return;
-    }
     const targetId = deleteUserModal.id || (deleteUserModal as any).Id || deleteUserModal.userId;
 
     // Guard an toan: Khong tu xoa chinh minh
@@ -160,9 +150,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
     }
   };
 
-  const hasAccess = currentUser && (currentUser.isAdmin || currentUser.IsAdmin || isCoordinator);
-
-  if (!hasAccess) {
+  if (!currentUser || (!currentUser.isAdmin && !currentUser.IsAdmin)) {
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-[#080f11] border border-[#ef4444] p-8 text-center glow-box-red relative space-y-4">
@@ -174,10 +162,10 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
             <Lock className="w-6 h-6" />
           </div>
           <h2 className="font-display text-xl font-bold uppercase text-[#ef4444]">
-            YÊU CẦU QUYỀN TRUY CẬP
+            YÊU CẦU QUYỀN SYSTEM ADMIN
           </h2>
           <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Khu vực duyệt và quản lý danh sách hồ sơ chỉ dành cho Ban Tổ Chức &amp; Quản trị viên.
+            Khu vực quản lý danh sách người dùng toàn hệ thống chỉ dành cho Quản trị viên.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
             <Link href="/login" className="w-full">
@@ -191,37 +179,29 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
     );
   }
 
-  const isCoordinatorView = isCoordinator;
-  const dashboardUrl = isCoordinatorView ? "/coordinator/dashboard" : "/admin/dashboard";
-
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Top Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
           <div>
-            <div className="font-mono text-[11px] text-cyan-400 mb-1 uppercase tracking-wider">
-              {isCoordinatorView ? "BAN TỔ CHỨC / DUYỆT & QUẢN LÝ HỒ SƠ THÍ SINH" : "QUẢN TRỊ HỆ THỐNG / TÀI KHOẢN & HỒ SƠ"}
+            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider">
+              QUẢN TRỊ HỆ THỐNG / TÀI KHOẢN &amp; HỒ SƠ
             </div>
             <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
-              {isCoordinatorView ? "DANH SÁCH THÍ SINH & DUYỆT THẺ SINH VIÊN" : "QUẢN LÝ NGƯỜI DÙNG TOÀN HỆ THỐNG"}
+              QUẢN LÝ NGƯỜI DÙNG TOÀN HỆ THỐNG
             </h1>
-            <p className="text-xs text-zinc-400 font-sans mt-1">
-              {isCoordinatorView
-                ? "Tra cứu danh sách sinh viên, xem ảnh thẻ 3x4, kiểm tra MSSV và phê duyệt/từ chối hồ sơ đăng ký tham gia cuộc thi."
-                : "Quản lý và kiểm soát toàn bộ tài khoản Admin, Điều phối viên, Giám khảo, Cố vấn và Sinh viên trong toàn hệ thống."}
-            </p>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Link href={dashboardUrl}>
-              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-cyan-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
+            <Link href="/admin/dashboard">
+              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-amber-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
                 <span>← Bảng Điều Hành</span>
               </button>
             </Link>
             <button
               onClick={() => refetch()}
-              className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 text-zinc-300 font-mono text-xs uppercase hover:border-cyan-400 hover:text-white transition-colors rounded cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 text-zinc-300 font-mono text-xs uppercase hover:border-amber-400 hover:text-white transition-colors rounded cursor-pointer flex items-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Làm Mới</span>
@@ -503,7 +483,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                             >
                               <Eye className="w-3.5 h-3.5 inline" />
                             </button>
-                            {!isAdm && (currentUser?.isAdmin || currentUser?.IsAdmin) && (
+                            {!isAdm && (
                               <button
                                 onClick={() => setDeleteUserModal(u)}
                                 className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 text-rose-400 hover:bg-rose-500 hover:text-white font-mono text-xs rounded transition-all cursor-pointer"
