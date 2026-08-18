@@ -217,16 +217,40 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
       });
       setIsSubmitting(false);
 
-      if (res && (res.success !== false || (res as any).invitationId || (res as any).id)) {
-        setActionSuccess(
-          `Đã gửi thư mời và kích hoạt tài khoản tạm cho "${emailToUse}" thành công!`
-        );
-        handleClearSelection();
-        await refetchRoles();
-        onSuccess();
-        setTimeout(() => setActionSuccess(null), 3500);
+      // Đọc cờ email từ response để hiển thị trung thực
+      // Hỗ trợ cả flat response và nested data (tùy API trả về)
+      const rawResponse = res as any;
+      const invitationEmailSent = rawResponse?.invitationEmailSent
+        ?? rawResponse?.data?.invitationEmailSent
+        ?? true;
+      const activationEmailSent = rawResponse?.activationEmailSent
+        ?? rawResponse?.data?.activationEmailSent
+        ?? true;
+
+      if (res && (res.success !== false || rawResponse?.invitationId || rawResponse?.id)) {
+        // Nếu BẤT KỲ email nào bị lỗi → hiển thị cảnh báo
+        if (invitationEmailSent === false || activationEmailSent === false) {
+          const failedTypes: string[] = [];
+          if (activationEmailSent === false) failedTypes.push("email kích hoạt tài khoản tạm");
+          if (invitationEmailSent === false) failedTypes.push("email lời mời");
+          setActionError(
+            `Lời mời đã được tạo cho "${emailToUse}" nhưng hệ thống KHÔNG gửi được ${failedTypes.join(" và ")}. Vui lòng liên hệ DevOps kiểm tra SMTP.`
+          );
+          handleClearSelection();
+          await refetchRoles();
+          onSuccess();
+          setTimeout(() => setActionError(null), 8000);
+        } else {
+          setActionSuccess(
+            `Đã gửi thư mời và kích hoạt tài khoản tạm cho "${emailToUse}" thành công!`
+          );
+          handleClearSelection();
+          await refetchRoles();
+          onSuccess();
+          setTimeout(() => setActionSuccess(null), 3500);
+        }
       } else {
-        setActionError((res as any)?.message || "Gửi thư mời thất bại. Vui lòng kiểm tra định dạng email.");
+        setActionError(rawResponse?.message || "Gửi thư mời thất bại. Vui lòng kiểm tra định dạng email.");
       }
     } catch (err: any) {
       setIsSubmitting(false);

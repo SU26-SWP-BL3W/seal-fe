@@ -23,8 +23,10 @@ repositories/
 - Không hardcode dữ liệu mẫu (`MOCK_*`) import thẳng vào production code.
 - Field/route đối chiếu trực tiếp Request/Response Model thật trong source C# của BE
   (`SU26_SWP_BL3W_BE/backend/SEAL.Application/Features/**/Models`) — **không** suy đoán hay copy
-  từ FE cũ. FE cũ từng có bug lệch contract thật (`useFptStudentVerification` gọi
-  `/FptStudents/{code}` — route không tồn tại; đúng route là `/fpt-mock/students/{code}`).
+  từ FE cũ. (Lịch sử: FE cũ từng có bug lệch contract `useFptStudentVerification` gọi
+  `/FptStudents/{code}` sai; sau đó tạm trỏ `/fpt-mock/students/{code}` — endpoint đọc Google
+  Sheet ngoài không xác thực. Từ 2026-08-18 route thật là `/fpt-students/{code}`, đọc bảng
+  FptStudents trong DB, yêu cầu đăng nhập — không còn gọi ra Google Sheet mỗi request.)
 
 **⚠️ Cảnh báo đánh số luồng:** file swimlane BE (`docs/swimlane/SEAL_flow4_submission_scoring.drawio`)
 đặt Submission/Scoring là **Flow4**, nhưng comment ngay trong chính `SubmitResultsController.cs`/
