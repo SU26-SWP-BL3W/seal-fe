@@ -1,33 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { roundsRepository } from "@/repositories/roundsRepository";
 import { tracksRepository, type Track } from "@/repositories/events/tracksRepository";
 import { templatesRepository, type Template } from "@/repositories/events/templatesRepository";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
-import { 
-  Calendar, 
-  Layers, 
-  Target, 
-  Save, 
-  PlusCircle, 
-  Trash2, 
-  CheckCircle2, 
-  AlertCircle, 
-  Info, 
-  Clock, 
-  FileCode, 
-  Globe, 
-  FileSpreadsheet, 
-  Video, 
-  BookOpen, 
-  Palette, 
-  Sparkles,
-  Eye,
-  EyeOff
-} from "lucide-react";
 import { Card } from "@/components/ui";
 
 export interface RoundEditState {
@@ -57,12 +36,12 @@ export interface TrackEditState {
 }
 
 const AVAILABLE_DELIVERABLES = [
-  { key: "github", label: "MÃ NGUỒN GITHUB / GITLAB", icon: FileCode },
-  { key: "deployed_url", label: "LIVE DEMO URL", icon: Globe },
-  { key: "slides", label: "SLIDE THUYẾT TRÌNH (PDF/SLIDES)", icon: FileSpreadsheet },
-  { key: "demo_video", label: "VIDEO DEMO (YOUTUBE / DRIVE)", icon: Video },
-  { key: "report", label: "BÁO CÁO KIẾN TRÚC (PDF/DOC)", icon: BookOpen },
-  { key: "figma", label: "LINK FIGMA PROTOTYPE", icon: Palette },
+  { key: "github", label: "MÃ NGUỒN GITHUB / GITLAB" },
+  { key: "deployed_url", label: "LIVE DEMO URL" },
+  { key: "slides", label: "SLIDE THUYẾT TRÌNH (PDF/SLIDES)" },
+  { key: "demo_video", label: "VIDEO DEMO (YOUTUBE / DRIVE)" },
+  { key: "report", label: "BÁO CÁO KIẾN TRÚC (PDF/DOC)" },
+  { key: "figma", label: "LINK FIGMA PROTOTYPE" },
 ];
 
 function toDateTimeLocal(val?: string, defaultTime = "08:00") {
@@ -99,7 +78,6 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
 
   const [activeSubSection, setActiveSubSection] = useState<"general" | "rounds" | "tracks">("general");
 
-  // 1. Event General State
   const [eventName, setEventName] = useState(event?.eventName || event?.EventName || "");
   const [season, setSeason] = useState(event?.season || event?.Season || "Summer");
   const [year, setYear] = useState<number>(Number(event?.year || event?.Year) || new Date().getFullYear());
@@ -117,25 +95,64 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
     event?.status !== undefined ? Boolean(event.status) : (event?.Status !== undefined ? Boolean(event.Status) : false)
   );
 
-  // 2. Rounds State
   const [rounds, setRounds] = useState<RoundEditState[]>([]);
   const [deletedRoundIds, setDeletedRoundIds] = useState<string[]>([]);
   const [isLoadingRounds, setIsLoadingRounds] = useState<boolean>(true);
 
-  // 3. Tracks State
   const [tracks, setTracks] = useState<TrackEditState[]>([]);
   const [deletedTrackIds, setDeletedTrackIds] = useState<string[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(true);
 
-  // 4. Rubric Templates State (for inline assignment)
   const [templatesList, setTemplatesList] = useState<Template[]>([]);
   const [expandedTrackRubrics, setExpandedTrackRubrics] = useState<Record<number, boolean>>({});
 
-  // Status
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
-  // Load Rubric Templates list once on mount
+  const isGeneralComplete = useMemo(() => {
+    return Boolean(
+      eventName.trim() &&
+      season.trim() &&
+      year > 2000 &&
+      maxTeams > 0 &&
+      startDate &&
+      endDate &&
+      registrationStartDate &&
+      registrationEndDate
+    );
+  }, [eventName, season, year, maxTeams, startDate, endDate, registrationStartDate, registrationEndDate]);
+
+  const isRoundsComplete = useMemo(() => {
+    return Boolean(
+      rounds.length > 0 &&
+      rounds.every((r) => r.roundName.trim() && r.startDate && r.endDate)
+    );
+  }, [rounds]);
+
+  const assignedTracksRubricsCount = useMemo(() => {
+    return tracks.filter((t) => Boolean(t.templateId)).length;
+  }, [tracks]);
+
+  const isTracksComplete = useMemo(() => {
+    return Boolean(
+      tracks.length > 0 &&
+      assignedTracksRubricsCount === tracks.length &&
+      tracks.every((t) => t.trackName.trim())
+    );
+  }, [tracks, assignedTracksRubricsCount]);
+
+  const completedStepsCount = useMemo(() => {
+    let count = 0;
+    if (isGeneralComplete) count++;
+    if (isRoundsComplete) count++;
+    if (isTracksComplete) count++;
+    return count;
+  }, [isGeneralComplete, isRoundsComplete, isTracksComplete]);
+
+  const progressPercent = useMemo(() => {
+    return Math.round((completedStepsCount / 3) * 100);
+  }, [completedStepsCount]);
+
   useEffect(() => {
     let isMounted = true;
     templatesRepository
@@ -154,7 +171,6 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
     }));
   };
 
-  // Sync event props when changed
   useEffect(() => {
     if (event) {
       setEventName(event.eventName || event.EventName || "");
@@ -170,14 +186,12 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
     }
   }, [event]);
 
-  // Load Rounds & Tracks from DB
   useEffect(() => {
     if (!eventId) return;
     let isMounted = true;
     setIsLoadingRounds(true);
     setIsLoadingTracks(true);
 
-    // 1. Rounds
     roundsRepository
       .getRoundsByEventId(eventId)
       .then((res) => {
@@ -228,7 +242,6 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
       .catch(() => { if (isMounted) setRounds([]); })
       .finally(() => { if (isMounted) setIsLoadingRounds(false); });
 
-    // 2. Tracks
     tracksRepository
       .getTracksByEvent(eventId)
       .then((items) => {
@@ -261,7 +274,6 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
     return () => { isMounted = false; };
   }, [eventId]);
 
-  // Round Handlers
   const handleAddRound = () => {
     const nextNumber = rounds.length + 1;
     setRounds([
@@ -286,8 +298,8 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
 
   const handleRemoveRound = (index: number) => {
     const target = rounds[index];
-    if (target?.id && !target.id.startsWith("temp-")) {
-      setDeletedRoundIds([...deletedRoundIds, target.id]);
+    if (target?.id && !target.id.startsWith("temp-") && !target.isNew) {
+      setDeletedRoundIds((prev) => [...prev, target.id!]);
     }
     setRounds(rounds.filter((_, i) => i !== index));
   };
@@ -298,23 +310,25 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
     setRounds(updated);
   };
 
-  const toggleDeliverable = (roundIndex: number, deliverableKey: string) => {
-    const r = rounds[roundIndex];
-    const current = r.requiredDeliverables || [];
-    const updatedDeliverables = current.includes(deliverableKey)
-      ? current.filter((k) => k !== deliverableKey)
-      : [...current, deliverableKey];
-    handleRoundChange(roundIndex, "requiredDeliverables", updatedDeliverables);
+  const handleToggleDeliverable = (roundIndex: number, deliverableKey: string) => {
+    const target = rounds[roundIndex];
+    const currentList = target.requiredDeliverables || ["github", "deployed_url", "slides"];
+    const exists = currentList.includes(deliverableKey);
+    const updatedList = exists
+      ? currentList.filter((k) => k !== deliverableKey)
+      : [...currentList, deliverableKey];
+
+    handleRoundChange(roundIndex, "requiredDeliverables", updatedList);
   };
 
-  // Track Handlers
   const handleAddTrack = () => {
+    const nextNumber = tracks.length + 1;
     setTracks([
       ...tracks,
       {
         id: `temp-track-${Date.now()}`,
         isNew: true,
-        trackName: `HẠNG MỤC MỚI ${tracks.length + 1}`,
+        trackName: `HẠNG MỤC THI ĐẤU ${nextNumber}`,
         description: "",
         submissionRuleDescription: "",
       },
@@ -323,8 +337,8 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
 
   const handleRemoveTrack = (index: number) => {
     const target = tracks[index];
-    if (target?.id && !target.id.startsWith("temp-")) {
-      setDeletedTrackIds([...deletedTrackIds, target.id]);
+    if (target?.id && !target.id.startsWith("temp-") && !target.isNew) {
+      setDeletedTrackIds((prev) => [...prev, target.id!]);
     }
     setTracks(tracks.filter((_, i) => i !== index));
   };
@@ -335,74 +349,52 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
     setTracks(updated);
   };
 
-  // Save All
   const handleSaveAll = async (targetPublishStatus: boolean) => {
+    if (!eventId) {
+      toast.error("Không tìm thấy mã sự kiện.");
+      return;
+    }
+
     if (!eventName.trim()) {
-      const msg = "Vui lòng nhập Tên sự kiện!";
-      setSaveMessage({ text: msg, isError: true });
-      toast.error(msg);
+      toast.error("Tên sự kiện không được để trống.");
+      setActiveSubSection("general");
       return;
-    }
-
-    const evStart = startDate ? new Date(startDate) : new Date();
-    const evEnd = endDate ? new Date(endDate) : new Date();
-    if (evStart >= evEnd) {
-      const msg = "Ngày bắt đầu sự kiện phải trước ngày kết thúc sự kiện!";
-      setSaveMessage({ text: msg, isError: true });
-      toast.error(msg);
-      return;
-    }
-
-    for (let i = 0; i < rounds.length; i++) {
-      const r = rounds[i];
-      const rName = r.roundName.trim() || `Vòng ${i + 1}`;
-      const rStart = r.startDate ? new Date(r.startDate) : evStart;
-      const rEnd = r.endDate ? new Date(r.endDate) : evEnd;
-
-      if (rStart >= rEnd) {
-        const msg = `[${rName}]: Ngày bắt đầu nộp bài phải trước hạn chót nộp bài!`;
-        setSaveMessage({ text: msg, isError: true });
-        toast.error(msg);
-        return;
-      }
-
-      if (rStart < evStart || rEnd > evEnd) {
-        const msg = `[${rName}]: Thời gian nộp bài phải nằm trong khoảng sự kiện (${toDateTimeLocal(startDate)} - ${toDateTimeLocal(endDate)})!`;
-        setSaveMessage({ text: msg, isError: true });
-        toast.error(msg);
-        return;
-      }
     }
 
     setIsSaving(true);
     setSaveMessage(null);
 
     try {
-      // 1. Update Event
+      const evStart = startDate ? new Date(startDate) : new Date();
+      const evEnd = endDate ? new Date(endDate) : new Date(Date.now() + 30 * 86400000);
+      const regStart = registrationStartDate ? new Date(registrationStartDate) : new Date();
+      const regEnd = registrationEndDate ? new Date(registrationEndDate) : new Date(Date.now() + 14 * 86400000);
+
       await eventsRepository.updateEvent(eventId, {
         eventName: eventName.trim(),
-        season: season.trim(),
-        year: Number(year),
+        season,
+        year: Number(year) || new Date().getFullYear(),
         maxTeams: Number(maxTeams) || 50,
-        description: description.trim(),
+        description: description?.trim() || "",
         startDate: evStart.toISOString(),
         endDate: evEnd.toISOString(),
-        registrationStartDate: registrationStartDate ? new Date(registrationStartDate).toISOString() : undefined,
-        registrationEndDate: registrationEndDate ? new Date(registrationEndDate).toISOString() : undefined,
+        registrationStartDate: regStart.toISOString(),
         status: targetPublishStatus,
       });
 
-      // 2. Delete removed rounds
       for (const delId of deletedRoundIds) {
         try { await roundsRepository.deleteRound(delId); } catch {}
       }
 
-      // 3. Update or Create rounds
       for (let i = 0; i < rounds.length; i++) {
         const r = rounds[i];
         let rulePayload: string | undefined = undefined;
-        if (r.advancementRuleType !== "none" && r.advancementRuleValue.trim()) {
-          rulePayload = `${r.advancementRuleType}:${r.advancementRuleValue.trim()}`;
+        if (r.advancementRuleType === "top" && r.advancementRuleValue) {
+          rulePayload = `top:${r.advancementRuleValue}`;
+        } else if (r.advancementRuleType === "percent" && r.advancementRuleValue) {
+          rulePayload = `percent:${r.advancementRuleValue}`;
+        } else if (r.advancementRuleType === "minScore" && r.advancementRuleValue) {
+          rulePayload = `minscore:${r.advancementRuleValue}`;
         }
 
         const payload = {
@@ -425,12 +417,10 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
         }
       }
 
-      // 4. Delete removed tracks
       for (const delTrackId of deletedTrackIds) {
         try { await tracksRepository.deleteTrack(delTrackId); } catch {}
       }
 
-      // 5. Update or Create tracks & assign Rubric templates
       for (let i = 0; i < tracks.length; i++) {
         const t = tracks[i];
         const trackPayload = {
@@ -461,7 +451,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
       setIsSaving(false);
       setIsPublished(targetPublishStatus);
       const okMsg = targetPublishStatus
-        ? "ĐÃ LƯU & CÔNG KHAI THAY ĐỔI CẤU HÌNH SỰ KIỆN THÀNH CÔNG!"
+        ? "ĐÃ LƯU & MỞ ĐĂNG KÝ CUỘC THI THÀNH CÔNG!"
         : "ĐÃ LƯU DỮ LIỆU SỰ KIỆN DƯỚI DẠNG BẢN NHÁP THÀNH CÔNG!";
       setSaveMessage({ text: okMsg, isError: false });
       toast.success(okMsg);
@@ -476,399 +466,433 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
 
   return (
     <div className="space-y-6 font-mono text-xs text-[var(--text-primary)]">
-      {/* Top Banner with Sub-Navigation */}
       <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-5 hud-clipped flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${isPublished ? "bg-emerald-500" : "bg-amber-500"} animate-pulse`} />
+            <span className={`w-2 h-2 ${isPublished ? "bg-emerald-500" : "bg-amber-500"}`} />
             <span className="text-[10px] text-[#c084fc] font-bold tracking-widest uppercase">
-              CẤU HÌNH CUỘC THI • [{isPublished ? "ĐANG CÔNG BỐ (OPEN)" : "BẢN NHÁP (DRAFT)"}]
+              CẤU HÌNH CUỘC THI • [{isPublished ? "ĐANG MỞ ĐĂNG KÝ (OPEN)" : "BẢN NHÁP (DRAFT)"}]
             </span>
           </div>
-          <h2 className="font-display font-bold text-lg text-white uppercase tracking-wider mt-1">
-            {eventName || "SỰ KIỆN ĐANG QUẢN LÝ"}
-          </h2>
+          <div className="text-sm font-bold text-white uppercase tracking-wider">
+            {eventName || "SỰ KIỆN CHƯA ĐẶT TÊN"} ({season} {year})
+          </div>
+          <div className="text-[11px] font-mono text-zinc-400">
+            TIẾN ĐỘ THIẾT LẬP: <span className="text-white font-bold">{progressPercent}%</span> ({completedStepsCount}/3 BƯỚC HOÀN TẤT) •{" "}
+            <span className={progressPercent === 100 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+              {progressPercent === 100 ? "[SẴN SÀNG MỞ ĐĂNG KÝ]" : "[CẦN BỔ SUNG THÔNG TIN]"}
+            </span>
+          </div>
         </div>
 
-        {/* 3 Sub-Section Switcher Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-[var(--bg-input)] border border-zinc-800 hud-clipped">
+        <div className="flex flex-wrap items-center gap-2 bg-[#090e11] p-1.5 border border-zinc-800 hud-clipped">
           <button
             type="button"
             onClick={() => setActiveSubSection("general")}
-            className={`px-3 py-1.5 font-bold uppercase transition-all hud-clipped cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2.5 font-bold uppercase transition-all cursor-pointer hud-clipped text-xs flex items-center gap-2 ${
               activeSubSection === "general"
-                ? "bg-[#a855f7] text-white shadow-sm"
-                : "text-[var(--text-muted)] hover:text-white"
+                ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                : "bg-[#090e11] text-zinc-400 hover:text-white border border-zinc-800"
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>1. THÔNG TIN CHUNG</span>
+            <span>01. THÔNG TIN CHUNG</span>
+            <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase hud-clipped ${
+              isGeneralComplete
+                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+            }`}>
+              {isGeneralComplete ? "[HOÀN TẤT]" : "[THIẾU THÔNG TIN]"}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubSection("rounds")}
-            className={`px-3 py-1.5 font-bold uppercase transition-all hud-clipped cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2.5 font-bold uppercase transition-all cursor-pointer hud-clipped text-xs flex items-center gap-2 ${
               activeSubSection === "rounds"
-                ? "bg-[#a855f7] text-white shadow-sm"
-                : "text-[var(--text-muted)] hover:text-white"
+                ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                : "bg-[#090e11] text-zinc-400 hover:text-white border border-zinc-800"
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>2. VÒNG THI ({rounds.length})</span>
+            <span>02. VÒNG THI ({rounds.length})</span>
+            <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase hud-clipped ${
+              isRoundsComplete
+                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+            }`}>
+              {isRoundsComplete ? "[HOÀN TẤT]" : "[CHƯA CẤU HÌNH]"}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubSection("tracks")}
-            className={`px-3 py-1.5 font-bold uppercase transition-all hud-clipped cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2.5 font-bold uppercase transition-all cursor-pointer hud-clipped text-xs flex items-center gap-2 ${
               activeSubSection === "tracks"
-                ? "bg-[#a855f7] text-white shadow-sm"
-                : "text-[var(--text-muted)] hover:text-white"
+                ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                : "bg-[#090e11] text-zinc-400 hover:text-white border border-zinc-800"
             }`}
           >
-            <Target className="w-3.5 h-3.5" />
-            <span>3. HẠNG MỤC ({tracks.length})</span>
+            <span>03. HẠNG MỤC ({tracks.length})</span>
+            <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase hud-clipped ${
+              isTracksComplete
+                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+            }`}>
+              {isTracksComplete
+                ? `[${assignedTracksRubricsCount}/${tracks.length} RUBRIC • HOÀN TẤT]`
+                : `[${assignedTracksRubricsCount}/${tracks.length} RUBRIC • CHƯA XONG]`}
+            </span>
           </button>
         </div>
       </div>
 
-      {/* SUB-SECTION 1: THÔNG TIN CHUNG */}
       {activeSubSection === "general" && (
         <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-6">
-          <div className="border-b border-[var(--border-muted)] pb-3">
-            <h3 className="font-display font-bold text-base text-white uppercase tracking-wider flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#c084fc]" />
-              THÔNG TIN CỐT LÕI &amp; THỜI GIAN TỔ CHỨC
-            </h3>
-            <p className="text-[11px] text-[var(--text-muted)] font-sans mt-0.5">
-              Thiết lập tên cuộc thi, mùa giải, hạn đăng ký và thời gian diễn ra tổng thể.
-            </p>
+          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
+            <div>
+              <h3 className="font-display font-bold text-base text-white uppercase tracking-wider">
+                THÔNG TIN TỔNG QUAN CUỘC THI
+              </h3>
+              <p className="text-[11px] text-[var(--text-muted)] font-sans mt-0.5">
+                Thiết lập thông tin nhận diện, quy mô đội thi và các khung thời gian chính thức của sự kiện.
+              </p>
+            </div>
+            <span className={`px-2 py-0.5 text-[10px] font-mono font-bold uppercase hud-clipped ${
+              isGeneralComplete
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40"
+                : "bg-amber-500/15 text-amber-400 border border-amber-500/40"
+            }`}>
+              {isGeneralComplete ? "TRẠNG THÁI: [ĐÃ ĐIỀN ĐỦ THÔNG TIN]" : "TRẠNG THÁI: [CẦN BỔ SUNG DỮ LIỆU]"}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="block text-[10px] font-bold uppercase text-[var(--text-muted)]">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+            <div className="md:col-span-8 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
                 Tên Sự Kiện / Cuộc Thi *
               </label>
               <input
                 type="text"
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
-                placeholder="Ví dụ: SEAL HACKATHON 2026"
-                className="w-full px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white font-bold focus:border-[#a855f7] focus:outline-none"
+                placeholder="VD: FPT TECH HACKATHON 2026"
+                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white font-bold text-sm focus:border-[#a855f7] focus:outline-none"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold uppercase text-[var(--text-muted)]">
-                Mùa Giải
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Mùa Giải (Season) *
               </label>
               <select
                 value={season}
                 onChange={(e) => setSeason(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white focus:border-[#a855f7] focus:outline-none cursor-pointer"
+                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none"
               >
-                <option value="Spring">Mùa Xuân (Spring)</option>
-                <option value="Summer">Mùa Hè (Summer)</option>
-                <option value="Fall">Mùa Thu (Fall)</option>
-                <option value="Winter">Mùa Đông (Winter)</option>
+                <option value="Spring">Spring</option>
+                <option value="Summer">Summer</option>
+                <option value="Fall">Fall</option>
+                <option value="Winter">Winter</option>
               </select>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-bold uppercase text-[var(--text-muted)]">
-                Năm Tổ Chức &amp; Max Đội
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Năm Tổ Chức *
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white font-bold focus:border-[#a855f7] focus:outline-none text-center"
-                />
-                <input
-                  type="number"
-                  value={maxTeams}
-                  onChange={(e) => setMaxTeams(Number(e.target.value))}
-                  placeholder="Max đội"
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-zinc-700 text-white font-bold focus:border-[#a855f7] focus:outline-none text-center"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-            {/* Cột 1: Thời Gian Đăng Ký */}
-            <div className="p-4 bg-[var(--bg-input)] border border-zinc-800 hud-clipped space-y-3">
-              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block border-b border-zinc-800 pb-1 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                THỜI HẠN ĐĂNG KÝ THAM GIA
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase block mb-1">Mở Đăng Ký</label>
-                  <input
-                    type="datetime-local"
-                    value={registrationStartDate}
-                    onChange={(e) => setRegistrationStartDate(e.target.value)}
-                    className="w-full p-2 bg-[#090e11] border border-zinc-700 text-white text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase block mb-1">Đóng Đăng Ký</label>
-                  <input
-                    type="datetime-local"
-                    value={registrationEndDate}
-                    onChange={(e) => setRegistrationEndDate(e.target.value)}
-                    className="w-full p-2 bg-[#090e11] border border-zinc-700 text-white text-xs"
-                  />
-                </div>
-              </div>
+              <input
+                type="number"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none"
+              />
             </div>
 
-            {/* Cột 2: Thời Gian Diễn Ra Sự Kiện */}
-            <div className="p-4 bg-[var(--bg-input)] border border-zinc-800 hud-clipped space-y-3">
-              <span className="text-[10px] font-bold text-[#c084fc] uppercase tracking-wider block border-b border-zinc-800 pb-1 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#c084fc]" />
-                THỜI GIAN DIỄN RA SỰ KIỆN TỔNG THỂ
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase block mb-1">Bắt Đầu Sự Kiện</label>
-                  <input
-                    type="datetime-local"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full p-2 bg-[#090e11] border border-zinc-700 text-white text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase block mb-1">Kết Thúc Sự Kiện</label>
-                  <input
-                    type="datetime-local"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full p-2 bg-[#090e11] border border-zinc-700 text-white text-xs"
-                  />
-                </div>
+            <div className="md:col-span-3 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Mở Cổng Đăng Ký *
+              </label>
+              <input
+                type="datetime-local"
+                value={registrationStartDate}
+                onChange={(e) => setRegistrationStartDate(e.target.value)}
+                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+              />
+            </div>
+
+            <div className="md:col-span-3 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Đóng Cổng Đăng Ký *
+              </label>
+              <input
+                type="datetime-local"
+                value={registrationEndDate}
+                onChange={(e) => setRegistrationEndDate(e.target.value)}
+                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+              />
+            </div>
+
+            <div className="md:col-span-3 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Bắt Đầu Sự Kiện *
+              </label>
+              <input
+                type="datetime-local"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+              />
+            </div>
+
+            <div className="md:col-span-3 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Kết Thúc Sự Kiện *
+              </label>
+              <input
+                type="datetime-local"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-mono"
+              />
+            </div>
+
+            <div className="md:col-span-4 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Giới Hạn Số Lượng Đội (Max Teams) *
+              </label>
+              <input
+                type="number"
+                value={maxTeams}
+                onChange={(e) => setMaxTeams(Number(e.target.value))}
+                className="w-full p-2.5 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none"
+              />
+            </div>
+
+            <div className="md:col-span-8 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Trạng Thái Công Bố Sự Kiện
+              </label>
+              <div className="p-2.5 bg-[var(--bg-input)] border border-zinc-700 flex items-center justify-between text-xs">
+                <span className="text-zinc-300 font-mono">
+                  {isPublished ? "SỰ KIỆN ĐANG MỞ CÔNG KHAI (OPEN)" : "SỰ KIỆN ĐANG Ở BẢN NHÁP NỘI BỘ (DRAFT)"}
+                </span>
+                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase hud-clipped ${
+                  isPublished ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40" : "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                }`}>
+                  {isPublished ? "OPEN" : "DRAFT"}
+                </span>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-[10px] font-bold uppercase text-[var(--text-muted)]">
-              Mô Tả Chi Tiết &amp; Thể Lệ Cuộc Thi
-            </label>
-            <textarea
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Giới thiệu mục tiêu, đối tượng tham gia, thể lệ..."
-              className="w-full p-3 bg-[var(--bg-input)] border border-zinc-700 text-white font-sans text-xs focus:border-[#a855f7] focus:outline-none"
-            />
+            <div className="md:col-span-12 space-y-1.5">
+              <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                Mô Tả Thể Lệ &amp; Giới Thiệu Cuộc Thi
+              </label>
+              <textarea
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Nhập thể lệ cuộc thi, đối tượng tham gia, quyền lợi của thí sinh..."
+                className="w-full p-3 bg-[var(--bg-input)] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none font-sans leading-relaxed"
+              />
+            </div>
           </div>
         </Card>
       )}
 
-      {/* SUB-SECTION 2: CẤU HÌNH VÒNG THI */}
       {activeSubSection === "rounds" && (
         <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-muted)] pb-3">
             <div>
-              <h3 className="font-display font-bold text-base text-white uppercase tracking-wider flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[#c084fc]" />
-                QUẢN LÝ VÒNG THI &amp; YÊU CẦU NỘP BÀI ({rounds.length} VÒNG)
+              <h3 className="font-display font-bold text-base text-white uppercase tracking-wider">
+                THIẾT LẬP VÒNG THI &amp; THỜI HẠN NỘP BÀI ({rounds.length} VÒNG)
               </h3>
               <p className="text-[11px] text-[var(--text-muted)] font-sans mt-0.5">
-                Thiết lập hạn nộp bài, thời gian chấm thi, phúc khảo và quy định nộp sản phẩm cho từng vòng.
+                Cấu hình từng vòng thi, thiết lập 3 mốc thời gian (Nộp bài, Chấm thi, Phúc khảo) và sản phẩm nộp bắt buộc.
               </p>
             </div>
 
             <button
               type="button"
               onClick={handleAddRound}
-              className="px-3 py-2 bg-[#a855f7]/15 border border-[#a855f7] text-[#c084fc] hover:bg-[#a855f7] hover:text-white font-bold uppercase flex items-center gap-1.5 hud-clipped transition-all cursor-pointer"
+              className="px-3 py-2 bg-[#a855f7]/15 border border-[#a855f7] text-[#c084fc] hover:bg-[#a855f7] hover:text-white font-bold uppercase hud-clipped transition-all cursor-pointer"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>+ THÊM VÒNG THI</span>
+              <span>+ THÊM VÒNG THI MỚI</span>
             </button>
           </div>
 
           {isLoadingRounds ? (
-            <div className="py-12 text-center text-xs text-zinc-500">Đang tải danh sách vòng thi...</div>
+            <div className="py-12 text-center text-xs text-zinc-500">Đang tải cấu hình vòng thi...</div>
           ) : rounds.length === 0 ? (
             <div className="p-8 text-center border border-zinc-800 bg-[var(--bg-input)] text-zinc-400">
-              Chưa có vòng thi nào được cấu hình. Bấm "+ THÊM VÒNG THI" để bắt đầu.
+              Chưa có vòng thi nào. Bấm "+ THÊM VÒNG THI MỚI" để thiết lập vòng thi đầu tiên.
             </div>
           ) : (
             <div className="space-y-6">
               {rounds.map((r, idx) => (
                 <div
                   key={r.id || `round-${idx}`}
-                  className="p-5 bg-[var(--bg-input)] border border-zinc-800 hud-clipped space-y-4"
+                  className="p-5 bg-[var(--bg-input)] border border-zinc-800 hud-clipped space-y-5"
                 >
-                  <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
                     <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 bg-[#a855f7] text-white flex items-center justify-center font-bold text-xs hud-clipped">
+                      <span className="w-6 h-6 bg-[#090e11] border border-zinc-700 text-[#c084fc] flex items-center justify-center font-bold text-xs hud-clipped">
                         {idx + 1}
                       </span>
                       <input
                         type="text"
                         value={r.roundName}
                         onChange={(e) => handleRoundChange(idx, "roundName", e.target.value)}
-                        placeholder={`Tên Vòng ${idx + 1}`}
+                        placeholder={`Tên Vòng Thi Số ${idx + 1}`}
                         className="px-3 py-1 bg-[#090e11] border border-zinc-700 text-white font-bold text-sm uppercase focus:border-[#a855f7] focus:outline-none min-w-[280px]"
                       />
                     </div>
 
-                    {rounds.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRound(idx)}
-                        className="text-red-400 hover:text-red-300 font-mono text-xs flex items-center gap-1 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" /> Xóa Vòng
-                      </button>
-                    )}
-                  </div>
-
-                  {/* 3 Mốc Thời Gian: Nộp Bài - Chấm Điểm - Phúc Khảo */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 text-[11px]">
-                    <div className="p-3 bg-[#090e11] border border-zinc-800 hud-clipped space-y-2">
-                      <span className="text-[10px] font-bold text-amber-400 uppercase block flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> 1. HẠN NỘP BÀI (SUBMISSION)
-                      </span>
-                      <div className="space-y-1.5">
-                        <div>
-                          <span className="text-[10px] text-zinc-500 block">Bắt đầu nộp</span>
-                          <input
-                            type="datetime-local"
-                            value={r.startDate}
-                            onChange={(e) => handleRoundChange(idx, "startDate", e.target.value)}
-                            className="w-full p-1.5 bg-[#141f23] border border-zinc-700 text-white text-xs"
-                          />
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-zinc-500 block">Hạn chót nộp bài</span>
-                          <input
-                            type="datetime-local"
-                            value={r.endDate}
-                            onChange={(e) => handleRoundChange(idx, "endDate", e.target.value)}
-                            className="w-full p-1.5 bg-[#141f23] border border-zinc-700 text-white text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-[#090e11] border border-zinc-800 hud-clipped space-y-2">
-                      <span className="text-[10px] font-bold text-purple-400 uppercase block flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> 2. CHẤM ĐIỂM (SCORING)
-                      </span>
-                      <div className="space-y-1.5">
-                        <div>
-                          <span className="text-[10px] text-zinc-500 block">Bắt đầu chấm</span>
-                          <input
-                            type="datetime-local"
-                            value={r.scoringStartDate}
-                            onChange={(e) => handleRoundChange(idx, "scoringStartDate", e.target.value)}
-                            className="w-full p-1.5 bg-[#141f23] border border-zinc-700 text-white text-xs"
-                          />
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-zinc-500 block">Khóa bảng chấm</span>
-                          <input
-                            type="datetime-local"
-                            value={r.scoringEndDate}
-                            onChange={(e) => handleRoundChange(idx, "scoringEndDate", e.target.value)}
-                            className="w-full p-1.5 bg-[#141f23] border border-zinc-700 text-white text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-[#090e11] border border-zinc-800 hud-clipped space-y-2">
-                      <span className="text-[10px] font-bold text-cyan-400 uppercase block flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> 3. PHÚC KHẢO (APPEALS)
-                      </span>
-                      <div className="space-y-1.5">
-                        <div>
-                          <span className="text-[10px] text-zinc-500 block">Mở nhận phúc khảo</span>
-                          <input
-                            type="datetime-local"
-                            value={r.appealStartDate}
-                            onChange={(e) => handleRoundChange(idx, "appealStartDate", e.target.value)}
-                            className="w-full p-1.5 bg-[#141f23] border border-zinc-700 text-white text-xs"
-                          />
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-zinc-500 block">Đóng phúc khảo</span>
-                          <input
-                            type="datetime-local"
-                            value={r.appealEndDate}
-                            onChange={(e) => handleRoundChange(idx, "appealEndDate", e.target.value)}
-                            className="w-full p-1.5 bg-[#141f23] border border-zinc-700 text-white text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quy Tắc Đi Tiếp & Yêu Cầu Deliverables */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-zinc-800">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                        Quy Tắc Đi Tiếp Vòng Trong
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={r.advancementRuleType}
-                          onChange={(e) => handleRoundChange(idx, "advancementRuleType", e.target.value)}
-                          className="p-2 bg-[#090e11] border border-zinc-700 text-white text-xs cursor-pointer focus:outline-none"
+                    <div className="flex items-center gap-3">
+                      {rounds.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRound(idx)}
+                          className="text-red-400 hover:text-red-300 font-mono text-xs cursor-pointer uppercase"
                         >
-                          <option value="top">Lấy Top N đội cao điểm nhất</option>
-                          <option value="percent">Lấy Top % đội đứng đầu</option>
-                          <option value="minScore">Điểm tối thiểu đạt chuẩn</option>
-                          <option value="none">Không lọc (Chung kết / Tự do)</option>
-                        </select>
+                          [XÓA VÒNG THI]
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-                        {r.advancementRuleType !== "none" && (
-                          <input
-                            type="text"
-                            value={r.advancementRuleValue}
-                            onChange={(e) => handleRoundChange(idx, "advancementRuleValue", e.target.value)}
-                            placeholder={r.advancementRuleType === "top" ? "Ví dụ: 10" : r.advancementRuleType === "percent" ? "Ví dụ: 50%" : "Ví dụ: 8.0"}
-                            className="w-28 p-2 bg-[#090e11] border border-zinc-700 text-white text-xs font-bold text-center"
-                          />
-                        )}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#090e11] p-4 border border-zinc-800 hud-clipped">
+                    <div className="space-y-2 border-r border-zinc-800/60 pr-2">
+                      <div className="text-[11px] font-bold text-sky-400 uppercase">
+                        1. MỐC THỜI HẠN NỘP BÀI
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-400 uppercase block">Mở nộp bài:</label>
+                        <input
+                          type="datetime-local"
+                          value={r.startDate}
+                          onChange={(e) => handleRoundChange(idx, "startDate", e.target.value)}
+                          className="w-full p-2 bg-[#141f23] border border-zinc-700 text-white text-xs font-mono"
+                        />
+                        <label className="text-[10px] text-zinc-400 uppercase block mt-1">Hạn chót nộp:</label>
+                        <input
+                          type="datetime-local"
+                          value={r.endDate}
+                          onChange={(e) => handleRoundChange(idx, "endDate", e.target.value)}
+                          className="w-full p-2 bg-[#141f23] border border-zinc-700 text-white text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 border-r border-zinc-800/60 pr-2">
+                      <div className="text-[11px] font-bold text-amber-400 uppercase">
+                        2. MỐC CHẤM ĐIỂM GIÁM KHẢO
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-400 uppercase block">Bắt đầu chấm:</label>
+                        <input
+                          type="datetime-local"
+                          value={r.scoringStartDate}
+                          onChange={(e) => handleRoundChange(idx, "scoringStartDate", e.target.value)}
+                          className="w-full p-2 bg-[#141f23] border border-zinc-700 text-white text-xs font-mono"
+                        />
+                        <label className="text-[10px] text-zinc-400 uppercase block mt-1">Kết thúc chấm:</label>
+                        <input
+                          type="datetime-local"
+                          value={r.scoringEndDate}
+                          onChange={(e) => handleRoundChange(idx, "scoringEndDate", e.target.value)}
+                          className="w-full p-2 bg-[#141f23] border border-zinc-700 text-white text-xs font-mono"
+                        />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                        Yêu Cầu Sản Phẩm Bắt Buộc Khi Nộp Bài
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {AVAILABLE_DELIVERABLES.map((d) => {
-                          const isChecked = (r.requiredDeliverables || []).includes(d.key);
-                          const Icon = d.icon;
-                          return (
-                            <button
-                              key={d.key}
-                              type="button"
-                              onClick={() => toggleDeliverable(idx, d.key)}
-                              className={`px-2.5 py-1 text-[10px] font-bold flex items-center gap-1.5 hud-clipped transition-all cursor-pointer ${
-                                isChecked
-                                  ? "bg-[#a855f7]/20 border border-[#a855f7] text-[#c084fc]"
-                                  : "bg-[#090e11] border border-zinc-800 text-zinc-500 hover:text-zinc-300"
-                              }`}
-                            >
-                              <Icon className="w-3 h-3" />
-                              <span>{d.label}</span>
-                            </button>
-                          );
-                        })}
+                      <div className="text-[11px] font-bold text-purple-400 uppercase">
+                        3. MỐC TIẾP NHẬN PHÚC KHẢO
                       </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-400 uppercase block">Mở phúc khảo:</label>
+                        <input
+                          type="datetime-local"
+                          value={r.appealStartDate}
+                          onChange={(e) => handleRoundChange(idx, "appealStartDate", e.target.value)}
+                          className="w-full p-2 bg-[#141f23] border border-zinc-700 text-white text-xs font-mono"
+                        />
+                        <label className="text-[10px] text-zinc-400 uppercase block mt-1">Đóng phúc khảo:</label>
+                        <input
+                          type="datetime-local"
+                          value={r.appealEndDate}
+                          onChange={(e) => handleRoundChange(idx, "appealEndDate", e.target.value)}
+                          className="w-full p-2 bg-[#141f23] border border-zinc-700 text-white text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-[#090e11] p-3.5 border border-zinc-800 hud-clipped">
+                    <div className="md:col-span-4">
+                      <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">
+                        QUY TẮC ĐI TIẾP VÒNG TRONG (ADVANCEMENT)
+                      </label>
+                      <select
+                        value={r.advancementRuleType}
+                        onChange={(e) => handleRoundChange(idx, "advancementRuleType", e.target.value)}
+                        className="w-full p-2 bg-[#141f23] border border-zinc-700 text-white text-xs"
+                      >
+                        <option value="none">Không giới hạn (Toàn bộ đội thi)</option>
+                        <option value="top">Top N đội có điểm cao nhất (Ví dụ: Top 10)</option>
+                        <option value="percent">Top % đội điểm cao nhất (Ví dụ: 30%)</option>
+                        <option value="minScore">Điểm sàn tối thiểu (Ví dụ: &gt;= 7.0)</option>
+                      </select>
+                    </div>
+
+                    {r.advancementRuleType !== "none" && (
+                      <div className="md:col-span-3">
+                        <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">
+                          GIÁ TRỊ CẤU HÌNH
+                        </label>
+                        <input
+                          type="text"
+                          value={r.advancementRuleValue}
+                          onChange={(e) => handleRoundChange(idx, "advancementRuleValue", e.target.value)}
+                          placeholder={r.advancementRuleType === "top" ? "10" : r.advancementRuleType === "percent" ? "30" : "7.0"}
+                          className="w-full p-2 bg-[#141f23] border border-zinc-700 text-white text-xs font-mono"
+                        />
+                      </div>
+                    )}
+
+                    <div className="md:col-span-5 text-[11px] text-zinc-400 font-sans">
+                      {r.advancementRuleType === "top" && `Hệ thống sẽ tự động lọc ${r.advancementRuleValue || "N"} đội đứng đầu bảng điểm đi tiếp.`}
+                      {r.advancementRuleType === "percent" && `Hệ thống sẽ lấy ${r.advancementRuleValue || "N"}% số đội có điểm cao nhất đi tiếp.`}
+                      {r.advancementRuleType === "minScore" && `Chỉ những đội đạt từ ${r.advancementRuleValue || "N"} điểm trở lên mới được đi tiếp.`}
+                      {r.advancementRuleType === "none" && "Tất cả các đội nộp bài đều được vào danh sách xét duyệt vòng sau."}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                      YÊU CẦU NỘP BÀI (DELIVERABLES BẮT BUỘC)
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      {AVAILABLE_DELIVERABLES.map((deliv) => {
+                        const isSelected = (r.requiredDeliverables || []).includes(deliv.key);
+                        return (
+                          <button
+                            key={deliv.key}
+                            type="button"
+                            onClick={() => handleToggleDeliverable(idx, deliv.key)}
+                            className={`p-2.5 text-left border font-mono text-[11px] uppercase transition-all hud-clipped cursor-pointer ${
+                              isSelected
+                                ? "bg-[#a855f7]/20 border-[#a855f7] text-[#c084fc] font-bold"
+                                : "bg-[#090e11] border-zinc-800 text-zinc-400 hover:text-white"
+                            }`}
+                          >
+                            <span className="font-bold mr-1.5">{isSelected ? "[X]" : "[ ]"}</span>
+                            <span>{deliv.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -878,13 +902,11 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
         </Card>
       )}
 
-      {/* SUB-SECTION 3: CẤU HÌNH HẠNG MỤC (TRACKS) */}
       {activeSubSection === "tracks" && (
         <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-muted)] pb-3">
             <div>
-              <h3 className="font-display font-bold text-base text-white uppercase tracking-wider flex items-center gap-2">
-                <Target className="w-4 h-4 text-[#c084fc]" />
+              <h3 className="font-display font-bold text-base text-white uppercase tracking-wider">
                 QUẢN LÝ BẢNG ĐẤU &amp; GÁN TIÊU CHÍ RUBRIC ({tracks.length} HẠNG MỤC)
               </h3>
               <p className="text-[11px] text-[var(--text-muted)] font-sans mt-0.5">
@@ -895,10 +917,9 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
             <button
               type="button"
               onClick={handleAddTrack}
-              className="px-3 py-2 bg-[#a855f7]/15 border border-[#a855f7] text-[#c084fc] hover:bg-[#a855f7] hover:text-white font-bold uppercase flex items-center gap-1.5 hud-clipped transition-all cursor-pointer"
+              className="px-3 py-2 bg-[#a855f7]/15 border border-[#a855f7] text-[#c084fc] hover:bg-[#a855f7] hover:text-white font-bold uppercase hud-clipped transition-all cursor-pointer"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>+ THÊM HẠNG MỤC (TRACK)</span>
+              <span>+ THÊM HẠNG MỤC MỚI</span>
             </button>
           </div>
 
@@ -906,7 +927,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
             <div className="py-12 text-center text-xs text-zinc-500">Đang tải danh sách hạng mục...</div>
           ) : tracks.length === 0 ? (
             <div className="p-8 text-center border border-zinc-800 bg-[var(--bg-input)] text-zinc-400">
-              Chưa có hạng mục thi đấu nào. Bấm "+ THÊM HẠNG MỤC (TRACK)" để tạo mới.
+              Chưa có hạng mục thi đấu nào. Bấm "+ THÊM HẠNG MỤC MỚI" để tạo mới.
             </div>
           ) : (
             <div className="space-y-4">
@@ -942,9 +963,9 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                           <button
                             type="button"
                             onClick={() => handleRemoveTrack(idx)}
-                            className="text-red-400 hover:text-red-300 font-mono text-xs flex items-center gap-1 cursor-pointer"
+                            className="text-red-400 hover:text-red-300 font-mono text-xs cursor-pointer uppercase"
                           >
-                            <Trash2 className="w-3.5 h-3.5" /> Xóa Hạng Mục
+                            [XÓA HẠNG MỤC]
                           </button>
                         )}
                       </div>
@@ -963,21 +984,19 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                       />
                     </div>
 
-                    {/* INLINE RUBRIC TEMPLATE SELECTOR & EXPANDABLE CRITERIA PREVIEW */}
                     <div className="pt-3 border-t border-zinc-800 space-y-3 bg-[#090e11]/60 p-4 border border-zinc-800/80 hud-clipped">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-[#c084fc]" />
                           <span className="text-[11px] font-bold uppercase text-[#c084fc] tracking-wider">
                             BỘ TIÊU CHÍ CHẤM ĐIỂM (RUBRIC TEMPLATE)
                           </span>
                           {matchedTemplate ? (
                             <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 font-mono text-[10px] font-bold hud-clipped">
-                              ✅ ĐÃ GÁN TIÊU CHÍ
+                              [ĐÃ GÁN TIÊU CHÍ]
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-mono text-[10px] font-bold hud-clipped">
-                              ⚠️ CHƯA GÁN BỘ TIÊU CHÍ
+                              [CHƯA GÁN TIÊU CHÍ]
                             </span>
                           )}
                         </div>
@@ -986,18 +1005,12 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                           <button
                             type="button"
                             onClick={() => toggleExpandRubric(idx)}
-                            className="px-3 py-1 bg-[#141f23] border border-zinc-700 hover:border-[#a855f7] text-[#c084fc] font-mono text-[11px] font-bold uppercase flex items-center gap-1.5 hud-clipped transition-all cursor-pointer shadow-sm"
+                            className="px-3 py-1 bg-[#141f23] border border-zinc-700 hover:border-[#a855f7] text-[#c084fc] font-mono text-[11px] font-bold uppercase hud-clipped transition-all cursor-pointer"
                           >
                             {isExpanded ? (
-                              <>
-                                <EyeOff className="w-3.5 h-3.5" />
-                                <span>ẨN BẢNG TIÊU CHÍ ▲</span>
-                              </>
+                              <span>[ẨN BẢNG TIÊU CHÍ ▲]</span>
                             ) : (
-                              <>
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>XEM CHI TIẾT ({criterias.length} TIÊU CHÍ • {totalWeight}%) ▼</span>
-                              </>
+                              <span>[XEM CHI TIẾT: {criterias.length} TIÊU CHÍ • {totalWeight}% ▼]</span>
                             )}
                           </button>
                         )}
@@ -1033,18 +1046,17 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                             target="_blank"
                             className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400 hover:text-[#c084fc] transition-colors"
                           >
-                            <span>Kho tiêu chí mẫu (Module 04) ↗</span>
+                            <span>[KHO TIÊU CHÍ MẪU (MODULE 04) -&gt;]</span>
                           </Link>
                         </div>
                       </div>
 
-                      {/* Expandable Criteria Details Accordion */}
                       {isExpanded && matchedTemplate && (
                         <div className="mt-3 p-4 bg-[#0f171c] border border-zinc-700 hud-clipped space-y-3">
                           <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                             <div>
                               <span className="font-bold text-xs text-white">
-                                CHI TIẾT BỘ TIÊU CHÍ: {matchedTemplate.templateName || (matchedTemplate as any).Name}
+                                BẢNG TIÊU CHÍ: {matchedTemplate.templateName || (matchedTemplate as any).Name}
                               </span>
                               {matchedTemplate.description && (
                                 <p className="text-[11px] text-zinc-400 font-sans mt-0.5">
@@ -1053,7 +1065,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                               )}
                             </div>
                             <span className="font-mono text-xs text-[#c084fc] font-bold">
-                              Tổng Trọng Số: {totalWeight}%
+                              TỔNG TRỌNG SỐ: {totalWeight}%
                             </span>
                           </div>
 
@@ -1115,7 +1127,6 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
         </Card>
       )}
 
-      {/* Global Save Actions Footer */}
       {saveMessage && (
         <div
           className={`p-4 font-mono text-xs border hud-clipped flex items-center gap-2.5 ${
@@ -1124,15 +1135,14 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
               : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
           }`}
         >
-          {saveMessage.isError ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
+          <span>{saveMessage.isError ? "[LỖI]" : "[THÀNH CÔNG]"}</span>
           <span>{saveMessage.text}</span>
         </div>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-4 p-5 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped">
-        <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-2">
-          <Info className="w-4 h-4 text-[#c084fc]" />
-          <span>Lưu ý: Mọi thay đổi về vòng thi và hạng mục sẽ có hiệu lực trực tiếp cho toàn bộ thí sinh và giám khảo.</span>
+        <div className="text-[11px] text-[var(--text-muted)] font-mono">
+          [LƯU Ý: MỌI THAY ĐỔI VỀ VÒNG THI VÀ HẠNG MỤC SẼ CÓ HIỆU LỰC TRỰC TIẾP CHO TOÀN BỘ THÍ SINH VÀ GIÁM KHẢO]
         </div>
 
         <div className="flex items-center gap-3">
@@ -1142,17 +1152,16 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
             onClick={() => handleSaveAll(false)}
             className="px-4 py-2.5 bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white font-bold uppercase tracking-wider hud-clipped transition-all cursor-pointer disabled:opacity-50"
           >
-            <span>{isSaving ? "ĐANG LƯU..." : "💾 LƯU BẢN NHÁP"}</span>
+            <span>{isSaving ? "ĐANG LƯU..." : "[LƯU BẢN NHÁP]"}</span>
           </button>
 
           <button
             type="button"
             disabled={isSaving}
             onClick={() => handleSaveAll(true)}
-            className="px-6 py-2.5 bg-[#a855f7] hover:bg-[#9333ea] text-white font-bold uppercase tracking-wider hud-clipped flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-[#a855f7]/30"
+            className="px-6 py-2.5 bg-[#a855f7] hover:bg-[#9333ea] text-white font-bold uppercase tracking-wider hud-clipped transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-[#a855f7]/30"
           >
-            <Save className="w-4 h-4" />
-            <span>{isSaving ? "ĐANG LƯU DỮ LIỆU..." : "🚀 LƯU & CÔNG BỐ SỰ KIỆN"}</span>
+            <span>{isSaving ? "ĐANG LƯU DỮ LIỆU..." : "[LƯU & MỞ ĐĂNG KÝ CUỘC THI]"}</span>
           </button>
         </div>
       </div>

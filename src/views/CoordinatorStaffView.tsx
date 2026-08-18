@@ -342,8 +342,7 @@ export const CoordinatorStaffView: React.FC = () => {
                 : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-white border border-zinc-800"
             }`}
           >
-            <Layers className="w-4 h-4" />
-            <span>⚙️ 1. CẤU HÌNH SỰ KIỆN, VÒNG THI &amp; HẠNG MỤC</span>
+            <span>[01] CẤU HÌNH SỰ KIỆN, VÒNG THI &amp; HẠNG MỤC</span>
           </button>
 
           <button
@@ -355,8 +354,7 @@ export const CoordinatorStaffView: React.FC = () => {
                 : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-white border border-zinc-800"
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>👥 2. MỜI &amp; PHÂN CÔNG GIÁM KHẢO / CỐ VẤN ({filteredRoles.length})</span>
+            <span>[02] MỜI &amp; PHÂN CÔNG GIÁM KHẢO / CỐ VẤN ({filteredRoles.length})</span>
           </button>
         </div>
 
