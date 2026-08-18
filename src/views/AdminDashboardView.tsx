@@ -89,6 +89,32 @@ export const AdminDashboardView: React.FC = () => {
 
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [eventFilter, setEventFilter] = useState<"all" | "active" | "ended">("all");
+
+  const { activeEvents, endedEvents, filteredEvents } = React.useMemo(() => {
+    const active: any[] = [];
+    const ended: any[] = [];
+    const now = new Date();
+
+    displayEvents.forEach((ev: any) => {
+      const status = ev.status ?? ev.Status;
+      const endRaw = ev.endDate ?? ev.EndDate;
+      const isPastDate = endRaw ? new Date(endRaw) < now : false;
+      const isEnded = status === 2 || status === "Ended" || isPastDate;
+
+      if (isEnded) {
+        ended.push(ev);
+      } else {
+        active.push(ev);
+      }
+    });
+
+    let filtered = displayEvents;
+    if (eventFilter === "active") filtered = active;
+    if (eventFilter === "ended") filtered = ended;
+
+    return { activeEvents: active, endedEvents: ended, filteredEvents: filtered };
+  }, [displayEvents, eventFilter]);
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
       <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
@@ -115,7 +141,10 @@ export const AdminDashboardView: React.FC = () => {
           <div className="flex items-center gap-3 self-start md:self-auto">
             <Button
               variant="ghost"
-              onClick={() => refetchEvents()}
+              onClick={() => {
+                refetchEvents();
+                refetchEcs();
+              }}
               className="hud-clipped font-mono text-xs border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer text-zinc-300 hover:text-white"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Làm Mới
@@ -143,7 +172,7 @@ export const AdminDashboardView: React.FC = () => {
             </div>
             <span className="font-mono text-[10px] text-[var(--color-success)] flex items-center gap-1.5 pt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse" />
-              {displayEvents.length} Sự kiện đang vận hành
+              {activeEvents.length} Sự kiện đang vận hành ({endedEvents.length} đã kết thúc)
             </span>
           </Card>
 
@@ -201,20 +230,46 @@ export const AdminDashboardView: React.FC = () => {
 
         {/* All Events Admin Table */}
         <Card className="p-6 space-y-4 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
-          <div className="flex items-center justify-between">
-            <SectionTitle>DANH SÁCH TẤT CẢ SỰ KIỆN TRONG HỆ THỐNG ({displayEvents.length})</SectionTitle>
-            <button
-              type="button"
-              onClick={() => {
-                refetchEvents();
-                refetchEcs();
-              }}
-              className="text-xs font-mono text-[var(--text-muted)] hover:text-white flex items-center gap-1.5 px-3 py-1.5 border border-[var(--border-muted)] hover:border-[var(--accent-primary)] rounded bg-[var(--bg-base)] cursor-pointer transition-colors"
-              title="Tải lại danh sách sự kiện và điều phối viên"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Làm Mới</span>
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <SectionTitle>DANH SÁCH SỰ KIỆN TRONG HỆ THỐNG ({filteredEvents.length}/{displayEvents.length})</SectionTitle>
+            
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1.5 bg-[var(--bg-base)] p-1 border border-[var(--border-muted)] rounded font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setEventFilter("all")}
+                className={`px-3 py-1 rounded transition-colors cursor-pointer font-bold ${
+                  eventFilter === "all"
+                    ? "bg-[var(--color-danger)] text-white"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Tất cả ({displayEvents.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventFilter("active")}
+                className={`px-3 py-1 rounded transition-colors cursor-pointer font-bold flex items-center gap-1 ${
+                  eventFilter === "active"
+                    ? "bg-emerald-600 text-white"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Đang Mở ({activeEvents.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventFilter("ended")}
+                className={`px-3 py-1 rounded transition-colors cursor-pointer font-bold flex items-center gap-1 ${
+                  eventFilter === "ended"
+                    ? "bg-zinc-700 text-white"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Đã Kết Thúc ({endedEvents.length})
+              </button>
+            </div>
           </div>
 
           {isLoadingEvents ? (
@@ -253,100 +308,123 @@ export const AdminDashboardView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayEvents.map((ev: any, index: number) => {
-                    const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-admin-${index}`;
-                    const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
-                    const season = ev.season || ev.Season || "Mùa Hè";
-                    const year = ev.year || ev.Year || 2026;
-                    const roundsCount = ev.rounds?.length ?? ev.Rounds?.length ?? 1;
-                    
-                    const assignedEcs = ecMap[id] || [];
-                    const fallbackEc = ev.coordinatorEmail || ev.CoordinatorEmail;
-                    const ecSummaryTitle = assignedEcs.length > 0
-                      ? assignedEcs.map((x) => x.name ? `${x.name} (${x.email})` : x.email).join(", ")
-                      : fallbackEc || "Chưa gán EC";
+                  {filteredEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center font-mono text-xs text-zinc-400 border-t border-[var(--border-muted)]/50">
+                        Không có sự kiện nào trong mục "{eventFilter === "active" ? "Đang Mở" : eventFilter === "ended" ? "Đã Kết Thúc" : "Tất cả"}".
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredEvents.map((ev: any, index: number) => {
+                      const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-admin-${index}`;
+                      const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
+                      const season = ev.season || ev.Season || "Mùa Hè";
+                      const year = ev.year || ev.Year || 2026;
+                      const roundsCount = ev.rounds?.length ?? ev.Rounds?.length ?? 1;
+                      
+                      const status = ev.status ?? ev.Status;
+                      const endRaw = ev.endDate ?? ev.EndDate;
+                      const isPastDate = endRaw ? new Date(endRaw) < new Date() : false;
+                      const isEnded = status === 2 || status === "Ended" || isPastDate;
 
-                    return (
-                      <tr key={id} className="hover:bg-[var(--color-danger)]/5 transition-colors group">
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          <div className="font-mono font-bold text-sm text-[var(--text-primary)] group-hover:text-[var(--color-danger)] transition-colors truncate" title={name}>
-                            {name}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          <span className="inline-block max-w-full truncate px-2.5 py-1 text-xs font-mono font-bold bg-[var(--accent-team)]/10 text-[var(--accent-team)] border border-[var(--accent-team)]/30 rounded" title={`${season} ${year}`}>
-                            {season} {year}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          <span className="font-mono text-xs text-[var(--text-primary)]">
-                            {roundsCount} Vòng Thi
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
-                          {assignedEcs.length > 0 ? (
-                            <div className="flex items-center gap-1.5 max-w-full" title={ecSummaryTitle}>
-                              <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
-                              <span className="font-mono text-xs font-bold text-purple-300 truncate">
-                                {assignedEcs[0].name || assignedEcs[0].email}
-                              </span>
-                              {assignedEcs.length > 1 && (
-                                <span className="px-1.5 py-0.2 bg-purple-950/60 text-purple-300 border border-purple-500/40 rounded text-[9px] font-mono shrink-0 font-bold">
-                                  +{assignedEcs.length - 1}
-                                </span>
-                              )}
+                      const assignedEcs = ecMap[id] || [];
+                      const fallbackEc = ev.coordinatorEmail || ev.CoordinatorEmail;
+                      const ecSummaryTitle = assignedEcs.length > 0
+                        ? assignedEcs.map((x) => x.name ? `${x.name} (${x.email})` : x.email).join(", ")
+                        : fallbackEc || "Chưa gán EC";
+
+                      return (
+                        <tr key={id} className="hover:bg-[var(--color-danger)]/5 transition-colors group">
+                          <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
+                            <div className="font-mono font-bold text-sm text-[var(--text-primary)] group-hover:text-[var(--color-danger)] transition-colors truncate" title={name}>
+                              {name}
                             </div>
-                          ) : fallbackEc ? (
-                            <div className="flex items-center gap-1.5 max-w-full" title={fallbackEc}>
-                              <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
-                              <span className="font-mono text-xs font-bold text-purple-300 truncate">
-                                {fallbackEc}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="font-mono text-xs text-zinc-500 italic">
-                              Chưa gán EC
+                          </td>
+                          <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
+                            <span className="inline-block max-w-full truncate px-2.5 py-1 text-xs font-mono font-bold bg-[var(--accent-team)]/10 text-[var(--accent-team)] border border-[var(--accent-team)]/30 rounded" title={`${season} ${year}`}>
+                              {season} {year}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-3.5 align-middle border-t border-[var(--border-muted)]/50 text-center">
-                          <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border border-[var(--color-success)]/20 uppercase rounded whitespace-nowrap">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse shrink-0" />
-                            ACTIVE
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50 text-right">
-                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                            <Button
-                              variant="ghost"
-                              onClick={() => setEditingEvent(ev)}
-                              className="text-xs font-mono border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
-                              title="Chỉnh sửa toàn diện sự kiện & các vòng thi"
-                            >
-                              <Edit className="w-3.5 h-3.5" /> Sửa
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              onClick={() => setSelectedEvent(ev)}
-                              className="text-xs font-mono border-[var(--accent-coordinator)] text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/10 px-2.5 py-0.5 h-7 cursor-pointer inline-flex items-center gap-1"
-                              title="Quản lý & phân công Event Coordinator"
-                            >
-                              <UserCheck className="w-3.5 h-3.5" /> Quản lý EC
-                            </Button>
-                            <Link href={`/events/${id}`}>
+                          </td>
+                          <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
+                            <span className="font-mono text-xs text-[var(--text-primary)]">
+                              {roundsCount} Vòng Thi
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50">
+                            {assignedEcs.length > 0 ? (
+                              <div className="flex items-center gap-1.5 max-w-full" title={ecSummaryTitle}>
+                                <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
+                                <span className="font-mono text-xs font-bold text-purple-300 truncate">
+                                  {assignedEcs[0].name || assignedEcs[0].email}
+                                </span>
+                                {assignedEcs.length > 1 && (
+                                  <span className="px-1.5 py-0.2 bg-purple-950/60 text-purple-300 border border-purple-500/40 rounded text-[9px] font-mono shrink-0 font-bold">
+                                    +{assignedEcs.length - 1}
+                                  </span>
+                                )}
+                              </div>
+                            ) : fallbackEc ? (
+                              <div className="flex items-center gap-1.5 max-w-full" title={fallbackEc}>
+                                <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
+                                <span className="font-mono text-xs font-bold text-purple-300 truncate">
+                                  {fallbackEc}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-mono text-xs text-zinc-500 italic">
+                                Chưa gán EC
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-3.5 align-middle border-t border-[var(--border-muted)]/50 text-center">
+                            {isEnded ? (
+                              <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 uppercase rounded whitespace-nowrap">
+                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 shrink-0" />
+                                ENDED
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border border-[var(--color-success)]/20 uppercase rounded whitespace-nowrap">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse shrink-0" />
+                                ACTIVE
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 align-middle border-t border-[var(--border-muted)]/50 text-right">
+                            <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                               <Button
                                 variant="ghost"
-                                className="text-xs font-mono border-[var(--border-muted)] text-[var(--text-muted)] hover:text-white hover:border-[var(--accent-primary)] px-2 py-0.5 h-7 w-7 flex items-center justify-center cursor-pointer"
-                                title="Xem trang thể lệ công khai"
+                                onClick={() => setEditingEvent(ev)}
+                                className="text-xs font-mono border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
+                                title="Chỉnh sửa toàn diện sự kiện & các vòng thi"
                               >
-                                <ExternalLink className="w-3.5 h-3.5" />
+                                <Edit className="w-3 h-3" />
+                                Sửa
                               </Button>
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                              <Button
+                                variant="ghost"
+                                onClick={() => setSelectedEvent(ev)}
+                                className="text-xs font-mono border-[var(--accent-coordinator)]/60 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/10 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
+                                title="Quản lý & phân công Điều Phối Viên Sự Kiện (EC)"
+                              >
+                                <UserCheck className="w-3 h-3" />
+                                Gán EC
+                              </Button>
+                              <Link href={`/events/${id}`}>
+                                <Button
+                                  variant="ghost"
+                                  className="text-xs font-mono border-zinc-700 text-zinc-300 hover:text-white px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
+                                  title="Xem chi tiết sự kiện"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  Xem
+                                </Button>
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

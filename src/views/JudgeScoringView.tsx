@@ -12,9 +12,12 @@ import {
   Save,
   Send,
   Code,
+  Globe,
+  Presentation,
+  Video,
+  Layers,
   CheckCircle2,
   MessageSquare,
-  AlertCircle,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
@@ -224,8 +227,47 @@ export function JudgeScoringView() {
   const sub = selectedSubmission;
   const subId = sub?.id || sub?.Id || "";
   const displayCode = subId ? `SUB-${String(subId).slice(0, 8).toUpperCase()}` : "";
-  const submissionUrl = sub?.submissionUrl || sub?.SubmissionUrl || "";
   const isGraded = submittedIds.has(subId);
+
+  // Parse Submission Multi-Document Links & Notes
+  const parsedDesc = useMemo(() => {
+    if (!sub) return { links: [], notes: "" };
+    const raw = sub.description || sub.Description;
+    if (!raw) return { links: [], notes: "" };
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        links: Array.isArray(parsed?.links) ? parsed.links : [],
+        notes: parsed?.notes || "",
+      };
+    } catch {
+      return { links: [], notes: raw || "" };
+    }
+  }, [sub]);
+
+  // Extract separate link targets
+  const repoUrl =
+    sub?.repoUrl ||
+    sub?.RepoUrl ||
+    parsedDesc.links.find((l: any) => l.type === "github")?.url ||
+    sub?.submissionUrl ||
+    sub?.SubmissionUrl ||
+    "";
+  const demoUrl =
+    sub?.demoUrl ||
+    sub?.DemoUrl ||
+    parsedDesc.links.find((l: any) => l.type === "deployed_url")?.url ||
+    "";
+  const slideUrl =
+    sub?.slideUrl ||
+    sub?.SlideUrl ||
+    parsedDesc.links.find((l: any) => l.type === "slides")?.url ||
+    "";
+  const videoUrl =
+    parsedDesc.links.find((l: any) => l.type === "demo_video")?.url || "";
+  const figmaUrl =
+    parsedDesc.links.find((l: any) => l.type === "figma")?.url || "";
+  const submissionNotes = parsedDesc.notes;
 
   if (loadingTracks && assignedTracks.length === 0) {
     return (
@@ -341,10 +383,10 @@ export function JudgeScoringView() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TẦNG 2: BANNER HỒ SƠ ĐỀ TÀI & 3 NÚT TÀI LIỆU NẰM NGANG ĐẦY ĐỦ              */}
+      {/* TẦNG 2: BANNER HỒ SƠ ĐỀ TÀI & THANH CÔNG CỤ TÀI LIỆU ĐA ĐỊNH DẠNG (MULTI-DOC) */}
       {/* ========================================================================= */}
       <div className="bg-[#10171a] border border-zinc-800 p-3 rounded-lg shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
-        <div className="space-y-0.5 min-w-0 max-w-2xl">
+        <div className="space-y-0.5 min-w-0 max-w-xl">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-amber-400 px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded shrink-0">
               {displayCode || "—"}
@@ -352,27 +394,87 @@ export function JudgeScoringView() {
             <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
               Bài dự thi ẩn danh
             </h2>
+            {isGraded && (
+              <span className="px-2 py-0.5 bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-mono text-[10px] font-bold rounded">
+                ✓ ĐÃ CHỐT ĐIỂM
+              </span>
+            )}
           </div>
           <p className="text-xs text-zinc-300 truncate leading-relaxed">
-            Danh tính đội thi được ẩn để đảm bảo chấm điểm khách quan.
+            {submissionNotes ? `Ghi chú: "${submissionNotes}"` : "Danh tính đội thi được ẩn để đảm bảo chấm điểm khách quan."}
           </p>
         </div>
 
-        {/* Bài nộp thật chỉ có 1 link duy nhất (SubmissionUrl) — không có 3 field repo/demo/slide riêng ở BE */}
-        <div className="flex items-center gap-2 shrink-0">
-          {submissionUrl ? (
+        {/* Thanh Nút Mở Tài Liệu Đầy Đủ (Repo, Demo, Slide, Video, Figma) */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {repoUrl && (
             <a
-              href={submissionUrl}
+              href={repoUrl}
               target="_blank"
               rel="noreferrer"
+              title="Mở kho mã nguồn (GitHub / GitLab)"
               className="py-1.5 px-3 bg-[#121f26] hover:bg-[#182a33] text-cyan-300 border border-cyan-500/40 rounded font-mono text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
             >
               <Code className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span>Xem Bài Nộp ↗</span>
+              <span>GitHub Repo ↗</span>
             </a>
-          ) : (
+          )}
+
+          {demoUrl && (
+            <a
+              href={demoUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Mở sản phẩm trực tuyến Live Demo"
+              className="py-1.5 px-3 bg-[#0d2319] hover:bg-[#133324] text-emerald-300 border border-emerald-500/40 rounded font-mono text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Live Demo ↗</span>
+            </a>
+          )}
+
+          {slideUrl && (
+            <a
+              href={slideUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Mở Slide / PPT thuyết trình"
+              className="py-1.5 px-3 bg-[#26170e] hover:bg-[#382214] text-amber-300 border border-amber-500/40 rounded font-mono text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            >
+              <Presentation className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Slides PPT ↗</span>
+            </a>
+          )}
+
+          {videoUrl && (
+            <a
+              href={videoUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Mở Video Demo"
+              className="py-1.5 px-3 bg-[#261014] hover:bg-[#38161d] text-rose-300 border border-rose-500/40 rounded font-mono text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            >
+              <Video className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              <span>Video Demo ↗</span>
+            </a>
+          )}
+
+          {figmaUrl && (
+            <a
+              href={figmaUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Mở Thiết Kế Figma"
+              className="py-1.5 px-3 bg-[#21122b] hover:bg-[#311b40] text-purple-300 border border-purple-500/40 rounded font-mono text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            >
+              <Layers className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>Figma ↗</span>
+            </a>
+          )}
+
+          {!repoUrl && !demoUrl && !slideUrl && !videoUrl && !figmaUrl && (
             <span className="py-1.5 px-3 bg-[#141f23] text-zinc-500 border border-zinc-700 rounded font-mono text-xs">
-              Chưa có link bài nộp
+              Chưa có link tài liệu
             </span>
           )}
         </div>

@@ -12,6 +12,7 @@ import {
   readApiError,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
+import { validateDeliverableByType } from "@/utils/linkValidators";
 import {
   FolderOpen,
   Code,
@@ -69,8 +70,22 @@ export function MySubmissionsView() {
     e.preventDefault();
     if (!editingSub) return;
     const subId = editingSub.id || editingSub.Id || "";
-    if (!editRepo.trim() || !editDemo.trim() || !editSlide.trim()) {
-      setEditError("Vui lòng điền đủ 3 đường dẫn bắt buộc: Repo, Demo và Slide.");
+
+    const repoVal = validateDeliverableByType("github", editRepo.trim(), true);
+    if (!repoVal.isValid) {
+      setEditError(`Repo: ${repoVal.errorMessage}`);
+      return;
+    }
+
+    const demoVal = validateDeliverableByType("deployed_url", editDemo.trim(), true);
+    if (!demoVal.isValid) {
+      setEditError(`Demo: ${demoVal.errorMessage}`);
+      return;
+    }
+
+    const slideVal = validateDeliverableByType("slides", editSlide.trim(), true);
+    if (!slideVal.isValid) {
+      setEditError(`Slide: ${slideVal.errorMessage}`);
       return;
     }
 

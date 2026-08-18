@@ -15,6 +15,7 @@ import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import { ApiMissingDataBadge } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
+import { validateDeliverableByType } from "@/utils/linkValidators";
 
 import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
 
@@ -75,24 +76,52 @@ function TrackSubmissionCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
+  // Realtime field validation results
+  const fieldValidationMap = useMemo(() => {
+    const map: Record<string, { isValid: boolean; errorMessage?: string }> = {};
+    for (const d of deliverables) {
+      const val = (linkValues[d.type] || linkValues[d.id] || "").trim();
+      map[d.type] = validateDeliverableByType(d.type, val, d.required);
+    }
+    return map;
+  }, [deliverables, linkValues]);
+
   // Check completion
-  const { filledCount, requiredFilled, requiredTotal } = useMemo(() => {
+  const { filledCount, requiredFilled, requiredTotal, allValid } = useMemo(() => {
     let filled = 0;
     let reqFilled = 0;
     let reqTotal = 0;
+    let hasAnyError = false;
+
     for (const d of deliverables) {
       const val = (linkValues[d.type] || linkValues[d.id] || "").trim();
-      const valid = val.startsWith("http://") || val.startsWith("https://");
-      if (valid) filled++;
+      const valResult = fieldValidationMap[d.type] || { isValid: true };
+      
+      if (val.length > 0) {
+        filled++;
+        if (!valResult.isValid) {
+          hasAnyError = true;
+        }
+      }
+
       if (d.required) {
         reqTotal++;
-        if (valid) reqFilled++;
+        if (val.length > 0 && valResult.isValid) {
+          reqFilled++;
+        }
       }
     }
-    return { filledCount: filled, requiredFilled: reqFilled, requiredTotal: reqTotal };
-  }, [deliverables, linkValues]);
 
-  const allRequiredDone = requiredTotal > 0 ? requiredFilled === requiredTotal : true;
+    const allRequiredValid = reqTotal > 0 ? reqFilled === reqTotal : true;
+    return {
+      filledCount: filled,
+      requiredFilled: reqFilled,
+      requiredTotal: reqTotal,
+      allValid: allRequiredValid && !hasAnyError,
+    };
+  }, [deliverables, linkValues, fieldValidationMap]);
+
+  const allRequiredDone = allValid;
 
   const handleLinkChange = (key: string, val: string) => {
     setLinkValues((prev) => ({ ...prev, [key]: val }));
@@ -101,7 +130,19 @@ function TrackSubmissionCard({
 
   const handleCardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!allRequiredDone) return;
+    if (!allRequiredDone) {
+      // Find first invalid field error message
+      for (const d of deliverables) {
+        const val = (linkValues[d.type] || linkValues[d.id] || "").trim();
+        const res = validateDeliverableByType(d.type, val, d.required);
+        if (!res.isValid) {
+          setFormError(`${d.label}: ${res.errorMessage}`);
+          toast.error(`${d.label}: ${res.errorMessage}`);
+          return;
+        }
+      }
+      return;
+    }
 
     setIsSubmitting(true);
     const primaryDeliverable = deliverables.find((d) => d.required);
@@ -143,7 +184,6 @@ function TrackSubmissionCard({
         teamName: "",
         createdTime: new Date().toISOString(),
         isActive: true,
-        
       };
       setIsSaved(true);
       setFormError("");
@@ -221,73 +261,89 @@ function TrackSubmissionCard({
               const meta = (DELIVERABLE_ICONS as any)[dlv.type] || DELIVERABLE_ICONS.other;
               const val = linkValues[dlv.type] || linkValues[dlv.id] || "";
               const isFilled = val.trim().length > 0;
-              const isValidUrl = isFilled && (val.startsWith("http://") || val.startsWith("https://"));
+              const valResult = fieldValidationMap[dlv.type] || { isValid: true };
+              const isValidUrl = isFilled && valResult.isValid;
+              const isInvalid = isFilled && !valResult.isValid;
 
               return (
                 <div
                   key={dlv.id}
-                  className={`p-4 border transition-all duration-150 flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                  className={`p-4 border transition-all duration-150 flex flex-col gap-2 ${
                     isValidUrl
                       ? "border-[var(--color-success)]/40 bg-[var(--color-success)]/[0.02]"
-                      : isFilled
-                      ? "border-[var(--color-danger)]/40 bg-[var(--color-danger)]/[0.02]"
+                      : isInvalid
+                      ? "border-[var(--color-danger)]/40 bg-[var(--color-danger)]/[0.03]"
                       : "border-[var(--border-muted)] bg-[var(--bg-base)]/40 hover:border-[var(--border-muted)]/80"
                   }`}
                 >
-                  {/* Left: Icon & Label */}
-                  <div className="flex items-center gap-3 min-w-[200px]">
-                    <span className={`px-2 py-1 font-mono text-[10px] font-bold border ${meta.badgeColor}`}>
-                      {meta.label}
-                    </span>
-                    <div className="flex flex-col">
-                      <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
-                        {dlv.label}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    {/* Left: Icon & Label */}
+                    <div className="flex items-center gap-3 min-w-[200px]">
+                      <span className={`px-2 py-1 font-mono text-[10px] font-bold border ${meta.badgeColor}`}>
+                        {meta.label}
                       </span>
-                      {dlv.required ? (
-                        <span className="font-mono text-[9px] text-[var(--color-danger)] uppercase font-semibold">
-                          * Bắt buộc
+                      <div className="flex flex-col">
+                        <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
+                          {dlv.label}
+                        </span>
+                        {dlv.required ? (
+                          <span className="font-mono text-[9px] text-[var(--color-danger)] uppercase font-semibold">
+                            * Bắt buộc
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[9px] text-[var(--text-muted)] uppercase">
+                            Tuỳ chọn
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Input field */}
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="url"
+                        placeholder={dlv.placeholder || "https://..."}
+                        value={val}
+                        onChange={(e) => handleLinkChange(dlv.type, e.target.value)}
+                        className={`w-full px-3 py-2 bg-[var(--bg-input)] border font-mono text-xs focus:outline-none transition-colors ${
+                          isValidUrl
+                            ? "border-[var(--color-success)]/40 focus:border-[var(--color-success)] text-[var(--text-primary)]"
+                            : isInvalid
+                            ? "border-[var(--color-danger)] focus:border-[var(--color-danger)] text-[var(--color-danger)]"
+                            : "border-[var(--border-muted)] focus:border-[var(--accent-team)] text-[var(--text-primary)]"
+                        }`}
+                      />
+                    </div>
+
+                    {/* Right Status */}
+                    <div className="shrink-0 flex items-center gap-2">
+                      {isValidUrl ? (
+                        <span className="font-mono text-[10px] font-bold text-[var(--color-success)] flex items-center gap-1 border border-[var(--color-success)]/30 px-2 py-1 bg-[var(--color-success)]/10">
+                          ✓ HỢP LỆ
+                        </span>
+                      ) : isInvalid ? (
+                        <span className="font-mono text-[10px] font-bold text-[var(--color-danger)] flex items-center gap-1 border border-[var(--color-danger)]/30 px-2 py-1 bg-[var(--color-danger)]/10">
+                          ✕ SAI ĐỊNH DẠNG
+                        </span>
+                      ) : dlv.required ? (
+                        <span className="font-mono text-[10px] font-bold text-[var(--color-danger)] flex items-center gap-1 border border-[var(--color-danger)]/30 px-2 py-1 bg-[var(--color-danger)]/10">
+                          CHƯA ĐIỀN
                         </span>
                       ) : (
-                        <span className="font-mono text-[9px] text-[var(--text-muted)] uppercase">
-                          Tuỳ chọn
+                        <span className="font-mono text-[10px] text-[var(--text-muted)] border border-[var(--border-muted)] px-2 py-1">
+                          TUỲ Ý
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Input field */}
-                  <div className="flex-1 min-w-0">
-                    <input
-                      type="url"
-                      placeholder={dlv.placeholder || "https://..."}
-                      value={val}
-                      onChange={(e) => handleLinkChange(dlv.type, e.target.value)}
-                      className={`w-full px-3 py-2 bg-[var(--bg-input)] border font-mono text-xs focus:outline-none transition-colors ${
-                        isValidUrl
-                          ? "border-[var(--color-success)]/40 focus:border-[var(--color-success)] text-[var(--text-primary)]"
-                          : isFilled
-                          ? "border-[var(--color-danger)]/50 text-[var(--color-danger)]"
-                          : "border-[var(--border-muted)] focus:border-[var(--accent-team)] text-[var(--text-primary)]"
-                      }`}
-                    />
-                  </div>
-
-                  {/* Right Status */}
-                  <div className="shrink-0 flex items-center gap-2">
-                    {isValidUrl ? (
-                      <span className="font-mono text-[10px] font-bold text-[var(--color-success)] flex items-center gap-1 border border-[var(--color-success)]/30 px-2 py-1 bg-[var(--color-success)]/10">
-                        ĐÃ ĐIỀN
-                      </span>
-                    ) : dlv.required ? (
-                      <span className="font-mono text-[10px] font-bold text-[var(--color-danger)] flex items-center gap-1 border border-[var(--color-danger)]/30 px-2 py-1 bg-[var(--color-danger)]/10">
-                        CHƯA ĐIỀN
-                      </span>
-                    ) : (
-                      <span className="font-mono text-[10px] text-[var(--text-muted)] border border-[var(--border-muted)] px-2 py-1">
-                        TUỲ Ý
-                      </span>
-                    )}
-                  </div>
+                  {/* Inline Error Message */}
+                  {isInvalid && valResult.errorMessage && (
+                    <div className="font-mono text-[11px] text-[var(--color-danger)] flex items-center gap-1.5 pl-1 pt-1">
+                      <span>↳ ⚠️</span>
+                      <span>{valResult.errorMessage}</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
