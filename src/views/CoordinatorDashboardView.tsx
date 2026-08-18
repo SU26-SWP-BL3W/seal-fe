@@ -279,7 +279,7 @@ export const CoordinatorDashboardView: React.FC = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-[#a855f7]/20 text-[#a855f7] font-mono text-xs font-bold rounded">
+                        <span className="px-2 py-0.5 bg-[#a855f7]/20 text-[#a855f7] font-mono text-xs font-bold border border-[#a855f7]/40">
                           {mod.num}
                         </span>
                         <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
@@ -324,7 +324,7 @@ export const CoordinatorDashboardView: React.FC = () => {
             <Link href="/coordinator/submissions">
               <Button
                 variant="ghost"
-                className="text-xs font-mono border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer hover:border-white"
+                className="text-xs font-mono border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer hover:border-white hud-clipped"
               >
                 <span>Xem Toàn Bộ Bài Nộp</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -337,7 +337,7 @@ export const CoordinatorDashboardView: React.FC = () => {
               Đang tải danh sách bài làm...
             </div>
           ) : submissions.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[var(--text-muted)] bg-[var(--bg-input)] rounded">
+            <div className="p-8 text-center text-xs text-[var(--text-muted)] bg-[var(--bg-input)] border border-[var(--border-muted)]">
               Chưa có bài nộp nào trong sự kiện này.
             </div>
           ) : (
@@ -366,17 +366,17 @@ export const CoordinatorDashboardView: React.FC = () => {
                         <td className="p-3">
                           <div className="flex items-center gap-2 flex-wrap">
                             {repoUrl && (
-                              <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-[var(--bg-base)] border border-[var(--border-muted)] rounded text-[10px] flex items-center gap-1 hover:text-white">
+                              <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-[var(--bg-base)] border border-[var(--border-muted)] text-[10px] flex items-center gap-1 hover:text-white">
                                 <Code2 className="w-3 h-3 text-blue-400" /> Repo
                               </a>
                             )}
                             {demoUrl && (
-                              <a href={demoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded text-[10px] flex items-center gap-1 hover:bg-emerald-500/20">
+                              <a href={demoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] flex items-center gap-1 hover:bg-emerald-500/20">
                                 <Globe className="w-3 h-3" /> Demo
                               </a>
                             )}
                             {slideUrl && (
-                              <a href={slideUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-purple-500/10 border border-purple-500/30 text-purple-300 rounded text-[10px] flex items-center gap-1 hover:bg-purple-500/20">
+                              <a href={slideUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] flex items-center gap-1 hover:bg-purple-500/20">
                                 <FileSpreadsheet className="w-3 h-3" /> Slides
                               </a>
                             )}

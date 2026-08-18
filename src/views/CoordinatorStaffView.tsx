@@ -308,13 +308,14 @@ export const CoordinatorStaffView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="primary"
+            <button
+              type="button"
               onClick={() => setIsEditModalOpen(true)}
-              className="bg-[#a855f7] hover:bg-[#9333ea] text-white font-mono text-xs font-bold uppercase flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="px-4 py-2.5 bg-[#141f23] border border-zinc-700 hover:border-[#a855f7] text-[#c084fc] hover:text-white font-mono text-xs font-bold uppercase flex items-center gap-2 hud-clipped transition-all cursor-pointer shadow-sm hover:shadow-[0_0_12px_rgba(168,85,247,0.3)]"
             >
-              <Edit3 className="w-4 h-4" /> ⚙️ Chỉnh Sửa Sự Kiện &amp; Cấu Hình Vòng Thi
-            </Button>
+              <Edit3 className="w-4 h-4 text-[#a855f7]" />
+              <span>⚙️ CHỈNH SỬA SỰ KIỆN &amp; CẤU HÌNH VÒNG THI</span>
+            </button>
 
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs text-[var(--text-muted)]">Sự kiện:</span>
@@ -401,15 +402,15 @@ export const CoordinatorStaffView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingCoordinator}
-                  className="w-full py-2.5 bg-[var(--accent-coordinator)] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 bg-[#a855f7]/15 border border-[#a855f7] text-[#c084fc] hover:bg-[#a855f7] hover:text-white font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_12px_rgba(168,85,247,0.15)] hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmittingCoordinator ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Điều Phối Viên"}</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmittingCoordinator ? "ĐANG GỬI LỜI MỜI..." : "GỬI LỜI MỜI ĐIỀU PHỐI VIÊN"}</span>
                 </button>
               </form>
             </div>
           </div>
-          {/* Card Form 1: Invite Judge */}
+          {/* Card Form 2: Invite Judge */}
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-6 hud-clipped flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center gap-3 border-b border-[var(--border-muted)] pb-4 mb-6">
@@ -489,16 +490,16 @@ export const CoordinatorStaffView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingJudge}
-                  className="w-full py-2.5 bg-[var(--accent-judge)] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 bg-amber-500/15 border border-amber-500 text-amber-300 hover:bg-amber-500 hover:text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_12px_rgba(245,158,11,0.15)] hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmittingJudge ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Giám Khảo"}</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmittingJudge ? "ĐANG GỬI LỜI MỜI..." : "GỬI LỜI MỜI GIÁM KHẢO"}</span>
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Card Form 2: Invite Mentor */}
+          {/* Card Form 3: Invite Mentor */}
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] p-6 hud-clipped flex flex-col justify-between space-y-6">
             <div>
               <div className="flex items-center gap-3 border-b border-[var(--border-muted)] pb-4 mb-6">
@@ -578,10 +579,10 @@ export const CoordinatorStaffView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingMentor}
-                  className="w-full py-2.5 bg-[#2dd4bf] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 bg-emerald-500/15 border border-emerald-500 text-emerald-300 hover:bg-emerald-500 hover:text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_12px_rgba(16,185,129,0.15)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmittingMentor ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Cố Vấn"}</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmittingMentor ? "ĐANG GỬI LỜI MỜI..." : "GỬI LỜI MỜI CỐ VẤN"}</span>
                 </button>
               </form>
             </div>
