@@ -97,12 +97,15 @@ export const staffRepository = {
    * Mời Điều phối viên (Event Coordinator) qua Email (POST /api/EventCoordinators/invite)
    */
   async inviteCoordinator(payload: InviteCoordinatorDirectPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
+    // 3 endpoint mời (EC/Judge/Mentor) gửi email SMTP đồng bộ trong request ở BE —
+    // timeout mặc định 6s (thiết kế fail-fast chung cho app) là quá ngắn cho thao tác
+    // này, gây báo lỗi "timeout" giả dù lời mời đã tạo thành công ở BE.
     const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/EventCoordinators/invite", {
       eventId: payload.eventId,
       coordinatorEmail: payload.email,
       coordinatorFullName: payload.fullName || payload.email.split("@")[0],
       notes: payload.notes,
-    });
+    }, { timeout: 30_000 });
     return res.data;
   },
 
@@ -117,7 +120,7 @@ export const staffRepository = {
       judgeEmail: emailStr,
       judgeFullName: payload.fullName || emailStr.split("@")[0],
       notes: payload.notes,
-    });
+    }, { timeout: 30_000 });
     return res.data;
   },
 
@@ -132,7 +135,7 @@ export const staffRepository = {
       mentorEmail: emailStr,
       mentorFullName: payload.fullName || emailStr.split("@")[0],
       notes: payload.notes,
-    });
+    }, { timeout: 30_000 });
     return res.data;
   },
 
