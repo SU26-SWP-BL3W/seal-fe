@@ -10,6 +10,7 @@ import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
 import { Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle2, Award, ChevronDown, Filter, Layers } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
+import { Link } from "@/i18n/routing";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
   const toast = useToast();
@@ -249,8 +250,18 @@ export const CoordinatorPublishResultsView: React.FC = () => {
             </p>
           </div>
 
-          {/* Top Right Action Button */}
-          <div className="flex items-center gap-3">
+          {/* Top Right Action Buttons */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href={`/coordinator/prizes?eventId=${selectedEventId}`}>
+              <button
+                type="button"
+                className="px-4 py-2 bg-amber-500/10 border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Award className="w-4 h-4 text-amber-400" />
+                <span>CƠ CẤU GIẢI THƯỞNG</span>
+              </button>
+            </Link>
+
             <button
               type="button"
               disabled={isSubmitting}

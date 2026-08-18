@@ -48,23 +48,32 @@
 ---
 
 ### 3.2. Event Coordinator — Ban Tổ Chức (`Coordinator Sidebar` — Màu Tím Purple)
-- **Vị trí**: Cố định bên trái màn hình (`w-64`), có thanh cuộn riêng khi menu mở rộng.
+- **Vị trí**: Cố định bên trái màn hình (`w-64`), thiết kế số thứ tự lớn nổi bật `01, 02, 03, 04, 05, 06`.
 - **Badge nhận diện**: `[🟣 EVENT COORDINATOR]`
-- **Cây Menu chức năng cố định** (chia theo từng nhóm nghiệp vụ):
-  - **BẢNG ĐIỀU KHIỂN**:
-    1. `Control Center BTC`: `/coordinator/dashboard` (Bảng điều khiển trung tâm của sự kiện đang chọn).
-  - **THỦ TỤC & ĐỘI THI**:
-    2. `Duyệt Thẻ & Hồ Sơ Sinh Viên`: `/coordinator/profiles` (Kiểm duyệt thông tin sinh viên, thẻ SV trước khi vào đội).
-    3. `Duyệt Đăng Ký Đội Thi`: `/coordinator/teams` (Duyệt đơn đăng ký đội thi, đủ 3-5 thành viên hợp lệ).
-  - **CHẤM ĐIỂM & NHÂN SỰ**:
-    4. `Kho Tiêu Chí (Rubric Templates)`: `/coordinator/templates` (Tạo, nhân bản, gán bộ tiêu chí chấm điểm cho từng Hạng mục/Track).
-    5. `Mời Giám Khảo & Cố Vấn`: `/coordinator/staff` (Mời Judge/Mentor vào Track qua email, tạo tài khoản tạm).
-    6. `Phòng Phân Tích RBL (Calibration)`: `/coordinator/calibration` (Phân tích độ lệch điểm giữa các giám khảo, chuẩn hóa điểm).
-  - **KẾT QUẢ & PHÚC KHẢO**:
-    7. `Công Bố Kết Quả`: `/coordinator/publish-results` (Duyệt bảng điểm chung cuộc và mở công khai kết quả).
-    8. `Cơ Cấu Giải Thưởng`: `/coordinator/prizes` (Cấu hình danh mục giải thưởng, tiền thưởng VND).
-    9. `Xử Lý Phúc Khảo`: `/coordinator/appeals` (Tiếp nhận và giải quyết khiếu nại điểm số từ Trưởng nhóm).
-    10. `Chi Tiết Sự Kiện & Vòng Thi`: `/events` hoặc `/events/[id]` (Xem thể lệ, timeline).
+- **Cấu trúc 6 Module nghiệp vụ chính**:
+  1. **`01. QUẢN LÝ SỰ KIỆN`** (`/coordinator/staff` & `/coordinator/events`):
+     - 1.1 Danh sách sự kiện được assign (`useMyEvents`).
+     - 1.1.1 Chỉnh sửa thông tin sự kiện (Tên, mùa giải, năm, timeline, mô tả, ảnh, max teams).
+     - 1.1.2 Chỉnh sửa cấu hình vòng thi (Rounds timeline, nộp bài, chấm điểm, phúc khảo).
+       - 1.1.2.1 Thêm cấu hình vòng thi mới.
+     - 1.1.3 Quản lý Mentor - gắn vào Track đã tạo.
+     - 1.1.4 Quản lý Judge - gắn Judge vào Track đã tạo (hỗ trợ gắn nhiều Judge vào cùng 1 Track).
+  2. **`02. QUẢN LÝ ĐỘI THI`** (`/coordinator/teams`):
+     - 2.1 Danh sách tất cả các đội thi thuộc sự kiện phụ trách.
+     - 2.1.1 Xem chi tiết danh sách thành viên (Leader, Member, MSSV, trường học, ảnh thẻ 3x4).
+     - 2.1.2 Duyệt đội thi (`Approve`) hoặc Từ chối (`Reject` kèm khung nhập lý do từ chối gửi qua email).
+  3. **`03. DUYỆT TÀI KHOẢN`** (`/coordinator/profiles`):
+     - Duyệt tài khoản tái sử dụng, **chỉ lọc và duyệt các tài khoản có role `student`**.
+     - 3.1 Xem chi tiết thông tin, duyệt thẻ sinh viên (`Approve`) hoặc Từ chối (`Reject` kèm lý do).
+  4. **`04. KHO TIÊU CHÍ`** (`/coordinator/templates`):
+     - 4.1 Danh sách các bộ tiêu chí Rubric.
+     - 4.1.1 Chỉnh sửa các tiêu chí (Tên tiêu chí, trọng số %, thang điểm, mô tả, thêm/xóa tiêu chí).
+  5. **`05. QUẢN LÝ BÀI NỘP`** (`/coordinator/dashboard` & `/coordinator/appeals`):
+     - 5.1 Danh sách bài nộp: Lọc theo Sự Kiện, theo Track, theo Giám khảo / Trạng thái; xem GitHub Repo, Live Demo, Slide.
+     - 5.2 Danh sách phúc khảo (`/coordinator/appeals`): Xem khiếu nại điểm của đội thi, phân công giám khảo chấm lại hoặc phản hồi từ chối.
+  6. **`06. CÔNG BỐ KẾT QUẢ`** (`/coordinator/publish-results` & `/coordinator/prizes`):
+     - 6.1 Bảng xếp hạng - điểm số: Tính điểm tự động, gán giải thưởng, chuyển đổi trạng thái Công bố / Bản nháp.
+     - 6.2 Cơ cấu giải thưởng (`/coordinator/prizes`): Cấu hình các hạng mục giải thưởng, số lượng giải, giá trị tiền thưởng VND.
 
 ---
 

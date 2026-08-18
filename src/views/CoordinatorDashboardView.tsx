@@ -3,11 +3,13 @@
 import React, { useState } from "react";
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import { PagedResult } from "@/models/types";
 import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
+import { Link } from "@/i18n/routing";
 import {
   FileCode,
   Globe,
@@ -15,6 +17,9 @@ import {
   RefreshCw,
   Code2,
   Filter,
+  Layers,
+  AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 
 export const CoordinatorDashboardView: React.FC = () => {
@@ -27,7 +32,10 @@ export const CoordinatorDashboardView: React.FC = () => {
     : myEvents;
 
   const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const { data: tracks = [] } = useGetTracksByEvent(selectedEventId);
 
   // Query submissions
   const {
@@ -35,11 +43,14 @@ export const CoordinatorDashboardView: React.FC = () => {
     isLoading: isLoadingSubmissions,
     refetch: refetchSubmissions,
   } = useQuery({
-    queryKey: ["all-submissions", selectedEventId, eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
+    queryKey: ["all-submissions", selectedEventId, selectedTrackId, eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
     queryFn: async () => {
       const params: Record<string, any> = { PageSize: 200 };
       if (selectedEventId) {
         params.EventId = selectedEventId;
+      }
+      if (selectedTrackId) {
+        params.TrackId = selectedTrackId;
       }
       const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", { params });
       return res.data?.data ?? [];
@@ -56,8 +67,12 @@ export const CoordinatorDashboardView: React.FC = () => {
         return evId ? allowedEventIds.has(evId) : true;
       });
 
-  // Filtered submissions by search term
+  // Filtered submissions by track and search term
   const displaySubmissions = submissions.filter((sub: any) => {
+    if (selectedTrackId) {
+      const subTrackId = sub.trackId || sub.TrackId;
+      if (subTrackId && subTrackId !== selectedTrackId) return false;
+    }
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
     const teamName = (sub.teamName || sub.TeamName || "").toLowerCase();
@@ -125,14 +140,18 @@ export const CoordinatorDashboardView: React.FC = () => {
           </Card>
         </div>
 
-        {/* Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
-          <div className="flex items-center gap-2 w-full sm:w-1/2">
+        {/* Filter Bar with Track and Appeals Navigation */}
+        <div className="flex flex-col md:flex-row items-center gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
+          {/* Event Filter */}
+          <div className="flex items-center gap-2 w-full md:w-1/3">
             <Filter className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
             <select
               value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped"
+              onChange={(e) => {
+                setSelectedEventId(e.target.value);
+                setSelectedTrackId("");
+              }}
+              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped cursor-pointer"
             >
               <option value="">— Tất cả sự kiện ({eventsList.length}) —</option>
               {eventsList.map((ev: any, idx: number) => {
@@ -147,14 +166,45 @@ export const CoordinatorDashboardView: React.FC = () => {
             </select>
           </div>
 
-          <div className="w-full sm:w-1/2">
+          {/* Track Filter */}
+          <div className="flex items-center gap-2 w-full md:w-1/3">
+            <Layers className="w-4 h-4 text-[#a855f7] shrink-0" />
+            <select
+              value={selectedTrackId}
+              onChange={(e) => setSelectedTrackId(e.target.value)}
+              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped cursor-pointer"
+            >
+              <option value="">— Tất cả Hạng Mục / Track ({tracks.length}) —</option>
+              {tracks.map((t: any) => {
+                const tId = t.id || t.Id || t.trackId || t.TrackId;
+                const tName = t.trackName || t.TrackName || t.name || t.Name || "Track";
+                return (
+                  <option key={tId} value={tId}>
+                    {tName}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Search Term */}
+          <div className="w-full md:w-1/3 flex items-center gap-2">
             <Input
               type="text"
-              placeholder="Tìm kiếm theo tên đội, sự kiện, hạng mục..."
+              placeholder="Tìm kiếm theo tên đội, bài nộp..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs"
             />
+            <Link href="/coordinator/appeals">
+              <Button
+                variant="ghost"
+                className="whitespace-nowrap font-mono text-xs border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 flex items-center gap-1 cursor-pointer"
+                title="Xem danh sách đơn phúc khảo"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" /> Phúc Khảo
+              </Button>
+            </Link>
           </div>
         </div>
 
