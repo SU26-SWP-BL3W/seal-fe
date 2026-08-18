@@ -8,6 +8,8 @@ import {
   useGetTeamsByEvent,
   useGetTeamById,
   useDisqualifyTeam,
+  useDeleteTeam,
+  useAddTeamMember,
 } from "@/repositories/teamsRepository";
 import { useEvents, useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
@@ -40,17 +42,35 @@ function TeamDetailModal({
   onClose,
   onApprove,
   onReject,
+  onDelete,
   isApproving,
 }: {
   team: any;
   onClose: () => void;
   onApprove: (teamId: string) => void;
   onReject: (team: any) => void;
+  onDelete: (team: any) => void;
   isApproving: boolean;
 }) {
   const teamId = pickId(team);
   const { data: detailData, isLoading } = useGetTeamById(teamId);
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [addMemberUserId, setAddMemberUserId] = useState("");
+  const [addMemberError, setAddMemberError] = useState("");
+  const { mutateAsync: addMember, isPending: isAddingMember } = useAddTeamMember();
+
+  const handleAddMember = async () => {
+    if (!addMemberUserId.trim()) return;
+    setAddMemberError("");
+    try {
+      await addMember({ teamId, payload: { userId: addMemberUserId.trim() } });
+      setAddMemberUserId("");
+      setShowAddMember(false);
+    } catch (err: any) {
+      setAddMemberError(err?.response?.data?.message || err?.message || "Không thêm được thành viên.");
+    }
+  };
 
   const teamDetail = detailData || team;
   const members = teamDetail.members || teamDetail.Members || [];
@@ -164,8 +184,59 @@ function TeamDetailModal({
             )}
           </div>
 
+          {/* Thêm thành viên trực tiếp (bỏ qua lời mời) */}
+          <div className="space-y-2 border-t border-[var(--border-muted)] pt-3">
+            {showAddMember ? (
+              <div className="space-y-2 font-mono text-xs">
+                <label className="text-[10px] uppercase text-[var(--text-muted)]">
+                  User ID người dùng đã có tài khoản trong hệ thống:
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="User ID..."
+                    value={addMemberUserId}
+                    onChange={(e) => setAddMemberUserId(e.target.value)}
+                    className="flex-1 text-xs"
+                  />
+                  <Button
+                    variant="primary"
+                    onClick={handleAddMember}
+                    disabled={isAddingMember || !addMemberUserId.trim()}
+                    className="text-xs font-mono cursor-pointer"
+                  >
+                    {isAddingMember ? "Đang thêm..." : "Thêm"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => { setShowAddMember(false); setAddMemberError(""); }}
+                    className="text-xs font-mono cursor-pointer"
+                  >
+                    Hủy
+                  </Button>
+                </div>
+                {addMemberError && <p className="text-[var(--color-danger)]">{addMemberError}</p>}
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                onClick={() => setShowAddMember(true)}
+                className="text-xs font-mono border border-[var(--border-muted)] cursor-pointer"
+              >
+                + Thêm Thành Viên Trực Tiếp
+              </Button>
+            )}
+          </div>
+
           {/* Actions Bottom */}
           <div className="flex items-center justify-end gap-3 border-t border-[var(--border-muted)] pt-4 font-mono text-xs">
+            <Button
+              variant="ghost"
+              onClick={() => onDelete(team)}
+              className="border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 font-mono text-xs cursor-pointer mr-auto"
+            >
+              Xóa Đội
+            </Button>
             <Button variant="ghost" onClick={onClose} className="border border-[var(--border-muted)] font-mono text-xs cursor-pointer">
               Đóng
             </Button>
@@ -212,6 +283,7 @@ export function CoordinatorTeamsView() {
   const [rejectReason, setRejectReason] = useState("");
   const [disqualifyModal, setDisqualifyModal] = useState<{ teamId: string; teamName: string } | null>(null);
   const [disqualifyReason, setDisqualifyReason] = useState("");
+  const [deleteModal, setDeleteModal] = useState<{ teamId: string; teamName: string } | null>(null);
   const [detailModal, setDetailModal] = useState<TeamEntity | null>(null);
   const [eventId, setEventId] = useState("");
   const [selectedTrackId, setSelectedTrackId] = useState("");
@@ -238,6 +310,7 @@ export function CoordinatorTeamsView() {
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
   const { mutateAsync: disqualifyTeam, isPending: isDisqualifying } = useDisqualifyTeam();
+  const { mutateAsync: deleteTeam, isPending: isDeleting } = useDeleteTeam();
 
   const handleEventChange = (newEvId: string) => {
     setEventId(newEvId);
@@ -269,6 +342,21 @@ export function CoordinatorTeamsView() {
       setRejectModal(null);
       setDetailModal(null);
       setRejectReason("");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteModal) return;
+    try {
+      await deleteTeam(deleteModal.teamId);
+      alert("Đã xóa đội thi.");
+      refetchPending();
+      refetchRegistered();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Xóa đội thi thất bại.");
+    } finally {
+      setDeleteModal(null);
+      setDetailModal(null);
     }
   };
 
@@ -583,8 +671,44 @@ export function CoordinatorTeamsView() {
               const tName = team.teamName || team.TeamName || team.name || team.Name || "Đội thi";
               setRejectModal({ teamId: tId, teamName: tName });
             }}
+            onDelete={(team) => {
+              const tId = pickId(team);
+              const tName = team.teamName || team.TeamName || team.name || team.Name || "Đội thi";
+              setDeleteModal({ teamId: tId, teamName: tName });
+            }}
             isApproving={isApproving}
           />
+        )}
+
+        {/* Modal Xóa Đội */}
+        {deleteModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in">
+            <Card className="w-full max-w-md p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)] space-y-4 shadow-2xl">
+              <div className="flex items-center gap-2 text-[var(--color-danger)]">
+                <XCircle className="w-5 h-5" />
+                <h3 className="font-display text-base font-bold uppercase">
+                  Xóa Đội Thi — {deleteModal.teamName}
+                </h3>
+              </div>
+
+              <p className="font-mono text-xs text-[var(--text-muted)]">
+                Hành động này xóa vĩnh viễn đội thi khỏi hệ thống, không thể hoàn tác. Chỉ nên xóa đội chưa có bài nộp/kết quả.
+              </p>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-muted)]">
+                <Button variant="ghost" onClick={() => setDeleteModal(null)} className="text-xs font-mono">
+                  Hủy Bỏ
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="text-xs font-mono bg-[var(--color-danger)] text-white font-bold cursor-pointer"
+                >
+                  {isDeleting ? "Đang xóa..." : "Xác Nhận Xóa"}
+                </Button>
+              </div>
+            </Card>
+          </div>
         )}
 
         {/* Modal Từ Chối */}

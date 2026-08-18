@@ -2,7 +2,7 @@
 
 import { Link } from "@/i18n/routing";
 import { Badge, Button } from "@/components/ui";
-import { Crown, LogOut, Trophy, Users } from "lucide-react";
+import { Crown, LogOut, Pencil, Trophy, Users } from "lucide-react";
 import { TEAM_STATUS, TONE_TEXT } from "./teamStatus";
 import type { TeamView } from "./types";
 
@@ -13,6 +13,7 @@ interface Props {
   isLeaving: boolean;
   onConfirmRegistration: () => void;
   onLeave: () => void;
+  onEdit?: () => void;
 }
 
 // Header một hành động chính duy nhất theo trạng thái đội; mọi lối đi khác
@@ -24,6 +25,7 @@ export function TeamHeader({
   isLeaving,
   onConfirmRegistration,
   onLeave,
+  onEdit,
 }: Props) {
   const status = TEAM_STATUS[team.status] ?? TEAM_STATUS.Forming;
   const isRegistered = team.status === "Registered" || team.status === "Approved";
@@ -97,6 +99,11 @@ export function TeamHeader({
               <Trophy className="size-3.5" /> Bảng xếp hạng
             </Button>
           </Link>
+          {isLeader && (team.status === "Forming" || team.status === "Rejected") && onEdit && (
+            <Button variant="ghost" accent="team" className="text-xs" onClick={onEdit}>
+              <Pencil className="size-3.5" /> Sửa thông tin
+            </Button>
+          )}
           {!isLeader && team.status === "Forming" && (
             <Button
               variant="ghost"
