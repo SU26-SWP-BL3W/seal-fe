@@ -3,8 +3,6 @@
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetUsers, useApproveUser, useRejectUser, useDeleteUser } from "@/repositories/usersRepository";
-import { staffRepository } from "@/repositories/staffRepository";
-import { useEvents } from "@/repositories/eventsRepository";
 import {
   Users,
   Search,
@@ -29,9 +27,10 @@ import {
 import { Link } from "@/i18n/routing";
 import type { User } from "@/models/entities";
 import { readApiError } from "@/repositories/submitResultsRepository";
+import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
 
 export const AdminUsersView: React.FC = () => {
-  const { user: currentUser, loginAsDemoRole } = useAuth();
+  const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -42,14 +41,10 @@ export const AdminUsersView: React.FC = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [deleteUserModal, setDeleteUserModal] = useState<User | null>(null);
 
-  const { data: eventsList = [] } = useEvents();
-  const [selectedUserForEc, setSelectedUserForEc] = useState<User | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data: rawUsersData, isLoading, refetch } = useGetUsers();
+  const { data: rawUsersData, isLoading, refetch } = useGetUsers({ pageSize: 500 });
   const usersList: User[] = useMemo(() => {
     const list = rawUsersData?.data ?? (Array.isArray(rawUsersData) ? rawUsersData : []);
     return Array.isArray(list) ? list : [];
@@ -170,16 +165,14 @@ export const AdminUsersView: React.FC = () => {
             YÊU CẦU QUYỀN SYSTEM ADMIN
           </h2>
           <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Khu vực quản lý danh sách người dùng toàn hệ thống chỉ dành cho Quản trị viên. Bấm chọn nhanh tài khoản Admin Demo để tiếp tục:
+            Khu vực quản lý danh sách người dùng toàn hệ thống chỉ dành cho Quản trị viên.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Admin")}
-              className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors"
-            >
-              [ 🛡️ Đăng Nhập System Admin Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors">
+                Đến trang đăng nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -511,177 +504,31 @@ export const AdminUsersView: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Chi tiết User Đầy Đủ Ảnh Thẻ, Lý Do & Nút Thao Tác Trực Tiếp */}
-      {detailUserModal && (() => {
-        const modalEmail = (detailUserModal.email || "").toLowerCase();
-        const modalIsAdm = !!detailUserModal.isAdmin || !!detailUserModal.IsAdmin || modalEmail.includes("admin");
-        const modalIsJudge = modalEmail.includes("judge");
-        const modalIsMentor = modalEmail.includes("mentor");
-        const modalIsCoord = modalEmail.includes("ec.") || modalEmail.includes("coordinator");
-        const modalIsStaff = modalIsAdm || modalIsCoord || modalIsJudge || modalIsMentor;
-        const modalUserId = detailUserModal.id || (detailUserModal as any).Id || detailUserModal.userId || "";
-
-        return (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-            <div className="max-w-xl w-full bg-[#11181c] border border-zinc-700 p-6 rounded-lg space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-              
-              {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="font-display font-bold text-lg text-white uppercase flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-amber-400" />
-                  <span>HỒ SƠ CHI TIẾT NGƯỜI DÙNG</span>
-                </h3>
-                <button onClick={() => setDetailUserModal(null)} className="text-zinc-400 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Thông tin cốt lõi */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs bg-[#0b1013] p-4 rounded border border-zinc-800">
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">HỌ VÀ TÊN:</span>
-                  <span className="text-white font-bold text-sm">{detailUserModal.fullName || "Chưa cập nhật"}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">EMAIL HỆ THỐNG:</span>
-                  <span className="text-cyan-300 font-semibold">{detailUserModal.email}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">VAI TRÒ TÀI KHOẢN:</span>
-                  <span className="font-bold text-amber-300">
-                    {modalIsAdm
-                      ? "Quản trị viên (Admin)"
-                      : modalIsCoord
-                      ? "Điều phối viên (Coordinator)"
-                      : modalIsJudge
-                      ? "Giám khảo chuyên môn (Judge)"
-                      : modalIsMentor
-                      ? "Cố vấn học thuật (Mentor)"
-                      : "Thí sinh / Sinh viên (Student)"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">TRƯỜNG ĐẠI HỌC:</span>
-                  <span className="text-white">{detailUserModal.schoolName || (detailUserModal.isFpt ? "Đại học FPT" : "N/A")}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">MÃ SỐ SINH VIÊN:</span>
-                  <span className="text-white font-mono">{detailUserModal.studentCode || (modalIsStaff ? "— (Cán bộ)" : "Chưa cập nhật")}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">TRẠNG THÁI HỒ SƠ:</span>
-                  {modalIsStaff ? (
-                    <span className="text-zinc-400 italic">Tài khoản chuyên môn (Miễn duyệt thẻ)</span>
-                  ) : detailUserModal.isApproved ? (
-                    <span className="text-emerald-400 font-bold">✔ ĐÃ PHÊ DUYỆT THẺ</span>
-                  ) : (detailUserModal.rejectionCount ?? 0) >= 2 ? (
-                    <span className="text-rose-400 font-bold">✘ TẠM KHÓA (Bị từ chối ≥2 lần)</span>
-                  ) : (
-                    <span className="text-amber-400 font-bold">⚠ CHỜ DUYỆT THẺ SV</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Lịch sử & Lý do từ chối (Nếu có) */}
-              {(detailUserModal.rejectionReason || (detailUserModal.rejectionCount ?? 0) > 0) && (
-                <div className="bg-rose-950/30 border border-rose-500/40 p-3 rounded space-y-1 font-mono text-xs text-rose-300">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <span>⚠ LỊCH SỬ TỪ CHỐI HỒ SƠ ({detailUserModal.rejectionCount || 1} LẦN):</span>
-                  </div>
-                  <p className="text-zinc-300 text-[11px] leading-relaxed">
-                    {detailUserModal.rejectionReason || "Ảnh thẻ sinh viên chưa đạt yêu cầu hoặc thông tin không trùng khớp."}
-                  </p>
-                </div>
-              )}
-
-              {/* Khung Minh Chứng & Ảnh Thẻ Sinh Viên */}
-              {!modalIsStaff && (
-                <div className="border border-zinc-800 p-3.5 bg-[#0b1013] rounded space-y-2 font-mono text-xs">
-                  <div className="flex items-center justify-between text-zinc-300 font-bold">
-                    <span>MINH CHỨNG THẺ SINH VIÊN:</span>
-                    {detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
-                      <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                        ✓ FPT Edu Verified
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {detailUserModal.photoStudentCardUrl ? (
-                    <div className="space-y-2">
-                      <img
-                        src={detailUserModal.photoStudentCardUrl}
-                        alt="Ảnh Thẻ Sinh Viên"
-                        className="w-full max-h-56 object-contain rounded border border-zinc-800 bg-black/40"
-                      />
-                      <div className="text-right">
-                        <a
-                          href={detailUserModal.photoStudentCardUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-amber-400 text-[11px] hover:underline"
-                        >
-                          [ ↗ Mở ảnh gốc toàn màn hình ]
-                        </a>
-                      </div>
-                    </div>
-                  ) : detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
-                    <div className="p-4 bg-emerald-950/20 border border-emerald-500/20 rounded text-center space-y-1 text-emerald-300">
-                      <p className="font-bold text-xs">Tài khoản Sinh viên FPT</p>
-                      <p className="text-[11px] text-zinc-400">
-                        Đã xác thực tự động qua địa chỉ email @fpt.edu.vn. Không yêu cầu nộp ảnh thẻ sinh viên vật lý.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-zinc-900 border border-zinc-800 rounded text-center space-y-1 text-zinc-400">
-                      <p className="text-xs">Sinh viên chưa tải ảnh thẻ sinh viên đính kèm.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Nút Thao Tác Trực Tiếp Dưới Chân Modal */}
-              <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
-                <div className="flex items-center gap-2">
-                  {!modalIsStaff && !detailUserModal.isApproved && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await handleApprove(modalUserId);
-                          setDetailUserModal(null);
-                        }}
-                        className="px-4 py-2 bg-emerald-500 text-black hover:bg-emerald-400 font-mono text-xs font-extrabold uppercase rounded cursor-pointer transition-all flex items-center gap-1.5"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Duyệt Hồ Sơ</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const target = { userId: modalUserId, fullName: detailUserModal.fullName || detailUserModal.email || "Sinh viên" };
-                          setDetailUserModal(null);
-                          setRejectUserModal(target);
-                        }}
-                        className="px-4 py-2 bg-rose-950/60 text-rose-300 border border-rose-500/40 hover:bg-rose-600 hover:text-white font-mono text-xs font-bold uppercase rounded cursor-pointer transition-all"
-                      >
-                        Từ Chối
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setDetailUserModal(null)}
-                  className="px-4 py-2 border border-zinc-700 text-zinc-300 font-mono text-xs rounded hover:text-white hover:border-zinc-500 cursor-pointer"
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Modal Chi tiết User Đầy Đủ Ảnh Thẻ 3x4, MSSV Spotlight & Thao Tác Trực Tiếp */}
+      {detailUserModal && (
+        <StudentProfileModal
+          user={detailUserModal as any}
+          isOpen={!!detailUserModal}
+          onClose={() => setDetailUserModal(null)}
+          canManage={true}
+          onApprove={async (uId) => {
+            await handleApprove(uId);
+            setDetailUserModal(null);
+          }}
+          onReject={async (uId, reason) => {
+            setActionError(null);
+            try {
+              await rejectUser({ userId: uId, reason });
+              setDetailUserModal(null);
+              setActionSuccess("Đã từ chối hồ sơ sinh viên và ghi lại lịch sử.");
+              refetch();
+              setTimeout(() => setActionSuccess(null), 2500);
+            } catch (err) {
+              setActionError("Lỗi từ chối hồ sơ: " + readApiError(err));
+            }
+          }}
+        />
+      )}
 
       {/* Modal Từ Chối Hồ Sơ */}
       {rejectUserModal && (

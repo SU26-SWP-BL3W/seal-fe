@@ -510,25 +510,14 @@ export function useGetMySubmissions(params: GetMySubmissionsParams = {}) {
 
 export function useGetTeamsByEvent(eventId?: string, status?: string) {
   return useQuery({
-    queryKey: ["teams-by-event", eventId, status],
+    queryKey: ["teams-by-event", eventId || "all", status || "all"],
     queryFn: async () => {
-      const res = await apiClient.get<PagedResult<TeamListItem>>("/Teams", {
-        params: { EventId: eventId, Status: status, PageSize: 200 },
-      });
+      const params: Record<string, any> = { PageSize: 200 };
+      if (eventId) params.EventId = eventId;
+      if (status) params.Status = status;
+      const res = await apiClient.get<PagedResult<TeamListItem>>("/Teams", { params });
       return res.data?.data ?? [];
     },
-    enabled: !!eventId,
-  });
-}
-
-export function useGetTeamProgress(teamId?: string) {
-  return useQuery({
-    queryKey: ["team-progress", teamId],
-    queryFn: async () => {
-      const res = await apiClient.get<any>(`/Teams/${teamId}/progress`);
-      return res.data;
-    },
-    enabled: !!teamId,
   });
 }
 

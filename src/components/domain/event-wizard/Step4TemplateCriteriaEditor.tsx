@@ -20,6 +20,7 @@ interface Step4TemplateCriteriaEditorProps {
   onUpdateCriteria: (index: number, field: keyof TemplateCriteriaFormState, value: any) => void;
   onNext: () => void;
   onPrev: () => void;
+  onSaveDraft?: () => void;
   isReadOnly?: boolean;
 }
 
@@ -29,6 +30,8 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
   criteriasByTrack = {},
   onUpdateTrackCriterias,
   onApplyToAllTracks,
+  templateName = "",
+  onUpdateTemplateName,
   criterias,
   totalWeight,
   isValidWeight100,
@@ -37,6 +40,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
   onUpdateCriteria,
   onNext,
   onPrev,
+  onSaveDraft,
   isReadOnly = false,
 }) => {
   const [selectedTrackId, setSelectedTrackId] = useState<string>(tracks[0]?.id || "");
@@ -118,7 +122,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
         <div>
           <h3 className="font-mono font-bold text-lg text-[#e1e7ec] uppercase tracking-wider flex items-center gap-2">
             <Sliders className="w-5 h-5 text-[#8b5cf6]" />
-            Bước 4: Soạn Thảo Tiêu Chí Chấm Điểm (Rubric RBL)
+            Bước 4: Soạn Thảo Tiêu Chí Chấm Điểm
           </h3>
           <p className="text-xs font-mono text-[#8a9ba8] mt-1">
             Hạng mục dùng **Mẫu Ngân Hàng** được hiển thị xem trước. Hạng mục **Tự Tạo** cho phép chỉnh sửa trọng số trực quan.
@@ -174,7 +178,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
                 {selectedTemplate?.templateName || selectedTemplate?.TemplateName}
               </div>
               <div className="text-[#8a9ba8] text-[11px]">
-                {selectedTemplate?.description || selectedTemplate?.Description || "Bộ tiêu chí chuẩn RBL đã được thẩm định 100% trọng số."}
+                {selectedTemplate?.description || selectedTemplate?.Description || "Bộ tiêu chí chuẩn đã được thẩm định 100% trọng số."}
               </div>
             </div>
           </div>
@@ -276,11 +280,19 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
                         <td className="p-3 text-center text-[#8a9ba8]">Thang 1-10</td>
                         <td className="p-3 text-center">
                           <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={crit.weight}
-                            onChange={(e) => handleUpdateActiveCriteria(idx, "weight", Number(e.target.value))}
+                            type="text"
+                            inputMode="numeric"
+                            value={crit.weight ?? 0}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (!raw.trim()) {
+                                handleUpdateActiveCriteria(idx, "weight", 0);
+                                return;
+                              }
+                              const digits = raw.replace(/[^0-9]/g, "");
+                              const val = digits === "" ? 0 : Math.min(100, Math.max(0, parseInt(digits, 10)));
+                              handleUpdateActiveCriteria(idx, "weight", val);
+                            }}
                             disabled={isReadOnly}
                             className="w-20 px-2 py-1 bg-[#13191c] border border-[#263339] text-[#00d9ff] font-mono text-xs text-center font-bold focus:outline-none focus:border-[#8b5cf6]"
                           />
@@ -347,10 +359,10 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
               </div>
 
               {/* Card 2: TOGGLE CHECKBOX SAVE TO TEMPLATE BANK (CÔNG TẮC BẬT/TẮT LƯU KHO) */}
-              <div className="bg-[#0a0e10] border border-[#263339] p-6 space-y-4 font-mono text-xs">
+              <div className="p-6 border border-[#263339] bg-[#0a0e10] space-y-4 font-mono text-xs">
                 <div className="border-b border-[#263339] pb-2 font-bold text-[#8b5cf6] tracking-widest uppercase flex items-center gap-1.5">
                   <Save className="w-4 h-4" />
-                  CẤU HÌNH LƯU KHO TIÊU CHÍ
+                  CẤU HÌNH LƯU KHO TIÊU CHÍ (TEMPLATE BANK)
                 </div>
 
                 <label className="flex items-start gap-3 p-3 bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] cursor-pointer transition-colors">
@@ -371,6 +383,25 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
                     </p>
                   </div>
                 </label>
+
+                {/* Input Tên Bộ Tiêu Chí (Disabled / Greyed out ONLY when saveToBank === false) */}
+                <div className={`space-y-1.5 pt-1 transition-all ${saveToBank ? "" : "opacity-40"}`}>
+                  <label className="text-[11px] text-[#8a9ba8] uppercase font-bold flex items-center gap-1">
+                    Tên bộ tiêu chí lưu kho *
+                  </label>
+                  <input
+                    type="text"
+                    disabled={!saveToBank}
+                    value={templateName || ""}
+                    onChange={(e) => onUpdateTemplateName?.(e.target.value)}
+                    placeholder="Ví dụ: Bộ Tiêu Chí Standard Pitch Deck 2026..."
+                    className={`w-full px-3 py-2 border font-sans text-xs focus:outline-none ${
+                      saveToBank
+                        ? "bg-[#13191c] border-[#263339] text-[#e1e7ec] focus:border-[#8b5cf6]"
+                        : "bg-[#0a0e10] border-[#182024] text-[#8a9ba8]/50 cursor-not-allowed"
+                    }`}
+                  />
+                </div>
               </div>
 
             </div>
@@ -386,17 +417,30 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
           onClick={onPrev}
           className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] flex items-center gap-1 cursor-pointer transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> &lt; Bước 3: Hạng Mục
+          <ArrowLeft className="w-4 h-4" /> <span>Bước 3: Hạng Mục</span>
         </button>
 
-        <button
-          type="button"
-          onClick={onNext}
-          className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
-        >
-          <span>TIẾP TỤC BƯỚC 5: PHÂN CÔNG NHÂN SỰ &gt;</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          {onSaveDraft && (
+            <button
+              type="button"
+              onClick={onSaveDraft}
+              className="px-4 py-2 bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] text-[#8a9ba8] hover:text-[#e1e7ec] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Save className="w-4 h-4 text-[#8b5cf6]" />
+              <span>LƯU BẢN NHÁP</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onNext}
+            className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-bold flex items-center gap-1 cursor-pointer transition-colors uppercase"
+          >
+            <span>TIẾP TỤC BƯỚC 5: CÔNG BỐ SỰ KIỆN</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

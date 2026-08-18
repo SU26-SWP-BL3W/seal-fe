@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetSubmitResultsByTrack } from "@/repositories/submitResultsRepository";
 import { useGetTemplate } from "@/repositories/templatesRepository";
@@ -13,15 +14,18 @@ import {
   Code,
   CheckCircle2,
   MessageSquare,
+  AlertCircle,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useToast } from "@/providers/ToastProvider";
 
 export function JudgeScoringView() {
+  const toast = useToast();
   const searchParams = useSearchParams();
   const prefillSubId = searchParams?.get("subId");
   const prefillTrackId = searchParams?.get("trackId") || "";
 
-  const { user, loginAsDemoRole } = useAuth();
+  const { user } = useAuth();
 
   // Dùng chung logic với Bảng Phân Công (useMyAssignedJudgeTracks) — đảm bảo bàn
   // chấm điểm thấy được MỌI track thật được gán, kể cả ở sự kiện khác với sự kiện
@@ -75,6 +79,36 @@ export function JudgeScoringView() {
     [myScores],
   );
 
+  // Tự động nạp lại điểm số từng tiêu chí và nhận xét nếu giám khảo đã chấm/lưu nháp trước đó
+  useEffect(() => {
+    if (!selectedSubmission) {
+      setScores({});
+      setComment("");
+      return;
+    }
+    const currentSubId = selectedSubmission.id || selectedSubmission.Id;
+    const existingScore = myScores.find((s) => (s.submitResultId || (s as any).SubmitResultId) === currentSubId);
+    if (existingScore) {
+      setComment((existingScore as any).comment || (existingScore as any).Comment || "");
+      const detailsList = (existingScore as any).details || (existingScore as any).Details || [];
+      if (Array.isArray(detailsList) && detailsList.length > 0) {
+        const loaded: Record<string, number> = {};
+        detailsList.forEach((d: any) => {
+          const cId = d.criteriaId || d.CriteriaId;
+          if (cId) {
+            loaded[cId] = Number(d.value ?? d.Value ?? 0);
+          }
+        });
+        setScores(loaded);
+      } else {
+        setScores({});
+      }
+    } else {
+      setScores({});
+      setComment("");
+    }
+  }, [selectedSubmission, myScores]);
+
   // Tính tổng điểm RBL theo trọng số
   const calculatedTotalScore = useMemo(() => {
     let totalWeightedRatio = 0;
@@ -123,7 +157,9 @@ export function JudgeScoringView() {
 
   const handleSaveScore = async (isFinalSubmit: boolean, autoAdvance = false) => {
     if (!selectedSubmission) {
-      setSaveError("Vui lòng chọn bài nộp cần chấm điểm.");
+      const msg = "Vui lòng chọn bài nộp cần chấm điểm.";
+      setSaveError(msg);
+      toast.error(msg);
       return;
     }
     setSaveError("");
@@ -131,7 +167,9 @@ export function JudgeScoringView() {
     const submitResultId = selectedSubmission.id || selectedSubmission.Id;
     const currentTemplateId = selectedTrack?.templateId;
     if (!submitResultId || !currentTemplateId || !eventRoleId) {
-      setSaveError("Thiếu submitResultId/templateId/eventRoleId thật — không thể lưu điểm.");
+      const msg = "Thiếu submitResultId/templateId/eventRoleId thật — không thể lưu điểm.";
+      setSaveError(msg);
+      toast.error(msg);
       return;
     }
     const payloadDetails = criteria.map((cr) => ({
@@ -147,12 +185,16 @@ export function JudgeScoringView() {
         isSubmitted: isFinalSubmit,
         details: payloadDetails,
       });
-      setSaveOk(isFinalSubmit ? "✓ Đã khóa và chốt điểm chính thức thành công!" : "✓ Đã lưu nháp bảng điểm thành công.");
+      const okMsg = isFinalSubmit ? "Đã khóa và chốt điểm chính thức thành công!" : "Đã lưu nháp bảng điểm thành công.";
+      setSaveOk(`✓ ${okMsg}`);
+      toast.success(okMsg);
       if (autoAdvance && currentSubIndex < apiSubmissions.length - 1) {
         setTimeout(() => handleNextSubmission(), 600);
       }
     } catch (err: any) {
-      setSaveError(err?.response?.data?.message || err?.message || "Lưu điểm thất bại — vui lòng thử lại.");
+      const errMsg = err?.response?.data?.message || err?.message || "Lưu điểm thất bại — vui lòng thử lại.";
+      setSaveError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -165,16 +207,14 @@ export function JudgeScoringView() {
           </div>
           <h2 className="font-display text-xl font-bold uppercase text-white">BÀN CHẤM ĐIỂM GIÁM KHẢO</h2>
           <p className="font-sans text-xs text-zinc-400 leading-relaxed">
-            Vui lòng đăng nhập hoặc bấm chọn nhanh vai trò Giám Khảo Demo để mở bàn chấm điểm:
+            Vui lòng đăng nhập với tài khoản Giám khảo để mở bàn chấm điểm.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Judge")}
-              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-md"
-            >
-              [ ⚖️ Vào Bằng Tài Khoản Giám Khảo Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-md">
+                Đến trang đăng nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>

@@ -33,15 +33,17 @@ import {
 } from "lucide-react";
 
 export function MySubmissionsView() {
-  const { user, loginAsDemoRole } = useAuth();
+  const { user } = useAuth();
   const { data: teamResponse, isLoading: isLoadingTeam } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
 
   const teamId = team?.id || team?.Id || "";
-  const isLeader = team?.leaderId === user?.id || team?.LeaderId === user?.id;
+  const isLeader = (team?.members || []).some(
+    (m: any) => m.userId === user?.id && m.roleName === "TeamLeader",
+  );
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
-  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions();
+  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
 
   // Edit Modal State
   const [editingSub, setEditingSub] = useState<SubmitResultListItem | null>(null);
@@ -103,32 +105,30 @@ export function MySubmissionsView() {
 
   if (!user) {
     return (
-          <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-[#080f11] border border-[#00d9ff] p-8 text-center glow-box space-y-4">
-              <div className="corner-accent-tl" />
-              <div className="corner-accent-tr" />
-              <div className="corner-accent-bl" />
-              <div className="corner-accent-br" />
-              <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
-              <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-                Vui lòng đăng nhập hoặc bấm nút Demo bên dưới để kiểm tra giao diện bảng bài nộp:
-              </p>
-              <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-                <button
-                  type="button"
-                  onClick={() => loginAsDemoRole("TeamLeader")}
-                  className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors"
-                >
-                  [ 🎯 Xem Bằng Tài Khoản Thí Sinh Demo ]
-                </button>
-              </div>
-            </div>
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#080f11] border border-[#00d9ff] p-8 text-center glow-box space-y-4">
+          <div className="corner-accent-tl" />
+          <div className="corner-accent-tr" />
+          <div className="corner-accent-bl" />
+          <div className="corner-accent-br" />
+          <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
+          <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
+            Vui lòng đăng nhập để xem danh sách bài nộp của đội.
+          </p>
+          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors">
+                Đến Trang Đăng Nhập
+              </button>
+            </Link>
           </div>
-        );
-      }
+        </div>
+      </div>
+    );
+  }
 
-      return (
-        <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#00d9ff] selection:text-[#003641]">
+  return (
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#00d9ff] selection:text-[#003641]">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header Panel (Stitch T5) */}
             <div className="bg-[#1a2123] relative p-6 border-t-2 border-[#00d9ff] shadow-[inset_0_0_20px_rgba(0,217,255,0.05)] border border-white/5 glow-box">
@@ -156,7 +156,7 @@ export function MySubmissionsView() {
 
                   <Link href="/submissions/new">
                     <button className="bg-[#00d9ff] text-[#080f11] font-display text-sm font-bold px-5 py-2 rounded-[12px] rounded-br-none hover:bg-white transition-all flex items-center gap-1.5 uppercase shadow-[0_0_15px_rgba(0,217,255,0.3)]">
-                      <Plus className="w-4 h-4" /> Nộp bài mới &gt;
+                      <Plus className="w-4 h-4" /> Nộp bài mới
                     </button>
                   </Link>
                 </div>
@@ -215,7 +215,7 @@ export function MySubmissionsView() {
                     <tbody className="divide-y divide-[#3c494d]/40">
                       {submissions.map((sub, idx) => {
                         const id = sub.id || sub.Id || `sub-${idx}`;
-                        const isEliminated = (sub as any).isEliminated || (sub as any).IsEliminated;
+                        const isEliminated = (sub as any).isTeamDisqualified || (sub as any).IsTeamDisqualified;
                         const isActive = sub.isActive ?? sub.IsActive ?? true;
 
                         return (

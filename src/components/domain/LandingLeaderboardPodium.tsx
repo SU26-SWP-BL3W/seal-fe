@@ -140,6 +140,7 @@ interface LandingLeaderboardPodiumProps {
   eventName?: string;
   season?: string;
   prizes?: PrizeItem[];
+  podiumTeams?: any[];
 }
 
 // ─── Main Podium Section ───────────────────────────────────────────────────────
@@ -147,11 +148,11 @@ export function LandingLeaderboardPodium({
   eventName = "SEAL Hackathon 2026",
   season = "MÙA GIẢI 2026",
   prizes = [],
+  podiumTeams = [],
 }: LandingLeaderboardPodiumProps) {
-  const podiumTeams: any[] = [];
-  const gold   = podiumTeams.find((t) => t.rank === 1);
-  const silver = podiumTeams.find((t) => t.rank === 2);
-  const bronze = podiumTeams.find((t) => t.rank === 3);
+  const gold   = podiumTeams.find((t) => t.rank === 1) || podiumTeams[0];
+  const silver = podiumTeams.find((t) => t.rank === 2) || podiumTeams[1];
+  const bronze = podiumTeams.find((t) => t.rank === 3) || podiumTeams[2];
 
   return (
     <section className="border-t border-[var(--border-muted)] bg-[var(--bg-panel)]/30 px-[var(--space-xl)] py-[calc(var(--space-xl)*1.5)]">

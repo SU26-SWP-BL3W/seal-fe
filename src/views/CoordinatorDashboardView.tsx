@@ -1,314 +1,268 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useMyEvents, eventsRepository, type MyEventModel } from "@/repositories/eventsRepository";
-import { useGetPendingTeams } from "@/repositories/teamsRepository";
-import { useGetUsers } from "@/repositories/usersRepository";
+import React, { useState } from "react";
+import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
+import { useEvents } from "@/repositories/eventsRepository";
+import { useQuery } from "@tanstack/react-query";
+import apiClient from "@/models/apiClient";
+import { PagedResult } from "@/models/types";
+import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
 import {
-  Layers,
-  Users,
-  Award,
-  FileCheck,
-  ChevronDown,
-  Settings,
-  ArrowRight,
-  ShieldCheck,
-  Activity,
-  AlertTriangle,
-  FolderKanban,
-  FileText,
-  CheckCircle2,
-  Sliders,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  Rocket,
+  FileCode,
+  Globe,
+  FileSpreadsheet,
+  RefreshCw,
+  Code2,
+  Filter,
 } from "lucide-react";
-import Link from "next/link";
 
 export const CoordinatorDashboardView: React.FC = () => {
-  const { data: eventsList = [], isLoading, refetch } = useMyEvents();
-  const { data: pendingTeams = [] } = useGetPendingTeams();
-  const { data: pendingUsersData } = useGetUsers({ isApproved: false });
-  const appealsList: { status?: number | string; Status?: string }[] = [];
-
-  // Deduplicated assigned events list
-  const seenEventKeys = new Set<string>();
-  const assignedEvents = eventsList.filter((ev) => {
-    const name = (ev.eventName || ev.EventName || "").trim();
-    const key = `${name.toLowerCase()}-${ev.year || ev.Year || 2026}`;
-    if (seenEventKeys.has(key)) return false;
-    seenEventKeys.add(key);
-    return true;
-  });
+  const { data: rawEvents = [] } = useEvents();
+  const eventsList = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
 
   const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-  // Default select first assigned event when list loads
-  useEffect(() => {
-    if (assignedEvents.length > 0 && !selectedEventId) {
-      const firstEv = assignedEvents[0];
-      const id = firstEv.id || firstEv.Id || firstEv.eventId || firstEv.EventId || "";
-      setSelectedEventId(id);
-    }
-  }, [assignedEvents, selectedEventId]);
+  // Query submissions
+  const {
+    data: rawSubmissions = [],
+    isLoading: isLoadingSubmissions,
+    refetch: refetchSubmissions,
+  } = useQuery({
+    queryKey: ["all-submissions", selectedEventId],
+    queryFn: async () => {
+      const params: Record<string, any> = { PageSize: 200 };
+      if (selectedEventId) params.EventId = selectedEventId;
+      const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", { params });
+      return res.data?.data ?? [];
+    },
+  });
 
-  const selectedEvent = assignedEvents.find(
-    (ev) => (ev.id || ev.Id || ev.eventId || ev.EventId) === selectedEventId
-  ) || assignedEvents[0];
+  const submissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
 
-  const selectedEventName = selectedEvent
-    ? selectedEvent.eventName || selectedEvent.EventName || "Sự kiện được chọn"
-    : "Chưa chọn sự kiện";
+  // Filtered submissions by search term
+  const displaySubmissions = submissions.filter((sub: any) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    const teamName = (sub.teamName || sub.TeamName || "").toLowerCase();
+    const eventName = (sub.eventName || sub.EventName || "").toLowerCase();
+    const trackName = (sub.trackName || sub.TrackName || "").toLowerCase();
+    return teamName.includes(term) || eventName.includes(term) || trackName.includes(term);
+  });
 
-  const isSelectedEventPublished = selectedEvent
-    ? Boolean(selectedEvent.status ?? selectedEvent.Status)
-    : false;
-
-  const selectedEventSeason = selectedEvent?.season || selectedEvent?.Season || "Summer";
-  const selectedEventYear = selectedEvent?.year || selectedEvent?.Year || 2026;
-
-  // Dynamic Metrics linked to active event
-  const eventTeamsCount = selectedEvent ? 12 : 0;
-  const eventPendingSubmissions = selectedEvent ? 5 : 0;
-  const eventPendingAppeals = selectedEvent ? 2 : 0;
+  const uniqueTeamsCount = new Set(submissions.map((s: any) => s.teamId || s.TeamId)).size;
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
-      {/* Main Container */}
-      <div className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
-        
-        {/* Page Title */}
-        <div className="border-b border-[#263339] pb-4">
-          <div className="flex items-center gap-2 font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider mb-1">
-            <FolderKanban className="w-4 h-4 text-[#8b5cf6]" />
-            <span>BẢNG ĐIỀU KHIỂN ĐIỀU PHỐI VIÊN</span>
-          </div>
-          <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider m-0">
-            TRUNG TÂM CHỈ HUY SỰ KIỆN
-          </h1>
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
+      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase">
+          <span className="text-[var(--color-danger)] font-bold">SEAL SYSTEM</span>
+          <span>&gt;</span>
+          <span className="text-[var(--text-primary)] font-bold">TỔNG HỢP BÀI THI &amp; SUBMISSIONS</span>
         </div>
 
-        {/* Elegant Event Selector Panel */}
-        <div className="bg-[#13191c] p-5 border border-[#263339] flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1.5 flex-1">
-            <label className="font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>
-              <span>SỰ KIỆN ĐANG QUẢN LÝ:</span>
-            </label>
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[var(--color-danger)] animate-pulse" />
+              <span className="font-mono text-[10px] text-[var(--color-danger)] font-bold tracking-widest uppercase">
+                SUBMISSIONS &amp; DELIVERABLES HUB
+              </span>
+            </div>
+            <h1 className="font-display font-bold text-2xl text-[var(--text-primary)] uppercase tracking-wider mt-1 flex items-center gap-2.5">
+              <FileCode className="w-6 h-6 text-[var(--color-danger)]" />
+              Tổng Hợp Bài Nộp Của Các Đội Thi
+            </h1>
+            <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
+              Theo dõi trực tiếp toàn bộ mã nguồn GitHub, bản chạy thử Demo URL và Slide thuyết trình của các đội thi.
+            </p>
+          </div>
 
-            {isLoading ? (
-              <div className="font-mono text-xs text-[#8a9ba8]">Đang tải danh sách sự kiện phụ trách...</div>
-            ) : assignedEvents.length === 0 ? (
-              <div className="font-mono text-xs text-[#f59e0b]">
-                Bạn hiện chưa được Admin phân công phụ trách sự kiện nào.
-              </div>
-            ) : (
-              <div className="relative max-w-2xl">
-                <select
-                  value={selectedEventId}
-                  onChange={(e) => setSelectedEventId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans font-semibold text-sm focus:outline-none focus:border-[#8b5cf6] cursor-pointer appearance-none"
-                >
-                  {assignedEvents.map((ev, idx) => {
-                    const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
-                    const name = ev.eventName || ev.EventName || "Sự kiện";
-                    const seasonStr = ev.season || ev.Season || "Summer";
-                    const yearNum = ev.year || ev.Year || 2026;
+          <Button
+            variant="ghost"
+            onClick={() => refetchSubmissions()}
+            className="font-mono text-xs border border-[var(--border-muted)] flex items-center gap-1.5 self-start md:self-auto cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Làm Mới
+          </Button>
+        </div>
+
+        {/* Metrics Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
+          <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-1">
+            <span className="text-[10px] text-[var(--text-muted)] uppercase block">Tổng Số Lượt Nộp Bài</span>
+            <div className="text-2xl font-bold text-[var(--text-primary)]">{submissions.length} Lượt</div>
+          </Card>
+          <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--color-success)]/30 hud-clipped space-y-1">
+            <span className="text-[10px] text-[var(--color-success)] uppercase block font-bold">Số Đội Đã Nộp Dự Án</span>
+            <div className="text-2xl font-bold text-[var(--color-success)]">{uniqueTeamsCount} Đội</div>
+          </Card>
+          <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-team)]/30 hud-clipped space-y-1">
+            <span className="text-[10px] text-[var(--accent-team)] uppercase block font-bold">Sự Kiện Đang Theo Dõi</span>
+            <div className="text-2xl font-bold text-[var(--accent-team)]">
+              {selectedEventId
+                ? eventsList.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId)?.eventName || "1 Sự Kiện"
+                : `${eventsList.length} Sự Kiện`}
+            </div>
+          </Card>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
+          <div className="flex items-center gap-2 w-full sm:w-1/2">
+            <Filter className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+            <select
+              value={selectedEventId}
+              onChange={(e) => setSelectedEventId(e.target.value)}
+              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped"
+            >
+              <option value="">— Tất cả sự kiện ({eventsList.length}) —</option>
+              {eventsList.map((ev: any, idx: number) => {
+                const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
+                const name = ev.eventName || ev.EventName || "Sự kiện";
+                return (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div className="w-full sm:w-1/2">
+            <Input
+              type="text"
+              placeholder="Tìm kiếm theo tên đội, sự kiện, hạng mục..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full text-xs"
+            />
+          </div>
+        </div>
+
+        {/* Submissions Table */}
+        <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
+            <h3 className="font-display font-bold text-sm text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+              <FileCode className="w-4 h-4 text-[var(--color-danger)]" />
+              Danh Sách Bài Nộp Chi Tiết ({displaySubmissions.length})
+            </h3>
+            <span className="font-mono text-[10px] text-[var(--text-muted)]">
+              Bấm vào các nút liên kết để kiểm tra trực tiếp sản phẩm của đội thi
+            </span>
+          </div>
+
+          {isLoadingSubmissions ? (
+            <div className="py-16 flex flex-col items-center justify-center gap-2 font-mono text-xs text-[var(--color-danger)]">
+              <RefreshCw className="w-6 h-6 animate-spin" />
+              <span>Đang tải danh sách bài làm từ hệ thống...</span>
+            </div>
+          ) : displaySubmissions.length === 0 ? (
+            <ApiMissingDataBadge
+              endpoint="GET /api/SubmitResults"
+              title="CHƯA CÓ BÀI NỘP NÀO ĐƯỢC GHI NHẬN"
+              message="Chưa có đội thi nào nộp bài làm trong phạm vi sự kiện đã chọn. Khi các thí sinh nộp liên kết GitHub/Demo/Slides, dữ liệu sẽ hiển thị ngay tại đây."
+            />
+          ) : (
+            <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-input)] hud-clipped">
+              <table className="w-full table-fixed min-w-[850px] text-left border-collapse font-mono text-xs">
+                <thead className="bg-[var(--bg-panel)] border-b border-[var(--border-muted)]">
+                  <tr>
+                    <th className="w-[24%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                      ĐỘI THI
+                    </th>
+                    <th className="w-[18%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                      HẠNG MỤC (TRACK)
+                    </th>
+                    <th className="w-[38%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                      LIÊN KẾT BÀI LÀM (DELIVERABLES)
+                    </th>
+                    <th className="w-[20%] px-4 py-3.5 text-right text-[var(--text-muted)] uppercase tracking-wider">
+                      THỜI GIAN NỘP
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displaySubmissions.map((sub: any, idx: number) => {
+                    const subId = sub.id || sub.Id || `sub-${idx}`;
+                    const teamName = sub.teamName || sub.TeamName || `Đội #${(sub.teamId || sub.TeamId)?.slice(-4) || idx + 1}`;
+                    const trackName = sub.trackName || sub.TrackName || "Chung";
+                    const repoUrl = sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl;
+                    const demoUrl = sub.demoUrl || sub.DemoUrl;
+                    const slideUrl = sub.slideUrl || sub.SlideUrl;
+                    const createdTime = sub.createdTime || sub.CreatedTime;
+
                     return (
-                      <option key={id} value={id}>
-                        {idx + 1}. {name} — ({seasonStr} {yearNum})
-                      </option>
+                      <tr key={subId} className="hover:bg-[var(--color-danger)]/5 transition-colors border-t border-[var(--border-muted)]/50">
+                        <td className="px-4 py-3.5 align-middle font-bold text-[var(--text-primary)] truncate" title={teamName}>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[var(--accent-team)] shrink-0" />
+                            <span className="truncate">{teamName}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 align-middle text-[var(--accent-team)] truncate font-semibold" title={trackName}>
+                          {trackName}
+                        </td>
+                        <td className="px-4 py-3.5 align-middle">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {repoUrl ? (
+                              <a
+                                href={repoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 bg-[var(--bg-base)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:border-white hover:text-white rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
+                                title={repoUrl}
+                              >
+                                <Code2 className="w-3.5 h-3.5 text-blue-400" />
+                                <span>GitHub Repo</span>
+                              </a>
+                            ) : null}
+
+                            {demoUrl ? (
+                              <a
+                                href={demoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 bg-[rgba(16,185,129,0.1)] border border-[var(--color-success)]/40 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
+                                title={demoUrl}
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                <span>Live Demo</span>
+                              </a>
+                            ) : null}
+
+                            {slideUrl ? (
+                              <a
+                                href={slideUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/40 text-purple-300 hover:bg-purple-500/20 rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
+                                title={slideUrl}
+                              >
+                                <FileSpreadsheet className="w-3.5 h-3.5" />
+                                <span>Slides Pitch</span>
+                              </a>
+                            ) : null}
+
+                            {!repoUrl && !demoUrl && !slideUrl && (
+                              <span className="text-[11px] text-[var(--text-muted)] italic">Đang cập nhật link</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 align-middle text-right text-[11px] text-[var(--text-muted)] whitespace-nowrap">
+                          {createdTime ? new Date(createdTime).toLocaleString("vi-VN") : "Vừa xong"}
+                        </td>
+                      </tr>
                     );
                   })}
-                </select>
-                <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-            )}
-          </div>
-
-          {selectedEvent && (
-            <div className="flex items-center gap-3 font-mono text-xs bg-[#0a0e10] px-4 py-2.5 border border-[#263339]">
-              <span className="text-[#8a9ba8]">TRẠNG THÁI:</span>
-              {isSelectedEventPublished ? (
-                <span className="text-[#10b981] font-bold">[ ĐÃ CÔNG BỐ ]</span>
-              ) : (
-                <span className="text-[#f59e0b] font-bold">[ BẢN NHÁP ]</span>
-              )}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
-
-        {/* 4 Metric Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Total Teams */}
-          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#8b5cf6]"></div>
-            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
-              <span>TỔNG SỐ ĐỘI THI</span>
-              <Users className="w-4 h-4 text-[#8b5cf6]" />
-            </div>
-            <div className="font-mono font-bold text-3xl text-[#e1e7ec]">{eventTeamsCount}</div>
-            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
-              <span>Sĩ số đội thi đã duyệt</span>
-              <Link href="/coordinator/teams" className="hover:text-[#8b5cf6] text-[11px] font-mono transition-colors">
-                Quản lý đội &gt;
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 2: Pending Submissions */}
-          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#f59e0b]"></div>
-            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
-              <span>BÀI NỘP CHỜ CHẤM</span>
-              <FileCheck className="w-4 h-4 text-[#f59e0b]" />
-            </div>
-            <div className="font-mono font-bold text-3xl text-[#e1e7ec]">{eventPendingSubmissions}</div>
-            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
-              <span>Cần tiến độ chấm điểm</span>
-              <Link href="/coordinator/publish-results" className="hover:text-[#f59e0b] text-[11px] font-mono transition-colors">
-                Soát xét &gt;
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 3: Pending Appeals */}
-          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#ef4444]"></div>
-            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
-              <span>PHÚC KHẢO CHỜ XỬ LÝ</span>
-              <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
-            </div>
-            <div className="font-mono font-bold text-3xl text-[#ef4444]">
-              {String(eventPendingAppeals).padStart(2, "0")}
-            </div>
-            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
-              <span>Khiếu nại chưa phản hồi</span>
-              <Link href="/coordinator/appeals" className="hover:text-[#ef4444] text-[11px] font-mono transition-colors">
-                Xử lý ngay &gt;
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 4: System Status */}
-          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#10b981]"></div>
-            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
-              <span>TRẠNG THÁI SỰ KIỆN</span>
-              <Activity className="w-4 h-4 text-[#10b981]" />
-            </div>
-            <div className="font-mono font-bold text-lg text-[#10b981] mt-1 mb-2">
-              {isSelectedEventPublished ? "ĐÃ CÔNG BỐ PUBLIC" : "ĐANG CHỈNH SỬA NHÁP"}
-            </div>
-            <div className="flex items-center gap-2 font-mono text-[11px] text-[#8a9ba8]">
-              <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
-              <span>{selectedEventSeason} {selectedEventYear}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Event Quick Action Hub Cards */}
-        <div className="space-y-4 pt-2">
-          <div className="flex items-center gap-2 font-mono text-xs font-bold text-[#8b5cf6] uppercase tracking-wider">
-            <Layers className="w-4 h-4" />
-            <span>QUẢN LÝ SỰ KIỆN: <span className="text-[#e1e7ec]">{selectedEventName}</span></span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            {/* Shortcut 1: Event Config (Trỏ về Event Wizard Cấu Hình Vòng & Hạng Mục) */}
-            <Link
-              href="/coordinator/events/new"
-              className="bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] p-5 space-y-3 transition-all group cursor-pointer"
-            >
-              <div className="w-9 h-9 bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
-                <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform" />
-              </div>
-              <div>
-                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#8b5cf6] transition-colors uppercase">
-                  Cấu Hình Vòng &amp; Hạng Mục
-                </h4>
-                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
-                  Cấu hình Vòng thi, Hạng mục, Tiêu chí chấm điểm RBL và Phân công nhân sự.
-                </p>
-              </div>
-              <div className="font-mono text-xs text-[#8b5cf6] font-semibold flex items-center gap-1 pt-1">
-                <span>MỞ CẤU HÌNH (WIZARD)</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-
-            {/* Shortcut 2: Staff Management */}
-            <Link
-              href={selectedEventId ? `/coordinator/staff?eventId=${selectedEventId}` : "#"}
-              className="bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] p-5 space-y-3 transition-all group cursor-pointer"
-            >
-              <div className="w-9 h-9 bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#8b5cf6] transition-colors uppercase">
-                  Phân Công Giám Khảo &amp; Cố Vấn
-                </h4>
-                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
-                  Mời và gán nhân sự Giám khảo / Cố vấn vào các Hạng mục.
-                </p>
-              </div>
-              <div className="font-mono text-xs text-[#8b5cf6] font-semibold flex items-center gap-1 pt-1">
-                <span>MỜI NHÂN SỰ</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-
-            {/* Shortcut 3: Prize Setup */}
-            <Link
-              href={selectedEventId ? `/coordinator/prizes?eventId=${selectedEventId}` : "#"}
-              className="bg-[#13191c] border border-[#263339] hover:border-[#f59e0b] p-5 space-y-3 transition-all group cursor-pointer"
-            >
-              <div className="w-9 h-9 bg-[#f59e0b]/10 border border-[#f59e0b]/30 flex items-center justify-center text-[#f59e0b]">
-                <Award className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#f59e0b] transition-colors uppercase">
-                  Cơ Cấu Giải Thưởng
-                </h4>
-                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
-                  Tạo cơ cấu giải thưởng và ánh xạ trao giải cho từng Hạng mục.
-                </p>
-              </div>
-              <div className="font-mono text-xs text-[#f59e0b] font-semibold flex items-center gap-1 pt-1">
-                <span>CẤU HÌNH GIẢI</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-
-            {/* Shortcut 4: Calibration RBL */}
-            <Link
-              href="/coordinator/calibration"
-              className="bg-[#13191c] border border-[#263339] hover:border-[#10b981] p-5 space-y-3 transition-all group cursor-pointer"
-            >
-              <div className="w-9 h-9 bg-[#10b981]/10 border border-[#10b981]/30 flex items-center justify-center text-[#10b981]">
-                <Activity className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#10b981] transition-colors uppercase">
-                  Phòng Phân Tích RBL
-                </h4>
-                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
-                  Phân tích độ lệch chuẩn điểm số giữa các giám khảo và chẩn đoán.
-                </p>
-              </div>
-              <div className="font-mono text-xs text-[#10b981] font-semibold flex items-center gap-1 pt-1">
-                <span>PHÂN TÍCH RBL</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
-
-          </div>
-        </div>
-
-      </div>
+        </Card>
+      </main>
     </div>
   );
 };

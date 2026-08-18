@@ -4,3 +4,4 @@ export * from "./SealShield";
 export * from "./LandingLeaderboardPodium";
 export * from "./LandingMetricsStrip";
 export * from "./LandingWorkflowSteps";
+export * from "./StudentProfileModal";

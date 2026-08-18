@@ -5,15 +5,6 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { User, EventRole } from "@/models/entities";
 import apiClient from "@/models/apiClient";
 
-export interface PresetAccount {
-  email: string;
-  roleName: "Admin" | "Coordinator" | "Judge" | "TeamLeader" | "Mentor" | "TeamMember";
-  fullName: string;
-  defaultRedirect: string;
-}
-
-export const PRESET_ACCOUNTS: PresetAccount[] = [];
-
 // Trang đích sau khi đăng nhập thật, theo vai trò backend trả về.
 // Chỉ trỏ route THẬT SỰ tồn tại (có page.tsx) — EventCoordinator/Mentor/Team* trước
 // đây trỏ vào route rỗng (404 khi đăng nhập thật, xác nhận sống với tài khoản
@@ -64,15 +55,12 @@ function pickPrimaryRole(rows: unknown[], userId: string): EventRole | null {
   };
 }
 
-export type DemoRoleType = "Admin" | "Coordinator" | "Judge" | "Mentor" | "TeamLeader" | "TeamMember";
-
 interface AuthContextType {
   user: User | null;
   activeRole: EventRole | null;
   isInitialized: boolean;
   loginWithCredentials: (email: string, password: string) => Promise<string>;
   loginWithGoogleCredential: (idToken: string) => Promise<string>;
-  loginAsDemoRole: (role: DemoRoleType) => void;
   logout: () => void;
 }
 
@@ -88,8 +76,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const storedUser = localStorage.getItem("currentUser");
       const storedRole = localStorage.getItem("activeRole");
-      if (storedUser) setUser(JSON.parse(storedUser));
-      if (storedRole) setActiveRole(JSON.parse(storedRole));
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        if (storedRole) setActiveRole(JSON.parse(storedRole));
+      } else {
+        setUser(null);
+        setActiveRole(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("activeRole");
+        }
+      }
     } catch (e) {
       console.error("Lỗi khôi phục phiên từ localStorage:", e);
     } finally {
@@ -136,79 +132,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginAsDemoRole = (role: DemoRoleType) => {
-    let mockUser: User;
-    let mockRole: EventRole | null = null;
-
-    if (role === "Admin") {
-      mockUser = {
-        id: "demo-admin-01",
-        userId: "demo-admin-01",
-        email: "admin.overwatch@seal.edu.vn",
-        fullName: "System Admin (Demo)",
-        isAdmin: true,
-        isStudent: false,
-        isApproved: true,
-        isFpt: true,
-        IsAdmin: true,
-      };
-    } else if (role === "Judge") {
-      mockUser = {
-        id: "demo-judge-01",
-        userId: "demo-judge-01",
-        email: "judge.lead@seal.edu.vn",
-        fullName: "Hội Đồng Giám Khảo (Demo)",
-        isAdmin: false,
-        isStudent: false,
-        isApproved: true,
-        isFpt: true,
-      };
-      // Không gán eventId/trackId giả — id không có thật trong DB sẽ làm mọi
-      // fetch theo sau (chi tiết event/track) trả 400. Vai trò demo chỉ đổi
-      // giao diện điều hướng, không giả lập được phân công thật.
-      mockRole = { id: "role-judge-01", roleName: "Judge" };
-    } else if (role === "Coordinator") {
-      mockUser = {
-        id: "demo-ec-01",
-        userId: "demo-ec-01",
-        email: "coordinator@seal.edu.vn",
-        fullName: "Trưởng Ban Tổ Chức (Demo)",
-        isAdmin: false,
-        isStudent: false,
-        isApproved: true,
-        isFpt: true,
-      };
-      mockRole = { id: "role-ec-01", roleName: "EventCoordinator" };
-    } else if (role === "Mentor") {
-      mockUser = {
-        id: "demo-mentor-01",
-        userId: "demo-mentor-01",
-        email: "mentor.tech@seal.edu.vn",
-        fullName: "Cố Vấn Chuyên Môn (Demo)",
-        isAdmin: false,
-        isStudent: false,
-        isApproved: true,
-        isFpt: true,
-      };
-      mockRole = { id: "role-mentor-01", roleName: "Mentor" };
-    } else {
-      mockUser = {
-        id: "demo-student-01",
-        userId: "demo-student-01",
-        email: "student.leader@fpt.edu.vn",
-        fullName: "Thí Sinh Trưởng Đội (Demo)",
-        isAdmin: false,
-        isStudent: true,
-        isApproved: true,
-        isFpt: true,
-        studentCode: "SE180001",
-      };
-      mockRole = { id: "role-lead-01", roleName: "TeamLeader" };
-    }
-
-    saveSession(mockUser, mockRole);
-  };
-
   const loginWithCredentials = async (email: string, password: string): Promise<string> => {
     const res = await apiClient.post<any>("/Auth/login", { email: email.trim(), password });
     const d = res.data ?? {};
@@ -224,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let studentCode = d.studentCode ?? d.StudentCode ?? d.user?.studentCode ?? null;
     let schoolId = d.schoolId ?? d.SchoolId ?? d.user?.schoolId ?? null;
     let photoStudentCardUrl = d.photoStudentCardUrl ?? d.PhotoStudentCardUrl ?? d.user?.photoStudentCardUrl ?? null;
+    let mustChangePassword = Boolean(d.mustChangePassword ?? d.MustChangePassword);
 
     if (typeof window !== "undefined") {
       localStorage.setItem("accessToken", accessToken);
@@ -242,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (p.studentCode) studentCode = p.studentCode;
         if (p.schoolId) schoolId = p.schoolId;
         if (p.photoStudentCardUrl) photoStudentCardUrl = p.photoStudentCardUrl;
+        if (p.mustChangePassword !== undefined) mustChangePassword = Boolean(p.mustChangePassword);
       }
     } catch {
       // Dùng thông tin từ response login nếu profile endpoint lỗi
@@ -258,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       studentCode,
       schoolId,
       photoStudentCardUrl,
+      mustChangePassword,
       isFpt: Boolean(d.isFpt ?? d.IsFpt ?? email.trim().toLowerCase().endsWith("@fpt.edu.vn")),
       UserID: userId,
       FullName: fullName,
@@ -283,14 +209,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
+      if (!isAdmin && primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
         targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
       }
     } catch {
       // fallback targetPath
     }
 
-    saveSession(authUser, primaryRole);
+    // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
+    if (mustChangePassword) {
+      targetPath = "/change-password";
+    }
+
+    saveSession(authUser, isAdmin ? null : primaryRole);
     return targetPath;
   };
 
@@ -310,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let studentCode = d.studentCode ?? d.StudentCode ?? d.user?.studentCode ?? null;
     let schoolId = d.schoolId ?? d.SchoolId ?? d.user?.schoolId ?? null;
     let photoStudentCardUrl = d.photoStudentCardUrl ?? d.PhotoStudentCardUrl ?? d.user?.photoStudentCardUrl ?? null;
+    let mustChangePassword = Boolean(d.mustChangePassword ?? d.MustChangePassword);
 
     if (typeof window !== "undefined") {
       localStorage.setItem("accessToken", accessToken);
@@ -328,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (p.studentCode) studentCode = p.studentCode;
         if (p.schoolId) schoolId = p.schoolId;
         if (p.photoStudentCardUrl) photoStudentCardUrl = p.photoStudentCardUrl;
+        if (p.mustChangePassword !== undefined) mustChangePassword = Boolean(p.mustChangePassword);
       }
     } catch {
       // Dùng thông tin từ response login nếu profile endpoint lỗi
@@ -344,6 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       studentCode,
       schoolId,
       photoStudentCardUrl,
+      mustChangePassword,
       isFpt: email.toLowerCase().endsWith("@fpt.edu.vn"),
       UserID: userId,
       FullName: fullName,
@@ -369,14 +303,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
-      if (primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
+      if (!isAdmin && primaryRole && REDIRECT_BY_ROLE[primaryRole.roleName || ""]) {
         targetPath = REDIRECT_BY_ROLE[primaryRole.roleName || ""];
       }
     } catch {
       // fallback targetPath
     }
 
-    saveSession(authUser, primaryRole);
+    // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
+    if (mustChangePassword) {
+      targetPath = "/change-password";
+    }
+
+    saveSession(authUser, isAdmin ? null : primaryRole);
     return targetPath;
   };
 
@@ -402,7 +341,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isInitialized,
           loginWithCredentials,
           loginWithGoogleCredential,
-          loginAsDemoRole,
           logout,
         }}
       >

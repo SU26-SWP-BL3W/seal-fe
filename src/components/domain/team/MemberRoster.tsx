@@ -10,6 +10,7 @@ interface Props {
   isLeader: boolean;
   isLoading?: boolean;
   onTransfer: (userId: string, name: string) => void;
+  onKick?: (userId: string, name: string) => void;
 }
 
 function initialsOf(name: string) {
@@ -26,11 +27,13 @@ function MemberRow({
   isCurrentUser,
   isLeader,
   onTransfer,
+  onKick,
 }: {
   member: MemberItem;
   isCurrentUser: boolean;
   isLeader: boolean;
   onTransfer: (userId: string, name: string) => void;
+  onKick?: (userId: string, name: string) => void;
 }) {
   return (
     <li
@@ -67,20 +70,31 @@ function MemberRow({
           {member.hasStudentProfile ? "Đã nộp hồ sơ" : "Chưa nộp hồ sơ"}
         </Badge>
         {isLeader && !isCurrentUser && member.roleName !== "TeamLeader" && (
-          <button
-            type="button"
-            onClick={() => onTransfer(member.userId, member.fullName)}
-            className="font-mono text-[10px] uppercase tracking-widest text-[color:var(--text-muted)] underline underline-offset-2 hover:text-[color:var(--accent-team)]"
-          >
-            Giao quyền đội trưởng
-          </button>
+          <div className="flex items-center gap-[var(--space-sm)]">
+            <button
+              type="button"
+              onClick={() => onTransfer(member.userId, member.fullName)}
+              className="font-mono text-[10px] uppercase tracking-widest text-[color:var(--text-muted)] underline underline-offset-2 hover:text-[color:var(--accent-team)]"
+            >
+              Giao quyền đội trưởng
+            </button>
+            {onKick && (
+              <button
+                type="button"
+                onClick={() => onKick(member.userId, member.fullName)}
+                className="font-mono text-[10px] uppercase tracking-widest text-[color:var(--color-danger)] underline underline-offset-2 hover:opacity-80"
+              >
+                Xóa khỏi đội
+              </button>
+            )}
+          </div>
         )}
       </div>
     </li>
   );
 }
 
-export function MemberRoster({ members, currentUserId, isLeader, isLoading = false, onTransfer }: Props) {
+export function MemberRoster({ members, currentUserId, isLeader, isLoading = false, onTransfer, onKick }: Props) {
   const count = members.length;
   const isEnough = count >= MIN_MEMBERS && count <= MAX_MEMBERS;
 
@@ -122,6 +136,7 @@ export function MemberRoster({ members, currentUserId, isLeader, isLoading = fal
               isCurrentUser={m.userId === currentUserId}
               isLeader={isLeader}
               onTransfer={onTransfer}
+              onKick={onKick}
             />
           ))}
         </ul>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useMentorWorkspaceViewModel, useMentorSubmissionDetailViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
 import { Card, Button, Badge } from "@/components/ui";
 import {
@@ -50,7 +50,7 @@ export function MentorSubmissionsView() {
     return true;
   });
 
-  const [selectedSubId] = useState<string>("");
+  const [selectedSubId, setSelectedSubId] = useState<string>("");
   const activeSubmission =
     filteredSubmissions.find((s) => (s.id || s.Id) === selectedSubId) || filteredSubmissions[0];
 
@@ -147,6 +147,35 @@ export function MentorSubmissionsView() {
               MODE: READ-ONLY (MENTOR ASSIST)
             </div>
           </div>
+
+          {/* Submissions Switcher Tabs if multiple */}
+          {filteredSubmissions.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 pt-3">
+              <span className="text-[10px] font-mono text-on-surface-variant uppercase font-bold mr-1">
+                Chọn bài nộp ({filteredSubmissions.length}):
+              </span>
+              {filteredSubmissions.map((sub, idx) => {
+                const subId = sub.id || sub.Id || "";
+                const isSelected = (activeSubmission?.id || activeSubmission?.Id) === subId;
+                const tId = (sub.teamId || sub.TeamId || "") as string;
+                const tName = teamNameById.get(tId) || `Đội #${idx + 1}`;
+                return (
+                  <button
+                    key={subId || idx}
+                    type="button"
+                    onClick={() => setSelectedSubId(subId)}
+                    className={`px-3 py-1 text-xs font-mono rounded cursor-pointer transition-all border ${
+                      isSelected
+                        ? "bg-[#00d9ff] text-black font-extrabold border-[#00d9ff]"
+                        : "bg-surface text-on-surface-variant border-outline-variant hover:text-on-surface hover:border-outline"
+                    }`}
+                  >
+                    {tName} {(sub as any).roundName || (sub as any).RoundName ? `(${(sub as any).roundName || (sub as any).RoundName})` : `#${idx + 1}`}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </header>
 
         {isLoading ? (

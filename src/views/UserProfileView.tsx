@@ -12,6 +12,7 @@ import { useGetUserRejections } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
 import { uploadRepository } from "@/repositories/uploadRepository";
 import { Button, Input, Card, Badge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 import {
   User,
   ShieldCheck,
@@ -32,6 +33,7 @@ import {
 import type { FptStudentResponse } from "@/models/entities";
 
 export function UserProfileView() {
+  const toast = useToast();
   const { user, activeRole } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -140,13 +142,14 @@ export function UserProfileView() {
         confirmNewPassword,
       });
       setPasswordSuccess(true);
+      toast.success("Đổi mật khẩu thành công!");
       setOldPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
     } catch (err: any) {
-      setPasswordError(
-        err?.response?.data?.message || err?.message || "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ."
-      );
+      const errMsg = err?.response?.data?.message || err?.message || "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.";
+      setPasswordError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -215,9 +218,12 @@ export function UserProfileView() {
       } as any);
 
       setSubmitSuccess(true);
+      toast.success("Cập nhật thông tin hồ sơ thành công!");
       setIsEditing(false);
     } catch (err: any) {
-      setSubmitError(err?.response?.data?.message || "Không thể cập nhật hồ sơ. Vui lòng thử lại sau.");
+      const errMsg = err?.response?.data?.message || "Không thể cập nhật hồ sơ. Vui lòng thử lại sau.";
+      setSubmitError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -327,7 +333,7 @@ export function UserProfileView() {
                       : "text-[var(--color-warning)]"
                   }`}>
                     {isBlocked
-                      ? "TÀI KHOẢN BỊ KHÓA (TWO-STRIKE BLOCK)"
+                      ? "TÀI KHOẢN BỊ TẠM KHÓA"
                       : user?.isApproved
                       ? "HỒ SƠ SINH VIÊN HỢP LỆ (APPROVED)"
                       : user?.isRejected
@@ -411,15 +417,15 @@ export function UserProfileView() {
                     ? "bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
                     : "bg-[var(--accent-team)]/10 text-[var(--accent-team)] border border-[var(--accent-team)]/30"
                 }`}>
-                  ROLE: {
+                  VAI TRÒ: {
                     roleName === "Coordinator"
-                      ? "EVENT COORDINATOR"
+                      ? "BAN TỔ CHỨC (COORDINATOR)"
                       : roleName === "Judge"
-                      ? "GIÁM KHẢO (JUDGE)"
+                      ? "GIÁM KHẢO"
                       : roleName === "Mentor"
-                      ? "CỐ VẤN (MENTOR)"
+                      ? "CỐ VẤN"
                       : roleName === "Admin"
-                      ? "SYSTEM ADMIN"
+                      ? "QUẢN TRỊ VIÊN HỆ THỐNG"
                       : "THÍ SINH (STUDENT)"
                   }
                 </span>

@@ -43,8 +43,10 @@ export function NavigationBar() {
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
   const userEmail = (user?.email || user?.Email || "").toLowerCase();
   
-  let roleName = "";
-  if (user?.isAdmin || user?.IsAdmin) {
+  let roleName = "Guest";
+  if (!user) {
+    roleName = "Guest";
+  } else if (user?.isAdmin || user?.IsAdmin) {
     roleName = "Admin";
   } else {
     roleName = rawRole || "";
@@ -76,32 +78,29 @@ export function NavigationBar() {
   const isMentorRoute = pathname.includes("/mentor");
   const isJudgeRoute = pathname.includes("/judge");
   const isAdminRoute = pathname.includes("/admin");
-  const isEventDetailRoute = pathname.includes("/events/") && (pathname.split("/events/")[1] || "").length > 0;
-  const isEventInnerRoute =
-    isEventDetailRoute ||
+  const isCandidateRoute =
     pathname.includes("/my-team") ||
     pathname.includes("/my-submissions") ||
-    pathname.includes("/appeals") ||
-    pathname.includes("/leaderboard");
+    pathname.includes("/my-invitations");
 
-  const isCoordinatorRole = roleName === "Coordinator" || roleName === "EventCoordinator" || user?.IsAdmin;
+  const isCoordinatorRole = roleName === "Coordinator" || roleName === "EventCoordinator";
   const isMentorRole = roleName === "Mentor";
   const isJudgeRole = roleName === "Judge";
   const isCandidateRole = roleName === "TeamLeader" || roleName === "TeamMember";
 
-  const showCoordinatorSidebar = isCoordinatorRoute;
+  const showCoordinatorSidebar = (isCoordinatorRoute && roleName !== "Admin") || (isCoordinatorRole && (pathname.includes("/coordinator") || pathname.includes("/appeals")));
   const showMentorSidebar = isMentorRoute;
   const showJudgeSidebar = isJudgeRoute;
-  const showParticipantSidebar = false;
-  const showAdminSidebar = isAdminRoute;
+  const showParticipantSidebar = isCandidateRoute && isCandidateRole;
+  const showAdminSidebar = isAdminRoute || (roleName === "Admin" && isCoordinatorRoute);
 
   // ─────────────────────────────────────────────────────────────
   // CHẾ ĐỘ 10: NAVBAR DỌC DÀNH RIÊNG CHO SYSTEM ADMIN (ADMIN WORKSPACE)
   // ─────────────────────────────────────────────────────────────
   if (showAdminSidebar) {
     return (
-      <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--color-danger)]/40 flex flex-col justify-between p-4 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0 overflow-hidden">
-        <div className="flex flex-col gap-4 overflow-y-auto pr-1 text-xs [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#263339] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+      <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--color-danger)]/40 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
+        <div className="flex flex-col gap-6">
           {/* Brand Logo & Notification Bell */}
           <div className="flex flex-col gap-3 pb-4 border-b border-[var(--border-muted)]">
             <div className="flex items-center justify-between">
@@ -141,8 +140,8 @@ export function NavigationBar() {
             <Link
               href="/admin/dashboard"
               className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname === "/admin/dashboard"
-                  ? "bg-[var(--color-danger)] text-white shadow-sm"
+                pathname.includes("/admin/dashboard") || (pathname.includes("/admin") && !pathname.includes("/admin/users") && !pathname.includes("/admin/schools") && !pathname.includes("/admin/events"))
+                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
                   : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
               }`}
             >
@@ -153,7 +152,7 @@ export function NavigationBar() {
               href="/admin/users"
               className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/admin/users")
-                  ? "bg-[var(--color-danger)] text-white shadow-sm"
+                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
                   : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
               }`}
             >
@@ -164,7 +163,7 @@ export function NavigationBar() {
               href="/admin/schools"
               className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/admin/schools")
-                  ? "bg-[var(--color-danger)] text-white shadow-sm"
+                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
                   : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
               }`}
             >
@@ -172,11 +171,33 @@ export function NavigationBar() {
             </Link>
 
             <Link
+              href="/coordinator/teams"
+              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
+                pathname.includes("/coordinator/teams")
+                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 shrink-0" /> Đội Thi &amp; Thí Sinh
+            </Link>
+
+            <Link
+              href="/coordinator/dashboard"
+              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
+                pathname.includes("/coordinator/dashboard") || pathname.includes("/coordinator/results")
+                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+              }`}
+            >
+              <FileText className="w-4 h-4 shrink-0" /> Điều Hành EC &amp; Bài Thi
+            </Link>
+
+            <Link
               href="/admin/events/new"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold mt-2 border border-[var(--color-danger)]/40 ${
+              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold mt-2 border border-[var(--color-danger)]/50 ${
                 pathname.includes("/admin/events/new")
-                  ? "bg-[var(--color-danger)] text-white"
-                  : "text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
+                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/30"
+                  : "text-[var(--color-danger)] bg-[var(--color-danger)]/5 hover:bg-[var(--color-danger)]/15"
               }`}
             >
               <PlusCircle className="w-4 h-4 shrink-0" /> Tạo Event Mới
@@ -214,17 +235,17 @@ export function NavigationBar() {
           {/* Brand Logo & Notification Bell */}
           <div className="flex flex-col gap-3 pb-4 border-b border-[var(--border-muted)]">
             <div className="flex items-center justify-between">
-              <Link href="/" className="font-display font-bold text-lg text-[#a855f7] tracking-widest uppercase flex items-center gap-2">
+              <Link href="/coordinator/dashboard" className="font-display font-bold text-lg text-[#a855f7] tracking-widest uppercase flex items-center gap-2">
                 <SealShield className="h-6 w-6 text-[#a855f7]" />
                 <span>COORD PANEL</span>
               </Link>
               <NotificationBell align="left" />
             </div>
             <Link
-              href="/"
+              href="/coordinator/dashboard"
               className="font-mono text-[11px] text-[var(--text-muted)] hover:text-[#a855f7] flex items-center gap-1.5 transition-colors"
             >
-              <ArrowLeft className="w-3 h-3" /> Quay lại trang chủ
+              <ArrowLeft className="w-3 h-3" /> Quay lại Control Center
             </Link>
           </div>
 
@@ -366,6 +387,18 @@ export function NavigationBar() {
               }`}
             >
               <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444]" /> Xử Lý Phúc Khảo
+            </Link>
+
+            {/* 11. Khám Phá & Chi Tiết Sự Kiện */}
+            <Link
+              href="/events"
+              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
+                pathname === "/events" || (pathname.includes("/events/") && !pathname.includes("/coordinator/events"))
+                  ? "bg-[#8b5cf6] text-white shadow-sm"
+                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+              }`}
+            >
+              <Compass className="w-4 h-4 shrink-0 text-[#00d9ff]" /> Chi Tiết Sự Kiện &amp; Phase
             </Link>
           </nav>
         </div>
@@ -877,7 +910,7 @@ export function NavigationBar() {
           </Link>
 
           {/* Single Workspace Access Link for Coordinator */}
-          {roleName === "Coordinator" && (
+          {user && roleName === "Coordinator" && (
             <Link
               href="/coordinator/dashboard"
               className="text-[#a855f7] font-bold hover:underline flex items-center gap-1.5 bg-[#a855f7]/10 border border-[#a855f7]/30 px-3 py-1 hud-clipped text-xs"
@@ -886,7 +919,7 @@ export function NavigationBar() {
             </Link>
           )}
 
-          {roleName === "Mentor" && (
+          {user && roleName === "Mentor" && (
             <Link
               href="/mentor/tracks"
               className="text-[#2dd4bf] font-bold hover:underline flex items-center gap-1.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 px-3 py-1 hud-clipped text-xs"
@@ -895,7 +928,7 @@ export function NavigationBar() {
             </Link>
           )}
 
-          {roleName === "Judge" && (
+          {user && roleName === "Judge" && (
             <Link
               href="/judge/scoring"
               className="text-[var(--accent-judge)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--accent-judge)]/10 border border-[var(--accent-judge)]/30 px-3 py-1 hud-clipped text-xs"
@@ -905,7 +938,7 @@ export function NavigationBar() {
           )}
 
           {/* Single Workspace Access Link for System Admin */}
-          {roleName === "Admin" && (
+          {user && roleName === "Admin" && (
             <Link
               href="/admin/dashboard"
               className="text-[var(--color-danger)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 px-3 py-1 hud-clipped text-xs"
@@ -914,7 +947,7 @@ export function NavigationBar() {
             </Link>
           )}
 
-          {(roleName === "TeamLeader" || roleName === "TeamMember") && (
+          {user && (roleName === "TeamLeader" || roleName === "TeamMember") && (
             <Link
               href="/my-team"
               className="text-[var(--accent-team)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--accent-team)]/10 border border-[var(--accent-team)]/30 px-3 py-1 hud-clipped text-xs"

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import { Calendar, Info, FileText, Lock, ArrowRight, Shield } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 
 export const CoordinatorEventDetailView: React.FC = () => {
   const params = useParams();
@@ -23,13 +23,13 @@ export const CoordinatorEventDetailView: React.FC = () => {
   useEffect(() => {
     if (event) {
       const ev = event as any;
-      setEventName(ev.eventName || ev.EventName || ev.name || "Hackathon 2024: Cyber Nexus");
-      setSeason(ev.season || ev.Season || "Spring");
-      setYear(ev.year || ev.Year || 2024);
-      setStartDate(ev.startDate ? ev.startDate.split("T")[0] : "2024-04-15");
-      setEndDate(ev.endDate ? ev.endDate.split("T")[0] : "2024-04-17");
-      setDescription(ev.description || ev.Description || "Sự kiện thi đấu quy mô dành cho sinh viên phát triển sản phẩm công nghệ và thuật toán.");
-      setStatus(ev.status !== undefined ? Boolean(ev.status) : ev.Status !== undefined ? Boolean(ev.Status) : true);
+      setEventName(ev.eventName || ev.EventName || ev.name || "Chưa thiết lập tên sự kiện");
+      setSeason(ev.season || ev.Season || "");
+      setYear(ev.year || ev.Year || new Date().getFullYear());
+      setStartDate(ev.startDate ? ev.startDate.split("T")[0] : "");
+      setEndDate(ev.endDate ? ev.endDate.split("T")[0] : "");
+      setDescription(ev.description || ev.Description || "Chưa có mô tả cho sự kiện này.");
+      setStatus(ev.status !== undefined ? Boolean(ev.status) : ev.Status !== undefined ? Boolean(ev.Status) : false);
     }
   }, [event]);
 

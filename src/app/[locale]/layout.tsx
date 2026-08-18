@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { ToastProvider } from "@/providers/ToastProvider";
 import { AppLayoutWrapper } from "@/components/domain/AppLayoutWrapper";
 import "@/styles/tokens.css";
 import "../globals.css";
@@ -42,7 +43,9 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <QueryProvider>
             <AuthProvider>
-              <AppLayoutWrapper>{children}</AppLayoutWrapper>
+              <ToastProvider>
+                <AppLayoutWrapper>{children}</AppLayoutWrapper>
+              </ToastProvider>
             </AuthProvider>
           </QueryProvider>
         </NextIntlClientProvider>

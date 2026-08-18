@@ -224,11 +224,11 @@ export function useUpdateStudentProfile() {
   });
 }
 
-/** GET /api/fpt-mock/students/{studentCode} */
+/** GET /api/fpt-students/{studentCode} — tra cứu bảng FptStudents thật trong DB, cần đăng nhập. */
 export function useFptStudentVerification() {
   return useMutation({
     mutationFn: async (studentCode: string) => {
-      const res = await apiClient.get<any>(`/fpt-mock/students/${studentCode}`);
+      const res = await apiClient.get<any>(`/fpt-students/${studentCode}`);
       return res.data;
     },
   });

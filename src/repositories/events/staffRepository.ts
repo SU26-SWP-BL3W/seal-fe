@@ -7,6 +7,8 @@ export interface InviteStaffPayload {
   eventId: string;
   trackId?: string;
   email: string;
+  fullName?: string;
+  notes?: string;
 }
 
 export interface AssignRolePayload {
@@ -24,7 +26,7 @@ export function useGetEventRoles(eventId?: string) {
       if (!eventId) return [];
       try {
         const res = await apiClient.get<BaseResponse<EventRole[]>>("/EventRoles/event", {
-          params: { EventId: eventId },
+          params: { EventId: eventId, PageSize: 500 },
         });
         return res.data?.data ?? [];
       } catch (err: any) {
@@ -33,6 +35,53 @@ export function useGetEventRoles(eventId?: string) {
       }
     },
     enabled: !!eventId,
+  });
+}
+
+export function useGetAllEventsCoordinators(events: any[]) {
+  const eventIds = events.map((e: any) => e.id || e.Id || e.eventId || e.EventId).filter(Boolean);
+  const cacheKey = eventIds.join(",");
+
+  return useQuery({
+    queryKey: ["all-events-coordinators", cacheKey],
+    queryFn: async () => {
+      if (eventIds.length === 0) return {};
+
+      const map: Record<string, { email: string; name: string }[]> = {};
+
+      await Promise.allSettled(
+        eventIds.map(async (evId) => {
+          try {
+            const res = await apiClient.get<BaseResponse<EventRole[]>>("/EventRoles/event", {
+              params: { EventId: evId, PageSize: 500 },
+            });
+            const roles = res.data?.data ?? [];
+            const ecs = roles
+              .filter((r: any) => {
+                const roleName = r.roleName || r.RoleName;
+                return (
+                  roleName === "EventCoordinator" ||
+                  roleName === 0 ||
+                  (typeof roleName === "string" && roleName.toLowerCase().includes("coordinator"))
+                );
+              })
+              .map((r: any) => ({
+                email: r.user?.email || r.User?.Email || r.email || r.Email || "",
+                name: r.user?.fullName || r.User?.FullName || r.fullName || "",
+              }))
+              .filter((x: any) => Boolean(x.email || x.name));
+
+            map[evId] = ecs;
+          } catch (e) {
+            map[evId] = [];
+          }
+        })
+      );
+
+      return map;
+    },
+    enabled: eventIds.length > 0,
+    staleTime: 15000,
   });
 }
 
@@ -48,28 +97,45 @@ export const staffRepository = {
    * Mời Điều phối viên (Event Coordinator) qua Email (POST /api/EventCoordinators/invite)
    */
   async inviteCoordinator(payload: InviteCoordinatorDirectPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
+    // 3 endpoint mời (EC/Judge/Mentor) gửi email SMTP đồng bộ trong request ở BE —
+    // timeout mặc định 6s (thiết kế fail-fast chung cho app) là quá ngắn cho thao tác
+    // này, gây báo lỗi "timeout" giả dù lời mời đã tạo thành công ở BE.
     const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/EventCoordinators/invite", {
       eventId: payload.eventId,
       coordinatorEmail: payload.email,
       coordinatorFullName: payload.fullName || payload.email.split("@")[0],
       notes: payload.notes,
-    });
+    }, { timeout: 30_000 });
     return res.data;
   },
 
   /**
    * Mời Giám khảo (Judge) tham gia Track/Event qua Email (POST /api/Judges/invite)
    */
-  async inviteJudge(payload: InviteStaffPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Judges/invite", payload);
+  async inviteJudge(payload: InviteStaffPayload): Promise<any> {
+    const emailStr = payload.email.trim();
+    const res = await apiClient.post("/Judges/invite", {
+      eventId: payload.eventId,
+      trackId: payload.trackId || undefined,
+      judgeEmail: emailStr,
+      judgeFullName: payload.fullName || emailStr.split("@")[0],
+      notes: payload.notes,
+    }, { timeout: 30_000 });
     return res.data;
   },
 
   /**
    * Mời Cố vấn (Mentor) tham gia Track/Event qua Email (POST /api/Mentors/invite)
    */
-  async inviteMentor(payload: InviteStaffPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Mentors/invite", payload);
+  async inviteMentor(payload: InviteStaffPayload): Promise<any> {
+    const emailStr = payload.email.trim();
+    const res = await apiClient.post("/Mentors/invite", {
+      eventId: payload.eventId,
+      trackId: payload.trackId || undefined,
+      mentorEmail: emailStr,
+      mentorFullName: payload.fullName || emailStr.split("@")[0],
+      notes: payload.notes,
+    }, { timeout: 30_000 });
     return res.data;
   },
 

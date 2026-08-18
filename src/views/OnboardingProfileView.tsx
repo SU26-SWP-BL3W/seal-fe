@@ -12,6 +12,7 @@ import { useGetUserRejections } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
 import { uploadRepository } from "@/repositories/uploadRepository";
 import { Button, Input, Card, Badge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 import {
   Shield,
   GraduationCap,
@@ -30,6 +31,7 @@ import type { FptStudentResponse } from "@/models/entities";
 type Step = "choose" | "fpt" | "nonFpt" | "pending";
 
 export function OnboardingProfileView() {
+  const toast = useToast();
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -64,11 +66,16 @@ export function OnboardingProfileView() {
       const result = await verifyFpt(fptCode);
       if (result?.isValid) {
         setFptResult(result);
+        toast.success("Xác thực thông tin sinh viên FPT thành công!");
       } else {
-        setFptError("Mã sinh viên không tồn tại trong hệ thống FPT.");
+        const msg = "Mã sinh viên không tồn tại trong hệ thống FPT.";
+        setFptError(msg);
+        toast.error(msg);
       }
     } catch {
-      setFptError("Không thể kết nối hệ thống. Vui lòng thử lại sau.");
+      const msg = "Không thể kết nối hệ thống FPT. Vui lòng thử lại sau.";
+      setFptError(msg);
+      toast.error(msg);
     }
   };
 
@@ -333,9 +340,12 @@ export function OnboardingProfileView() {
                       studentCode: fptResult.studentCode ?? fptCode,
                       fullName: fptResult.fullName ?? undefined,
                     } as any);
+                    toast.success("Đã gửi hồ sơ sinh viên FPT thành công!");
                     setStep("pending");
                   } catch (err: any) {
-                    setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
+                    const msg = err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.";
+                    setSubmitError(msg);
+                    toast.error(msg);
                   }
                 }}
                 className="w-full justify-center flex items-center gap-2"
@@ -468,9 +478,12 @@ export function OnboardingProfileView() {
                     photoCardUrl = uploaded.fileUrl;
                   }
                   await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl });
+                  toast.success("Đã nộp hồ sơ sinh viên thành công! Vui lòng chờ xét duyệt.");
                   setStep("pending");
                 } catch (err: any) {
-                  setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
+                  const msg = err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.";
+                  setSubmitError(msg);
+                  toast.error(msg);
                 } finally {
                   setIsUploadingPhoto(false);
                 }
