@@ -209,8 +209,10 @@ export function useEventDetail(eventId: string) {
       try {
         const res = await apiClient.get<any>(`/Events/${eventId}`);
         return (res.data?.data ?? res.data ?? null) as EntityEvent | null;
-      } catch (err) {
-        console.error("Error fetching event detail for ID:", eventId, err);
+      } catch (err: any) {
+        if (err?.name !== "CanceledError" && !err?.message?.includes("canceled")) {
+          console.warn("Could not fetch event detail for ID:", eventId, err?.message || err);
+        }
         return null;
       }
     },
