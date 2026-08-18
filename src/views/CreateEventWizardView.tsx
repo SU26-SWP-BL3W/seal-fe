@@ -10,9 +10,12 @@ import { Step6EventConfirmation } from "@/components/domain/event-wizard/Step6Ev
 import { Shield, Layers, Target, Sliders, AlertCircle, ArrowLeft, CheckCircle2, Rocket } from "lucide-react";
 import Link from "next/link";
 
+import { useRouter } from "next/navigation";
+
 import { useGetTemplates } from "@/repositories/templatesRepository";
 
 export const CreateEventWizardView: React.FC = () => {
+  const router = useRouter();
   const wizard = useCreateEventWizardViewModel();
   const { data: templates = [] } = useGetTemplates();
 
@@ -51,6 +54,41 @@ export const CreateEventWizardView: React.FC = () => {
           <div className="px-4 py-2 bg-[#13191c] border border-[#263339] font-mono text-xs">
             <span className="text-[#8a9ba8] block uppercase text-[10px]">Quyền Hạn Nghiệp Vụ:</span>
             <span className="text-[#8b5cf6] font-bold">CẤU HÌNH BAN TỔ CHỨC (COORDINATOR)</span>
+          </div>
+        </div>
+
+        {/* Prominent Event Selection Bar (Identical to CoordinatorStaffView logic) */}
+        <div className="bg-[#13191c] p-4 border border-[#263339] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs text-[#8a9ba8] font-bold uppercase tracking-wider">
+              SỰ KIỆN ĐANG CẤU HÌNH:
+            </span>
+            {Array.isArray(wizard.myEvents) && wizard.myEvents.length > 0 ? (
+              <select
+                value={wizard.targetEventId || (wizard.createdEvent as any)?.id || (wizard.createdEvent as any)?.eventId || ""}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  router.push(`/coordinator/events/new?eventId=${newId}`);
+                }}
+                className="bg-[#0a0e10] border border-[#263339] px-4 py-2 font-mono text-xs text-[#8b5cf6] font-bold focus:outline-none focus:border-[#8b5cf6] cursor-pointer"
+              >
+                {wizard.myEvents.map((ev: any, idx: number) => {
+                  const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
+                  const name = ev.eventName || ev.EventName || "Sự kiện";
+                  return (
+                    <option key={id} value={id}>
+                      {idx + 1}. {name}
+                    </option>
+                  );
+                })}
+              </select>
+            ) : (
+              <span className="font-mono text-xs text-[#f59e0b]">Đang tải danh sách sự kiện...</span>
+            )}
+          </div>
+
+          <div className="font-mono text-xs text-[#8a9ba8]">
+            Tên sự kiện: <span className="text-[#e1e7ec] font-bold">{wizard.eventData.eventName || "Chưa chọn"}</span>
           </div>
         </div>
 

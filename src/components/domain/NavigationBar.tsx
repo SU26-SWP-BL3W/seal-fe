@@ -1,5 +1,4 @@
-"use client";
-
+import React, { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { Link } from "@/i18n/routing";
@@ -35,6 +34,8 @@ import {
   AlertTriangle,
   Activity,
   LayoutDashboard,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 export function NavigationBar() {
@@ -42,6 +43,16 @@ export function NavigationBar() {
   const { user, activeRole, logout } = useAuth();
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
   const userEmail = (user?.email || user?.Email || "").toLowerCase();
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    procedures: false,
+    scoring: false,
+    results: false,
+  });
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   
   let roleName = "Guest";
   if (!user) {
@@ -267,8 +278,8 @@ export function NavigationBar() {
           </div>
 
           {/* Vertical Coordinator Menu Section */}
-          <nav className="flex flex-col gap-1.5 font-mono text-xs">
-            <span className="font-mono text-[10px] font-bold text-[#8b5cf6] tracking-wider px-3 py-1 uppercase border-b border-[#263339] mb-1">
+          <nav className="flex flex-col gap-1 font-mono text-xs">
+            <span className="font-mono text-[10px] font-bold text-[#8b5cf6] tracking-wider px-2 py-0.5 uppercase border-b border-[#263339] mb-1">
               MENU BẢNG ĐIỀU KHIỂN
             </span>
 
@@ -284,126 +295,153 @@ export function NavigationBar() {
               <LayoutDashboard className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Control Center BTC
             </Link>
 
+            {/* Accordion Group 1: THỦ TỤC & ĐỘI THI */}
+            <div className="mt-1.5 border-t border-[#263339]/60 pt-1">
+              <button
+                type="button"
+                onClick={() => toggleGroup("procedures")}
+                className="w-full flex items-center justify-between font-mono text-[10px] font-bold text-[#8a9ba8] hover:text-[#8b5cf6] tracking-wider px-2 py-1 uppercase cursor-pointer transition-colors"
+              >
+                <span>THỦ TỤC &amp; ĐỘI THI</span>
+                {openGroups.procedures ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                )}
+              </button>
 
-            <span className="font-mono text-[10px] font-bold text-[#8a9ba8] tracking-wider px-3 py-1 uppercase mt-3 border-b border-[#263339] mb-1">
-              THỦ TỤC & ĐỘI THI
-            </span>
+              {openGroups.procedures && (
+                <div className="flex flex-col gap-1 pl-1 pt-0.5">
+                  <Link
+                    href="/coordinator/events/new"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/events/new")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <Sliders className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Cấu Hình Vòng &amp; Tiêu Chí
+                  </Link>
 
-            {/* 3. Duyệt Tài Khoản Thí Sinh */}
-            <Link
-              href="/coordinator/profiles"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname.includes("/coordinator/profiles")
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <IdCard className="w-4 h-4 shrink-0 text-[#00d9ff]" /> Duyệt Tài Khoản Thí Sinh
-            </Link>
+                  <Link
+                    href="/coordinator/profiles"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/profiles")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <IdCard className="w-4 h-4 shrink-0 text-[#00d9ff]" /> Duyệt Tài Khoản Thí Sinh
+                  </Link>
 
-            {/* 4. Duyệt Đội Thi */}
-            <Link
-              href="/coordinator/teams"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname.includes("/coordinator/teams")
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <Users className="w-4 h-4 shrink-0 text-[#10b981]" /> Duyệt Đăng Ký Đội Thi
-            </Link>
+                  <Link
+                    href="/coordinator/teams"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/teams")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <Users className="w-4 h-4 shrink-0 text-[#10b981]" /> Duyệt Đăng Ký Đội Thi
+                  </Link>
+                </div>
+              )}
+            </div>
 
-            <span className="font-mono text-[10px] font-bold text-[#8a9ba8] tracking-wider px-3 py-1 uppercase mt-3 border-b border-[#263339] mb-1">
-              CHẤM ĐIỂM & NHÂN SỰ
-            </span>
+            {/* Accordion Group 2: CHẤM ĐIỂM & NHÂN SỰ */}
+            <div className="mt-1.5 border-t border-[#263339]/60 pt-1">
+              <button
+                type="button"
+                onClick={() => toggleGroup("scoring")}
+                className="w-full flex items-center justify-between font-mono text-[10px] font-bold text-[#8a9ba8] hover:text-[#8b5cf6] tracking-wider px-2 py-1 uppercase cursor-pointer transition-colors"
+              >
+                <span>CHẤM ĐIỂM &amp; NHÂN SỰ</span>
+                {openGroups.scoring ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                )}
+              </button>
 
-            {/* 5. Kho Tiêu Chí */}
-            <Link
-              href="/coordinator/templates"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname.includes("/coordinator/templates")
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <Sliders className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Kho Tiêu Chí (Templates)
-            </Link>
+              {openGroups.scoring && (
+                <div className="flex flex-col gap-1 pl-1 pt-0.5">
+                  <Link
+                    href="/coordinator/templates"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/templates")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <Sliders className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Kho Tiêu Chí (Templates)
+                  </Link>
 
-            {/* 6. Phân Công Nhân Sự */}
-            <Link
-              href="/coordinator/staff"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname.includes("/coordinator/staff")
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Mời Giám Khảo & Cố Vấn
-            </Link>
+                  <Link
+                    href="/coordinator/staff"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/staff")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <ShieldCheck className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Mời Giám Khảo &amp; Cố Vấn
+                  </Link>
+                </div>
+              )}
+            </div>
 
-            {/* 7. Phòng Phân Tích RBL */}
-            <Link
-              href="/coordinator/calibration"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname.includes("/coordinator/calibration")
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <Activity className="w-4 h-4 shrink-0 text-[#10b981]" /> Phòng Phân Tích RBL
-            </Link>
+            {/* Accordion Group 3: KẾT QUẢ & PHÚC KHẢO */}
+            <div className="mt-1.5 border-t border-[#263339]/60 pt-1">
+              <button
+                type="button"
+                onClick={() => toggleGroup("results")}
+                className="w-full flex items-center justify-between font-mono text-[10px] font-bold text-[#8a9ba8] hover:text-[#8b5cf6] tracking-wider px-2 py-1 uppercase cursor-pointer transition-colors"
+              >
+                <span>KẾT QUẢ &amp; PHÚC KHẢO</span>
+                {openGroups.results ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                )}
+              </button>
 
-            <span className="font-mono text-[10px] font-bold text-[#8a9ba8] tracking-wider px-3 py-1 uppercase mt-3 border-b border-[#263339] mb-1">
-              KẾT QUẢ & PHÚC KHẢO
-            </span>
+              {openGroups.results && (
+                <div className="flex flex-col gap-1 pl-1 pt-0.5">
+                  <Link
+                    href="/coordinator/publish-results"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/publish-results")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <FileCheck className="w-4 h-4 shrink-0 text-[#f59e0b]" /> Công Bố Kết Quả
+                  </Link>
 
-            {/* 8. Công Bố Kết Quả */}
-            <Link
-              href="/coordinator/publish-results"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname.includes("/coordinator/publish-results")
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <FileCheck className="w-4 h-4 shrink-0 text-[#f59e0b]" /> Công Bố Kết Quả
-            </Link>
+                  <Link
+                    href="/coordinator/prizes"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/prizes")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <Award className="w-4 h-4 shrink-0 text-[#f59e0b]" /> Cơ Cấu Giải Thưởng
+                  </Link>
 
-            {/* 9. Cơ Cấu Giải Thưởng */}
-            <Link
-              href="/coordinator/prizes"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname.includes("/coordinator/prizes")
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <Award className="w-4 h-4 shrink-0 text-[#f59e0b]" /> Cơ Cấu Giải Thưởng
-            </Link>
-
-            {/* 10. Xử Lý Phúc Khảo */}
-            <Link
-              href="/coordinator/appeals"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname.includes("/coordinator/appeals")
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444]" /> Xử Lý Phúc Khảo
-            </Link>
-
-            {/* 11. Khám Phá & Chi Tiết Sự Kiện */}
-            <Link
-              href="/events"
-              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
-                pathname === "/events" || (pathname.includes("/events/") && !pathname.includes("/coordinator/events"))
-                  ? "bg-[#8b5cf6] text-white shadow-sm"
-                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
-              }`}
-            >
-              <Compass className="w-4 h-4 shrink-0 text-[#00d9ff]" /> Chi Tiết Sự Kiện &amp; Phase
-            </Link>
+                  <Link
+                    href="/coordinator/appeals"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/appeals")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444]" /> Xử Lý Phúc Khảo
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
         </div>
 

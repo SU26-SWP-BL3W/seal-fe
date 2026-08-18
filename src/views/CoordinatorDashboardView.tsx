@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import apiClient from "@/models/apiClient";
 import { useMyEvents, eventsRepository, type MyEventModel } from "@/repositories/eventsRepository";
+import { useGetRoundsByEvent } from "@/repositories/events/roundsRepository";
 import { useGetPendingTeams } from "@/repositories/teamsRepository";
 import { useGetUsers } from "@/repositories/usersRepository";
 import {
@@ -23,8 +25,36 @@ import {
   Eye,
   EyeOff,
   Rocket,
+  Calendar,
+  ArrowDown,
+  CornerDownLeft,
 } from "lucide-react";
 import Link from "next/link";
+
+function formatDateStr(dateStr?: string) {
+  if (!dateStr) return "N/A";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+function getRoundStatus(r: any) {
+  const now = new Date();
+  const start = r.startDate || r.StartDate ? new Date(r.startDate || r.StartDate) : null;
+  const end = r.endDate || r.EndDate ? new Date(r.endDate || r.EndDate) : null;
+
+  if (start && now < start) {
+    return { label: "SẮP TỚI", badgeBg: "bg-[#263339] text-[#8a9ba8]" };
+  }
+  if (end && now > end) {
+    return { label: "ĐÃ HOÀN THÀNH", badgeBg: "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40" };
+  }
+  return { label: "ĐANG DIỄN RA", badgeBg: "bg-[#8b5cf6]/20 text-[#c084fc] border border-[#8b5cf6]/40" };
+}
 
 export const CoordinatorDashboardView: React.FC = () => {
   const { data: eventsList = [], isLoading, refetch } = useMyEvents();
@@ -57,6 +87,34 @@ export const CoordinatorDashboardView: React.FC = () => {
     (ev) => (ev.id || ev.Id || ev.eventId || ev.EventId) === selectedEventId
   ) || assignedEvents[0];
 
+  const activeEventId = selectedEventId || (selectedEvent?.id || selectedEvent?.Id || selectedEvent?.eventId || selectedEvent?.EventId || "");
+  const { data: roundsPagedData, isLoading: isLoadingRounds } = useGetRoundsByEvent(activeEventId || undefined);
+
+  const [localDraftRounds, setLocalDraftRounds] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && activeEventId) {
+      try {
+        const rawDraft = localStorage.getItem(`seal_wizard_draft_${activeEventId}`);
+        if (rawDraft) {
+          const parsed = JSON.parse(rawDraft);
+          if (Array.isArray(parsed.rounds) && parsed.rounds.length > 0) {
+            setLocalDraftRounds(parsed.rounds);
+            return;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      setLocalDraftRounds([]);
+    }
+  }, [activeEventId]);
+
+  const realRoundsRaw = localDraftRounds.length > 0
+    ? localDraftRounds
+    : ((roundsPagedData as any)?.data || (roundsPagedData as any)?.items || (Array.isArray(roundsPagedData) ? roundsPagedData : (selectedEvent?.rounds || [])));
+  const realRounds = Array.isArray(realRoundsRaw) ? realRoundsRaw : [];
+
   const selectedEventName = selectedEvent
     ? selectedEvent.eventName || selectedEvent.EventName || "Sự kiện được chọn"
     : "Chưa chọn sự kiện";
@@ -72,6 +130,112 @@ export const CoordinatorDashboardView: React.FC = () => {
   const eventTeamsCount = selectedEvent ? ((selectedEvent as any).teamsCount ?? (selectedEvent as any).teamCount ?? 0) : 0;
   const eventPendingSubmissions = 0;
   const eventPendingAppeals = appealsList.length;
+
+  // High-level Event Milestones (Clean, non-cluttered timeline cards)
+  const now = new Date();
+  const regStart = selectedEvent?.registrationStartDate || (selectedEvent as any)?.RegistrationStartDate;
+  const regEnd = selectedEvent?.registrationEndDate || (selectedEvent as any)?.RegistrationEndDate;
+
+  interface EventMilestone {
+    id: string;
+    stepNumber: number;
+    title: string;
+    categoryTag: string;
+    submissionStart?: string;
+    submissionEnd?: string;
+    scoringStart?: string;
+    scoringEnd?: string;
+    status: "completed" | "active" | "upcoming";
+    badgeText: string;
+    badgeBg: string;
+  }
+
+  const eventMilestones: EventMilestone[] = [];
+
+  // Milestone 1: Mở đăng ký đội thi
+  let regStatus: "completed" | "active" | "upcoming" = "upcoming";
+  let regBadgeBg = "bg-[#263339] text-[#8a9ba8]";
+  let regBadgeText = "SẮP TỚI";
+  if (regStart && regEnd) {
+    const sDate = new Date(regStart);
+    const eDate = new Date(regEnd);
+    if (now > eDate) {
+      regStatus = "completed";
+      regBadgeText = "ĐÃ HOÀN THÀNH";
+      regBadgeBg = "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40";
+    } else if (now >= sDate && now <= eDate) {
+      regStatus = "active";
+      regBadgeText = "ĐANG MỞ ĐĂNG KÝ";
+      regBadgeBg = "bg-[#00d9ff]/20 text-[#00d9ff] border border-[#00d9ff]/40";
+    }
+  }
+
+  eventMilestones.push({
+    id: "ms-reg",
+    stepNumber: 1,
+    title: "Mở Đăng Ký Đội Thi",
+    categoryTag: "THỦ TỤC BAN ĐẦU",
+    submissionStart: regStart || "",
+    submissionEnd: regEnd || "",
+    status: regStatus,
+    badgeText: regBadgeText,
+    badgeBg: regBadgeBg,
+  });
+
+  // Milestone for each Round
+  if (realRounds.length > 0) {
+    realRounds.forEach((r: any, idx: number) => {
+      const roundNum = r.roundNumber || r.RoundNumber || idx + 1;
+      const roundName = r.roundName || r.RoundName || `Vòng ${roundNum}`;
+      const rStart = r.startDate || r.StartDate;
+      const rEnd = r.endDate || r.EndDate;
+      const scStart = r.scoringStartDate || r.ScoringStartDate;
+      const scEnd = r.scoringEndDate || r.ScoringEndDate;
+
+      let roundStatus: "completed" | "active" | "upcoming" = "upcoming";
+      let roundBadgeBg = "bg-[#263339] text-[#8a9ba8]";
+      let roundBadgeText = "SẮP TỚI";
+
+      const checkEnd = scEnd ? new Date(scEnd) : (rEnd ? new Date(rEnd) : null);
+      const checkStart = rStart ? new Date(rStart) : null;
+
+      if (checkEnd && now > checkEnd) {
+        roundStatus = "completed";
+        roundBadgeText = "ĐÃ HOÀN THÀNH";
+        roundBadgeBg = "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40";
+      } else if (checkStart && now >= checkStart && checkEnd && now <= checkEnd) {
+        roundStatus = "active";
+        roundBadgeText = "ĐANG DIỄN RA";
+        roundBadgeBg = "bg-[#8b5cf6]/20 text-[#c084fc] border border-[#8b5cf6]/40";
+      }
+
+      eventMilestones.push({
+        id: `ms-round-${idx}`,
+        stepNumber: eventMilestones.length + 1,
+        title: roundName,
+        categoryTag: `VÒNG THI CHÍNH THỨC ${roundNum}`,
+        submissionStart: rStart || "",
+        submissionEnd: rEnd || "",
+        scoringStart: scStart || "",
+        scoringEnd: scEnd || "",
+        status: roundStatus,
+        badgeText: roundBadgeText,
+        badgeBg: roundBadgeBg,
+      });
+    });
+  }
+
+  // Final Milestone: Phúc khảo & Trao giải Gala
+  eventMilestones.push({
+    id: "ms-final",
+    stepNumber: eventMilestones.length + 1,
+    title: "Phúc Khảo & Trao Giải Gala",
+    categoryTag: "TỔNG KẾT SỰ KIỆN",
+    submissionStart: selectedEvent?.endDate || (selectedEvent as any)?.EndDate || "",
+    status: isSelectedEventPublished ? "completed" : "upcoming",
+    badgeText: isSelectedEventPublished ? "ĐÃ CÔNG BỐ" : "CHỜ CÔNG BỐ",
+    badgeBg: isSelectedEventPublished ? "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40" : "bg-[#263339] text-[#8a9ba8]",
+  });
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
@@ -208,104 +372,104 @@ export const CoordinatorDashboardView: React.FC = () => {
           </div>
         </div>
 
-        {/* Event Quick Action Hub Cards */}
-        <div className="space-y-4 pt-2">
-          <div className="flex items-center gap-2 font-mono text-xs font-bold text-[#8b5cf6] uppercase tracking-wider">
-            <Layers className="w-4 h-4" />
-            <span>QUẢN LÝ SỰ KIỆN: <span className="text-[#e1e7ec]">{selectedEventName}</span></span>
+        {/* Clean Modern Event Roadmap / Milestones Stepper */}
+        <div className="bg-[#13191c] border border-[#263339] p-6 space-y-5">
+          <div className="flex items-center justify-between border-b border-[#263339] pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
+                <Layers className="w-4 h-4 text-[#8b5cf6]" />
+              </div>
+              <div>
+                <h3 className="font-mono font-bold text-sm text-[#e1e7ec] uppercase tracking-wider m-0">
+                  TIẾN ĐỘ &amp; MỐC SỰ KIỆN CHÍNH
+                </h3>
+                <p className="font-mono text-xs text-[#8a9ba8] m-0">
+                  {selectedEventName} — Tổng hợp {eventMilestones.length} mốc tiến độ quan trọng
+                </p>
+              </div>
+            </div>
+            <Link
+              href={activeEventId ? `/coordinator/events/new?eventId=${activeEventId}` : "/coordinator/events/new"}
+              className="font-mono text-xs text-[#8b5cf6] hover:underline flex items-center gap-1.5 font-bold bg-[#8b5cf6]/10 px-3 py-1.5 border border-[#8b5cf6]/30 transition-all hover:bg-[#8b5cf6]/20"
+            >
+              <span>CHỈNH SỬA VÒNG (WIZARD)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            {/* Shortcut 1: Event Config (Trỏ về Event Wizard Cấu Hình Vòng & Hạng Mục) */}
-            <Link
-              href={selectedEventId ? `/coordinator/events/new?eventId=${selectedEventId}` : "/coordinator/events/new"}
-              className="bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] p-5 space-y-3 transition-all group cursor-pointer"
-            >
-              <div className="w-9 h-9 bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
-                <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform" />
-              </div>
-              <div>
-                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#8b5cf6] transition-colors uppercase">
-                  Cấu Hình Vòng &amp; Hạng Mục
-                </h4>
-                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
-                  Cấu hình Vòng thi, Hạng mục, Tiêu chí chấm điểm RBL và Phân công nhân sự.
-                </p>
-              </div>
-              <div className="font-mono text-xs text-[#8b5cf6] font-semibold flex items-center gap-1 pt-1">
-                <span>MỞ CẤU HÌNH (WIZARD)</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+          {/* Grid Layout of Milestone Cards */}
+          {isLoadingRounds ? (
+            <div className="font-mono text-xs text-[#8a9ba8] p-4">Đang tải tiến độ sự kiện...</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {eventMilestones.map((ms) => {
+                const isActive = ms.status === "active";
+                const isDone = ms.status === "completed";
 
-            {/* Shortcut 2: Staff Management */}
-            <Link
-              href={selectedEventId ? `/coordinator/staff?eventId=${selectedEventId}` : "#"}
-              className="bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] p-5 space-y-3 transition-all group cursor-pointer"
-            >
-              <div className="w-9 h-9 bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#8b5cf6] transition-colors uppercase">
-                  Phân Công Giám Khảo &amp; Cố Vấn
-                </h4>
-                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
-                  Mời và gán nhân sự Giám khảo / Cố vấn vào các Hạng mục.
-                </p>
-              </div>
-              <div className="font-mono text-xs text-[#8b5cf6] font-semibold flex items-center gap-1 pt-1">
-                <span>MỜI NHÂN SỰ</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+                return (
+                  <div
+                    key={ms.id}
+                    className={`bg-[#0a0e10] p-4 border transition-all flex flex-col justify-between space-y-3 relative overflow-hidden group ${
+                      isActive
+                        ? "border-[#00d9ff] shadow-[0_0_15px_rgba(0,217,255,0.15)]"
+                        : isDone
+                        ? "border-[#10b981]/40"
+                        : "border-[#263339]"
+                    }`}
+                  >
+                    {/* Top Accent Line */}
+                    <div
+                      className={`absolute top-0 left-0 w-full h-[2px] ${
+                        isActive ? "bg-[#00d9ff]" : isDone ? "bg-[#10b981]" : "bg-[#263339]"
+                      }`}
+                    ></div>
 
-            {/* Shortcut 3: Prize Setup */}
-            <Link
-              href={selectedEventId ? `/coordinator/prizes?eventId=${selectedEventId}` : "#"}
-              className="bg-[#13191c] border border-[#263339] hover:border-[#f59e0b] p-5 space-y-3 transition-all group cursor-pointer"
-            >
-              <div className="w-9 h-9 bg-[#f59e0b]/10 border border-[#f59e0b]/30 flex items-center justify-center text-[#f59e0b]">
-                <Award className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#f59e0b] transition-colors uppercase">
-                  Cơ Cấu Giải Thưởng
-                </h4>
-                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
-                  Tạo cơ cấu giải thưởng và ánh xạ trao giải cho từng Hạng mục.
-                </p>
-              </div>
-              <div className="font-mono text-xs text-[#f59e0b] font-semibold flex items-center gap-1 pt-1">
-                <span>CẤU HÌNH GIẢI</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+                    {/* Milestone Card Header */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] font-bold text-[#8b5cf6] tracking-wider uppercase flex items-center gap-1.5">
+                          <span className="w-4 h-4 rounded bg-[#8b5cf6]/20 text-[#c084fc] flex items-center justify-center text-[9px]">
+                            {ms.stepNumber}
+                          </span>
+                          <span>{ms.categoryTag}</span>
+                        </span>
+                        <span className={`text-[9px] font-mono px-2 py-0.5 font-bold ${ms.badgeBg}`}>
+                          {ms.badgeText}
+                        </span>
+                      </div>
 
-            {/* Shortcut 4: Calibration RBL */}
-            <Link
-              href="/coordinator/calibration"
-              className="bg-[#13191c] border border-[#263339] hover:border-[#10b981] p-5 space-y-3 transition-all group cursor-pointer"
-            >
-              <div className="w-9 h-9 bg-[#10b981]/10 border border-[#10b981]/30 flex items-center justify-center text-[#10b981]">
-                <Activity className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="font-mono font-bold text-sm text-[#e1e7ec] group-hover:text-[#10b981] transition-colors uppercase">
-                  Phòng Phân Tích RBL
-                </h4>
-                <p className="font-sans text-xs text-[#8a9ba8] mt-1 leading-relaxed">
-                  Phân tích độ lệch chuẩn điểm số giữa các giám khảo và chẩn đoán.
-                </p>
-              </div>
-              <div className="font-mono text-xs text-[#10b981] font-semibold flex items-center gap-1 pt-1">
-                <span>PHÂN TÍCH RBL</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
+                      <h4 className="font-mono font-bold text-sm text-[#e1e7ec] pt-1">{ms.title}</h4>
+                    </div>
 
-          </div>
+                    {/* Sub-dates Box inside the Card */}
+                    <div className="bg-[#13191c] p-2.5 border border-[#263339] space-y-1.5 font-mono text-xs">
+                      {ms.submissionStart && (
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-[#8a9ba8] flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-[#00d9ff]" /> Nộp bài:
+                          </span>
+                          <span className="text-[#e1e7ec] font-bold">
+                            {formatDateStr(ms.submissionStart)} — {formatDateStr(ms.submissionEnd)}
+                          </span>
+                        </div>
+                      )}
+
+                      {ms.scoringStart && (
+                        <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#263339]/60">
+                          <span className="text-[#8a9ba8] flex items-center gap-1">
+                            <Activity className="w-3 h-3 text-[#10b981]" /> Chấm RBL:
+                          </span>
+                          <span className="text-[#10b981] font-bold">
+                            {formatDateStr(ms.scoringStart)} — {formatDateStr(ms.scoringEnd)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
       </div>

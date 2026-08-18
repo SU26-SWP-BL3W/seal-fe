@@ -100,16 +100,25 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         }
       }
 
-      // 3. Persist tracks to backend API
+      // 3. Persist tracks to backend API (update if id exists to prevent duplicate track records in DB)
       if (Array.isArray(tracks) && tracks.length > 0) {
         for (const trk of tracks) {
           try {
-            await tracksRepository.createTrack({
-              eventId: targetId,
-              trackName: trk.trackName,
-              templateId: trk.templateId,
-              description: trk.description,
-            });
+            if (trk.id && typeof trk.id === "string" && !trk.id.startsWith("trk-")) {
+              await tracksRepository.updateTrack(trk.id, {
+                eventId: targetId,
+                trackName: trk.trackName,
+                templateId: trk.templateId,
+                description: trk.description,
+              });
+            } else {
+              await tracksRepository.createTrack({
+                eventId: targetId,
+                trackName: trk.trackName,
+                templateId: trk.templateId,
+                description: trk.description,
+              });
+            }
           } catch (e) {
             // Ignore API network error
           }

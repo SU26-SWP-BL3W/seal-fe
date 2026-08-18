@@ -10,6 +10,7 @@ import {
   useGetTeamById,
 } from "@/repositories/teamsRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Button, Card, Badge } from "@/components/ui";
 import {
   Users,
@@ -23,6 +24,7 @@ import {
   Building2,
   FileText,
   Ban,
+  Filter,
 } from "lucide-react";
 import type { TeamEntity } from "@/models/entities";
 
@@ -37,18 +39,34 @@ export function CoordinatorTeamsView() {
   const [disqualifyReason, setDisqualifyReason] = useState("");
   const [detailModal, setDetailModal] = useState<TeamEntity | null>(null);
   const [eventId, setEventId] = useState("");
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("ALL");
 
   const { data: myEvents = [] } = useMyEvents();
   useEffect(() => {
     if (!eventId && myEvents.length) setEventId(pickId(myEvents[0]));
   }, [myEvents, eventId]);
 
+  const { data: tracks = [] } = useGetTracksByEvent(eventId);
+
   const { data: rawPendingTeams, isLoading, refetch } = useGetPendingTeams();
-  const pendingTeams: TeamEntity[] = Array.isArray(rawPendingTeams)
+  const pendingTeamsRaw: TeamEntity[] = Array.isArray(rawPendingTeams)
     ? rawPendingTeams
     : (rawPendingTeams as any)?.data ?? [];
 
-  const { data: registeredTeams = [], refetch: refetchRegistered } = useGetTeamsByEvent(eventId, "Registered");
+  const { data: registeredTeamsRaw = [], refetch: refetchRegistered } = useGetTeamsByEvent(eventId, "Registered");
+
+  // Filter pending and registered teams by selectedTrackId
+  const pendingTeams = pendingTeamsRaw.filter((t: any) => {
+    if (!selectedTrackId || selectedTrackId === "ALL") return true;
+    const tTrackId = t.trackId || t.TrackId || t.trackName || t.TrackName || "";
+    return tTrackId === selectedTrackId;
+  });
+
+  const registeredTeams = (Array.isArray(registeredTeamsRaw) ? registeredTeamsRaw : []).filter((t: any) => {
+    if (!selectedTrackId || selectedTrackId === "ALL") return true;
+    const tTrackId = t.trackId || t.TrackId || t.trackName || t.TrackName || "";
+    return tTrackId === selectedTrackId;
+  });
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
   const { mutateAsync: disqualifyTeam, isPending: isDisqualifying } = useDisqualifyTeam();
@@ -131,21 +149,49 @@ export function CoordinatorTeamsView() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto mb-6">
-        <select
-          value={eventId}
-          onChange={(e) => setEventId(e.target.value)}
-          className="px-4 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
-        >
-          {myEvents.map((ev: any) => {
-            const id = pickId(ev);
-            return (
-              <option key={id} value={id}>
-                {ev.eventName || ev.EventName || id}
-              </option>
-            );
-          })}
-        </select>
+      <div className="max-w-5xl mx-auto mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-[#8a9ba8]">Sự kiện:</span>
+          <select
+            value={eventId}
+            onChange={(e) => {
+              setEventId(e.target.value);
+              setSelectedTrackId("ALL");
+            }}
+            className="px-4 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped font-bold focus:outline-none"
+          >
+            {myEvents.map((ev: any) => {
+              const id = pickId(ev);
+              return (
+                <option key={id} value={id}>
+                  {ev.eventName || ev.EventName || id}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-[#8a9ba8] flex items-center gap-1">
+            <Filter className="w-3.5 h-3.5 text-[#8b5cf6]" /> Hạng mục thi (Track):
+          </span>
+          <select
+            value={selectedTrackId}
+            onChange={(e) => setSelectedTrackId(e.target.value)}
+            className="px-4 py-2 bg-[var(--bg-input)] border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs hud-clipped font-bold focus:outline-none cursor-pointer"
+          >
+            <option value="ALL">-- Tất cả Hạng mục thi --</option>
+            {tracks.map((tr: any) => {
+              const trId = tr.id || tr.Id || tr.trackId || tr.TrackId || "";
+              const trName = tr.trackName || tr.TrackName || "Hạng mục";
+              return (
+                <option key={trId} value={trId}>
+                  {trName}
+                </option>
+              );
+            })}
+          </select>
+        </div>
       </div>
 
       {/* Content */}

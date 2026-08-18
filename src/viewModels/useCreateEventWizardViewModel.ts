@@ -159,9 +159,9 @@ export function useCreateEventWizardViewModel() {
         if (Array.isArray(effectiveEv.tracks) && effectiveEv.tracks.length > 0) {
           const mappedTracks: TrackFormState[] = effectiveEv.tracks.map((t: any, idx: number) => ({
             id: t.id || t.Id || t.trackId || `trk-${idx}`,
-            trackName: t.trackName || t.TrackName || t.name || `Hạng mục ${idx + 1}`,
-            templateId: t.templateId || t.TemplateId || "custom",
+            trackName: t.trackName || t.TrackName || `Hạng mục ${idx + 1}`,
             description: t.description || t.Description || "",
+            templateId: t.templateId || t.TemplateId || "",
           }));
           setTracks(mappedTracks);
         }
@@ -543,6 +543,8 @@ export function useCreateEventWizardViewModel() {
     handleUpdateCriteria,
     handleAddStaffInvite,
     handleRemoveStaffInvite,
+    myEvents,
+    targetEventId,
     handleNextStep,
     handlePrevStep,
     handleSaveDraft,

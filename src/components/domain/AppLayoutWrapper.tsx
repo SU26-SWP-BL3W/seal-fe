@@ -65,7 +65,7 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
         <main className="flex-1 flex flex-col w-full min-h-0">
           {children}
         </main>
-        <Footer />
+        {!hasVerticalSidebar && !isAuthRoute && <Footer />}
       </div>
     </div>
   );

@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useGetPrizesByEvent, useCreatePrize, saveStoredPrizesForEvent } from "@/repositories/results/prizesRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
+import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save, GripVertical, ArrowUp, ArrowDown, Filter } from "lucide-react";
 
+import apiClient from "@/models/apiClient";
 import { useMyEvents } from "@/repositories/eventsRepository";
 
 export interface PrizeItemState {
@@ -50,7 +51,7 @@ export const CoordinatorPrizesView: React.FC = () => {
     return new Intl.NumberFormat("vi-VN").format(num);
   };
 
-  // Dynamic tracks list
+  // Dynamic tracks list from API
   const tracksList = [
     { id: "all", name: "Toàn Sự Kiện (Chung)" },
     ...dbTracks.map((t: any) => ({
@@ -64,26 +65,14 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   React.useEffect(() => {
     if (Array.isArray(dbPrizes) && dbPrizes.length > 0) {
-      // Deduplicate DB prizes by clean lowercased name to collapse all historic duplicates
-      const uniqueMap = new Map<string, any>();
-      dbPrizes.forEach((p: any) => {
-        const rawName = p.prizeName || p.PrizeName || p.name || "";
-        const cleanName = rawName.replace(/\s*\([^)]*\)/g, "").trim() || rawName;
-        const nameKey = cleanName.toLowerCase();
-        if (nameKey && !uniqueMap.has(nameKey)) {
-          uniqueMap.set(nameKey, { ...p, cleanName });
-        }
-      });
-      const uniqueList = Array.from(uniqueMap.values());
-
-      const mapped = uniqueList.map((p: any, idx: number) => {
+      const mapped = dbPrizes.map((p: any, idx: number) => {
         const valStr = p.prizeValueVnd
           ? formatCurrencyNumber(String(p.prizeValueVnd))
           : (p.value ? formatCurrencyNumber(String(p.value)) : "1.000.000");
 
         return {
           id: p.id || p.Id || `prz-${idx}`,
-          prizeName: p.cleanName || "Giải thưởng",
+          prizeName: p.prizeName || p.PrizeName || p.name || "Giải thưởng",
           quantity: p.quantity || p.Quantity || 1,
           value: valStr,
           trackName: p.trackName || p.TrackName || "Toàn Sự Kiện (Chung)",
@@ -91,7 +80,7 @@ export const CoordinatorPrizesView: React.FC = () => {
       });
       setPrizes(mapped);
     }
-  }, [activeEventId, dbPrizes.length]);
+  }, [activeEventId, dbPrizes]);
 
   // Handle Add New Editable Prize Row
   const handleAddPrize = () => {
@@ -132,6 +121,55 @@ export const CoordinatorPrizesView: React.FC = () => {
     );
   };
 
+  const [filterTrack, setFilterTrack] = useState<string>("ALL");
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleMoveUp = (idx: number) => {
+    if (idx <= 0) return;
+    setPrizes((prev) => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx - 1];
+      next[idx - 1] = temp;
+      if (activeEventId) saveStoredPrizesForEvent(activeEventId, next);
+      return next;
+    });
+  };
+
+  const handleMoveDown = (idx: number) => {
+    if (idx >= prizes.length - 1) return;
+    setPrizes((prev) => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx + 1];
+      next[idx + 1] = temp;
+      if (activeEventId) saveStoredPrizesForEvent(activeEventId, next);
+      return next;
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === idx) return;
+    setPrizes((prev) => {
+      const updated = [...prev];
+      const [draggedItem] = updated.splice(draggedIdx, 1);
+      updated.splice(idx, 0, draggedItem);
+      if (activeEventId) saveStoredPrizesForEvent(activeEventId, updated);
+      return updated;
+    });
+    setDraggedIdx(idx);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+  };
+
   // Calculate live total prize budget in VNĐ
   const totalPrizeBudget = prizes.reduce((acc, p) => {
     const numericStr = p.value.replace(/[^0-9]/g, "");
@@ -147,28 +185,19 @@ export const CoordinatorPrizesView: React.FC = () => {
 
     try {
       if (activeEventId) {
-        // Clean prize names before saving (strip duplicate suffixes)
-        const cleanedPrizes = prizes.map(p => ({
-          ...p,
-          prizeName: p.prizeName.replace(/\s*\([^)]*\)/g, "").trim() || p.prizeName,
-        }));
+        saveStoredPrizesForEvent(activeEventId, prizes);
 
-        // 1. Overwrite stored prize list to prevent geometric duplication (2 -> 4 -> 8)
-        saveStoredPrizesForEvent(activeEventId, cleanedPrizes);
-        setPrizes(cleanedPrizes);
-
-        // 2. Sync to API
-        for (const p of cleanedPrizes) {
+        for (const p of prizes) {
           try {
             await createPrizeMutation.mutateAsync({
               eventId: activeEventId,
               payload: {
-                prizeName: `${p.prizeName} (${p.trackName})`,
+                prizeName: p.prizeName,
                 value: p.value,
                 quantity: p.quantity,
               },
             });
-          } catch (e) {
+          } catch {
             // Ignore API network errors
           }
         }
@@ -253,31 +282,68 @@ export const CoordinatorPrizesView: React.FC = () => {
           
           {/* Left Panel: INTERACTIVE PRIZE FORM BUILDER (8 cols) */}
           <div className="lg:col-span-8 bg-[#13191c] border border-[#263339] p-6 space-y-4 font-mono text-xs">
-            <div className="flex items-center justify-between border-b border-[#263339] pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#263339] pb-3">
               <div className="font-bold text-[#f59e0b] tracking-widest uppercase flex items-center gap-2">
                 <Award className="w-4 h-4 text-[#f59e0b]" />
                 <span>DANH SÁCH GIẢI THƯỞNG VÀ GIÁ TRỊ ({prizes.length} Giải)</span>
               </div>
-              <span className="text-[10px] text-[#8a9ba8]">Nhập tên giải, số lượng &amp; gán Hạng mục trực tiếp bên dưới</span>
+
+              {/* Track Filter for Prizes */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[#8a9ba8] font-bold text-[11px] flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5 text-[#f59e0b]" /> LỌC HẠNG MỤC:
+                </span>
+                <select
+                  value={filterTrack}
+                  onChange={(e) => setFilterTrack(e.target.value)}
+                  className="px-3 py-1 bg-[#0a0e10] border border-[#f59e0b]/40 text-[#f59e0b] font-mono text-xs font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">-- Tất cả Hạng mục --</option>
+                  {tracksList.map((t) => (
+                    <option key={t.id} value={t.name}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Interactive Editable Table */}
+            {/* Interactive Editable Table with Drag and Drop Reordering */}
             <div className="overflow-x-auto">
               <table className="w-full text-left font-mono text-xs">
                 <thead>
                   <tr className="border-b border-[#263339] text-[#8a9ba8] tracking-wider text-[11px] bg-[#0a0e10]">
+                    <th className="p-3 w-10 text-center">KÉO</th>
                     <th className="p-3 w-12 text-center">STT</th>
                     <th className="p-3">TÊN GIẢI THƯỞNG *</th>
                     <th className="p-3 w-24 text-center">SỐ LƯỢNG</th>
                     <th className="p-3 w-40">GIÁ TRỊ (VNĐ) *</th>
                     <th className="p-3">HẠNG MỤC ÁP DỤNG</th>
+                    <th className="p-3 w-20 text-center">THỨ TỰ</th>
                     <th className="p-3 w-12 text-center">XÓA</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#263339]">
-                  {prizes.map((p, idx) => (
-                    <tr key={p.id} className="hover:bg-[#182024]">
-                      <td className="p-3 text-center text-[#8a9ba8] font-bold">0{idx + 1}</td>
+                  {prizes
+                    .map((p, originalIdx) => ({ p, originalIdx }))
+                    .filter(({ p }) => filterTrack === "ALL" || p.trackName === filterTrack)
+                    .map(({ p, originalIdx }, displayIdx) => (
+                      <tr
+                        key={p.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, originalIdx)}
+                        onDragOver={(e) => handleDragOver(e, originalIdx)}
+                        onDragEnd={handleDragEnd}
+                        className={`hover:bg-[#182024] transition-all ${
+                          draggedIdx === originalIdx ? "bg-[#8b5cf6]/20 opacity-50 border-2 border-dashed border-[#8b5cf6]" : ""
+                        }`}
+                      >
+                        {/* Drag Handle */}
+                        <td className="p-3 text-center cursor-grab active:cursor-grabbing text-[#8a9ba8] hover:text-[#8b5cf6]">
+                          <GripVertical className="w-4 h-4 mx-auto" />
+                        </td>
+
+                        <td className="p-3 text-center text-[#8a9ba8] font-bold">0{originalIdx + 1}</td>
                       
                       {/* Tên giải thưởng editable input */}
                       <td className="p-3">
@@ -344,6 +410,30 @@ export const CoordinatorPrizesView: React.FC = () => {
                             </option>
                           ))}
                         </select>
+                      </td>
+
+                      {/* Thứ tự Up / Down buttons */}
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            disabled={originalIdx === 0}
+                            onClick={() => handleMoveUp(originalIdx)}
+                            className="p-1 text-[#8a9ba8] hover:text-[#8b5cf6] disabled:opacity-20 cursor-pointer"
+                            title="Di chuyển lên"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={originalIdx === prizes.length - 1}
+                            onClick={() => handleMoveDown(originalIdx)}
+                            className="p-1 text-[#8a9ba8] hover:text-[#8b5cf6] disabled:opacity-20 cursor-pointer"
+                            title="Di chuyển xuống"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
 
                       {/* Xóa giải thưởng */}

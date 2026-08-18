@@ -54,14 +54,58 @@ export const CoordinatorTemplatesView: React.FC = () => {
   }, [dbTemplates.length]);
 
   const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
 
-  // New Criteria Set Form State
+  // New/Edit Criteria Set Form State
   const [newSetName, setNewSetName] = useState("");
   const [newSetDesc, setNewSetDesc] = useState("");
   const [builderCriterias, setBuilderCriterias] = useState<CriteriaInsideSet[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleOpenCreateModal = () => {
+    setEditingSetId(null);
+    setNewSetName("");
+    setNewSetDesc("");
+    setBuilderCriterias([
+      {
+        id: `new-${Date.now()}-1`,
+        criterionName: "Tiêu chí Đổi Mới & Sáng Tạo",
+        weight: 40,
+        maxScore: 10,
+        description: "Đánh giá tính độc đáo, khác biệt và hàm lượng công nghệ.",
+      },
+      {
+        id: `new-${Date.now()}-2`,
+        criterionName: "Tiêu chí Tính Khả Thi & Triển Khai",
+        weight: 60,
+        maxScore: 10,
+        description: "Đánh giá khả năng áp dụng thực tế và hoàn thiện mô hình.",
+      },
+    ]);
+    setIsBuilderModalOpen(true);
+  };
+
+  const handleOpenEditModal = (set: CriteriaSetItem) => {
+    setEditingSetId(set.id);
+    setNewSetName(set.templateName);
+    setNewSetDesc(set.description);
+    setBuilderCriterias(
+      set.criterias.length > 0
+        ? set.criterias.map((c) => ({ ...c }))
+        : [
+            {
+              id: `crit-${Date.now()}`,
+              criterionName: "Tiêu chí thành phần 1",
+              weight: 100,
+              maxScore: 10,
+              description: "Mô tả chi tiết tiêu chí chấm điểm...",
+            },
+          ]
+    );
+    setIsBuilderModalOpen(true);
+  };
 
   // Computed weight for builder
   const builderTotalWeight = builderCriterias.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
@@ -99,11 +143,11 @@ export const CoordinatorTemplatesView: React.FC = () => {
     );
   };
 
-  // Save New Criteria Set into State & Database
+  // Save New or Updated Criteria Set into State & Database
   const handleSaveCriteriaSet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSetName.trim()) {
-      alert("Vui lòng nhập tên cho Bộ Tiêu Chí mới!");
+      alert("Vui lòng nhập tên cho Bộ Tiêu Chí!");
       return;
     }
     if (!isBuilderValid100) {
@@ -113,27 +157,40 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      if (templatesRepository?.createTemplate) {
-        await templatesRepository.createTemplate({
+      if (editingSetId) {
+        setCriteriaSets((prev) =>
+          prev.map((s) =>
+            s.id === editingSetId
+              ? { ...s, templateName: newSetName, description: newSetDesc, criterias: builderCriterias }
+              : s
+          )
+        );
+        setSuccessMessage(`✓ Đã cập nhật thành công Bộ tiêu chí "${newSetName}"!`);
+      } else {
+        if (templatesRepository?.createTemplate) {
+          await templatesRepository.createTemplate({
+            templateName: newSetName,
+            description: newSetDesc,
+          });
+        }
+
+        const newSet: CriteriaSetItem = {
+          id: `set-${Date.now()}`,
           templateName: newSetName,
-          description: newSetDesc,
-        });
+          description: newSetDesc || "Bộ tiêu chí đánh giá chuẩn cho sự kiện.",
+          createdDate: new Date().toISOString().split("T")[0],
+          criterias: builderCriterias,
+        };
+
+        setCriteriaSets((prev) => [newSet, ...prev]);
+        setSelectedSetId(newSet.id);
+        setSuccessMessage(`Đã tạo và lưu thành công "${newSetName}" vào Kho Bộ Tiêu Chí!`);
       }
 
-      const newSet: CriteriaSetItem = {
-        id: `set-${Date.now()}`,
-        templateName: newSetName,
-        description: newSetDesc || "Bộ tiêu chí đánh giá chuẩn cho sự kiện.",
-        createdDate: new Date().toISOString().split("T")[0],
-        criterias: builderCriterias,
-      };
-
-      setCriteriaSets((prev) => [newSet, ...prev]);
-      setSelectedSetId(newSet.id);
       setIsBuilderModalOpen(false);
       setNewSetName("");
       setNewSetDesc("");
-      setSuccessMessage(`Đã tạo và lưu thành công "${newSetName}" vào Kho Bộ Tiêu Chí!`);
+      setEditingSetId(null);
     } catch {
       alert("Lưu Bộ tiêu chí thất bại.");
     } finally {
@@ -317,14 +374,25 @@ export const CoordinatorTemplatesView: React.FC = () => {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
-                      className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>XÓA BỘ TIÊU CHÍ</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(activeSet)}
+                        className="px-3.5 py-1.5 bg-[#8b5cf6]/10 border border-[#8b5cf6]/40 hover:bg-[#8b5cf6]/20 text-[#c084fc] font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>SỬA BỘ TIÊU CHÍ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
+                        className="px-3.5 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>XÓA BỘ TIÊU CHÍ</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
