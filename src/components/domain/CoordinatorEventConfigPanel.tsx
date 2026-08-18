@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { roundsRepository } from "@/repositories/roundsRepository";
 import { tracksRepository, type Track } from "@/repositories/events/tracksRepository";
+import { templatesRepository, type Template } from "@/repositories/events/templatesRepository";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
 import { 
@@ -23,7 +24,9 @@ import {
   Video, 
   BookOpen, 
   Palette, 
-  Sparkles
+  Sparkles,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Card } from "@/components/ui";
 
@@ -124,9 +127,32 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
   const [deletedTrackIds, setDeletedTrackIds] = useState<string[]>([]);
   const [isLoadingTracks, setIsLoadingTracks] = useState<boolean>(true);
 
+  // 4. Rubric Templates State (for inline assignment)
+  const [templatesList, setTemplatesList] = useState<Template[]>([]);
+  const [expandedTrackRubrics, setExpandedTrackRubrics] = useState<Record<number, boolean>>({});
+
   // Status
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
+  // Load Rubric Templates list once on mount
+  useEffect(() => {
+    let isMounted = true;
+    templatesRepository
+      .getTemplates()
+      .then((items) => {
+        if (isMounted) setTemplatesList(items || []);
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
+  const toggleExpandRubric = (trackIndex: number) => {
+    setExpandedTrackRubrics((prev) => ({
+      ...prev,
+      [trackIndex]: !prev[trackIndex],
+    }));
+  };
 
   // Sync event props when changed
   useEffect(() => {
@@ -404,7 +430,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
         try { await tracksRepository.deleteTrack(delTrackId); } catch {}
       }
 
-      // 5. Update or Create tracks
+      // 5. Update or Create tracks & assign Rubric templates
       for (let i = 0; i < tracks.length; i++) {
         const t = tracks[i];
         const trackPayload = {
@@ -412,12 +438,23 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
           trackName: t.trackName.trim() || `HẠNG MỤC ${i + 1}`,
           description: t.description?.trim() || "",
           submissionRuleDescription: t.submissionRuleDescription?.trim() || "",
+          templateId: t.templateId || undefined,
         };
 
+        let targetTrackId = t.id;
         if (t.id && !t.id.startsWith("temp-") && !t.isNew) {
           await tracksRepository.updateTrack(t.id, trackPayload);
         } else {
-          await tracksRepository.createTrack(trackPayload);
+          const created = await tracksRepository.createTrack(trackPayload);
+          targetTrackId = created?.id || (created as any)?.Id;
+        }
+
+        if (targetTrackId && t.templateId) {
+          try {
+            await tracksRepository.assignTemplateToTrack(targetTrackId, t.templateId);
+          } catch (err) {
+            console.error("Assign template error:", err);
+          }
         }
       }
 
@@ -873,62 +910,206 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
             </div>
           ) : (
             <div className="space-y-4">
-              {tracks.map((t, idx) => (
-                <div
-                  key={t.id || `track-${idx}`}
-                  className="p-5 bg-[var(--bg-input)] border border-zinc-800 hud-clipped space-y-4"
-                >
-                  <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 bg-[#090e11] border border-zinc-700 text-[#c084fc] flex items-center justify-center font-bold text-xs hud-clipped">
-                        T{idx + 1}
-                      </span>
+              {tracks.map((t, idx) => {
+                const matchedTemplate = templatesList.find(
+                  (tpl) => (tpl.id || (tpl as any).Id || (tpl as any).templateId || (tpl as any).TemplateId) === t.templateId
+                );
+                const criterias = matchedTemplate?.criterias || (matchedTemplate as any)?.TemplateCriterias || [];
+                const totalWeight = criterias.reduce((sum: number, c: any) => sum + (c.weight ?? c.Weight ?? 0), 0);
+                const isExpanded = Boolean(expandedTrackRubrics[idx]);
+
+                return (
+                  <div
+                    key={t.id || `track-${idx}`}
+                    className="p-5 bg-[var(--bg-input)] border border-zinc-800 hud-clipped space-y-4"
+                  >
+                    <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 bg-[#090e11] border border-zinc-700 text-[#c084fc] flex items-center justify-center font-bold text-xs hud-clipped">
+                          T{idx + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={t.trackName}
+                          onChange={(e) => handleTrackChange(idx, "trackName", e.target.value)}
+                          placeholder={`Tên Hạng mục ${idx + 1}`}
+                          className="px-3 py-1 bg-[#090e11] border border-zinc-700 text-white font-bold text-sm uppercase focus:border-[#a855f7] focus:outline-none min-w-[280px]"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {tracks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTrack(idx)}
+                            className="text-red-400 hover:text-red-300 font-mono text-xs flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Xóa Hạng Mục
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-zinc-400 uppercase block">
+                        Mô Tả Yêu Cầu Chuyên Môn &amp; Thể Lệ Track
+                      </label>
                       <input
                         type="text"
-                        value={t.trackName}
-                        onChange={(e) => handleTrackChange(idx, "trackName", e.target.value)}
-                        placeholder={`Tên Hạng mục ${idx + 1}`}
-                        className="px-3 py-1 bg-[#090e11] border border-zinc-700 text-white font-bold text-sm uppercase focus:border-[#a855f7] focus:outline-none min-w-[280px]"
+                        value={t.description || ""}
+                        onChange={(e) => handleTrackChange(idx, "description", e.target.value)}
+                        placeholder="Mô tả công nghệ hoặc phạm vi dự thi của track này..."
+                        className="w-full p-2 bg-[#090e11] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none"
                       />
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      {t.id && !t.id.startsWith("temp-") && (
-                        <Link
-                          href={`/coordinator/tracks/${t.id}/assign-template`}
-                          className="px-3 py-1.5 bg-[#a855f7] hover:bg-[#9333ea] text-white font-mono text-[11px] font-bold uppercase flex items-center gap-1.5 hud-clipped transition-all shadow-sm"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>🎯 GÁN BỘ TIÊU CHÍ (RUBRIC)</span>
-                        </Link>
-                      )}
+                    {/* INLINE RUBRIC TEMPLATE SELECTOR & EXPANDABLE CRITERIA PREVIEW */}
+                    <div className="pt-3 border-t border-zinc-800 space-y-3 bg-[#090e11]/60 p-4 border border-zinc-800/80 hud-clipped">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-[#c084fc]" />
+                          <span className="text-[11px] font-bold uppercase text-[#c084fc] tracking-wider">
+                            BỘ TIÊU CHÍ CHẤM ĐIỂM (RUBRIC TEMPLATE)
+                          </span>
+                          {matchedTemplate ? (
+                            <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 font-mono text-[10px] font-bold hud-clipped">
+                              ✅ ĐÃ GÁN TIÊU CHÍ
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-mono text-[10px] font-bold hud-clipped">
+                              ⚠️ CHƯA GÁN BỘ TIÊU CHÍ
+                            </span>
+                          )}
+                        </div>
 
-                      {tracks.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTrack(idx)}
-                          className="text-red-400 hover:text-red-300 font-mono text-xs flex items-center gap-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Xóa
-                        </button>
+                        {matchedTemplate && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandRubric(idx)}
+                            className="px-3 py-1 bg-[#141f23] border border-zinc-700 hover:border-[#a855f7] text-[#c084fc] font-mono text-[11px] font-bold uppercase flex items-center gap-1.5 hud-clipped transition-all cursor-pointer shadow-sm"
+                          >
+                            {isExpanded ? (
+                              <>
+                                <EyeOff className="w-3.5 h-3.5" />
+                                <span>ẨN BẢNG TIÊU CHÍ ▲</span>
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>XEM CHI TIẾT ({criterias.length} TIÊU CHÍ • {totalWeight}%) ▼</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                        <div className="md:col-span-8">
+                          <select
+                            value={t.templateId || ""}
+                            onChange={(e) => handleTrackChange(idx, "templateId", e.target.value || null)}
+                            className="w-full p-2.5 bg-[#141f23] border border-zinc-700 text-[#e1e7ec] font-mono font-bold text-xs focus:border-[#a855f7] focus:outline-none cursor-pointer hud-clipped"
+                          >
+                            <option value="" className="text-zinc-500">
+                              -- Chọn Bộ Tiêu Chí Chấm Thi Áp Dụng Cho Hạng Mục Này ({templatesList.length} mẫu có sẵn) --
+                            </option>
+                            {templatesList.map((tpl: any) => {
+                              const tplId = tpl.id || tpl.Id || tpl.templateId || tpl.TemplateId;
+                              const tplName = tpl.name || tpl.Name || tpl.templateName || tpl.TemplateName || "Mẫu Rubric";
+                              const crits = tpl.criterias || tpl.TemplateCriterias || [];
+                              const tplWeight = crits.reduce((sum: number, c: any) => sum + (c.weight ?? c.Weight ?? 0), 0);
+                              return (
+                                <option key={tplId} value={tplId} className="bg-[#0f171c] text-white">
+                                  {tplName} ({crits.length} tiêu chí • Trọng số {tplWeight || 100}%)
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        <div className="md:col-span-4 text-right">
+                          <Link
+                            href="/coordinator/templates"
+                            target="_blank"
+                            className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400 hover:text-[#c084fc] transition-colors"
+                          >
+                            <span>Kho tiêu chí mẫu (Module 04) ↗</span>
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Expandable Criteria Details Accordion */}
+                      {isExpanded && matchedTemplate && (
+                        <div className="mt-3 p-4 bg-[#0f171c] border border-zinc-700 hud-clipped space-y-3">
+                          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                            <div>
+                              <span className="font-bold text-xs text-white">
+                                CHI TIẾT BỘ TIÊU CHÍ: {matchedTemplate.templateName || (matchedTemplate as any).Name}
+                              </span>
+                              {matchedTemplate.description && (
+                                <p className="text-[11px] text-zinc-400 font-sans mt-0.5">
+                                  {matchedTemplate.description}
+                                </p>
+                              )}
+                            </div>
+                            <span className="font-mono text-xs text-[#c084fc] font-bold">
+                              Tổng Trọng Số: {totalWeight}%
+                            </span>
+                          </div>
+
+                          {criterias.length === 0 ? (
+                            <div className="py-4 text-center text-xs text-zinc-500 font-mono">
+                              Bộ tiêu chí này hiện chưa có tiêu chí con nào.
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left font-mono text-xs border-collapse">
+                                <thead>
+                                  <tr className="border-b border-zinc-800 bg-[#141f23] text-zinc-400 uppercase text-[10px]">
+                                    <th className="p-2.5 w-12 text-center">STT</th>
+                                    <th className="p-2.5">Tiêu Chí Đánh Giá</th>
+                                    <th className="p-2.5">Mô Tả / Hướng Dẫn Giám Khảo</th>
+                                    <th className="p-2.5 text-center w-28">Trọng Số (%)</th>
+                                    <th className="p-2.5 text-center w-28">Điểm Tối Đa</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-800/60">
+                                  {criterias.map((crit: any, cIdx: number) => {
+                                    const cName = crit.criteriaName || crit.CriteriaName || crit.name || crit.Name || `Tiêu chí ${cIdx + 1}`;
+                                    const cDesc = crit.description || crit.Description || "Đánh giá chất lượng chuyên môn";
+                                    const cWeight = crit.weight ?? crit.Weight ?? 0;
+                                    const cMaxScore = crit.maxScore ?? crit.MaxScore ?? 10;
+
+                                    return (
+                                      <tr key={crit.criteriaId || crit.id || `crit-${cIdx}`} className="hover:bg-zinc-900/40">
+                                        <td className="p-2.5 text-center text-zinc-500 font-bold">
+                                          {cIdx + 1}
+                                        </td>
+                                        <td className="p-2.5 font-bold text-white">
+                                          {cName}
+                                        </td>
+                                        <td className="p-2.5 text-[11px] font-sans text-zinc-300">
+                                          {cDesc}
+                                        </td>
+                                        <td className="p-2.5 text-center font-bold text-[#c084fc]">
+                                          {cWeight}%
+                                        </td>
+                                        <td className="p-2.5 text-center text-zinc-400">
+                                          {cMaxScore} pts
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-zinc-400 uppercase block">
-                      Mô Tả Yêu Cầu Chuyên Môn &amp; Thể Lệ Track
-                    </label>
-                    <input
-                      type="text"
-                      value={t.description || ""}
-                      onChange={(e) => handleTrackChange(idx, "description", e.target.value)}
-                      placeholder="Mô tả công nghệ hoặc phạm vi dự thi của track này..."
-                      className="w-full p-2 bg-[#090e11] border border-zinc-700 text-white text-xs focus:border-[#a855f7] focus:outline-none"
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
