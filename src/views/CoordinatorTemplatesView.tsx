@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
-import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles } from "lucide-react";
+import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles, Copy } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
 export interface CriteriaInsideSet {
@@ -170,6 +170,27 @@ export const CoordinatorTemplatesView: React.FC = () => {
     }
   };
 
+  // LOI_04: Clone/Fork Template - Copy existing set as a new template
+  const handleCloneTemplate = (setId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    const sourceSet = criteriaSets.find((s) => s.id === setId);
+    if (!sourceSet) return;
+
+    // Pre-fill builder with cloned data
+    setNewSetName(`[Bản sao] ${sourceSet.templateName}`);
+    setNewSetDesc(sourceSet.description);
+    setBuilderCriterias(
+      sourceSet.criterias.map((c, idx) => ({
+        ...c,
+        id: `clone-${Date.now()}-${idx}`,
+      }))
+    );
+    setIsBuilderModalOpen(true);
+    setSuccessMessage(`✓ Đã sao chép "${sourceSet.templateName}" - Vui lòng chỉnh sửa và lưu!`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white flex flex-col">
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 py-8 space-y-6">
@@ -249,14 +270,25 @@ export const CoordinatorTemplatesView: React.FC = () => {
                         </h3>
                       </div>
 
-                      <button
-                        type="button"
-                        title="Xóa bộ tiêu chí"
-                        onClick={(e) => handleDeleteSet(set.id, set.templateName, e)}
-                        className="p-1.5 text-[#8a9ba8] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {/* LOI_04: Clone button */}
+                        <button
+                          type="button"
+                          title="Nhân bản bộ tiêu chí (Clone/Fork)"
+                          onClick={(e) => handleCloneTemplate(set.id, e)}
+                          className="p-1.5 text-[#8a9ba8] hover:text-[#8b5cf6] hover:bg-[#8b5cf6]/10 transition-colors cursor-pointer"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Xóa bộ tiêu chí"
+                          onClick={(e) => handleDeleteSet(set.id, set.templateName, e)}
+                          className="p-1.5 text-[#8a9ba8] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs font-sans text-[#8a9ba8] line-clamp-2 leading-relaxed">
@@ -317,14 +349,26 @@ export const CoordinatorTemplatesView: React.FC = () => {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
-                      className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>XÓA BỘ TIÊU CHÍ</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleCloneTemplate(activeSet.id, e)}
+                        className="px-3 py-1.5 bg-[#8b5cf6]/10 border border-[#8b5cf6]/40 hover:bg-[#8b5cf6]/20 text-[#c084fc] font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                        title="Sao chép toàn bộ tiêu chí sang mẫu mới để tùy biến độc lập"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>NHÂN BẢN (CLONE)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
+                        className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>XÓA BỘ TIÊU CHÍ</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 

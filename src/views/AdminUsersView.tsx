@@ -59,6 +59,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
   const { mutateAsync: rejectUser } = useRejectUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
 
+  // LOI_12: Check if user has card submission (studentCode OR photoStudentCardUrl)
+  const hasCardSubmission = (u: User) => {
+    const hasStudentCode = Boolean(u.studentCode && u.studentCode.trim() !== "");
+    const hasPhotoCardUrl = Boolean(
+      (u as any).photoStudentCardUrl && (u as any).photoStudentCardUrl.trim() !== ""
+    );
+    return hasStudentCode || hasPhotoCardUrl;
+  };
+
   // Filtered Users List
   const filteredUsers = useMemo(() => {
     return usersList.filter((u) => {
@@ -92,9 +101,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
       else if (statusFilter === "pending") matchesStatus = !u.isApproved && (u.rejectionCount ?? 0) < 2;
       else if (statusFilter === "locked") matchesStatus = (u.rejectionCount ?? 0) >= 2;
 
-      return matchesSearch && matchesRole && matchesStatus;
+      // LOI_12: EC mode - ONLY show students with card submissions
+      let matchesCardSubmission = true;
+      if (isCoordinator) {
+        matchesCardSubmission = hasCardSubmission(u);
+      }
+
+      return matchesSearch && matchesRole && matchesStatus && matchesCardSubmission;
     });
-  }, [usersList, searchTerm, roleFilter, statusFilter]);
+  }, [usersList, searchTerm, roleFilter, statusFilter, isCoordinator]);
 
   const handleApprove = async (userId: string) => {
     setActionError(null);
