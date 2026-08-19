@@ -355,19 +355,26 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent-primary)] font-mono text-[10px] font-extrabold text-black animate-pulse shadow-[0_0_8px_rgba(0,217,255,0.6)]">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-2xl z-50 overflow-hidden font-mono text-xs animate-in fade-in zoom-in-95 duration-100">
-          <div className="p-3 border-b border-[var(--border-muted)] flex items-center justify-between bg-[var(--bg-input)]/50">
+        <div
+          className={`absolute ${
+            align === "left" ? "left-0 sm:left-0" : "right-0 sm:right-0"
+          } mt-2 w-84 sm:w-[26rem] md:w-[28rem] rounded border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-2xl z-50 overflow-hidden font-mono text-xs animate-in fade-in zoom-in-95 duration-100`}
+        >
+          {/* Header */}
+          <div className="p-3.5 border-b border-[var(--border-muted)] flex items-center justify-between bg-[var(--bg-input)]/60">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-[var(--text-primary)] uppercase tracking-wider text-[11px]">
+              <span className="font-bold text-[var(--text-primary)] uppercase tracking-wider text-xs sm:text-sm">
                 [ TRUNG TÂM THÔNG BÁO ]
               </span>
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--accent-primary)] text-black">
+                <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-[var(--accent-primary)] text-black">
                   {unreadCount}
                 </span>
               )}
@@ -377,20 +384,21 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                 refetch();
                 refetchNotifs();
               }}
-              className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1 cursor-pointer"
+              className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1.5 cursor-pointer font-medium"
             >
-              <RefreshCw className={`w-3 h-3 ${isLoading || isLoadingNotifs ? "animate-spin" : ""}`} /> Làm mới
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading || isLoadingNotifs ? "animate-spin" : ""}`} /> Làm mới
             </button>
           </div>
 
-          <div className="max-h-80 overflow-y-auto divide-y divide-[var(--border-muted)]/60">
+          {/* List Content */}
+          <div className="max-h-96 overflow-y-auto divide-y divide-[var(--border-muted)]/60">
             {isLoading || isLoadingNotifs ? (
-              <div className="p-6 text-center text-[var(--text-muted)] flex justify-center items-center gap-2">
+              <div className="p-8 text-center text-[var(--text-muted)] flex justify-center items-center gap-2 text-xs">
                 <RefreshCw className="w-4 h-4 animate-spin text-[var(--accent-primary)]" />
                 Đang tải thông báo...
               </div>
             ) : pendingInvitations.length === 0 && systemNotifs.length === 0 ? (
-              <div className="p-6 text-center text-[var(--text-muted)] italic">
+              <div className="p-8 text-center text-[var(--text-muted)] italic text-xs">
                 Không có lời mời hoặc thông báo mới
               </div>
             ) : (
@@ -398,21 +406,21 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
               {pendingInvitations.map((item) => (
                 <div
                   key={item.invitationId}
-                  className="p-3.5 flex flex-col gap-1.5 bg-[var(--accent-primary)]/5 hover:bg-[var(--bg-input)]/40 transition-colors"
+                  className="p-4 flex flex-col gap-2 bg-[var(--accent-primary)]/5 hover:bg-[var(--bg-input)]/40 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]" />
-                      <span className="font-bold text-[var(--text-primary)] text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0" />
+                      <span className="font-bold text-[var(--text-primary)] text-sm truncate">
                         {item.type === "TEAM" ? "📩 Lời Mời Vào Đội (Từ Đội Trưởng)" : `🎖️ Lời Mời: ${formatRoleLabel(item.role)}`}
                       </span>
                     </div>
-                    <span className="text-[10px] text-[var(--accent-team)] font-bold">
+                    <span className="text-xs text-[var(--accent-team)] font-bold px-2 py-0.5 bg-cyan-950/40 border border-cyan-500/30 rounded shrink-0">
                       {item.targetName}
                     </span>
                   </div>
 
-                  <p className="font-sans text-xs text-[var(--text-muted)] leading-relaxed">
+                  <p className="font-sans text-xs sm:text-[13px] text-zinc-300 leading-relaxed">
                     {item.type === "TEAM"
                       ? item.inviterName
                         ? `Đội trưởng ${item.inviterName} đã gửi lời mời bạn gia nhập đội thi "${item.targetName}". Nhấn "Đồng ý" để chính thức vào đội ngay!`
@@ -422,20 +430,20 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                       : `Ban Tổ Chức đã gửi lời mời bạn đảm nhiệm vai trò ${formatRoleLabel(item.role)} cho sự kiện "${item.targetName}"${item.trackName ? ` (Hạng mục: ${item.trackName})` : ""}.`}
                   </p>
 
-                  <div className="flex items-center gap-2 pt-1 font-mono text-[10px]">
+                  <div className="flex items-center gap-2 pt-1 font-mono text-xs">
                     <button
                       disabled={isResponding}
                       onClick={() => handleRespond(item, true)}
-                      className="px-2.5 py-1 bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/40 font-bold uppercase hover:bg-[var(--color-success)] hover:text-black transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                      className="px-3.5 py-1.5 bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/40 font-bold uppercase hover:bg-[var(--color-success)] hover:text-black transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer rounded"
                     >
-                      <Check className="w-3 h-3" /> {item.type === "TEAM" ? "ĐỒNG Ý VÀO ĐỘI" : "ĐỒNG Ý NHẬN VAI TRÒ"}
+                      <Check className="w-3.5 h-3.5" /> {item.type === "TEAM" ? "ĐỒNG Ý VÀO ĐỘI" : "ĐỒNG Ý NHẬN VAI TRÒ"}
                     </button>
                     <button
                       disabled={isResponding}
                       onClick={() => handleRespond(item, false)}
-                      className="px-2.5 py-1 bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30 font-bold uppercase hover:bg-[var(--color-danger)] hover:text-white transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                      className="px-3 py-1.5 bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30 font-bold uppercase hover:bg-[var(--color-danger)] hover:text-white transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer rounded"
                     >
-                      <X className="w-3 h-3" /> TỪ CHỐI
+                      <X className="w-3.5 h-3.5" /> TỪ CHỐI
                     </button>
                   </div>
                 </div>
@@ -445,23 +453,23 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                 return (
                   <div
                     key={n.id}
-                    className={`p-3.5 flex flex-col gap-1.5 transition-colors ${
-                      n.isRead ? "opacity-60 bg-transparent" : "bg-[var(--accent-primary)]/5"
+                    className={`p-4 flex flex-col gap-2 transition-colors ${
+                      n.isRead ? "opacity-65 bg-transparent" : "bg-[var(--accent-primary)]/5"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${formatted.badgeClass}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase border ${formatted.badgeClass}`}>
                           {formatted.badgeText}
                         </span>
-                        <span className="font-bold text-[var(--text-primary)] text-xs">{formatted.title}</span>
+                        <span className="font-bold text-[var(--text-primary)] text-sm">{formatted.title}</span>
                       </div>
                       {!n.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0 animate-pulse" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-primary)] shrink-0 animate-pulse" />
                       )}
                     </div>
-                    <p className="font-sans text-xs text-[var(--text-muted)] leading-relaxed">{formatted.message}</p>
-                    <div className="flex items-center justify-between pt-1 font-mono text-[10px]">
+                    <p className="font-sans text-xs sm:text-[13px] text-zinc-300 leading-relaxed">{formatted.message}</p>
+                    <div className="flex items-center justify-between pt-1 font-mono text-xs">
                       <div className="flex items-center gap-2">
                         {n.linkUrl ? (
                           n.linkUrl.startsWith("http") ? (
@@ -499,7 +507,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                       {!n.isRead && (
                         <button
                           onClick={() => markRead(n.id)}
-                          className="text-zinc-500 hover:text-white uppercase transition-colors cursor-pointer"
+                          className="text-zinc-500 hover:text-white uppercase transition-colors cursor-pointer text-[11px]"
                         >
                           Đánh dấu đã đọc
                         </button>
@@ -513,14 +521,14 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
           </div>
 
           {/* Footer */}
-          <div className="p-2.5 text-center bg-[var(--bg-base)] border-t border-[var(--border-muted)] flex items-center justify-between">
-            <span className="text-[10px] text-[var(--text-muted)] font-mono">Tự động đồng bộ</span>
+          <div className="p-3 text-center bg-[var(--bg-base)] border-t border-[var(--border-muted)] flex items-center justify-between">
+            <span className="text-xs text-[var(--text-muted)] font-mono">Tự động đồng bộ</span>
             <Link
               href="/my-invitations"
               onClick={() => setIsOpen(false)}
-              className="text-[10px] text-[var(--accent-primary)] font-bold hover:underline flex items-center gap-1"
+              className="text-xs text-[var(--accent-primary)] font-bold hover:underline flex items-center gap-1.5"
             >
-              Mở trung tâm lời mời <ExternalLink className="w-3 h-3" />
+              Mở trung tâm lời mời <ExternalLink className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
