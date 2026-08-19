@@ -180,6 +180,9 @@ export function UserProfileView() {
     return map;
   }, [eventsList]);
 
+  const { data: myTeamData } = useMyTeam();
+  const myTeam = (myTeamData as any)?.data ?? myTeamData;
+
   const assignedRoleNames = useMemo(() => {
     return [...new Set(userRoles.map((r: any) => r.roleName || r.RoleName).filter(Boolean))];
   }, [userRoles]);
@@ -189,8 +192,15 @@ export function UserProfileView() {
     const isStudent = user?.isStudent !== undefined ? user.isStudent : undefined;
     const rawRole = activeRole?.roleName || (activeRole as any)?.RoleName || (user as any)?.role || (user as any)?.Role || "";
 
-    return getRoleDetails(rawRole, assignedRoleNames, isAdmin, isStudent);
-  }, [user, activeRole, assignedRoleNames]);
+    const isTeamLeader = myTeam && (myTeam.leaderId === currentUserId || (myTeam as any)?.LeaderId === currentUserId);
+    const isTeamMember = myTeam && !isTeamLeader;
+
+    const effectiveRoles = [...assignedRoleNames];
+    if (isTeamLeader && !effectiveRoles.includes("TeamLeader")) effectiveRoles.push("TeamLeader");
+    if (isTeamMember && !effectiveRoles.includes("TeamMember")) effectiveRoles.push("TeamMember");
+
+    return getRoleDetails(rawRole, effectiveRoles, isAdmin, isStudent);
+  }, [user, activeRole, assignedRoleNames, myTeam, currentUserId]);
 
   const isStaff = roleInfo.isStaff;
 
@@ -258,9 +268,6 @@ export function UserProfileView() {
 
   const { data: schoolsData, isLoading: loadingSchools } = useGetSchools();
   const schools = schoolsData || [];
-
-  const { data: myTeamData } = useMyTeam();
-  const myTeam = (myTeamData as any)?.data ?? myTeamData;
 
   const { data: rejectionsData } = useGetUserRejections(user?.id || user?.userId);
   const rejections: any[] = Array.isArray(rejectionsData) ? rejectionsData : ((rejectionsData as any)?.data || []);
