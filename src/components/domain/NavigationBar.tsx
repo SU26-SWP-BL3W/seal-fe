@@ -96,19 +96,19 @@ export function NavigationBar() {
   const isJudgeRoute = pathname.includes("/judge");
   const isAdminRoute = pathname.includes("/admin");
 
-  const showAdminSidebar = !isAuthRoute && (roleName === "Admin" || isAdminRoute);
+  const showAdminSidebar = !isAuthRoute && isAdminRoute;
   const showCoordinatorSidebar =
     !isAuthRoute &&
     roleName !== "Admin" &&
     !isAdminRoute &&
-    (roleName === "Coordinator" || isCoordinatorRoute);
+    (isCoordinatorRoute || pathname.includes("/appeals"));
   const showMentorSidebar =
     !isAuthRoute &&
     roleName !== "Admin" &&
     roleName !== "Coordinator" &&
     !isAdminRoute &&
     !isCoordinatorRoute &&
-    (roleName === "Mentor" || isMentorRoute);
+    isMentorRoute;
   const showJudgeSidebar =
     !isAuthRoute &&
     roleName !== "Admin" &&
@@ -117,7 +117,7 @@ export function NavigationBar() {
     !isAdminRoute &&
     !isCoordinatorRoute &&
     !isMentorRoute &&
-    (roleName === "Judge" || isJudgeRoute);
+    isJudgeRoute;
   const showParticipantSidebar = false;
 
   // ─────────────────────────────────────────────────────────────
