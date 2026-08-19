@@ -106,7 +106,7 @@ function EventCard({ event }: { event: EventCardData }) {
 
           {/* Tagline / Brief description */}
           <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
-            {event.tagline || event.description || "Cuộc thi lập trình và phát triển sản phẩm công nghệ theo chuẩn RBL."}
+            {event.tagline || event.description || "Cuộc thi lập trình và phát triển sản phẩm công nghệ."}
           </p>
 
           {/* Tracks Tags */}
@@ -381,7 +381,7 @@ export function EventsDiscoveryView() {
               Khám Phá &amp; Đăng Ký Sự Kiện
             </h1>
             <p className="font-mono text-xs text-zinc-400 mt-1">
-              Tra cứu toàn bộ các giải đấu lập trình RBL trên hệ thống SEAL — chọn sự kiện để xem thể lệ và đăng ký tham gia.
+              Tra cứu toàn bộ các giải đấu lập trình trên hệ thống SEAL — chọn sự kiện để xem thể lệ và đăng ký tham gia.
             </p>
           </div>
 

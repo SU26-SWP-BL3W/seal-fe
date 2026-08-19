@@ -275,7 +275,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
         <div className="border-b border-zinc-800 pb-4 space-y-1">
           <div className="font-mono text-[11px] text-purple-400 uppercase tracking-widest flex items-center gap-2 font-bold">
             <Shield className="w-3.5 h-3.5" />
-            <span>EXECUTIVE ADMIN // EVENT COORDINATOR HUB</span>
+            <span>QUẢN LÝ ĐIỀU PHỐI VIÊN SỰ KIỆN</span>
           </div>
           <h2 className="font-display font-bold text-2xl text-white uppercase flex items-center gap-2.5">
             <UserCheck className="w-6 h-6 text-purple-400" />
@@ -382,7 +382,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
               THÊM HOẶC MỜI ĐIỀU PHỐI VIÊN MỚI
             </h3>
             <p className="font-mono text-[11px] text-zinc-400">
-              Gõ tìm kiếm tên/email cán bộ trong database hoặc nhập email mới để hệ thống tự động gửi thư mời tạo tài khoản tạm.
+              Gõ tìm kiếm tên/email cán bộ trong hệ thống hoặc nhập email mới để gửi thư mời tạo tài khoản.
             </p>
           </div>
 

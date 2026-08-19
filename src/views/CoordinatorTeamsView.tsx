@@ -298,7 +298,7 @@ export function CoordinatorTeamsView() {
           >
             <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
               <div>
-                <span className="font-mono text-[10px] text-[var(--accent-coordinator)] uppercase font-bold tracking-widest">// TEAM REGISTRATION INSPECTION MODAL</span>
+                <span className="font-mono text-[10px] text-[var(--accent-coordinator)] uppercase font-bold tracking-widest">THÔNG TIN CHI TIẾT ĐỘI THI</span>
                 <h3 className="font-display text-xl font-bold text-[var(--text-primary)] uppercase tracking-widest mt-1">
                   ĐỘI THI: {detailModal.teamName || detailModal.TeamName}
                 </h3>

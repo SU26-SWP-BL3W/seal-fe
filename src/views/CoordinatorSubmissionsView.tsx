@@ -159,7 +159,7 @@ export const CoordinatorSubmissionsView: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse" />
               <span className="font-mono text-[10px] text-[#a855f7] font-bold tracking-widest uppercase">
-                MODULE 05 // DELIVERABLES MANAGEMENT
+                QUẢN LÝ BÀI NỘP
               </span>
             </div>
             <h1 className="font-display font-bold text-2xl text-[var(--text-primary)] uppercase tracking-wider mt-1 flex items-center gap-2.5">

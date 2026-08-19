@@ -12,7 +12,7 @@ export function DashboardHeader() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
           <input
             type="text"
-            placeholder="// TÌM KIẾM SỰ KIỆN, ĐỘI THI, BÀI NỘP..."
+            placeholder="TÌM KIẾM SỰ KIỆN, ĐỘI THI, BÀI NỘP..."
             className="w-full border border-[var(--border-muted)] bg-[var(--bg-input)] pl-9 pr-4 py-1.5 font-mono text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/50 focus:outline-none focus:border-[var(--accent-primary)] focus:shadow-[0_0_8px_rgba(0,217,255,0.2)] transition-all"
           />
         </div>
@@ -23,7 +23,7 @@ export function DashboardHeader() {
         {/* Live Countdown Timer Badge */}
         <div className="hidden sm:flex items-center gap-2 px-3 py-1 hud-clipped bg-[var(--accent-judge)]/10 border border-[var(--accent-judge)]/40 text-[var(--accent-judge)] font-mono text-xs font-bold">
           <Clock className="h-3.5 w-3.5" />
-          <span>// ROUND 1 LOCKS IN: 18H 45M 20S</span>
+          <span>THỜI HẠN VÒNG 1: 18H 45M</span>
         </div>
 
         {/* Tactical System State */}

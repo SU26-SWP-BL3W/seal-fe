@@ -277,7 +277,7 @@ export function MentorSubmissionsView() {
                         <PlayCircle className="w-4 h-4 text-on-surface-variant group-hover:text-[#00d9ff] transition-colors" />
                       </div>
                       <div className="flex-1 flex flex-col justify-center px-4 py-2">
-                        <span className="text-[9px] text-on-surface-variant uppercase font-bold">Live Demo Endpoint</span>
+                        <span className="text-[9px] text-on-surface-variant uppercase font-bold">Liên Kết Live Demo</span>
                         <span className="text-[12px] text-on-surface truncate font-bold">
                           {demoUrl || "Chưa cung cấp demo URL"}
                         </span>
@@ -383,11 +383,6 @@ export function MentorSubmissionsView() {
                         ? new Date(activeSubmission.createdTime || activeSubmission.CreatedTime!).toLocaleString("vi-VN")
                         : "---"}
                     </div>
-                  </div>
-
-                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col justify-center items-center gap-1">
-                    <span className="text-[#00d9ff] font-bold text-xs">[ STATUS: NOMINAL ]</span>
-                    <span className="text-[9px] text-on-surface-variant">API_CONN_ESTABLISHED</span>
                   </div>
                 </div>
               </div>

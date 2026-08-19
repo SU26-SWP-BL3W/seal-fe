@@ -173,7 +173,7 @@ export const AdminDashboardView: React.FC = () => {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-[var(--bg-panel)] p-6 hud-clipped border border-[var(--border-muted)] shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-80 h-80 bg-[var(--color-danger)]/5 rounded-full blur-3xl pointer-events-none" />
             <div className="space-y-1 z-10">
-              <HudLabel>// SYSTEM ADMIN OPERATIONS HUB</HudLabel>
+              <HudLabel>TRUNG TÂM QUẢN TRỊ HỆ THỐNG</HudLabel>
               <h1 className="font-display font-bold text-2xl sm:text-3xl text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-3">
                 <div className="p-2 rounded bg-[var(--color-danger)]/15 border border-[var(--color-danger)]/30 text-[var(--color-danger)]">
                   <Shield className="w-7 h-7" />
@@ -508,8 +508,8 @@ export const AdminDashboardView: React.FC = () => {
           ) : displayEvents.length === 0 ? (
             <ApiMissingDataBadge
               endpoint="GET /api/Events"
-              title="CHƯA CÓ SỰ KIỆN TỪ BACKEND DATABASE"
-              message="Chưa có bản ghi sự kiện nào được trả về từ Backend API. Vui lòng bấm 'Khởi Tạo Sự Kiện Mới' để tạo sự kiện."
+              title="CHƯA CÓ SỰ KIỆN NÀO TRONG HỆ THỐNG"
+              message="Hệ thống chưa có sự kiện nào. Vui lòng bấm 'Khởi Tạo Sự Kiện Mới' để bắt đầu tạo sự kiện đầu tiên."
             />
           ) : filteredEvents.length === 0 ? (
             <div className="p-12 text-center space-y-3 border border-[var(--border-muted)] rounded bg-[var(--bg-base)]">
