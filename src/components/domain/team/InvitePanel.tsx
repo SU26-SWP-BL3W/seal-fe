@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Badge, Button, Card, Field, Input, SkeletonRows } from "@/components/ui";
-import { AlertTriangle, Clock, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Clock, ShieldAlert, X } from "lucide-react";
 import { MAX_MEMBERS } from "./teamStatus";
 import type { InvitationView } from "./types";
 
@@ -194,41 +194,47 @@ export function InvitePanel({
                   : "Không có lời mời nào đang chờ."}
               </p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-2.5">
                 {pendingInvitations.map((inv) => (
                   <li
                     key={inv.id}
-                    className="flex flex-col gap-1 border border-zinc-800 bg-zinc-900/60 p-2.5 rounded"
+                    className="flex flex-col gap-2 border border-zinc-800 bg-[#12191d] p-3 rounded hud-clipped hover:border-zinc-700 transition-colors shadow-sm"
                   >
+                    {/* Top Row: Timestamp & Status Badge */}
                     <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <span className="truncate text-xs font-bold text-white block" title={inv.email}>
-                          {inv.email}
-                        </span>
-                        {inv.fullName && (
-                          <span className="text-[10px] text-zinc-400">{inv.fullName}</span>
-                        )}
-                      </div>
-                      <Badge tone="warning" className="text-[10px]">
-                        <Clock className="size-3 mr-1 inline" /> {inv.statusLabel || "Đang chờ"}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-800/60">
-                      <span>
+                      <span className="text-[10px] text-zinc-400 font-mono">
                         Gửi: {inv.sentAt ? new Date(inv.sentAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" }) : "—"}
                       </span>
-                      {canInvite && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950/60 text-amber-300 border border-amber-500/40 flex items-center gap-1 shrink-0">
+                        <Clock className="size-3 text-amber-400" />
+                        <span>Đang chờ</span>
+                      </span>
+                    </div>
+
+                    {/* Middle Row: Full Email & Full Name */}
+                    <div className="space-y-0.5 pt-0.5">
+                      <div className="text-xs font-bold text-white font-mono break-all leading-snug" title={inv.email}>
+                        {inv.email}
+                      </div>
+                      {inv.fullName && (
+                        <div className="text-[11px] text-zinc-400 font-sans">{inv.fullName}</div>
+                      )}
+                    </div>
+
+                    {/* Bottom Row: Actions */}
+                    {canInvite && (
+                      <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px]">
+                        <span className="text-[10px] text-zinc-500 font-mono">Hết hạn sau 24h</span>
                         <button
                           type="button"
                           disabled={isCancelling}
                           onClick={() => onCancel(inv)}
-                          className="font-bold uppercase text-red-400 hover:text-red-300 hover:underline cursor-pointer disabled:opacity-40"
+                          className="px-2 py-0.5 font-mono font-bold uppercase text-rose-400 hover:text-white bg-rose-950/30 hover:bg-rose-900/60 border border-rose-500/30 rounded transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1"
                         >
-                          Hủy mời
+                          <X className="size-3" /> Hủy mời
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -244,7 +250,7 @@ export function InvitePanel({
                 Chưa có lịch sử lời mời nào.
               </p>
             ) : (
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-2.5">
                 {historyInvitations.map((inv) => {
                   const isAccepted = inv.status === "Accepted";
                   const isDeclined = inv.status === "Declined";
@@ -253,25 +259,39 @@ export function InvitePanel({
                   return (
                     <li
                       key={inv.id}
-                      className="flex flex-col gap-1 border border-zinc-800/80 bg-zinc-900/30 p-2.5 rounded text-xs"
+                      className="flex flex-col gap-2 border border-zinc-800/80 bg-zinc-900/40 p-3 rounded hud-clipped text-xs hover:border-zinc-700 transition-colors"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-zinc-300 font-bold" title={inv.email}>
-                          {inv.email}
+                        <span className="text-[10px] text-zinc-500 font-mono">
+                          Gửi: {inv.sentAt ? new Date(inv.sentAt).toLocaleDateString("vi-VN") : "—"}
                         </span>
-                        <Badge
-                          tone={isAccepted ? "success" : isDeclined ? "danger" : "neutral"}
-                          className="text-[10px]"
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                            isAccepted
+                              ? "bg-emerald-950/50 text-emerald-300 border-emerald-500/40"
+                              : isDeclined
+                              ? "bg-rose-950/50 text-rose-300 border-rose-500/40"
+                              : isExpired
+                              ? "bg-zinc-800 text-zinc-400 border-zinc-700"
+                              : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                          }`}
                         >
                           {isAccepted ? "Đã chấp nhận" : isDeclined ? "Đã từ chối" : isExpired ? "Đã hết hạn" : inv.statusLabel}
-                        </Badge>
+                        </span>
                       </div>
-                      <div className="text-[10px] text-zinc-500 flex justify-between">
-                        <span>Gửi: {inv.sentAt ? new Date(inv.sentAt).toLocaleDateString("vi-VN") : "—"}</span>
-                        {inv.respondedAt && (
-                          <span>Phản hồi: {new Date(inv.respondedAt).toLocaleDateString("vi-VN")}</span>
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-zinc-200 font-mono break-all" title={inv.email}>
+                          {inv.email}
+                        </div>
+                        {inv.fullName && (
+                          <div className="text-[11px] text-zinc-400 font-sans">{inv.fullName}</div>
                         )}
                       </div>
+                      {inv.respondedAt && (
+                        <div className="text-[10px] text-zinc-500 font-mono pt-1 border-t border-zinc-800/60">
+                          Phản hồi lúc: {new Date(inv.respondedAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" })}
+                        </div>
+                      )}
                     </li>
                   );
                 })}
