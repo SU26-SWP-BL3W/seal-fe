@@ -316,7 +316,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           <div className="space-y-1">
             <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Layers className="w-3.5 h-3.5 text-[#8b5cf6]" />
-              VÒNG THI (ROUND) *
+              VÒNG THI *
             </label>
             <div className="relative">
               <select
@@ -338,7 +338,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           <div className="space-y-1">
             <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Award className="w-3.5 h-3.5 text-[#8b5cf6]" />
-              HẠNG MỤC THI ĐẤU (TRACK) *
+              HẠNG MỤC THI ĐẤU *
             </label>
             <div className="relative">
               <select

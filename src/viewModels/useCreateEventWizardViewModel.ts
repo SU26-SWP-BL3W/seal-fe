@@ -1,11 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { eventsRepository, useMyEvents } from "@/repositories/eventsRepository";
-import { roundsRepository } from "@/repositories/roundsRepository";
-import { tracksRepository } from "@/repositories/tracksRepository";
-import { templatesRepository } from "@/repositories/templatesRepository";
-import { staffRepository } from "@/repositories/staffRepository";
-import { EventEntity, RoundEntity, TrackEntity, TemplateEntity, TemplateCriteriaEntity, EventRoleInvitationEntity } from "@/models/entities";
+import { useGetRoundsByEvent } from "@/repositories/events/roundsRepository";
+import type { EventEntity } from "@/models/entities";
 
 export interface EventFormState {
   eventName: string;
@@ -68,6 +65,7 @@ export function useCreateEventWizardViewModel() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState<boolean>(false);
 
   // Step 1 State: Event Basic Info
   const [eventData, setEventData] = useState<EventFormState>({
@@ -125,6 +123,13 @@ export function useCreateEventWizardViewModel() {
 
         const effectiveEv = localDraft ? { ...activeEv, ...localDraft } : activeEv;
 
+        // Reset or sync current step for the selected event
+        if (effectiveEv.currentStep && typeof effectiveEv.currentStep === "number") {
+          setCurrentStep(Math.min(Math.max(1, effectiveEv.currentStep), 5));
+        } else {
+          setCurrentStep(1);
+        }
+
         setEventData({
           eventName: effectiveEv.eventName || effectiveEv.EventName || "",
           season: effectiveEv.season || effectiveEv.Season || "",
@@ -159,9 +164,9 @@ export function useCreateEventWizardViewModel() {
         if (Array.isArray(effectiveEv.tracks) && effectiveEv.tracks.length > 0) {
           const mappedTracks: TrackFormState[] = effectiveEv.tracks.map((t: any, idx: number) => ({
             id: t.id || t.Id || t.trackId || `trk-${idx}`,
-            trackName: t.trackName || t.TrackName || t.name || `Hạng mục ${idx + 1}`,
-            templateId: t.templateId || t.TemplateId || "custom",
+            trackName: t.trackName || t.TrackName || `Hạng mục ${idx + 1}`,
             description: t.description || t.Description || "",
+            templateId: t.templateId || t.TemplateId || "",
           }));
           setTracks(mappedTracks);
         }
@@ -180,11 +185,38 @@ export function useCreateEventWizardViewModel() {
     }
   }, [myEvents, targetEventId]);
 
+  // Fetch rounds from backend API if rounds state is empty
+  const activeEventIdForRounds = (createdEvent as any)?.id || (createdEvent as any)?.Id || targetEventId || "";
+  const { data: dbRoundsPaged } = useGetRoundsByEvent(activeEventIdForRounds || undefined);
+
+  useEffect(() => {
+    if (activeEventIdForRounds) {
+      const rawRounds = (dbRoundsPaged as any)?.data || (dbRoundsPaged as any)?.items || (Array.isArray(dbRoundsPaged) ? dbRoundsPaged : []);
+      if (Array.isArray(rawRounds) && rawRounds.length > 0) {
+        setRounds((prev) => {
+          if (prev.length > 0) return prev; // Don't overwrite if user or draft already has rounds
+          return rawRounds.map((r: any, idx: number) => ({
+            id: r.id || r.Id || r.roundId || `rnd-${idx}`,
+            roundName: r.roundName || r.RoundName || `Vòng ${idx + 1}`,
+            roundNumber: r.roundNumber || r.RoundNumber || idx + 1,
+            startDate: r.startDate || r.StartDate || "",
+            endDate: r.endDate || r.EndDate || "",
+            advancementRule: r.advancementRule || r.AdvancementRule || "top:10",
+            scoringStartDate: r.scoringStartDate || r.ScoringStartDate || "",
+            scoringEndDate: r.scoringEndDate || r.ScoringEndDate || "",
+          }));
+        });
+      }
+    }
+  }, [dbRoundsPaged, activeEventIdForRounds]);
+
   const setCriteriasForTrack = (trackId: string, list: TemplateCriteriaFormState[]) => {
+    setIsDirty(true);
     setCriteriasByTrack((prev) => ({ ...prev, [trackId]: list }));
   };
 
   const applyCriteriasToAllTracks = (list: TemplateCriteriaFormState[]) => {
+    setIsDirty(true);
     const nextMap: Record<string, TemplateCriteriaFormState[]> = {};
     tracks.forEach((t) => {
       nextMap[t.id] = list;
@@ -296,10 +328,12 @@ export function useCreateEventWizardViewModel() {
 
   // Actions
   const handleUpdateEventField = (field: keyof EventFormState, value: any) => {
+    setIsDirty(true);
     setEventData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleAddRound = () => {
+    setIsDirty(true);
     const nextNumber = rounds.length + 1;
     setRounds((prev) => [
       ...prev,
@@ -316,14 +350,17 @@ export function useCreateEventWizardViewModel() {
 
   const handleRemoveRound = (id: string) => {
     if (rounds.length <= 1) return;
+    setIsDirty(true);
     setRounds((prev) => prev.filter((r) => r.id !== id));
   };
 
   const handleUpdateRound = (id: string, field: keyof RoundFormState, value: any) => {
+    setIsDirty(true);
     setRounds((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
 
   const handleAddTrack = () => {
+    setIsDirty(true);
     const defaultRoundId = rounds[0]?.id || "tmp-r1";
     setTracks((prev) => [
       ...prev,
@@ -338,14 +375,17 @@ export function useCreateEventWizardViewModel() {
   };
 
   const handleRemoveTrack = (id: string) => {
+    setIsDirty(true);
     setTracks((prev) => prev.filter((t) => t.id !== id));
   };
 
   const handleUpdateTrack = (id: string, field: keyof TrackFormState, value: any) => {
+    setIsDirty(true);
     setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, [field]: value } : t)));
   };
 
   const handleAddCriteria = (criteriaObj?: Partial<TemplateCriteriaFormState>) => {
+    setIsDirty(true);
     setCriterias((prev) => [
       ...prev,
       {
@@ -359,10 +399,12 @@ export function useCreateEventWizardViewModel() {
   };
 
   const handleRemoveCriteria = (index: number) => {
+    setIsDirty(true);
     setCriterias((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleUpdateCriteria = (index: number, field: keyof TemplateCriteriaFormState, value: any) => {
+    setIsDirty(true);
     setCriterias((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: field === "weight" || field === "maxScore" ? Number(value) : value } : item))
     );
@@ -373,6 +415,7 @@ export function useCreateEventWizardViewModel() {
       setErrorMessage("Vui lòng nhập địa chỉ email hợp lệ!");
       return;
     }
+    setIsDirty(true);
     setStaffInvites((prev) => [
       ...prev,
       {
@@ -387,6 +430,7 @@ export function useCreateEventWizardViewModel() {
   };
 
   const handleRemoveStaffInvite = (id: string) => {
+    setIsDirty(true);
     setStaffInvites((prev) => prev.filter((s) => s.id !== id));
   };
 
@@ -489,7 +533,8 @@ export function useCreateEventWizardViewModel() {
       }
 
       setIsSubmitting(false);
-      setSuccessMessage("✓ Đã lưu bản nháp tiến trình thành công! Bạn có thể thoát và quay lại làm tiếp bất cứ lúc nào.");
+      setIsDirty(false);
+      setSuccessMessage("Đã lưu bản nháp tiến trình thành công! Bạn có thể thoát và quay lại làm tiếp bất cứ lúc nào.");
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
       setIsSubmitting(false);
@@ -543,9 +588,13 @@ export function useCreateEventWizardViewModel() {
     handleUpdateCriteria,
     handleAddStaffInvite,
     handleRemoveStaffInvite,
+    myEvents,
+    targetEventId,
     handleNextStep,
     handlePrevStep,
     handleSaveDraft,
     maxStepReached,
+    isDirty,
+    setIsDirty,
   };
 }

@@ -95,7 +95,7 @@ export function DeclineInvitationModal({
               {/* Error Message */}
               {error && (
                 <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-sm text-red-400 text-sm font-mono">
-                  ⚠ {error}
+                  {error}
                 </div>
               )}
 
@@ -143,7 +143,7 @@ export function DeclineInvitationModal({
                   className="hud-clipped flex-1 bg-[#f87171] hover:bg-[#ef4444] disabled:bg-[#7f1d1d] text-[#fff] py-2 px-4 font-display font-bold text-sm uppercase tracking-wider transition-all group relative overflow-hidden disabled:cursor-not-allowed"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
-                    {isLoading_ ? 'ĐANG XỬ LÝ...' : '✓ XÁC NHẬN'}
+                    {isLoading_ ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN'}
                   </span>
                   <div className="absolute inset-0 h-full w-full bg-gradient-to-b from-transparent via-white/10 to-transparent -translate-y-full group-hover:animate-[scan_1.5s_ease-in-out_infinite]"></div>
                 </button>

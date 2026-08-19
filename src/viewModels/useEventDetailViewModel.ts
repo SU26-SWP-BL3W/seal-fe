@@ -56,7 +56,7 @@ export function useEventDetailViewModel(eventId: string) {
       eventName: ev.eventName || ev.EventName || "Sự kiện Hackathon",
       season: ev.season || ev.Season || "Mùa Giải",
       year: Number(ev.year || ev.Year || new Date().getFullYear()),
-      tagline: ev.tagline || ev.Tagline || ev.description || ev.Description || "Sự kiện cuộc thi RBL trên hệ thống SEAL",
+      tagline: ev.tagline || ev.Tagline || ev.description || ev.Description || "Sự kiện cuộc thi Hackathon trên hệ thống SEAL",
       description: ev.description || ev.Description || "",
       startDate: ev.startDate || ev.StartDate || "",
       endDate: ev.endDate || ev.EndDate || "",

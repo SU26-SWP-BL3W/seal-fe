@@ -1,399 +1,478 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { Link } from "@/i18n/routing";
-import { Button, Card } from "@/components/ui";
-import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
-import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
-import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
-import { useAuth } from "@/providers/AuthProvider";
-import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
-import { PagedResult } from "@/models/types";
-import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
-import { AdminMonitoringBanner } from "@/components/domain/AdminMonitoringBanner";
+import { useMyEvents, eventsRepository, type MyEventModel } from "@/repositories/eventsRepository";
+import { useGetRoundsByEvent } from "@/repositories/events/roundsRepository";
+import { useGetPendingTeams } from "@/repositories/teamsRepository";
+import { useGetUsers } from "@/repositories/usersRepository";
 import {
-  FileCode,
-  Globe,
-  FileSpreadsheet,
-  Code2,
+  Layers,
   Users,
-  Shield,
-  FolderGit2,
   Award,
+  FileCheck,
+  ChevronDown,
+  Settings,
   ArrowRight,
-  Sparkles,
-  Zap,
+  ShieldCheck,
+  Activity,
+  AlertTriangle,
+  FolderKanban,
+  FileText,
   CheckCircle2,
+  Sliders,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Rocket,
   Calendar,
+  ArrowDown,
+  CornerDownLeft,
 } from "lucide-react";
+import Link from "next/link";
+
+function formatDateStr(dateStr?: string) {
+  if (!dateStr) return "N/A";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+function getRoundStatus(r: any) {
+  const now = new Date();
+  const start = r.startDate || r.StartDate ? new Date(r.startDate || r.StartDate) : null;
+  const end = r.endDate || r.EndDate ? new Date(r.endDate || r.EndDate) : null;
+
+  if (start && now < start) {
+    return { label: "SẮP TỚI", badgeBg: "bg-[#263339] text-[#8a9ba8]" };
+  }
+  if (end && now > end) {
+    return { label: "ĐÃ HOÀN THÀNH", badgeBg: "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40" };
+  }
+  return { label: "ĐANG DIỄN RA", badgeBg: "bg-[#8b5cf6]/20 text-[#c084fc] border border-[#8b5cf6]/40" };
+}
 
 export const CoordinatorDashboardView: React.FC = () => {
-  const searchParams = useSearchParams();
-  const queryEventId = searchParams.get("eventId") || "";
+  const { data: eventsList = [], isLoading, refetch } = useMyEvents();
+  const { data: pendingTeams = [] } = useGetPendingTeams();
+  const { data: pendingUsersData } = useGetUsers({ isApproved: false });
+  const appealsList: { status?: number | string; Status?: string }[] = [];
 
-  const { user: currentUser } = useAuth();
-  const { data: myEvents = [] } = useMyEvents();
-  const { data: rawAllEvents = [] } = useEvents();
-  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
-  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
-    ? allEvents
-    : myEvents;
-
-  const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId);
-
-  useEffect(() => {
-    if (queryEventId) {
-      setSelectedEventId(queryEventId);
-    } else if (eventsList.length > 0 && !selectedEventId) {
-      setSelectedEventId(eventsList[0].id || eventsList[0].Id || eventsList[0].eventId || eventsList[0].EventId || "");
-    }
-  }, [queryEventId, eventsList, selectedEventId]);
-
-  const { data: tracks = [] } = useGetTracksByEvent(selectedEventId || undefined);
-  const { data: teams = [] } = useGetTeamsByEvent(selectedEventId || undefined);
-  const { data: prizes = [] } = useGetPrizesByEvent(selectedEventId || undefined);
-
-  const selectedEventObj = eventsList.find(
-    (e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId
-  );
-  const selectedEventName = selectedEventObj?.eventName || selectedEventObj?.EventName || "";
-
-  // Query submissions
-  const {
-    data: rawSubmissions = [],
-    isLoading: isLoadingSubmissions,
-  } = useQuery({
-    queryKey: ["all-submissions", selectedEventId, eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
-    queryFn: async () => {
-      const params: Record<string, any> = { PageSize: 200 };
-      if (selectedEventId) {
-        params.EventId = selectedEventId;
-      }
-      const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", { params });
-      return res.data?.data ?? [];
-    },
+  // Deduplicated assigned events list
+  const seenEventKeys = new Set<string>();
+  const assignedEvents = eventsList.filter((ev) => {
+    const name = (ev.eventName || ev.EventName || "").trim();
+    const key = `${name.toLowerCase()}-${ev.year || ev.Year || 2026}`;
+    if (seenEventKeys.has(key)) return false;
+    seenEventKeys.add(key);
+    return true;
   });
 
-  const allSubmissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
-  const allowedEventIds = new Set(eventsList.map((e: any) => e.id || e.Id || e.eventId || e.EventId));
-  const submissions = (currentUser?.isAdmin || currentUser?.IsAdmin)
-    ? allSubmissions
-    : allSubmissions.filter((sub: any) => {
-        const evId = sub.eventId || sub.EventId;
-        return evId ? allowedEventIds.has(evId) : true;
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+
+  // Default select first assigned event when list loads
+  useEffect(() => {
+    if (assignedEvents.length > 0 && !selectedEventId) {
+      const firstEv = assignedEvents[0];
+      const id = firstEv.id || firstEv.Id || firstEv.eventId || firstEv.EventId || "";
+      setSelectedEventId(id);
+    }
+  }, [assignedEvents, selectedEventId]);
+
+  const selectedEvent = assignedEvents.find(
+    (ev) => (ev.id || ev.Id || ev.eventId || ev.EventId) === selectedEventId
+  ) || assignedEvents[0];
+
+  const activeEventId = selectedEventId || (selectedEvent?.id || selectedEvent?.Id || selectedEvent?.eventId || selectedEvent?.EventId || "");
+  const { data: roundsPagedData, isLoading: isLoadingRounds } = useGetRoundsByEvent(activeEventId || undefined);
+
+  const [localDraftRounds, setLocalDraftRounds] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && activeEventId) {
+      try {
+        const rawDraft = localStorage.getItem(`seal_wizard_draft_${activeEventId}`);
+        if (rawDraft) {
+          const parsed = JSON.parse(rawDraft);
+          if (Array.isArray(parsed.rounds) && parsed.rounds.length > 0) {
+            setLocalDraftRounds(parsed.rounds);
+            return;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      setLocalDraftRounds([]);
+    }
+  }, [activeEventId]);
+
+  const realRoundsRaw = localDraftRounds.length > 0
+    ? localDraftRounds
+    : ((roundsPagedData as any)?.data || (roundsPagedData as any)?.items || (Array.isArray(roundsPagedData) ? roundsPagedData : (selectedEvent?.rounds || [])));
+  const realRounds = Array.isArray(realRoundsRaw) ? realRoundsRaw : [];
+
+  const selectedEventName = selectedEvent
+    ? selectedEvent.eventName || selectedEvent.EventName || "Sự kiện được chọn"
+    : "Chưa chọn sự kiện";
+
+  const isSelectedEventPublished = selectedEvent
+    ? Boolean(selectedEvent.status ?? selectedEvent.Status)
+    : false;
+
+  const selectedEventSeason = selectedEvent?.season || selectedEvent?.Season || "Summer";
+  const selectedEventYear = selectedEvent?.year || selectedEvent?.Year || 2026;
+
+  // Dynamic Metrics linked to active event
+  const eventTeamsCount = selectedEvent ? ((selectedEvent as any).teamsCount ?? (selectedEvent as any).teamCount ?? 0) : 0;
+  const eventPendingSubmissions = 0;
+  const eventPendingAppeals = appealsList.length;
+
+  // High-level Event Milestones (Clean, non-cluttered timeline cards)
+  const now = new Date();
+  const regStart = selectedEvent?.registrationStartDate || (selectedEvent as any)?.RegistrationStartDate;
+  const regEnd = selectedEvent?.registrationEndDate || (selectedEvent as any)?.RegistrationEndDate;
+
+  interface EventMilestone {
+    id: string;
+    stepNumber: number;
+    title: string;
+    categoryTag: string;
+    submissionStart?: string;
+    submissionEnd?: string;
+    scoringStart?: string;
+    scoringEnd?: string;
+    status: "completed" | "active" | "upcoming";
+    badgeText: string;
+    badgeBg: string;
+  }
+
+  const eventMilestones: EventMilestone[] = [];
+
+  // Milestone 1: Mở đăng ký đội thi
+  let regStatus: "completed" | "active" | "upcoming" = "upcoming";
+  let regBadgeBg = "bg-[#263339] text-[#8a9ba8]";
+  let regBadgeText = "SẮP TỚI";
+  if (regStart && regEnd) {
+    const sDate = new Date(regStart);
+    const eDate = new Date(regEnd);
+    if (now > eDate) {
+      regStatus = "completed";
+      regBadgeText = "ĐÃ HOÀN THÀNH";
+      regBadgeBg = "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40";
+    } else if (now >= sDate && now <= eDate) {
+      regStatus = "active";
+      regBadgeText = "ĐANG MỞ ĐĂNG KÝ";
+      regBadgeBg = "bg-[#00d9ff]/20 text-[#00d9ff] border border-[#00d9ff]/40";
+    }
+  }
+
+  eventMilestones.push({
+    id: "ms-reg",
+    stepNumber: 1,
+    title: "Mở Đăng Ký Đội Thi",
+    categoryTag: "THỦ TỤC BAN ĐẦU",
+    submissionStart: regStart || "",
+    submissionEnd: regEnd || "",
+    status: regStatus,
+    badgeText: regBadgeText,
+    badgeBg: regBadgeBg,
+  });
+
+  // Milestone for each Round
+  if (realRounds.length > 0) {
+    realRounds.forEach((r: any, idx: number) => {
+      const roundNum = r.roundNumber || r.RoundNumber || idx + 1;
+      const roundName = r.roundName || r.RoundName || `Vòng ${roundNum}`;
+      const rStart = r.startDate || r.StartDate;
+      const rEnd = r.endDate || r.EndDate;
+      const scStart = r.scoringStartDate || r.ScoringStartDate;
+      const scEnd = r.scoringEndDate || r.ScoringEndDate;
+
+      let roundStatus: "completed" | "active" | "upcoming" = "upcoming";
+      let roundBadgeBg = "bg-[#263339] text-[#8a9ba8]";
+      let roundBadgeText = "SẮP TỚI";
+
+      const checkEnd = scEnd ? new Date(scEnd) : (rEnd ? new Date(rEnd) : null);
+      const checkStart = rStart ? new Date(rStart) : null;
+
+      if (checkEnd && now > checkEnd) {
+        roundStatus = "completed";
+        roundBadgeText = "ĐÃ HOÀN THÀNH";
+        roundBadgeBg = "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40";
+      } else if (checkStart && now >= checkStart && checkEnd && now <= checkEnd) {
+        roundStatus = "active";
+        roundBadgeText = "ĐANG DIỄN RA";
+        roundBadgeBg = "bg-[#8b5cf6]/20 text-[#c084fc] border border-[#8b5cf6]/40";
+      }
+
+      eventMilestones.push({
+        id: `ms-round-${idx}`,
+        stepNumber: eventMilestones.length + 1,
+        title: roundName,
+        categoryTag: `VÒNG THI CHÍNH THỨC ${roundNum}`,
+        submissionStart: rStart || "",
+        submissionEnd: rEnd || "",
+        scoringStart: scStart || "",
+        scoringEnd: scEnd || "",
+        status: roundStatus,
+        badgeText: roundBadgeText,
+        badgeBg: roundBadgeBg,
       });
+    });
+  }
 
-  const currentEvent = selectedEventObj || eventsList[0];
-
-  const MODULES = [
-    {
-      num: "01",
-      title: "QUẢN LÝ SỰ KIỆN & NHÂN SỰ",
-      desc: "Mời & phân bổ Giám khảo, Cố vấn vào các Hạng mục (Tracks) và cấu hình thể lệ.",
-      href: `/coordinator/staff?eventId=${selectedEventId}`,
-      icon: Shield,
-      accent: "text-[#a855f7]",
-      border: "hover:border-[#a855f7]",
-      tag: "Vòng thi & Nhân sự",
-    },
-    {
-      num: "02",
-      title: "QUẢN LÝ ĐỘI THI",
-      desc: "Xem roster đội hình, duyệt đăng ký tham gia thi đấu và theo dõi sĩ số thành viên.",
-      href: "/coordinator/teams",
-      icon: Users,
-      accent: "text-[var(--accent-team)]",
-      border: "hover:border-[var(--accent-team)]",
-      tag: `${teams.length} Đội tham gia`,
-    },
-    {
-      num: "03",
-      title: "DUYỆT HỒ SƠ THÍ SINH",
-      desc: "Xét duyệt ảnh thẻ sinh viên 3x4, xác minh mã số sinh viên MSSV toàn diện.",
-      href: "/coordinator/profiles",
-      icon: CheckCircle2,
-      accent: "text-emerald-400",
-      border: "hover:border-emerald-400",
-      tag: "Hồ sơ thẻ SV",
-    },
-    {
-      num: "04",
-      title: "KHO BỘ TIÊU CHÍ (RUBRICS)",
-      desc: "Soạn thảo ngân hàng mẫu tiêu chí chấm điểm, đảm bảo phân bổ trọng số 100%.",
-      href: "/coordinator/templates",
-      icon: FolderGit2,
-      accent: "text-blue-400",
-      border: "hover:border-blue-400",
-      tag: "Ngân hàng Rubric",
-    },
-    {
-      num: "05",
-      title: "QUẢN LÝ BÀI NỘP (SUBMISSIONS)",
-      desc: "Tổng hợp mã nguồn GitHub, Live Demo và Slide thuyết trình từ tất cả các đội thi.",
-      href: "/coordinator/submissions",
-      icon: FileCode,
-      accent: "text-[#f59e0b]",
-      border: "hover:border-[#f59e0b]",
-      tag: `${submissions.length} Bài nộp`,
-    },
-    {
-      num: "06",
-      title: "XÉT KẾT QUẢ & CÔNG BỐ",
-      desc: "Tự động tính điểm xếp hạng Top N, gán cơ cấu giải thưởng và công bố công khai.",
-      href: "/coordinator/publish-results",
-      icon: Award,
-      accent: "text-amber-400",
-      border: "hover:border-amber-400",
-      tag: `${prizes.length} Giải thưởng`,
-    },
-  ];
+  // Final Milestone: Phúc khảo & Trao giải Gala
+  eventMilestones.push({
+    id: "ms-final",
+    stepNumber: eventMilestones.length + 1,
+    title: "Phúc Khảo & Trao Giải Gala",
+    categoryTag: "TỔNG KẾT SỰ KIỆN",
+    submissionStart: selectedEvent?.endDate || (selectedEvent as any)?.EndDate || "",
+    status: isSelectedEventPublished ? "completed" : "upcoming",
+    badgeText: isSelectedEventPublished ? "ĐÃ CÔNG BỐ" : "CHỜ CÔNG BỐ",
+    badgeBg: isSelectedEventPublished ? "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40" : "bg-[#263339] text-[#8a9ba8]",
+  });
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
-      {/* Banner Giám sát nổi bật khi Admin truy cập */}
-      <AdminMonitoringBanner
-        eventId={selectedEventId || undefined}
-        eventName={selectedEventName || undefined}
-      />
-
-      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-6 py-8 space-y-6">
-        {/* Breadcrumb Navigation with Back Links */}
-        <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase">
-          <Link href="/admin/events" className="text-[var(--color-danger)] font-bold hover:underline">
-            SEAL ADMIN
-          </Link>
-          <span>&gt;</span>
-          <Link href="/admin/events" className="text-[var(--text-muted)] hover:text-white transition-colors">
-            QUẢN LÝ SỰ KIỆN
-          </Link>
-          {selectedEventId && (
-            <>
-              <span>&gt;</span>
-              <Link href={`/admin/events/${selectedEventId}`} className="text-red-400 hover:text-white transition-colors truncate max-w-xs">
-                {selectedEventName || selectedEventId}
-              </Link>
-            </>
-          )}
-          <span>&gt;</span>
-          <span className="text-[var(--text-primary)] font-bold">GIÁM SÁT BÀI THI &amp; SUBMISSIONS</span>
+    <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
+      {/* Main Container */}
+      <div className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
+        
+        {/* Page Title */}
+        <div className="border-b border-[#263339] pb-4">
+          <div className="flex items-center gap-2 font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider mb-1">
+            <FolderKanban className="w-4 h-4 text-[#8b5cf6]" />
+            <span>BẢNG ĐIỀU KHIỂN ĐIỀU PHỐI VIÊN</span>
+          </div>
+          <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider m-0">
+            TRUNG TÂM CHỈ HUY SỰ KIỆN
+          </h1>
         </div>
 
-        {/* Header with Event Selector */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse" />
-              <span className="font-mono text-[10px] text-[#a855f7] font-bold tracking-widest uppercase">
-                COORDINATOR CONTROL DECK v2.0
-              </span>
-            </div>
-            <h1 className="font-display font-bold text-2xl text-[var(--text-primary)] uppercase tracking-wider mt-1 flex items-center gap-2.5">
-              <Zap className="w-6 h-6 text-[#a855f7]" />
-              Trung Tâm Điều Hành Sự Kiện &amp; Ban Tổ Chức
-            </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-              Quản lý toàn bộ 6 phân hệ cốt lõi: Sự kiện, Nhân sự, Đội thi, Tiêu chí Rubric, Bài nộp và Công bố kết quả.
-            </p>
-          </div>
+        {/* Elegant Event Selector Panel */}
+        <div className="bg-[#13191c] p-5 border border-[#263339] flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5 flex-1">
+            <label className="font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#8b5cf6]"></span>
+              <span>SỰ KIỆN ĐANG QUẢN LÝ:</span>
+            </label>
 
-          {/* Event Dropdown */}
-          <div className="flex items-center gap-2 bg-[var(--bg-panel)] border border-[var(--border-muted)] px-3 py-2 hud-clipped font-mono text-xs">
-            <Calendar className="w-4 h-4 text-[#a855f7] shrink-0" />
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="bg-transparent text-[var(--text-primary)] font-bold focus:outline-none cursor-pointer max-w-[260px] truncate"
-            >
-              {eventsList.map((ev: any) => {
-                const id = ev.id || ev.Id || ev.eventId || ev.EventId;
-                const name = ev.eventName || ev.EventName || "Sự kiện";
-                return (
-                  <option key={id} value={id} className="bg-[var(--bg-panel)] text-[var(--text-primary)]">
-                    {name} ({ev.season || ev.Season || ""} {ev.year || ev.Year || ""})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-        </div>
-
-        {/* 4 Stat Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
-          <Card className="p-4 bg-[var(--bg-panel)] border border-[#a855f7]/40 hud-clipped space-y-1">
-            <span className="text-[10px] text-[#a855f7] uppercase block font-bold">Sự Kiện Đang Phụ Trách</span>
-            <div className="text-2xl font-bold text-[var(--text-primary)] truncate">
-              {currentEvent?.eventName || currentEvent?.EventName || "Chưa chọn sự kiện"}
-            </div>
-            <span className="text-[10px] text-[var(--text-muted)] block">
-              Mùa giải: {currentEvent?.season || "Spring"} {currentEvent?.year || "2026"}
-            </span>
-          </Card>
-
-          <Card className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-team)]/30 hud-clipped space-y-1">
-            <span className="text-[10px] text-[var(--accent-team)] uppercase block font-bold">Tổng Số Đội Thi</span>
-            <div className="text-2xl font-bold text-[var(--accent-team)]">{teams.length} Đội</div>
-            <span className="text-[10px] text-[var(--text-muted)] block">
-              Phân bổ trên {tracks.length} Hạng mục (Tracks)
-            </span>
-          </Card>
-
-          <Card className="p-4 bg-[var(--bg-panel)] border border-emerald-500/30 hud-clipped space-y-1">
-            <span className="text-[10px] text-emerald-400 uppercase block font-bold">Bài Nộp Thu Thập</span>
-            <div className="text-2xl font-bold text-emerald-400">{submissions.length} Bài nộp</div>
-            <span className="text-[10px] text-[var(--text-muted)] block">
-              Gồm GitHub repo, Live Demo &amp; Slides
-            </span>
-          </Card>
-
-          <Card className="p-4 bg-[var(--bg-panel)] border border-amber-500/30 hud-clipped space-y-1">
-            <span className="text-[10px] text-amber-400 uppercase block font-bold">Cơ Cấu Giải Thưởng</span>
-            <div className="text-2xl font-bold text-amber-400">{prizes.length} Giải thưởng</div>
-            <span className="text-[10px] text-[var(--text-muted)] block">
-              Sẵn sàng gán cho Top N khi công bố
-            </span>
-          </Card>
-        </div>
-
-        {/* 6 Core Modules Quick Action Deck */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-2 font-mono text-xs">
-            <span className="font-bold text-[#a855f7] uppercase tracking-wider flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#a855f7]" />
-              LUỒNG CÔNG VIỆC ĐIỀU PHỐI (6 MODULES WORKFLOW)
-            </span>
-            <span className="text-[10px] text-[var(--text-muted)]">Bấm vào từng module để truy cập nhanh</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {MODULES.map((mod) => {
-              const Icon = mod.icon;
-              return (
-                <Link
-                  key={mod.num}
-                  href={mod.href}
-                  className={`p-5 bg-[var(--bg-panel)] border border-[var(--border-muted)] ${mod.border} transition-all duration-200 hud-clipped flex flex-col justify-between space-y-4 group hover:bg-[var(--bg-input)]`}
+            {isLoading ? (
+              <div className="font-mono text-xs text-[#8a9ba8]">Đang tải danh sách sự kiện phụ trách...</div>
+            ) : assignedEvents.length === 0 ? (
+              <div className="font-mono text-xs text-[#f59e0b]">
+                Bạn hiện chưa được Admin phân công phụ trách sự kiện nào.
+              </div>
+            ) : (
+              <div className="relative max-w-2xl">
+                <select
+                  value={selectedEventId}
+                  onChange={(e) => setSelectedEventId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans font-semibold text-sm focus:outline-none focus:border-[#8b5cf6] cursor-pointer appearance-none"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-[#a855f7]/20 text-[#a855f7] font-mono text-xs font-bold border border-[#a855f7]/40">
-                          {mod.num}
-                        </span>
-                        <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-                          {mod.tag}
-                        </span>
-                      </div>
-                      <Icon className={`w-5 h-5 ${mod.accent}`} />
-                    </div>
+                  {assignedEvents.map((ev, idx) => {
+                    const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
+                    const name = ev.eventName || ev.EventName || "Sự kiện";
+                    const seasonStr = ev.season || ev.Season || "Summer";
+                    const yearNum = ev.year || ev.Year || 2026;
+                    return (
+                      <option key={id} value={id}>
+                        {idx + 1}. {name} — ({seasonStr} {yearNum})
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            )}
+          </div>
 
-                    <h3 className="font-display font-bold text-sm text-[var(--text-primary)] uppercase tracking-wide group-hover:text-white transition-colors">
-                      {mod.title}
-                    </h3>
+          {selectedEvent && (
+            <div className="flex items-center gap-3 font-mono text-xs bg-[#0a0e10] px-4 py-2.5 border border-[#263339]">
+              <span className="text-[#8a9ba8]">TRẠNG THÁI:</span>
+              {isSelectedEventPublished ? (
+                <span className="text-[#10b981] font-bold">[ ĐÃ CÔNG BỐ ]</span>
+              ) : (
+                <span className="text-[#f59e0b] font-bold">[ BẢN NHÁP ]</span>
+              )}
+            </div>
+          )}
+        </div>
 
-                    <p className="font-mono text-xs text-[var(--text-muted)] leading-relaxed">
-                      {mod.desc}
-                    </p>
-                  </div>
+        {/* 4 Metric Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Total Teams */}
+          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#8b5cf6]"></div>
+            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
+              <span>TỔNG SỐ ĐỘI THI</span>
+              <Users className="w-4 h-4 text-[#8b5cf6]" />
+            </div>
+            <div className="font-mono font-bold text-3xl text-[#e1e7ec]">{eventTeamsCount}</div>
+            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
+              <span>Sĩ số đội thi đã duyệt</span>
+              <Link href="/coordinator/teams" className="hover:text-[#8b5cf6] text-[11px] font-mono transition-colors">
+                Quản lý đội &gt;
+              </Link>
+            </div>
+          </div>
 
-                  <div className="pt-2 border-t border-[var(--border-muted)] flex items-center justify-between font-mono text-[11px] text-[var(--text-muted)] group-hover:text-white">
-                    <span>Truy cập module</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-              );
-            })}
+          {/* Card 2: Pending Submissions */}
+          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#f59e0b]"></div>
+            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
+              <span>BÀI NỘP CHỜ CHẤM</span>
+              <FileCheck className="w-4 h-4 text-[#f59e0b]" />
+            </div>
+            <div className="font-mono font-bold text-3xl text-[#e1e7ec]">{eventPendingSubmissions}</div>
+            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
+              <span>Cần tiến độ chấm điểm</span>
+              <Link href="/coordinator/publish-results" className="hover:text-[#f59e0b] text-[11px] font-mono transition-colors">
+                Soát xét &gt;
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 3: Pending Appeals */}
+          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#ef4444]"></div>
+            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
+              <span>PHÚC KHẢO CHỜ XỬ LÝ</span>
+              <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
+            </div>
+            <div className="font-mono font-bold text-3xl text-[#ef4444]">
+              {String(eventPendingAppeals).padStart(2, "0")}
+            </div>
+            <div className="font-sans text-xs text-[#8a9ba8] mt-2 flex items-center justify-between">
+              <span>Khiếu nại chưa phản hồi</span>
+              <Link href="/coordinator/appeals" className="hover:text-[#ef4444] text-[11px] font-mono transition-colors">
+                Xử lý ngay &gt;
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 4: System Status */}
+          <div className="bg-[#13191c] p-5 border border-[#263339] relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-[#10b981]"></div>
+            <div className="font-mono text-[11px] text-[#8a9ba8] font-bold tracking-widest mb-2 flex items-center justify-between">
+              <span>TRẠNG THÁI SỰ KIỆN</span>
+              <Activity className="w-4 h-4 text-[#10b981]" />
+            </div>
+            <div className="font-mono font-bold text-lg text-[#10b981] mt-1 mb-2">
+              {isSelectedEventPublished ? "ĐÃ CÔNG BỐ PUBLIC" : "ĐANG CHỈNH SỬA NHÁP"}
+            </div>
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[#8a9ba8]">
+              <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
+              <span>{selectedEventSeason} {selectedEventYear}</span>
+            </div>
           </div>
         </div>
 
-        {/* Recent Submissions Quick Table */}
-        <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-4 font-mono text-xs">
-          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
-            <div>
-              <h3 className="font-display font-bold text-sm text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                <FileCode className="w-4 h-4 text-[#f59e0b]" />
-                Bài Nộp Mới Nhất ({submissions.slice(0, 5).length}/{submissions.length})
-              </h3>
-              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                Các sản phẩm dự thi mới nộp gần đây nhất của các đội.
-              </p>
+        {/* Clean Modern Event Roadmap / Milestones Stepper */}
+        <div className="bg-[#13191c] border border-[#263339] p-6 space-y-5">
+          <div className="flex items-center justify-between border-b border-[#263339] pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center text-[#8b5cf6]">
+                <Layers className="w-4 h-4 text-[#8b5cf6]" />
+              </div>
+              <div>
+                <h3 className="font-mono font-bold text-sm text-[#e1e7ec] uppercase tracking-wider m-0">
+                  TIẾN ĐỘ &amp; MỐC SỰ KIỆN CHÍNH
+                </h3>
+                <p className="font-mono text-xs text-[#8a9ba8] m-0">
+                  {selectedEventName} — Tổng hợp {eventMilestones.length} mốc tiến độ quan trọng
+                </p>
+              </div>
             </div>
-
-            <Link href="/coordinator/submissions">
-              <Button
-                variant="ghost"
-                className="text-xs font-mono border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer hover:border-white hud-clipped"
-              >
-                <span>Xem Toàn Bộ Bài Nộp</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
+            <Link
+              href={activeEventId ? `/coordinator/events/new?eventId=${activeEventId}` : "/coordinator/events/new"}
+              className="font-mono text-xs text-[#8b5cf6] hover:underline flex items-center gap-1.5 font-bold bg-[#8b5cf6]/10 px-3 py-1.5 border border-[#8b5cf6]/30 transition-all hover:bg-[#8b5cf6]/20"
+            >
+              <span>CHỈNH SỬA VÒNG (WIZARD)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          {isLoadingSubmissions ? (
-            <div className="py-12 text-center text-xs text-[var(--text-muted)]">
-              Đang tải danh sách bài làm...
-            </div>
-          ) : submissions.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[var(--text-muted)] bg-[var(--bg-input)] border border-[var(--border-muted)]">
-              Chưa có bài nộp nào trong sự kiện này.
-            </div>
+          {/* Grid Layout of Milestone Cards */}
+          {isLoadingRounds ? (
+            <div className="font-mono text-xs text-[#8a9ba8] p-4">Đang tải tiến độ sự kiện...</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full table-fixed min-w-[700px] text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-[var(--border-muted)] bg-[var(--bg-input)] text-[var(--text-muted)] uppercase text-[10px]">
-                    <th className="w-[30%] p-3">Đội Thi</th>
-                    <th className="w-[20%] p-3">Hạng Mục</th>
-                    <th className="w-[35%] p-3">Liên Kết Bài Làm</th>
-                    <th className="w-[15%] p-3 text-right">Thời Gian</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border-muted)]">
-                  {submissions.slice(0, 5).map((sub: any, idx: number) => {
-                    const teamName = sub.teamName || sub.TeamName || `Đội #${idx + 1}`;
-                    const trackName = sub.trackName || sub.TrackName || "Chung";
-                    const repoUrl = sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl;
-                    const demoUrl = sub.demoUrl || sub.DemoUrl;
-                    const slideUrl = sub.slideUrl || sub.SlideUrl;
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {eventMilestones.map((ms) => {
+                const isActive = ms.status === "active";
+                const isDone = ms.status === "completed";
 
-                    return (
-                      <tr key={sub.id || idx} className="hover:bg-[var(--bg-input)] transition-colors">
-                        <td className="p-3 font-bold text-[var(--text-primary)] truncate">{teamName}</td>
-                        <td className="p-3 text-[var(--accent-team)] truncate">{trackName}</td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {repoUrl && (
-                              <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-[var(--bg-base)] border border-[var(--border-muted)] text-[10px] flex items-center gap-1 hover:text-white">
-                                <Code2 className="w-3 h-3 text-blue-400" /> Repo
-                              </a>
-                            )}
-                            {demoUrl && (
-                              <a href={demoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] flex items-center gap-1 hover:bg-emerald-500/20">
-                                <Globe className="w-3 h-3" /> Demo
-                              </a>
-                            )}
-                            {slideUrl && (
-                              <a href={slideUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] flex items-center gap-1 hover:bg-purple-500/20">
-                                <FileSpreadsheet className="w-3 h-3" /> Slides
-                              </a>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 text-right text-[11px] text-[var(--text-muted)]">
-                          {sub.createdTime ? new Date(sub.createdTime).toLocaleDateString("vi-VN") : "Vừa xong"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                return (
+                  <div
+                    key={ms.id}
+                    className={`bg-[#0a0e10] p-4 border transition-all flex flex-col justify-between space-y-3 relative overflow-hidden group ${
+                      isActive
+                        ? "border-[#00d9ff] shadow-[0_0_15px_rgba(0,217,255,0.15)]"
+                        : isDone
+                        ? "border-[#10b981]/40"
+                        : "border-[#263339]"
+                    }`}
+                  >
+                    {/* Top Accent Line */}
+                    <div
+                      className={`absolute top-0 left-0 w-full h-[2px] ${
+                        isActive ? "bg-[#00d9ff]" : isDone ? "bg-[#10b981]" : "bg-[#263339]"
+                      }`}
+                    ></div>
+
+                    {/* Milestone Card Header */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] font-bold text-[#8b5cf6] tracking-wider uppercase flex items-center gap-1.5">
+                          <span className="w-4 h-4 rounded bg-[#8b5cf6]/20 text-[#c084fc] flex items-center justify-center text-[9px]">
+                            {ms.stepNumber}
+                          </span>
+                          <span>{ms.categoryTag}</span>
+                        </span>
+                        <span className={`text-[9px] font-mono px-2 py-0.5 font-bold ${ms.badgeBg}`}>
+                          {ms.badgeText}
+                        </span>
+                      </div>
+
+                      <h4 className="font-mono font-bold text-sm text-[#e1e7ec] pt-1">{ms.title}</h4>
+                    </div>
+
+                    {/* Sub-dates Box inside the Card */}
+                    <div className="bg-[#13191c] p-2.5 border border-[#263339] space-y-1.5 font-mono text-xs">
+                      {ms.submissionStart && (
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-[#8a9ba8] flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-[#00d9ff]" /> Nộp bài:
+                          </span>
+                          <span className="text-[#e1e7ec] font-bold">
+                            {formatDateStr(ms.submissionStart)} — {formatDateStr(ms.submissionEnd)}
+                          </span>
+                        </div>
+                      )}
+
+                      {ms.scoringStart && (
+                        <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#263339]/60">
+                          <span className="text-[#8a9ba8] flex items-center gap-1">
+                            <Activity className="w-3 h-3 text-[#10b981]" /> Chấm điểm:
+                          </span>
+                          <span className="text-[#10b981] font-bold">
+                            {formatDateStr(ms.scoringStart)} — {formatDateStr(ms.scoringEnd)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
-        </Card>
-      </main>
+        </div>
+
+      </div>
     </div>
   );
 };
