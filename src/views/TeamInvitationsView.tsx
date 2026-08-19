@@ -45,15 +45,17 @@ export function TeamInvitationsView() {
       }
 
       if (isAccepted) {
-        toast.success(`Đã chấp nhận lời mời tham gia "${targetName}"!`);
+        toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
         queryClient.invalidateQueries({ queryKey: ["my-team"] });
         queryClient.invalidateQueries({ queryKey: ["myTeam"] });
         queryClient.invalidateQueries({ queryKey: ["eventRoles"] });
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+        queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       } else {
-        toast.info(`Đã từ chối lời mời tham gia "${targetName}".`);
+        toast.info(`Bạn đã từ chối lời mời tham gia "${targetName}".`);
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+        queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
       }
     } catch (err: unknown) {
       const detail = err as { message?: string; response?: { data?: { message?: string; detail?: string } } };

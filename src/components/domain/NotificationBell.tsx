@@ -7,10 +7,89 @@ import { useRespondEventRoleInvitation } from "@/repositories/eventRolesReposito
 import { useMyNotifications, useMarkNotificationRead } from "@/repositories/notificationsRepository";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, X, ExternalLink, RefreshCw } from "lucide-react";
+import { Check, X, ExternalLink, RefreshCw, Bell, UserPlus, UserCheck, UserX, AlertCircle } from "lucide-react";
 
 interface NotificationBellProps {
   align?: "left" | "right";
+}
+
+function formatNotificationContent(rawTitle: string, rawMessage: string, type?: string) {
+  const tLower = (rawTitle || "").toLowerCase();
+  const mLower = (rawMessage || "").toLowerCase();
+
+  // 1. Thành viên mới tham gia / đồng ý vào đội
+  if (
+    tLower.includes("thành viên đã tham gia") ||
+    tLower.includes("đã tham gia") ||
+    tLower.includes("joined") ||
+    mLower.includes("đã đồng ý vào đội") ||
+    mLower.includes("đã tham gia đội")
+  ) {
+    return {
+      title: "🎉 Thành viên mới gia nhập đội",
+      message: rawMessage.replace(/Một thành viên đã đồng ý vào đội (.*)\./i, "Thí sinh đã đồng ý lời mời và chính thức gia nhập đội $1."),
+      badgeText: "THÀNH VIÊN MỚI",
+      badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+    };
+  }
+
+  // 2. Lời mời bị từ chối / không tham gia
+  if (
+    tLower.includes("từ chối") ||
+    tLower.includes("declined") ||
+    tLower.includes("rejected") ||
+    mLower.includes("từ chối lời mời") ||
+    mLower.includes("không đồng ý")
+  ) {
+    return {
+      title: "❌ Lời mời tham gia bị từ chối",
+      message: rawMessage || "Một thí sinh đã từ chối lời mời tham gia đội thi.",
+      badgeText: "TỪ CHỐI",
+      badgeClass: "bg-rose-950/40 text-rose-300 border-rose-500/30",
+    };
+  }
+
+  // 3. Bạn đã đồng ý gia nhập đội / Vào đội thành công
+  if (
+    tLower.includes("gia nhập thành công") ||
+    tLower.includes("bạn đã vào đội") ||
+    mLower.includes("bạn đã trở thành thành viên")
+  ) {
+    return {
+      title: "🏆 Gia nhập đội thi thành công",
+      message: rawMessage || "Bạn đã chính thức gia nhập đội thi. Chúc bạn và đồng đội đạt thành tích xuất sắc!",
+      badgeText: "VÀO ĐỘI",
+      badgeClass: "bg-cyan-950/40 text-cyan-300 border-cyan-500/30",
+    };
+  }
+
+  // 4. Lời mời mới vào đội
+  if (tLower.includes("lời mời") || mLower.includes("mời bạn tham gia")) {
+    return {
+      title: rawTitle || "📩 Lời mời tham gia đội thi",
+      message: rawMessage,
+      badgeText: "LỜI MỜI",
+      badgeClass: "bg-sky-950/40 text-sky-300 border-sky-500/30",
+    };
+  }
+
+  // 5. Yêu cầu xin gia nhập đội
+  if (tLower.includes("yêu cầu") || mLower.includes("xin gia nhập") || mLower.includes("yêu cầu tham gia")) {
+    return {
+      title: "🙋 Yêu cầu xin gia nhập đội thi",
+      message: rawMessage,
+      badgeText: "YÊU CẦU",
+      badgeClass: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+    };
+  }
+
+  // Default fallback:
+  return {
+    title: rawTitle || "Thông báo hệ thống",
+    message: rawMessage,
+    badgeText: "HỆ THỐNG",
+    badgeClass: "bg-zinc-900 text-zinc-300 border-zinc-700",
+  };
 }
 
 export function NotificationBell({ align = "left" }: NotificationBellProps) {
@@ -62,15 +141,17 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
       }
 
       if (isAccepted) {
-        toast.success(`Đã chấp nhận lời mời tham gia "${targetName}"!`);
+        toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
         queryClient.invalidateQueries({ queryKey: ["my-team"] });
         queryClient.invalidateQueries({ queryKey: ["myTeam"] });
         queryClient.invalidateQueries({ queryKey: ["eventRoles"] });
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+        queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       } else {
-        toast.info(`Đã từ chối lời mời tham gia "${targetName}".`);
+        toast.info(`Bạn đã từ chối lời mời tham gia "${targetName}".`);
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+        queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
       }
     } catch (err: any) {
       const rawMsg =
@@ -171,13 +252,13 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
               {pendingInvitations.map((item) => (
                 <div
                   key={item.invitationId}
-                  className="p-3 flex flex-col gap-1.5 bg-[var(--accent-primary)]/5 hover:bg-[var(--bg-input)]/40 transition-colors"
+                  className="p-3.5 flex flex-col gap-1.5 bg-[var(--accent-primary)]/5 hover:bg-[var(--bg-input)]/40 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]" />
                       <span className="font-bold text-[var(--text-primary)] text-xs">
-                        {item.type === "TEAM" ? "Lời Mời Vào Đội Thi" : `Lời Mời Vai Trò: ${item.role || "Staff"}`}
+                        {item.type === "TEAM" ? "📩 Lời Mời Gia Nhập Đội Thi" : `📩 Lời Mời Vai Trò: ${item.role || "Staff"}`}
                       </span>
                     </div>
                     <span className="text-[10px] text-[var(--accent-team)] font-bold">
@@ -186,58 +267,97 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                   </div>
 
                   <p className="font-sans text-xs text-[var(--text-muted)] leading-relaxed">
-                    {item.inviterName ? `${item.inviterName} đã gửi lời mời bạn tham gia.` : "Bạn nhận được lời mời mới."}
+                    {item.inviterName
+                      ? `${item.inviterName} đã gửi lời mời bạn gia nhập đội thi.`
+                      : "Bạn nhận được một lời mời tham gia mới."}
                   </p>
 
                   <div className="flex items-center gap-2 pt-1 font-mono text-[10px]">
                     <button
                       disabled={isResponding}
                       onClick={() => handleRespond(item, true)}
-                      className="px-2.5 py-1 bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/40 font-bold uppercase hover:bg-[var(--color-success)] hover:text-black transition-all flex items-center gap-1 disabled:opacity-50"
+                      className="px-2.5 py-1 bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/40 font-bold uppercase hover:bg-[var(--color-success)] hover:text-black transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                     >
                       <Check className="w-3 h-3" /> ĐỒNG Ý
                     </button>
                     <button
                       disabled={isResponding}
                       onClick={() => handleRespond(item, false)}
-                      className="px-2.5 py-1 bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30 font-bold uppercase hover:bg-[var(--color-danger)] hover:text-white transition-all flex items-center gap-1 disabled:opacity-50"
+                      className="px-2.5 py-1 bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30 font-bold uppercase hover:bg-[var(--color-danger)] hover:text-white transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                     >
                       <X className="w-3 h-3" /> TỪ CHỐI
                     </button>
                   </div>
                 </div>
               ))}
-              {systemNotifs.map((n) => (
-                <div
-                  key={n.id}
-                  className={`p-3 flex flex-col gap-1 ${n.isRead ? "opacity-60" : "bg-[var(--accent-primary)]/5"}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-[var(--text-primary)] text-xs">{n.title}</span>
-                    {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] shrink-0" />}
+              {systemNotifs.map((n) => {
+                const formatted = formatNotificationContent(n.title, n.message, n.type);
+                return (
+                  <div
+                    key={n.id}
+                    className={`p-3.5 flex flex-col gap-1.5 transition-colors ${
+                      n.isRead ? "opacity-60 bg-transparent" : "bg-[var(--accent-primary)]/5"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${formatted.badgeClass}`}>
+                          {formatted.badgeText}
+                        </span>
+                        <span className="font-bold text-[var(--text-primary)] text-xs">{formatted.title}</span>
+                      </div>
+                      {!n.isRead && (
+                        <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0 animate-pulse" />
+                      )}
+                    </div>
+                    <p className="font-sans text-xs text-[var(--text-muted)] leading-relaxed">{formatted.message}</p>
+                    <div className="flex items-center justify-between pt-1 font-mono text-[10px]">
+                      <div className="flex items-center gap-2">
+                        {n.linkUrl ? (
+                          n.linkUrl.startsWith("http") ? (
+                            <a
+                              href={n.linkUrl}
+                              className="text-[var(--accent-primary)] font-bold hover:underline"
+                            >
+                              [ ↗ Mở liên kết ]
+                            </a>
+                          ) : (
+                            <Link
+                              href={n.linkUrl}
+                              onClick={() => {
+                                if (!n.isRead) markRead(n.id);
+                                setIsOpen(false);
+                              }}
+                              className="text-[var(--accent-primary)] font-bold hover:underline"
+                            >
+                              [ Xem chi tiết ]
+                            </Link>
+                          )
+                        ) : (
+                          <Link
+                            href="/my-team"
+                            onClick={() => {
+                              if (!n.isRead) markRead(n.id);
+                              setIsOpen(false);
+                            }}
+                            className="text-[var(--accent-primary)] font-bold hover:underline"
+                          >
+                            [ Xem đội thi ]
+                          </Link>
+                        )}
+                      </div>
+                      {!n.isRead && (
+                        <button
+                          onClick={() => markRead(n.id)}
+                          className="text-zinc-500 hover:text-white uppercase transition-colors cursor-pointer"
+                        >
+                          Đánh dấu đã đọc
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <p className="font-sans text-xs text-[var(--text-muted)] leading-relaxed">{n.message}</p>
-                  <div className="flex items-center gap-2 pt-1">
-                    {n.linkUrl && (
-                      n.linkUrl.startsWith("http") ? (
-                        <a href={n.linkUrl} className="text-[10px] text-[var(--accent-primary)] font-bold hover:underline">Mở</a>
-                      ) : (
-                        <Link href={n.linkUrl} onClick={() => { if (!n.isRead) markRead(n.id); setIsOpen(false); }} className="text-[10px] text-[var(--accent-primary)] font-bold hover:underline">
-                          Xem chi tiết
-                        </Link>
-                      )
-                    )}
-                    {!n.isRead && (
-                      <button
-                        onClick={() => markRead(n.id)}
-                        className="text-[10px] text-[var(--text-muted)] hover:text-white uppercase"
-                      >
-                        Đánh dấu đã đọc
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               </>
             )}
           </div>
