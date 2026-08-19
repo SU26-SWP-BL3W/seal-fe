@@ -6,12 +6,19 @@ import { Button, Input, Card } from "@/components/ui";
 import { Link } from "@/i18n/routing";
 import { Shield, Mail, Lock, User, Eye, EyeOff, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
+import { useAuth } from "@/providers/AuthProvider";
+import { AlreadyLoggedInNotice } from "@/components/domain/AlreadyLoggedInNotice";
 
 type RegisterStep = "form" | "success";
 
 export function RegisterView() {
+  const { user: currentUser } = useAuth();
   const toast = useToast();
   const [step, setStep] = useState<RegisterStep>("form");
+
+  if (currentUser) {
+    return <AlreadyLoggedInNotice />;
+  }
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

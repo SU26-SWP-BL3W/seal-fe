@@ -218,22 +218,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // QUY TẮC ĐIỀU HƯỚNG THEO ĐÚNG ACTOR:
-    // 1. Admin -> /admin/dashboard
-    // 2. Coordinator -> /coordinator/dashboard
-    // 3. Judge -> /judge/scoring
-    // 4. Mentor -> /mentor/tracks
-    // 5. TeamLeader / TeamMember -> /my-team
-    // 6. Sinh viên (Student): Nếu chưa duyệt thẻ -> /onboarding/profile, nếu đã duyệt -> /events
-    // 7. Khác -> /events
-    let targetPath = "/events";
+    // 1. Thí sinh (Student): Đã duyệt thẻ -> / (Landing Page), Chưa duyệt thẻ -> /onboarding/profile
+    // 2. Tất cả role khác (Admin, Coordinator, Judge, Mentor): Vào thẳng Dashboard tương ứng
+    let targetPath = "/";
     if (isAdmin) {
       targetPath = "/admin/dashboard";
     } else if (detectedRole && REDIRECT_BY_ROLE[detectedRole]) {
       targetPath = REDIRECT_BY_ROLE[detectedRole];
     } else if (isStudent) {
-      targetPath = isApproved ? "/events" : "/onboarding/profile";
+      targetPath = isApproved ? "/" : "/onboarding/profile";
     } else {
-      targetPath = "/events";
+      targetPath = "/";
     }
 
     // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
@@ -330,22 +325,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // QUY TẮC ĐIỀU HƯỚNG GOOGLE THEO ĐÚNG ACTOR:
-    // 1. Admin -> /admin/dashboard
-    // 2. Coordinator -> /coordinator/dashboard
-    // 3. Judge -> /judge/scoring
-    // 4. Mentor -> /mentor/tracks
-    // 5. TeamLeader / TeamMember -> /my-team
-    // 6. Sinh viên (Student): Nếu chưa duyệt thẻ -> /onboarding/profile, nếu đã duyệt -> /events
-    // 7. Khác -> /events
-    let targetPath = "/events";
+    // 1. Thí sinh (Student): Đã duyệt thẻ -> / (Landing Page), Chưa duyệt thẻ -> /onboarding/profile
+    // 2. Tất cả role khác (Admin, Coordinator, Judge, Mentor): Vào thẳng Dashboard tương ứng
+    let targetPath = "/";
     if (isAdmin) {
       targetPath = "/admin/dashboard";
     } else if (detectedRole && REDIRECT_BY_ROLE[detectedRole]) {
       targetPath = REDIRECT_BY_ROLE[detectedRole];
     } else if (isStudent) {
-      targetPath = isApproved ? "/events" : "/onboarding/profile";
+      targetPath = isApproved ? "/" : "/onboarding/profile";
     } else {
-      targetPath = "/events";
+      targetPath = "/";
     }
 
     // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
