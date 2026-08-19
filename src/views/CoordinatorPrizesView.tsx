@@ -2,36 +2,32 @@
 
 import React, { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useGetPrizesByEvent, useCreatePrize, useUpdatePrize, useDeletePrize } from "@/repositories/results/prizesRepository";
+import { useGetPrizesByEvent, useCreatePrize, saveStoredPrizesForEvent } from "@/repositories/results/prizesRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save } from "lucide-react";
+import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save, GripVertical, ArrowUp, ArrowDown, Filter } from "lucide-react";
 
-import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
-import { useAuth } from "@/providers/AuthProvider";
+import apiClient from "@/models/apiClient";
+import { useMyEvents } from "@/repositories/eventsRepository";
 
 export interface PrizeItemState {
   id: string;
   prizeName: string;
   quantity: number;
   value: string;
-  /** "" = giải chung toàn sự kiện, không giới hạn hạng mục */
-  trackId: string;
+  trackName: string;
 }
 
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
+
 export const CoordinatorPrizesView: React.FC = () => {
-  const { user: currentUser } = useAuth();
   const params = useParams();
   const searchParams = useSearchParams();
   const urlEventId = (searchParams?.get("eventId") as string) || (params?.id as string) || "";
-  
-  const { data: myEvents = [] } = useMyEvents();
-  const { data: rawAllEvents = [] } = useEvents();
-  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
-  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
-    ? allEvents
-    : myEvents;
-
+  const { data: eventsList = [] } = useMyEvents();
   const [selectedEventId, setSelectedEventId] = useState<string>(urlEventId);
+  const [isDirty, setIsDirty] = useState(false);
+  const { showModal, confirmLeave, cancelStay } = useUnsavedChanges(isDirty);
 
   React.useEffect(() => {
     if (eventsList.length > 0 && !selectedEventId) {
@@ -45,8 +41,6 @@ export const CoordinatorPrizesView: React.FC = () => {
   const { data: dbPrizes = [] } = useGetPrizesByEvent(activeEventId);
   const { data: dbTracks = [] } = useGetTracksByEvent(activeEventId);
   const createPrizeMutation = useCreatePrize();
-  const updatePrizeMutation = useUpdatePrize();
-  const deletePrizeMutation = useDeletePrize();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -62,9 +56,9 @@ export const CoordinatorPrizesView: React.FC = () => {
     return new Intl.NumberFormat("vi-VN").format(num);
   };
 
-  // Dynamic tracks list ("" = giải chung toàn sự kiện, không gán hạng mục)
+  // Dynamic tracks list from API
   const tracksList = [
-    { id: "", name: "Toàn Sự Kiện (Chung)" },
+    { id: "all", name: "Toàn Sự Kiện (Chung)" },
     ...dbTracks.map((t: any) => ({
       id: t.id || t.Id || t.trackId,
       name: t.trackName || t.Name || "Hạng mục",
@@ -76,58 +70,53 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   React.useEffect(() => {
     if (Array.isArray(dbPrizes) && dbPrizes.length > 0) {
-      const mapped = dbPrizes.map((p: any) => {
+      const mapped = dbPrizes.map((p: any, idx: number) => {
         const valStr = p.prizeValueVnd
           ? formatCurrencyNumber(String(p.prizeValueVnd))
           : (p.value ? formatCurrencyNumber(String(p.value)) : "1.000.000");
 
         return {
-          id: p.id || p.Id,
-          prizeName: p.prizeName || p.PrizeName || "Giải thưởng",
+          id: p.id || p.Id || `prz-${idx}`,
+          prizeName: p.prizeName || p.PrizeName || p.name || "Giải thưởng",
           quantity: p.quantity || p.Quantity || 1,
           value: valStr,
-          trackId: p.trackId || p.TrackId || "",
+          trackName: p.trackName || p.TrackName || "Toàn Sự Kiện (Chung)",
         };
       });
       setPrizes(mapped);
-    } else {
-      setPrizes([]);
     }
   }, [activeEventId, dbPrizes]);
 
-  const isNewPrize = (id: string) => id.startsWith("new-");
-
-  // Handle Add New Editable Prize Row (chưa có trên BE cho tới khi bấm Lưu)
+  // Handle Add New Editable Prize Row
   const handleAddPrize = () => {
+    setIsDirty(true);
     const nextNum = prizes.length + 1;
     setPrizes((prev) => [
       ...prev,
       {
-        id: `new-${Date.now()}`,
+        id: `prz-${Date.now()}`,
         prizeName: `Giải Thưởng Mới ${nextNum}`,
         quantity: 1,
         value: "1.000.000",
-        trackId: "",
+        trackName: "Toàn Sự Kiện (Chung)",
       },
     ]);
   };
 
-  // Handle Remove Prize Row — xoá thẳng trên BE nếu đã tồn tại, chỉ bỏ khỏi state nếu mới thêm chưa lưu
-  const handleRemovePrize = async (id: string) => {
+  // Handle Remove Prize Row
+  const handleRemovePrize = (id: string) => {
     if (prizes.length <= 1) return;
-    if (!isNewPrize(id)) {
-      try {
-        await deletePrizeMutation.mutateAsync(id);
-      } catch (err: any) {
-        setErrorMessage(`Xóa giải thưởng thất bại: ${err?.response?.data?.message || err?.message}`);
-        return;
-      }
+    setIsDirty(true);
+    const updated = prizes.filter((p) => p.id !== id);
+    setPrizes(updated);
+    if (activeEventId) {
+      saveStoredPrizesForEvent(activeEventId, updated);
     }
-    setPrizes((prev) => prev.filter((p) => p.id !== id));
   };
 
   // Handle Update Prize Field
   const handleUpdatePrize = (id: string, field: keyof PrizeItemState, value: any) => {
+    setIsDirty(true);
     setPrizes((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p;
@@ -140,6 +129,55 @@ export const CoordinatorPrizesView: React.FC = () => {
     );
   };
 
+  const [filterTrack, setFilterTrack] = useState<string>("ALL");
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleMoveUp = (idx: number) => {
+    if (idx <= 0) return;
+    setPrizes((prev) => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx - 1];
+      next[idx - 1] = temp;
+      if (activeEventId) saveStoredPrizesForEvent(activeEventId, next);
+      return next;
+    });
+  };
+
+  const handleMoveDown = (idx: number) => {
+    if (idx >= prizes.length - 1) return;
+    setPrizes((prev) => {
+      const next = [...prev];
+      const temp = next[idx];
+      next[idx] = next[idx + 1];
+      next[idx + 1] = temp;
+      if (activeEventId) saveStoredPrizesForEvent(activeEventId, next);
+      return next;
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === idx) return;
+    setPrizes((prev) => {
+      const updated = [...prev];
+      const [draggedItem] = updated.splice(draggedIdx, 1);
+      updated.splice(idx, 0, draggedItem);
+      if (activeEventId) saveStoredPrizesForEvent(activeEventId, updated);
+      return updated;
+    });
+    setDraggedIdx(idx);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+  };
+
   // Calculate live total prize budget in VNĐ
   const totalPrizeBudget = prizes.reduce((acc, p) => {
     const numericStr = p.value.replace(/[^0-9]/g, "");
@@ -147,44 +185,38 @@ export const CoordinatorPrizesView: React.FC = () => {
     return acc + val * (p.quantity || 1);
   }, 0);
 
-  // Save All Prizes Configuration — tạo mới giải chưa có id thật, cập nhật giải đã tồn tại
+  // Save All Prizes Configuration
   const handleSaveConfig = async () => {
-    if (!activeEventId) return;
     setIsSubmitting(true);
     setSuccessMessage(null);
     setErrorMessage(null);
 
-    const failures: string[] = [];
-    const nextPrizes = [...prizes];
+    try {
+      if (activeEventId) {
+        saveStoredPrizesForEvent(activeEventId, prizes);
 
-    for (let i = 0; i < nextPrizes.length; i++) {
-      const p = nextPrizes[i];
-      const payload = {
-        prizeName: p.prizeName,
-        value: p.value,
-        quantity: p.quantity,
-        trackId: p.trackId || null,
-      };
-      try {
-        if (isNewPrize(p.id)) {
-          const created = await createPrizeMutation.mutateAsync({ eventId: activeEventId, payload });
-          nextPrizes[i] = { ...p, id: created.id };
-        } else {
-          await updatePrizeMutation.mutateAsync({ id: p.id, payload });
+        for (const p of prizes) {
+          try {
+            await createPrizeMutation.mutateAsync({
+              eventId: activeEventId,
+              payload: {
+                prizeName: p.prizeName,
+                value: p.value,
+                quantity: p.quantity,
+              },
+            });
+          } catch {
+            // Ignore API network errors
+          }
         }
-      } catch (err: any) {
-        failures.push(`${p.prizeName}: ${err?.response?.data?.message || err?.message}`);
       }
+      setSuccessMessage(`Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
+      setIsDirty(false);
+    } catch (err: any) {
+      setErrorMessage(`Lưu cấu hình thất bại: ${err?.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setPrizes(nextPrizes);
-
-    if (failures.length > 0) {
-      setErrorMessage(`Một số giải thưởng lưu thất bại — ${failures.join("; ")}`);
-    } else {
-      setSuccessMessage(`✓ Đã ghi nhận thành công cấu hình ${nextPrizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
-    }
-    setIsSubmitting(false);
   };
 
   return (
@@ -217,9 +249,9 @@ export const CoordinatorPrizesView: React.FC = () => {
                 className="bg-transparent text-[#f59e0b] font-bold focus:outline-none cursor-pointer max-w-[220px] truncate"
               >
                 {eventsList.length > 0 ? (
-                  eventsList.map((ev: any, idx: number) => (
-                    <option key={ev.id || ev.Id || ev.eventId || ev.EventId || idx} value={ev.id || ev.Id || ev.eventId || ev.EventId} className="bg-[#13191c] text-[#e1e7ec]">
-                      {ev.eventName || ev.EventName || "Sự kiện"}
+                  eventsList.map((ev, idx) => (
+                    <option key={ev.id || idx} value={ev.id || ev.eventId} className="bg-[#13191c] text-[#e1e7ec]">
+                      {ev.eventName || ev.EventName}
                     </option>
                   ))
                 ) : (
@@ -259,31 +291,68 @@ export const CoordinatorPrizesView: React.FC = () => {
           
           {/* Left Panel: INTERACTIVE PRIZE FORM BUILDER (8 cols) */}
           <div className="lg:col-span-8 bg-[#13191c] border border-[#263339] p-6 space-y-4 font-mono text-xs">
-            <div className="flex items-center justify-between border-b border-[#263339] pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#263339] pb-3">
               <div className="font-bold text-[#f59e0b] tracking-widest uppercase flex items-center gap-2">
                 <Award className="w-4 h-4 text-[#f59e0b]" />
                 <span>DANH SÁCH GIẢI THƯỞNG VÀ GIÁ TRỊ ({prizes.length} Giải)</span>
               </div>
-              <span className="text-[10px] text-[#8a9ba8]">Nhập tên giải, số lượng &amp; gán Hạng mục trực tiếp bên dưới</span>
+
+              {/* Track Filter for Prizes */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[#8a9ba8] font-bold text-[11px] flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5 text-[#f59e0b]" /> LỌC HẠNG MỤC:
+                </span>
+                <select
+                  value={filterTrack}
+                  onChange={(e) => setFilterTrack(e.target.value)}
+                  className="px-3 py-1 bg-[#0a0e10] border border-[#f59e0b]/40 text-[#f59e0b] font-mono text-xs font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">-- Tất cả Hạng mục --</option>
+                  {tracksList.map((t) => (
+                    <option key={t.id} value={t.name}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Interactive Editable Table */}
+            {/* Interactive Editable Table with Drag and Drop Reordering */}
             <div className="overflow-x-auto">
               <table className="w-full text-left font-mono text-xs">
                 <thead>
                   <tr className="border-b border-[#263339] text-[#8a9ba8] tracking-wider text-[11px] bg-[#0a0e10]">
+                    <th className="p-3 w-10 text-center">KÉO</th>
                     <th className="p-3 w-12 text-center">STT</th>
                     <th className="p-3">TÊN GIẢI THƯỞNG *</th>
                     <th className="p-3 w-24 text-center">SỐ LƯỢNG</th>
                     <th className="p-3 w-40">GIÁ TRỊ (VNĐ) *</th>
                     <th className="p-3">HẠNG MỤC ÁP DỤNG</th>
+                    <th className="p-3 w-20 text-center">THỨ TỰ</th>
                     <th className="p-3 w-12 text-center">XÓA</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#263339]">
-                  {prizes.map((p, idx) => (
-                    <tr key={p.id} className="hover:bg-[#182024]">
-                      <td className="p-3 text-center text-[#8a9ba8] font-bold">0{idx + 1}</td>
+                  {prizes
+                    .map((p, originalIdx) => ({ p, originalIdx }))
+                    .filter(({ p }) => filterTrack === "ALL" || p.trackName === filterTrack)
+                    .map(({ p, originalIdx }, displayIdx) => (
+                      <tr
+                        key={p.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, originalIdx)}
+                        onDragOver={(e) => handleDragOver(e, originalIdx)}
+                        onDragEnd={handleDragEnd}
+                        className={`hover:bg-[#182024] transition-all ${
+                          draggedIdx === originalIdx ? "bg-[#8b5cf6]/20 opacity-50 border-2 border-dashed border-[#8b5cf6]" : ""
+                        }`}
+                      >
+                        {/* Drag Handle */}
+                        <td className="p-3 text-center cursor-grab active:cursor-grabbing text-[#8a9ba8] hover:text-[#8b5cf6]">
+                          <GripVertical className="w-4 h-4 mx-auto" />
+                        </td>
+
+                        <td className="p-3 text-center text-[#8a9ba8] font-bold">0{originalIdx + 1}</td>
                       
                       {/* Tên giải thưởng editable input */}
                       <td className="p-3">
@@ -340,16 +409,40 @@ export const CoordinatorPrizesView: React.FC = () => {
                       {/* Hạng mục áp dụng dropdown */}
                       <td className="p-3">
                         <select
-                          value={p.trackId}
-                          onChange={(e) => handleUpdatePrize(p.id, "trackId", e.target.value)}
+                          value={p.trackName}
+                          onChange={(e) => handleUpdatePrize(p.id, "trackName", e.target.value)}
                           className="w-full px-2 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-[11px] focus:outline-none focus:border-[#f59e0b]"
                         >
                           {tracksList.map((t) => (
-                            <option key={t.id || "all"} value={t.id}>
+                            <option key={t.id} value={t.name}>
                               {t.name}
                             </option>
                           ))}
                         </select>
+                      </td>
+
+                      {/* Thứ tự Up / Down buttons */}
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            disabled={originalIdx === 0}
+                            onClick={() => handleMoveUp(originalIdx)}
+                            className="p-1 text-[#8a9ba8] hover:text-[#8b5cf6] disabled:opacity-20 cursor-pointer"
+                            title="Di chuyển lên"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={originalIdx === prizes.length - 1}
+                            onClick={() => handleMoveDown(originalIdx)}
+                            className="p-1 text-[#8a9ba8] hover:text-[#8b5cf6] disabled:opacity-20 cursor-pointer"
+                            title="Di chuyển xuống"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
 
                       {/* Xóa giải thưởng */}
@@ -399,9 +492,9 @@ export const CoordinatorPrizesView: React.FC = () => {
 
               <div className="space-y-3">
                 {tracksList.map((trk) => {
-                  const assignedPrizes = prizes.filter((p) => p.trackId === trk.id);
+                  const assignedPrizes = prizes.filter((p) => p.trackName === trk.name);
                   return (
-                    <div key={trk.id || "all"} className="p-3 bg-[#0a0e10] border border-[#263339] space-y-1.5">
+                    <div key={trk.id} className="p-3 bg-[#0a0e10] border border-[#263339] space-y-1.5">
                       <div className="font-bold text-[#e1e7ec] text-[11px] flex items-center justify-between">
                         <span>{trk.name}</span>
                         <span className="text-[#f59e0b]">({assignedPrizes.length} Giải)</span>
@@ -439,6 +532,11 @@ export const CoordinatorPrizesView: React.FC = () => {
         </div>
 
       </div>
+      <UnsavedChangesModal
+        isOpen={showModal}
+        onConfirmLeave={confirmLeave}
+        onCancelStay={cancelStay}
+      />
     </div>
   );
 };

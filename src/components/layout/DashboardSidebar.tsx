@@ -19,6 +19,8 @@ import {
   FolderGit2,
   CheckCircle2,
   AlertTriangle,
+  School,
+  Plus,
 } from "lucide-react";
 import { Badge } from "@/components/ui";
 
@@ -33,6 +35,13 @@ const PUBLIC_ITEMS: NavItem[] = [
   { label: "BẢNG ĐIỀU KHIỂN", href: "/dashboard", icon: LayoutDashboard },
   { label: "SỰ KIỆN & GIẢI ĐẤU", href: "/events", icon: Trophy },
   { label: "BẢNG XẾP HẠNG", href: "/leaderboard", icon: Award },
+];
+
+const ADMIN_ITEMS: NavItem[] = [
+  { label: "BẢNG ĐIỀU HÀNH TỔNG", href: "/admin/dashboard", icon: LayoutDashboard, roleBadge: "[ADM]" },
+  { label: "QUẢN LÝ NGƯỜI DÙNG", href: "/admin/users", icon: Users, roleBadge: "[ADM]" },
+  { label: "TRƯỜNG ĐẠI HỌC", href: "/admin/schools", icon: School, roleBadge: "[ADM]" },
+  { label: "TẠO SỰ KIỆN MỚI", href: "/admin/events/new", icon: Plus, roleBadge: "[NEW]" },
 ];
 
 const COORDINATOR_ITEMS: NavItem[] = [
@@ -92,7 +101,7 @@ export function DashboardSidebar() {
             <div className="font-display font-bold text-base tracking-wider text-[var(--text-primary)] flex items-center gap-2">
               SEAL <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] border border-[var(--accent-primary)]/40">HUD v2.0</span>
             </div>
-            <p className="text-[10px] font-mono text-[var(--text-muted)] tracking-widest uppercase">// COMMAND DECK</p>
+            <p className="text-[10px] font-mono text-[var(--text-muted)] tracking-widest uppercase">COMMAND DECK</p>
           </div>
         </div>
 
@@ -125,7 +134,7 @@ export function DashboardSidebar() {
           {isCoordinator && (
             <div className="pt-3 pb-1">
               <span className="text-[9px] font-mono font-bold text-[#a855f7] tracking-widest uppercase block px-2 mb-1.5">
-                // BAN TỔ CHỨC (COORDINATOR)
+                BAN TỔ CHỨC (COORDINATOR)
               </span>
               {COORDINATOR_ITEMS.map((item) => {
                 const Icon = item.icon;
@@ -160,7 +169,7 @@ export function DashboardSidebar() {
           {isTeam && (
             <div className="pt-2">
               <span className="text-[9px] font-mono font-bold text-[var(--accent-team)] tracking-widest uppercase block px-2 mb-1">
-                // KHÔNG GIAN ĐỘI THI
+                KHÔNG GIAN ĐỘI THI
               </span>
               {CANDIDATE_ITEMS.map((item) => {
                 const Icon = item.icon;
@@ -190,7 +199,7 @@ export function DashboardSidebar() {
           {isJudge && (
             <div className="pt-2">
               <span className="text-[9px] font-mono font-bold text-[var(--accent-judge)] tracking-widest uppercase block px-2 mb-1">
-                // HỘI ĐỒNG GIÁM KHẢO
+                HỘI ĐỒNG GIÁM KHẢO
               </span>
               {JUDGE_ITEMS.map((item) => {
                 const Icon = item.icon;
@@ -220,7 +229,7 @@ export function DashboardSidebar() {
           {isMentor && (
             <div className="pt-2">
               <span className="text-[9px] font-mono font-bold text-[#2dd4bf] tracking-widest uppercase block px-2 mb-1">
-                // ĐỘI NGŨ CỐ VẤN
+                ĐỘI NGŨ CỐ VẤN
               </span>
               {MENTOR_ITEMS.map((item) => {
                 const Icon = item.icon;
@@ -246,21 +255,39 @@ export function DashboardSidebar() {
             </div>
           )}
 
-          {/* Admin link */}
+          {/* Admin Section */}
           {isAdmin && (
-            <div className="pt-2">
-              <Link
-                href="/admin/dashboard"
-                className="group flex items-center justify-between px-3 py-2 font-mono text-xs font-bold tracking-wider uppercase transition-all text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Shield className="h-4 w-4 text-[var(--color-danger)]" />
-                  <span>QUẢN TRỊ ADMIN</span>
-                </div>
-                <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-[var(--color-danger)]/20 text-[var(--color-danger)] border border-[var(--color-danger)]/40">
-                  [ADM]
-                </span>
-              </Link>
+            <div className="pt-3 pb-1 border-t border-[var(--border-muted)]">
+              <span className="text-[9px] font-mono font-bold text-[var(--color-danger)] tracking-widest uppercase block px-2 mb-1.5 flex items-center gap-1.5">
+                <Shield className="w-3 h-3 text-[var(--color-danger)]" />
+                BAN QUẢN TRỊ (ADMIN)
+              </span>
+              {ADMIN_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href || (item.href !== "/admin/dashboard" && pathname.startsWith(item.href));
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`group flex items-center justify-between px-3 py-2 font-mono text-xs font-bold tracking-wider uppercase transition-all duration-150 ${
+                      isActive
+                        ? "hud-clipped border-l-2 border-[var(--color-danger)] bg-[var(--color-danger)]/15 text-white"
+                        : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className={`h-4 w-4 ${isActive ? "text-[var(--color-danger)]" : "text-[var(--text-muted)]"}`} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.roleBadge && (
+                      <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-[var(--color-danger)]/20 text-[var(--color-danger)] border border-[var(--color-danger)]/40">
+                        {item.roleBadge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           )}
 

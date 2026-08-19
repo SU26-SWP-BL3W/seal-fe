@@ -6,12 +6,19 @@ import { Button, Input, Card } from "@/components/ui";
 import { Link } from "@/i18n/routing";
 import { Shield, Mail, Lock, User, Eye, EyeOff, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
+import { useAuth } from "@/providers/AuthProvider";
+import { AlreadyLoggedInNotice } from "@/components/domain/AlreadyLoggedInNotice";
 
 type RegisterStep = "form" | "success";
 
 export function RegisterView() {
+  const { user: currentUser } = useAuth();
   const toast = useToast();
   const [step, setStep] = useState<RegisterStep>("form");
+
+  if (currentUser) {
+    return <AlreadyLoggedInNotice />;
+  }
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -162,7 +169,7 @@ export function RegisterView() {
             />
             {errors.fullName && (
               <span className="text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {errors.fullName}
+                {errors.fullName}
               </span>
             )}
           </div>
@@ -184,7 +191,7 @@ export function RegisterView() {
             />
             {errors.email && (
               <span className="text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {errors.email}
+                {errors.email}
               </span>
             )}
           </div>
@@ -215,7 +222,7 @@ export function RegisterView() {
             </div>
             {errors.password && (
               <span className="text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {errors.password}
+                {errors.password}
               </span>
             )}
           </div>
@@ -247,14 +254,14 @@ export function RegisterView() {
             </div>
             {errors.confirmPassword && (
               <span className="text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {errors.confirmPassword}
+                {errors.confirmPassword}
               </span>
             )}
           </div>
 
           {errors.submit && (
             <div className="p-3 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/30 text-[var(--color-danger)] text-xs font-mono">
-              ⚠ {errors.submit}
+              {errors.submit}
             </div>
           )}
 

@@ -10,6 +10,8 @@ import { SealShield } from "@/components/domain/SealShield";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
 
+import { AlreadyLoggedInNotice } from "@/components/domain/AlreadyLoggedInNotice";
+
 export function LoginView() {
   const toast = useToast();
   const searchParams = useSearchParams();
@@ -21,8 +23,12 @@ export function LoginView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { loginWithCredentials, loginWithGoogleCredential } = useAuth();
+  const { user: currentUser, loginWithCredentials, loginWithGoogleCredential } = useAuth();
   const router = useRouter();
+
+  if (currentUser) {
+    return <AlreadyLoggedInNotice />;
+  }
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -97,13 +103,13 @@ export function LoginView() {
 
           {isVerifiedNotice && (
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 font-mono text-xs hud-clipped">
-              ✓ Xác thực email thành công! Vui lòng đăng nhập để tiếp tục hoàn thiện hồ sơ sinh viên.
+              Xác thực email thành công! Vui lòng đăng nhập để tiếp tục hoàn thiện hồ sơ sinh viên.
             </div>
           )}
 
           {errorMessage && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/40 text-rose-400 font-mono text-xs hud-clipped">
-              ⚠️ {errorMessage}
+              {errorMessage}
             </div>
           )}
 

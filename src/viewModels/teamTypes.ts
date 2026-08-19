@@ -11,6 +11,7 @@ export interface TrackItem {
   id: string;
   trackName: string;
   description: string;
+  submissionRuleDescription?: string;
   roundId: string;
   templateId: string | null;
 }

@@ -58,7 +58,7 @@ export function LandingPortalView() {
           {/* Subtitle */}
           <p className="max-w-2xl w-full font-sans text-sm md:text-base text-slate-400 leading-relaxed text-center">
             Đấu trường hackathon dành cho sinh viên toàn quốc — tranh tài xây dựng sản phẩm thực tế,
-            nhận tư vấn từ Mentor và nhận đánh giá minh bạch theo chuẩn khoa học RBL.
+            nhận tư vấn từ Mentor và nhận đánh giá minh bạch theo tiêu chí chuẩn.
           </p>
 
           {/* Symmetrical Button Group */}
@@ -116,7 +116,7 @@ export function LandingPortalView() {
       <LandingWorkflowSteps />
 
       {/* ─────────────────────────────────────────────────────────────
-          SECTION 6: PODIUM HALL OF FAME & RBL PROOF
+          SECTION 6: PODIUM HALL OF FAME & PROOF OF RESULTS
          ───────────────────────────────────────────────────────────── */}
       <LandingLeaderboardPodium />
 
@@ -337,7 +337,7 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
 
                 {countdown.isUrgent && (
                   <span className="font-mono text-[10px] font-bold text-[var(--color-danger)] uppercase tracking-wider animate-pulse text-center border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 py-1">
-                    ⚠ Sắp đóng cổng — Nộp bài ngay!
+                    Sắp đóng cổng — Nộp bài ngay!
                   </span>
                 )}
               </div>
@@ -478,7 +478,7 @@ function LandingFaqSection() {
       a: "Mỗi đội thi bắt buộc có từ 3 đến 5 thành viên. Trưởng nhóm có thể gửi lời mời trực tiếp hoặc tìm kiếm thành viên chưa có đội qua hệ thống ghép đội.",
     },
     {
-      q: "Điểm số RBL được tính toán và đảm bảo tính minh bạch ra sao?",
+      q: "Điểm số bài nộp được tính toán và đảm bảo tính minh bạch ra sao?",
       a: "Mỗi bài nộp được chấm độc lập bởi 4 Giám khảo. Hệ thống tự động tính tổng điểm theo trọng số tiêu chí và tính hệ số độ lệch Inter-rater Delta. Nếu độ lệch vượt ngưỡng 2.0, bài nộp sẽ được chuyển tới giám khảo trưởng soát xét lại.",
     },
     {

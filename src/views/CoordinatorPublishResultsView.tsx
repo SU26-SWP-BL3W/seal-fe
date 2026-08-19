@@ -23,6 +23,7 @@ import {
   Send,
   FileSpreadsheet,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
@@ -246,7 +247,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
     link.click();
     document.body.removeChild(link);
 
-    toast.success("✓ Đã xuất file CSV kết quả thành công!");
+    toast.success("Đã xuất file CSV kết quả thành công!");
   };
 
   // 6.2 Gửi email thông báo kết quả
@@ -266,7 +267,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
       // Simulate sending email notification batch to teams
       await new Promise((resolve) => setTimeout(resolve, 1500));
       toast.success(
-        `✓ Đã gửi email thông báo kết quả thành công tới ${
+        `Đã gửi email thông báo kết quả thành công tới ${
           emailRecipientType === "all" ? displayResults.length : "Top các"
         } đội thi!`
       );
@@ -316,7 +317,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           <div className="space-y-1">
             <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Layers className="w-3.5 h-3.5 text-[#8b5cf6]" />
-              VÒNG THI (ROUND) *
+              VÒNG THI *
             </label>
             <div className="relative">
               <select
@@ -338,7 +339,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           <div className="space-y-1">
             <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Award className="w-3.5 h-3.5 text-[#8b5cf6]" />
-              HẠNG MỤC THI ĐẤU (TRACK) *
+              HẠNG MỤC THI ĐẤU *
             </label>
             <div className="relative">
               <select
@@ -556,7 +557,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                 onClick={() => setIsEmailModalOpen(false)}
                 className="text-[#8a9ba8] hover:text-white"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

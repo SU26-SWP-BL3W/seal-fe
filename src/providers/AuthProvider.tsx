@@ -284,9 +284,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 2. Coordinator -> /coordinator/dashboard (kèm eventId nếu có)
     // 3. Judge -> /judge/events (kèm eventId nếu có); Mentor -> /events hoặc /events/${eventId}
     // 4. TeamLeader / TeamMember -> /my-team (kèm eventId nếu có)
-    // 5. Sinh viên (Student): Nếu chưa duyệt thẻ -> /onboarding/profile, nếu đã duyệt -> /events
-    // 6. Khác -> /events
-    let targetPath = "/events";
+    // 5. Sinh viên: đã duyệt thẻ -> / (Landing); chưa duyệt -> /onboarding/profile
+    // 6. Khác -> /
+    let targetPath = "/";
     if (isAdmin) {
       targetPath = "/admin/dashboard";
     } else if (detectedRole === "EventCoordinator" || detectedRole === "Coordinator") {
@@ -298,9 +298,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (detectedRole === "TeamLeader" || detectedRole === "TeamMember") {
       targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
-      targetPath = isApproved ? "/events" : "/onboarding/profile";
+      targetPath = isApproved ? "/" : "/onboarding/profile";
     } else {
-      targetPath = "/events";
+      targetPath = "/";
     }
 
     // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
@@ -406,9 +406,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 2. Coordinator -> /coordinator/dashboard (kèm eventId nếu có)
     // 3. Judge -> /judge/events (kèm eventId nếu có); Mentor -> /events hoặc /events/${eventId}
     // 4. TeamLeader / TeamMember -> /my-team (kèm eventId nếu có)
-    // 5. Sinh viên (Student): Nếu chưa duyệt thẻ -> /onboarding/profile, nếu đã duyệt -> /events
-    // 6. Khác -> /events
-    let targetPath = "/events";
+    // 5. Sinh viên: đã duyệt thẻ -> / (Landing); chưa duyệt -> /onboarding/profile
+    // 6. Khác -> /
+    let targetPath = "/";
     if (isAdmin) {
       targetPath = "/admin/dashboard";
     } else if (detectedRole === "EventCoordinator" || detectedRole === "Coordinator") {
@@ -420,9 +420,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (detectedRole === "TeamLeader" || detectedRole === "TeamMember") {
       targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
-      targetPath = isApproved ? "/events" : "/onboarding/profile";
+      targetPath = isApproved ? "/" : "/onboarding/profile";
     } else {
-      targetPath = "/events";
+      targetPath = "/";
     }
 
     // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
