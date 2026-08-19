@@ -235,7 +235,7 @@ function TrackSubmissionCard({
       };
       setIsSaved(true);
       setFormError("");
-      const okMsg = `Đã lưu thành công bài nộp cho hạng mục ${track.trackName}!`;
+      const okMsg = `🎉 Nộp bài thành công cho hạng mục "${track.trackName}"! Hệ thống đã ghi nhận bài thi và gửi email xác nhận biên nhận nộp bài tới các thành viên trong đội.`;
       toast.success(okMsg);
       onSubmitSuccess(track.id, updatedItem);
     } catch (err) {
