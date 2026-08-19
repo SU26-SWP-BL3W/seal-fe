@@ -128,6 +128,42 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
+  // 9. Đạt Giải Thưởng & Vinh Danh
+  if (
+    tLower.includes("giải thưởng") ||
+    tLower.includes("đạt giải") ||
+    tLower.includes("quán quân") ||
+    tLower.includes("á quân") ||
+    tLower.includes("chúc mừng đạt giải") ||
+    mLower.includes("đạt giải") ||
+    mLower.includes("giải nhất") ||
+    mLower.includes("giải nhì") ||
+    mLower.includes("giải ba") ||
+    mLower.includes("giải thưởng")
+  ) {
+    return {
+      title: "👑 Chúc mừng! Đội của bạn đã đạt giải thưởng chung cuộc!",
+      message: rawMessage || "Chúc mừng đội thi của bạn đã xuất sắc giành giải thưởng tại giải đấu! Ban Tổ Chức đã gửi email chúc mừng và hướng dẫn nhận giải.",
+      badgeText: "GIẢI THƯỞNG",
+      badgeClass: "bg-amber-950/50 text-amber-300 border-amber-400/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]",
+    };
+  }
+
+  // 10. Công bố kết quả chung cuộc
+  if (
+    tLower.includes("kết quả chung cuộc") ||
+    tLower.includes("bảng vinh danh") ||
+    mLower.includes("kết quả chung cuộc") ||
+    mLower.includes("bảng vàng")
+  ) {
+    return {
+      title: "🏆 Công bố kết quả chung cuộc & Bảng vinh danh",
+      message: rawMessage || "Ban Tổ Chức đã chính thức công bố bảng xếp hạng tổng và vinh danh các đội thi xuất sắc nhất giải đấu.",
+      badgeText: "CHUNG CUỘC",
+      badgeClass: "bg-yellow-950/40 text-yellow-300 border-yellow-500/30",
+    };
+  }
+
   // 5. Thành viên mới tham gia / đồng ý vào đội
   if (
     tLower.includes("thành viên đã tham gia") ||
