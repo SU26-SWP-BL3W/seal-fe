@@ -287,6 +287,68 @@ export function UserProfileView() {
         (user as any)?.school?.schoolName ||
         "Chưa cập nhật";
 
+  // Xác định rõ ràng sinh viên FPT hay sinh viên trường ngoài:
+  const isFptStudent = useMemo(() => {
+    if (schoolChoice === "OTHER") return false;
+    if (userSchool?.schoolName && !userSchool.schoolName.toLowerCase().includes("fpt")) return false;
+    if (user?.isFpt === false) return false;
+    const emailLower = (user?.email || "").toLowerCase();
+    return Boolean(user?.isFpt || userSchool?.schoolName?.toLowerCase().includes("fpt") || emailLower.endsWith("@fpt.edu.vn"));
+  }, [schoolChoice, userSchool, user]);
+
+  const hasStudentCardPhoto = Boolean(user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl || photoPreview);
+
+  // RÀNG BUỘC: Đối với sinh viên trường ngoài, BẮT BUỘC phải có ảnh thẻ sinh viên mới ở trạng thái ĐÃ DUYỆT
+  const cardApprovalStatus = useMemo(() => {
+    if (isBlocked) {
+      return {
+        label: "[ TÀI KHOẢN TẠM KHÓA ]",
+        colorClass: "text-rose-400 font-bold",
+        badge: "bg-rose-950/40 text-rose-300 border-rose-500/30",
+        isApproved: false,
+      };
+    }
+    if (isFptStudent) {
+      if (user?.isApproved) {
+        return {
+          label: "[ ĐÃ XÁC THỰC FPT ]",
+          colorClass: "text-emerald-400 font-bold",
+          badge: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+          isApproved: true,
+        };
+      }
+      return {
+        label: "[ CHỜ XÁC MINH MSSV ]",
+        colorClass: "text-amber-400 font-bold",
+        badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+        isApproved: false,
+      };
+    }
+    // Sinh viên trường ngoài:
+    if (!hasStudentCardPhoto) {
+      return {
+        label: "[ CHƯA NỘP ẢNH THẺ ]",
+        colorClass: "text-amber-400 font-bold",
+        badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+        isApproved: false,
+      };
+    }
+    if (user?.isApproved) {
+      return {
+        label: "[ ĐÃ DUYỆT THẺ SV ]",
+        colorClass: "text-emerald-400 font-bold",
+        badge: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+        isApproved: true,
+      };
+    }
+    return {
+      label: "[ CHỜ PHÊ DUYỆT THẺ ]",
+      colorClass: "text-amber-300 font-bold",
+      badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+      isApproved: false,
+    };
+  }, [isBlocked, isFptStudent, hasStudentCardPhoto, user?.isApproved]);
+
   // Xử lý xác minh sinh viên FPT qua API tra cứu FPT DB thật
   const handleVerifyFpt = async () => {
     if (!fptCode.trim()) {
@@ -615,16 +677,16 @@ export function UserProfileView() {
                     </div>
 
                     <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
-                      <span className="text-zinc-400">XÁC MINH FPT:</span>
+                      <span className="text-zinc-400">PHÂN LOẠI TRƯỜNG:</span>
                       <span className="font-bold text-zinc-300">
-                        {user?.isFpt ? "[FPT EDU]" : "[TRƯỜNG NGOÀI]"}
+                        {isFptStudent ? "[ FPT EDU ]" : "[ TRƯỜNG NGOÀI ]"}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
                       <span className="text-zinc-400">TRẠNG THÁI THẺ:</span>
-                      <span className="font-bold text-emerald-400">
-                        {user?.isApproved ? "[ ĐÃ DUYỆT ]" : "[ CHỜ DUYỆT ]"}
+                      <span className={`font-bold ${cardApprovalStatus.colorClass}`}>
+                        {cardApprovalStatus.label}
                       </span>
                     </div>
                   </>
@@ -657,8 +719,13 @@ export function UserProfileView() {
                       </div>
                     </div>
                   ) : (
-                    <div className="p-6 border border-dashed border-zinc-800 bg-[#090e11] text-center font-mono text-xs text-zinc-500 hud-clipped">
-                      [ CHƯA CÓ ẢNH THẺ SINH VIÊN ]
+                    <div className="p-4 border border-dashed border-amber-500/30 bg-[#090e11] text-center font-mono text-[11px] text-amber-400/80 hud-clipped space-y-1">
+                      <p className="font-bold uppercase">[ CHƯA CÓ ẢNH THẺ SINH VIÊN ]</p>
+                      <p className="text-[10px] text-zinc-500 font-sans">
+                        {isFptStudent
+                          ? "Sinh viên FPT được miễn nộp ảnh thẻ."
+                          : "Sinh viên trường ngoài cần nộp ảnh thẻ để được xét duyệt."}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -732,7 +799,14 @@ export function UserProfileView() {
                         <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped">
                           <span className="text-[10px] text-zinc-500 uppercase block font-bold">PHÂN LOẠI TRƯỜNG</span>
                           <span className="text-sm font-bold text-zinc-300 block">
-                            {schoolChoice === "FPT" ? "Sinh Viên FPT Edu" : "Sinh Viên Trường Ngoài"}
+                            {isFptStudent ? "Sinh Viên FPT Edu" : "Sinh Viên Trường Ngoài"}
+                          </span>
+                        </div>
+
+                        <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped sm:col-span-2">
+                          <span className="text-[10px] text-zinc-500 uppercase block font-bold">TRẠNG THÁI XÉT DUYỆT THẺ & HỒ SƠ</span>
+                          <span className={`text-sm font-bold block ${cardApprovalStatus.colorClass}`}>
+                            {cardApprovalStatus.label}
                           </span>
                         </div>
                       </>
