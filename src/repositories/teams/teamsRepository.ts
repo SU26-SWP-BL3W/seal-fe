@@ -44,6 +44,7 @@ export function useCreateTeam() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -89,6 +90,8 @@ export function useDeleteTeam() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -210,6 +213,8 @@ export function useLeaveTeam() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 }
@@ -321,6 +326,7 @@ export function useRespondTeamInvitation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myTeamInvitation"] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -364,6 +370,8 @@ export function useConfirmTeamRegistration() {
     onSuccess: (_data, teamId) => {
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 }

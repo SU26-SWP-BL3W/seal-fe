@@ -44,3 +44,4 @@ src/.mcp.json
 stitch_extracted/
 *.zip
 BUSINESS_LOGIC.md
+.claude/

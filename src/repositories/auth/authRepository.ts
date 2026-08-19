@@ -206,6 +206,10 @@ export function useSubmitStudentProfile() {
     onSuccess: (profile) => {
       localStorage.setItem("currentUser", JSON.stringify(profile));
       queryClient.setQueryData(["currentUser"], profile);
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
     },
   });
 }
@@ -220,6 +224,10 @@ export function useUpdateStudentProfile() {
     onSuccess: (profile) => {
       localStorage.setItem("currentUser", JSON.stringify(profile));
       queryClient.setQueryData(["currentUser"], profile);
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
     },
   });
 }

@@ -335,8 +335,14 @@ export function OnboardingProfileView() {
                 onClick={async () => {
                   setSubmitError("");
                   try {
+                    const fptSchool = schools.find(
+                      (s) =>
+                        s.schoolName?.toLowerCase().includes("fpt") ||
+                        s.schoolName?.toLowerCase().includes("đại học fpt")
+                    );
                     await submitProfile({
                       isFpt: true,
+                      schoolId: fptSchool?.id || "",
                       studentCode: fptResult.studentCode ?? fptCode,
                       fullName: fptResult.fullName ?? undefined,
                     } as any);
