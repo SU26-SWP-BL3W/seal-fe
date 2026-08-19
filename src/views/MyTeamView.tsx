@@ -16,6 +16,8 @@ import {
   useUpdateTeam,
 } from "@/repositories/teamsRepository";
 import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
+import { AlertTriangle } from "lucide-react";
 import {
   AvailableTeamsList,
   buildRequirements,
@@ -48,6 +50,7 @@ function pick(obj: unknown, ...keys: string[]): string {
 }
 
 export function MyTeamView() {
+  const toast = useToast();
   const { user, activeRole } = useAuth();
   const searchParams = useSearchParams();
   const roleName = pick(activeRole, "RoleName", "roleName");
@@ -321,13 +324,29 @@ export function MyTeamView() {
           }}
         />
 
-        {team.lastRejectReason && isForming && (
-          <Card className="border-[var(--color-danger)]/40 bg-[var(--color-danger)]/5">
-            <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-[color:var(--color-danger)]">
-              Lý do BTC trả hồ sơ
-            </h2>
-            <p className="mt-[var(--space-xs)] font-mono text-xs text-pretty text-[color:var(--text-primary)]">
-              {team.lastRejectReason}
+        {team.status === "PendingApproval" && (
+          <Card className="border-sky-500/40 bg-sky-950/20 p-4 hud-clipped space-y-2">
+            <div className="flex items-center gap-2 text-sky-400 font-mono font-bold text-xs uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+              <span>Hồ sơ đã gửi tới Ban Tổ Chức — Đang chờ thẩm định</span>
+            </div>
+            <p className="font-sans text-xs text-sky-200/90 leading-relaxed">
+              Hệ thống đã gửi email xác nhận ghi danh. Ban Tổ Chức sẽ kiểm tra tính hợp lệ của đội (sĩ số 3–5 người, thẻ sinh viên các thành viên) và gửi kết quả duyệt qua thông báo & email trong thời gian sớm nhất.
+            </p>
+          </Card>
+        )}
+
+        {(team.lastRejectReason || team.status === "Rejected") && (
+          <Card className="border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 p-5 hud-clipped space-y-3">
+            <div className="flex items-center gap-2 text-[var(--color-danger)] font-mono font-bold text-xs uppercase tracking-wider">
+              <AlertTriangle className="w-4 h-4 text-[var(--color-danger)]" />
+              <span>Lý do Ban Tổ Chức từ chối / trả hồ sơ</span>
+            </div>
+            <div className="p-3.5 bg-black/50 border border-red-500/30 font-mono text-xs text-red-200 leading-relaxed rounded">
+              {team.lastRejectReason || "Hồ sơ đội chưa đáp ứng đầy đủ thể lệ của giải đấu. Vui lòng kiểm tra lại thông tin các thành viên."}
+            </div>
+            <p className="font-sans text-[11px] text-zinc-400">
+              💡 Vui lòng hoàn thiện lại đội hình hoặc cập nhật hồ sơ thành viên theo lý do trên, sau đó nhấn nút <strong>[ Ghi danh với BTC ]</strong> để gửi lại hồ sơ xét duyệt.
             </p>
           </Card>
         )}
@@ -407,7 +426,10 @@ export function MyTeamView() {
         error={dialogError}
         onConfirm={() =>
           runAction(
-            () => confirmRegistration(team.id),
+            async () => {
+              await confirmRegistration(team.id);
+              toast.success("Gửi hồ sơ ghi danh với Ban Tổ Chức thành công! Hệ thống đã gửi email xác nhận và thông báo cho Ban Tổ Chức thẩm định.");
+            },
             "Không ghi danh được. Kiểm tra lại số thành viên và hồ sơ.",
           )
         }

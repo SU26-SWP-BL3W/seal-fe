@@ -15,6 +15,7 @@ import {
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Button, Card, Badge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 import {
   Users,
   CheckCircle2,
@@ -36,6 +37,7 @@ function pickId(item: any): string {
 }
 
 export function CoordinatorTeamsView() {
+  const toast = useToast();
   const [rejectModal, setRejectModal] = useState<{ teamId: string; teamName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [disqualifyModal, setDisqualifyModal] = useState<{ teamId: string; teamName: string } | null>(null);
@@ -94,38 +96,49 @@ export function CoordinatorTeamsView() {
   const handleApprove = async (teamId: string) => {
     try {
       await approveTeam(teamId);
+      toast.success("Phê duyệt hồ sơ đội thi thành công! Hệ thống đã gửi email và thông báo cho đội.");
       setDetailModal(null);
       refetch();
+      refetchRegistered();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Duyệt đội thi thất bại. Vui lòng thử lại.");
+      toast.error(err?.response?.data?.message || err?.message || "Duyệt đội thi thất bại. Vui lòng thử lại.");
     }
   };
 
   const handleReject = async () => {
     if (!rejectModal) return;
-    if (!rejectReason.trim()) return;
+    if (!rejectReason.trim()) {
+      toast.warning("Vui lòng nhập lý do từ chối để gửi thông báo cho đội thi.");
+      return;
+    }
 
     try {
       await rejectTeam({ teamId: rejectModal.teamId, reason: rejectReason.trim() });
+      toast.success(`Đã từ chối đơn ghi danh của đội "${rejectModal.teamName}". Lý do đã được gửi qua email và thông báo chuông tới đội.`);
       setRejectModal(null);
       setDetailModal(null);
       setRejectReason("");
       refetch();
+      refetchRegistered();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Từ chối đăng ký thất bại. Vui lòng thử lại.");
+      toast.error(err?.response?.data?.message || err?.message || "Từ chối đăng ký thất bại. Vui lòng thử lại.");
     }
   };
 
   const handleDisqualify = async () => {
     if (!disqualifyModal) return;
-    if (!disqualifyReason.trim()) return;
+    if (!disqualifyReason.trim()) {
+      toast.warning("Vui lòng nhập lý do loại đội.");
+      return;
+    }
     try {
       await disqualifyTeam({ teamId: disqualifyModal.teamId, reason: disqualifyReason.trim() });
+      toast.success(`Đã loại đội "${disqualifyModal.teamName}" khỏi cuộc thi.`);
       setDisqualifyModal(null);
       setDisqualifyReason("");
       refetchRegistered();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Loại đội thất bại. Vui lòng thử lại.");
+      toast.error(err?.response?.data?.message || err?.message || "Loại đội thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -133,12 +146,13 @@ export function CoordinatorTeamsView() {
     if (!deleteModal) return;
     try {
       await deleteTeam(deleteModal.teamId);
+      toast.success(`Đã xóa đội "${deleteModal.teamName}" thành công.`);
       setDeleteModal(null);
       setDetailModal(null);
       refetch();
       refetchRegistered();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || "Xóa đội thi thất bại.");
+      toast.error(err?.response?.data?.message || err?.message || "Xóa đội thi thất bại.");
     }
   };
 
