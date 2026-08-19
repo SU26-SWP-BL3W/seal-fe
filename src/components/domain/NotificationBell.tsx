@@ -33,7 +33,23 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
-  // 2. Ban Tổ Chức từ chối / trả hồ sơ đội thi
+  // 2. Ban Tổ Chức loại đội khỏi cuộc thi (Disqualified)
+  if (
+    tLower.includes("loại đội") ||
+    tLower.includes("bị loại") ||
+    tLower.includes("disqualified") ||
+    mLower.includes("bị loại khỏi cuộc thi") ||
+    mLower.includes("loại khỏi giải đấu")
+  ) {
+    return {
+      title: "🚫 Quyết định: Loại đội thi khỏi cuộc thi",
+      message: rawMessage || "Đội thi của bạn đã bị Ban Tổ Chức loại khỏi cuộc thi do vi phạm quy chế. Vui lòng liên hệ BTC để biết thêm chi tiết.",
+      badgeText: "BỊ LOẠI",
+      badgeClass: "bg-red-950/60 text-red-300 border-red-500/50 shadow-[0_0_8px_rgba(239,68,68,0.3)]",
+    };
+  }
+
+  // 3. Ban Tổ Chức từ chối / trả hồ sơ đội thi
   if (
     tLower.includes("từ chối đơn") ||
     tLower.includes("trả hồ sơ") ||

@@ -605,37 +605,56 @@ export function CoordinatorTeamsView() {
 
       {disqualifyModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
-          <Card className="w-full max-w-md p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)]/40 space-y-4">
-            <div className="flex items-center gap-3">
-              <Ban className="w-5 h-5 text-[var(--color-danger)]" />
-              <h3 className="font-display text-base font-bold text-[var(--color-danger)] tracking-widest uppercase">
-                LOẠI ĐỘI KHỎI CUỘC THI
-              </h3>
+          <Card className="w-full max-w-lg p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)]/50 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-[var(--color-danger)]/30 pb-3">
+              <div className="p-2 rounded-full bg-red-950/60 border border-red-500/40">
+                <Ban className="w-5 h-5 text-[var(--color-danger)]" />
+              </div>
+              <div>
+                <h3 className="font-display text-base font-bold text-[var(--color-danger)] tracking-wider uppercase">
+                  LOẠI ĐỘI THI KHỎI GIẢI ĐẤU
+                </h3>
+                <p className="text-xs text-zinc-400 font-mono">Xử lý vi phạm quy chế & kỷ luật thi đấu</p>
+              </div>
             </div>
-            <p className="text-xs font-mono text-[var(--text-muted)]">
-              Đội <strong className="text-white">{disqualifyModal.teamName}</strong> sẽ bị Disqualified. Lý do gửi tới đội trưởng.
-            </p>
-            <textarea
-              value={disqualifyReason}
-              onChange={(e) => setDisqualifyReason(e.target.value)}
-              placeholder="Lý do loại đội (bắt buộc)"
-              rows={3}
-              className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs resize-none focus:outline-none focus:border-[var(--color-danger)]"
-            />
+
+            <div className="p-3 bg-red-950/20 border border-red-500/30 rounded text-xs space-y-1 font-sans text-zinc-300 leading-relaxed">
+              <p>
+                ⚠️ Đội <strong className="text-white font-mono">{disqualifyModal.teamName}</strong> sẽ bị chuyển sang trạng thái <strong className="text-rose-400 font-mono">Bị Loại (Disqualified)</strong>.
+              </p>
+              <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-zinc-400">
+                <li>Đội không thể tiếp tục nộp bài thi, không được chấm điểm hoặc xếp hạng.</li>
+                <li>Hệ thống sẽ gửi email và thông báo chuông tới tất cả thành viên trong đội kèm lý do loại đội bên dưới.</li>
+              </ul>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase flex items-center gap-1">
+                <span>Lý do loại đội (Bắt buộc):</span>
+              </label>
+              <textarea
+                value={disqualifyReason}
+                onChange={(e) => setDisqualifyReason(e.target.value)}
+                placeholder="Nhập lý do loại đội (Ví dụ: Gian lận bài nộp, vi phạm điều lệ giải đấu, sử dụng thành viên trái quy chế, v.v.)..."
+                rows={3}
+                className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs rounded resize-none focus:outline-none focus:border-[var(--color-danger)] focus:ring-1 focus:ring-[var(--color-danger)]/50"
+              />
+            </div>
+
             <div className="flex gap-3 pt-2">
               <Button
                 variant="ghost"
                 onClick={() => { setDisqualifyModal(null); setDisqualifyReason(""); }}
-                className="flex-1 justify-center font-mono text-xs"
+                className="flex-1 justify-center font-mono text-xs py-2.5"
               >
-                Hủy
+                HỦY BỎ
               </Button>
               <Button
                 disabled={!disqualifyReason.trim() || isDisqualifying}
                 onClick={handleDisqualify}
-                className="flex-1 justify-center bg-[var(--color-danger)] text-white font-mono text-xs font-bold"
+                className="flex-1 justify-center bg-[var(--color-danger)] text-white font-mono text-xs font-bold py-2.5 hover:bg-red-600 transition-colors shadow-[0_0_12px_rgba(239,68,68,0.3)]"
               >
-                {isDisqualifying ? "Đang gửi..." : "// XÁC NHẬN LOẠI"}
+                {isDisqualifying ? "Đang gửi quyết định..." : "🚫 XÁC NHẬN LOẠI ĐỘI"}
               </Button>
             </div>
           </Card>
