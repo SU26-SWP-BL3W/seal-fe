@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useId, useRef, type ReactNode } from "react";
 
-type Size = "sm" | "md";
+export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl";
 
-const SIZE_CLASS: Record<Size, string> = {
+const SIZE_CLASS: Record<ModalSize, string> = {
   sm: "max-w-sm",
   md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  "2xl": "max-w-2xl",
 };
 
 const FOCUSABLE =
@@ -21,7 +24,7 @@ export interface ModalProps {
   description?: ReactNode;
   children?: ReactNode;
   footer?: ReactNode;
-  size?: Size;
+  size?: ModalSize;
   /** Đặt false cho thao tác đang chạy dở để tránh đóng nhầm giữa chừng. */
   dismissable?: boolean;
 }

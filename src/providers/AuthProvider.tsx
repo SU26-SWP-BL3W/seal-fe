@@ -9,34 +9,47 @@ import apiClient from "@/models/apiClient";
 const REDIRECT_BY_ROLE: Record<string, string> = {
   EventCoordinator: "/coordinator/dashboard",
   Coordinator: "/coordinator/dashboard",
-  Judge: "/judge/scoring",
-  Mentor: "/mentor/tracks",
+  Judge: "/judge/events",
+  Mentor: "/events",
   TeamLeader: "/my-team",
   TeamMember: "/my-team",
 };
 
-const ROLE_RANK = ["EventCoordinator", "Judge", "Mentor", "TeamLeader", "TeamMember"];
+const ROLE_RANK = ["EventCoordinator", "Coordinator", "Judge", "Mentor", "TeamLeader", "TeamMember"];
 
 function pickPrimaryRole(rows: unknown[], userId: string): EventRole | null {
-  const norm = (Array.isArray(rows) ? rows : []).map((raw) => {
-    const r = raw as Record<string, unknown>;
-    const str = (...keys: string[]) => {
-      for (const k of keys) {
-        const v = r[k];
-        if (typeof v === "string" && v.trim()) return v;
+  const now = Date.now();
+  const norm = (Array.isArray(rows) ? rows : [])
+    .map((raw) => {
+      const r = raw as Record<string, unknown>;
+      const str = (...keys: string[]) => {
+        for (const k of keys) {
+          const v = r[k];
+          if (typeof v === "string" && v.trim()) return v;
+        }
+        return "";
+      };
+      const expiredAtStr = str("expiredAt", "ExpiredAt");
+      let isExpired = false;
+      if (expiredAtStr) {
+        const expTime = new Date(expiredAtStr).getTime();
+        if (!isNaN(expTime) && expTime < now) {
+          isExpired = true;
+        }
       }
-      return "";
-    };
-    return {
-      id: str("id", "Id"),
-      eventId: str("eventId", "EventId"),
-      roleName: str("roleName", "RoleName"),
-      trackId: str("trackId", "TrackId"),
-      teamId: str("teamId", "TeamId"),
-    };
-  });
+      return {
+        id: str("id", "Id"),
+        eventId: str("eventId", "EventId"),
+        roleName: str("roleName", "RoleName"),
+        trackId: str("trackId", "TrackId"),
+        teamId: str("teamId", "TeamId"),
+        isExpired,
+      };
+    })
+    .filter((r) => !r.isExpired); // Chỉ giữ các vai trò còn hiệu lực trong sự kiện
+
   const chosen = ROLE_RANK.map((rn) => norm.find((r) => r.roleName === rn)).find(Boolean);
-  if (!chosen) return null;
+  if (!chosen) return null; // Hết hiệu lực -> Không có active role -> Trở thành Guest
   const assigned = norm.filter((r) => r.roleName === chosen.roleName).map((r) => r.eventId).filter(Boolean);
   return {
     id: chosen.id,
@@ -64,6 +77,7 @@ interface AuthContextType {
   loginWithCredentials: (email: string, password: string) => Promise<string>;
   loginWithGoogleCredential: (idToken: string) => Promise<string>;
   logout: () => void;
+  refreshRoles: () => Promise<EventRole | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,7 +87,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [activeRole, setActiveRole] = useState<EventRole | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  // Khôi phục phiên từ localStorage (F5 safe) & đồng bộ profile mới nhất từ BE
+  const fetchUserRoles = async (userId: string): Promise<EventRole | null> => {
+    if (!userId) return null;
+    try {
+      const rolesRes = await apiClient.get<any>("/EventRoles/user", {
+        params: { UserId: userId, userId, PageSize: 200, pageSize: 200 },
+      });
+      const rows: unknown[] =
+        rolesRes.data?.data?.items ??
+        rolesRes.data?.items ??
+        rolesRes.data?.data ??
+        rolesRes.data ??
+        [];
+      return pickPrimaryRole(rows, userId);
+    } catch {
+      return null;
+    }
+  };
+
+  const refreshRoles = async (): Promise<EventRole | null> => {
+    const currentUserId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
+    if (!currentUserId) return null;
+    const latestRole = await fetchUserRoles(currentUserId);
+    setActiveRole(latestRole);
+    if (typeof window !== "undefined") {
+      if (latestRole) {
+        localStorage.setItem("activeRole", JSON.stringify(latestRole));
+      } else {
+        localStorage.removeItem("activeRole");
+      }
+    }
+    return latestRole;
+  };
+
+  // Khôi phục phiên từ localStorage (F5 safe) & đồng bộ profile + eventRoles mới nhất từ BE
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem("currentUser");
@@ -94,12 +141,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsInitialized(true);
     }
 
-    // Tự động kiểm tra và làm mới trạng thái isApproved từ server nếu có token
+    // Tự động kiểm tra và làm mới trạng thái isApproved & EventRoles từ server nếu có token
     const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
     if (token) {
       apiClient.get<User>("/Users/profile")
-        .then((res) => {
+        .then(async (res) => {
           if (res.data) {
+            const raw = res.data as any;
+            const uid = raw.id || raw.Id || raw.userId || raw.UserId;
             setUser((prev) => {
               const updated = {
                 ...(prev || {}),
@@ -113,6 +162,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               }
               return updated;
             });
+
+            // Tự động đồng bộ EventRoles mới nhất từ DB & Fallback vai trò thông minh (ví dụ: gỡ EC -> fallback về Judge)
+            if (uid) {
+              const latestRole = await fetchUserRoles(uid);
+              setActiveRole(latestRole);
+              if (typeof window !== "undefined") {
+                if (latestRole) {
+                  localStorage.setItem("activeRole", JSON.stringify(latestRole));
+                } else {
+                  localStorage.removeItem("activeRole");
+                }
+              }
+            }
           }
         })
         .catch(() => {
@@ -196,9 +258,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let primaryRole: EventRole | null = null;
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
-        params: { UserId: userId, PageSize: 200 },
+        params: { UserId: userId, userId, PageSize: 200, pageSize: 200 },
       });
-      const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
+      const rows: unknown[] = rolesRes.data?.data?.items ?? rolesRes.data?.items ?? rolesRes.data?.data ?? rolesRes.data ?? [];
       primaryRole = pickPrimaryRole(rows, userId);
     } catch {
       // fallback
@@ -217,23 +279,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // QUY TẮC ĐIỀU HƯỚNG THEO ĐÚNG ACTOR:
+    // QUY TẮC ĐIỀU HƯỚNG THÔNG MINH (SMART CONTEXTUAL REDIRECT):
     // 1. Admin -> /admin/dashboard
-    // 2. Coordinator -> /coordinator/dashboard
-    // 3. Judge -> /judge/scoring
-    // 4. Mentor -> /mentor/tracks
-    // 5. TeamLeader / TeamMember -> /my-team
-    // 6. Sinh viên (Student): Nếu chưa duyệt thẻ -> /onboarding/profile, nếu đã duyệt -> /events
-    // 7. Khác -> /events
-    let targetPath = "/events";
+    // 2. Coordinator -> /coordinator/dashboard (kèm eventId nếu có)
+    // 3. Judge -> /judge/events (kèm eventId nếu có); Mentor -> /events hoặc /events/${eventId}
+    // 4. TeamLeader / TeamMember -> /my-team (kèm eventId nếu có)
+    // 5. Sinh viên: đã duyệt thẻ -> / (Landing); chưa duyệt -> /onboarding/profile
+    // 6. Khác -> /
+    let targetPath = "/";
     if (isAdmin) {
       targetPath = "/admin/dashboard";
-    } else if (detectedRole && REDIRECT_BY_ROLE[detectedRole]) {
-      targetPath = REDIRECT_BY_ROLE[detectedRole];
+    } else if (detectedRole === "EventCoordinator" || detectedRole === "Coordinator") {
+      targetPath = primaryRole?.eventId ? `/coordinator/dashboard?eventId=${primaryRole.eventId}` : "/coordinator/dashboard";
+    } else if (detectedRole === "Judge") {
+      targetPath = primaryRole?.eventId ? `/judge/events?eventId=${primaryRole.eventId}` : "/judge/events";
+    } else if (detectedRole === "Mentor") {
+      targetPath = primaryRole?.eventId ? `/events/${primaryRole.eventId}` : "/events";
+    } else if (detectedRole === "TeamLeader" || detectedRole === "TeamMember") {
+      targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
-      targetPath = isApproved ? "/events" : "/onboarding/profile";
+      targetPath = isApproved ? "/" : "/onboarding/profile";
     } else {
-      targetPath = "/events";
+      targetPath = "/";
     }
 
     // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
@@ -308,9 +375,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let primaryRole: EventRole | null = null;
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
-        params: { UserId: userId, PageSize: 200 },
+        params: { UserId: userId, userId, PageSize: 200, pageSize: 200 },
       });
-      const rows: unknown[] = rolesRes.data?.data ?? rolesRes.data ?? [];
+      const rows: unknown[] =
+        rolesRes.data?.data?.items ??
+        rolesRes.data?.items ??
+        rolesRes.data?.data ??
+        rolesRes.data ??
+        [];
       primaryRole = pickPrimaryRole(rows, userId);
     } catch {
       // fallback
@@ -331,21 +403,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // QUY TẮC ĐIỀU HƯỚNG GOOGLE THEO ĐÚNG ACTOR:
     // 1. Admin -> /admin/dashboard
-    // 2. Coordinator -> /coordinator/dashboard
-    // 3. Judge -> /judge/scoring
-    // 4. Mentor -> /mentor/tracks
-    // 5. TeamLeader / TeamMember -> /my-team
-    // 6. Sinh viên (Student): Nếu chưa duyệt thẻ -> /onboarding/profile, nếu đã duyệt -> /events
-    // 7. Khác -> /events
-    let targetPath = "/events";
+    // 2. Coordinator -> /coordinator/dashboard (kèm eventId nếu có)
+    // 3. Judge -> /judge/events (kèm eventId nếu có); Mentor -> /events hoặc /events/${eventId}
+    // 4. TeamLeader / TeamMember -> /my-team (kèm eventId nếu có)
+    // 5. Sinh viên: đã duyệt thẻ -> / (Landing); chưa duyệt -> /onboarding/profile
+    // 6. Khác -> /
+    let targetPath = "/";
     if (isAdmin) {
       targetPath = "/admin/dashboard";
-    } else if (detectedRole && REDIRECT_BY_ROLE[detectedRole]) {
-      targetPath = REDIRECT_BY_ROLE[detectedRole];
+    } else if (detectedRole === "EventCoordinator" || detectedRole === "Coordinator") {
+      targetPath = primaryRole?.eventId ? `/coordinator/dashboard?eventId=${primaryRole.eventId}` : "/coordinator/dashboard";
+    } else if (detectedRole === "Judge") {
+      targetPath = primaryRole?.eventId ? `/judge/events?eventId=${primaryRole.eventId}` : "/judge/events";
+    } else if (detectedRole === "Mentor") {
+      targetPath = primaryRole?.eventId ? `/events/${primaryRole.eventId}` : "/events";
+    } else if (detectedRole === "TeamLeader" || detectedRole === "TeamMember") {
+      targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
-      targetPath = isApproved ? "/events" : "/onboarding/profile";
+      targetPath = isApproved ? "/" : "/onboarding/profile";
     } else {
-      targetPath = "/events";
+      targetPath = "/";
     }
 
     // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
@@ -380,6 +457,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loginWithCredentials,
           loginWithGoogleCredential,
           logout,
+          refreshRoles,
         }}
       >
         {children}

@@ -5,6 +5,7 @@ import { eventsRepository } from "@/repositories/eventsRepository";
 import { roundsRepository } from "@/repositories/roundsRepository";
 import { tracksRepository, type Track } from "@/repositories/events/tracksRepository";
 import { useToast } from "@/providers/ToastProvider";
+import { parseLinkRules, type LinkRulesConfig } from "@/components/domain/event-wizard/Step3TrackConfig";
 
 export interface RoundEditState {
   id?: string;
@@ -948,7 +949,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[10px] text-zinc-400 font-bold uppercase block">
-                          MÔ TẢ ĐỀ BÀI &amp; ĐỊNH HƯỚNG CÔNG NGHỆ:
+                          MÔ TẢ ĐỊNH HƯỚNG CÔNG NGHỆ:
                         </label>
                         <textarea
                           rows={2}
@@ -959,17 +960,73 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-zinc-400 font-bold uppercase block">
-                          QUY ĐỊNH NỘP BÀI RIÊNG CỦA TRACK (NẾU CÓ):
+                      {/* HUD Deliverable Links radios */}
+                      <div className="sm:col-span-2 p-3 bg-[#070b0d] border border-zinc-800 space-y-2">
+                        <label className="text-[10px] text-cyan-400 font-bold uppercase block">
+                          CẤU HÌNH YÊU CẦU CÁC LOẠI LINK BÀI NỘP (SUBMISSION LINK DELIVERABLES):
                         </label>
-                        <textarea
-                          rows={2}
-                          value={t.submissionRuleDescription || ""}
-                          onChange={(e) => handleTrackChange(idx, "submissionRuleDescription", e.target.value)}
-                          placeholder="vd: Yêu cầu đính kèm dataset, video quay mô hình chạy thực tế..."
-                          className="w-full p-2 bg-[#0b1013] border border-zinc-700 text-[11px] text-white outline-none"
-                        />
+                        {(() => {
+                          const currentRules = parseLinkRules(t.submissionRuleDescription || t.description);
+                          return (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                              {[
+                                { key: "github", label: "Code GitHub" },
+                                { key: "demo", label: "Video Demo" },
+                                { key: "slides", label: "Slide Presentation" },
+                                { key: "figma", label: "Figma UI/UX" },
+                                { key: "docs", label: "Báo Cáo PDF" },
+                              ].map((item) => {
+                                const st = currentRules[item.key as keyof LinkRulesConfig] || "none";
+                                return (
+                                  <div key={item.key} className="p-2 bg-[#10171a] border border-zinc-800 space-y-1 text-[10px]">
+                                    <span className="font-bold text-zinc-200 block truncate">{item.label}</span>
+                                    <div className="flex items-center gap-1.5 font-mono">
+                                      <label className="flex items-center gap-0.5 cursor-pointer">
+                                        <input
+                                          type="radio"
+                                          name={`modal_link_${idx}_${item.key}`}
+                                          checked={st === "required"}
+                                          onChange={() => {
+                                            const next = { ...currentRules, [item.key]: "required" };
+                                            handleTrackChange(idx, "submissionRuleDescription", JSON.stringify(next));
+                                          }}
+                                          className="accent-red-500"
+                                        />
+                                        <span className={st === "required" ? "text-red-400 font-bold" : "text-zinc-500"}>Bắt buộc</span>
+                                      </label>
+                                      <label className="flex items-center gap-0.5 cursor-pointer">
+                                        <input
+                                          type="radio"
+                                          name={`modal_link_${idx}_${item.key}`}
+                                          checked={st === "optional"}
+                                          onChange={() => {
+                                            const next = { ...currentRules, [item.key]: "optional" };
+                                            handleTrackChange(idx, "submissionRuleDescription", JSON.stringify(next));
+                                          }}
+                                          className="accent-cyan-400"
+                                        />
+                                        <span className={st === "optional" ? "text-cyan-400 font-bold" : "text-zinc-500"}>Tùy chọn</span>
+                                      </label>
+                                      <label className="flex items-center gap-0.5 cursor-pointer">
+                                        <input
+                                          type="radio"
+                                          name={`modal_link_${idx}_${item.key}`}
+                                          checked={st === "none"}
+                                          onChange={() => {
+                                            const next = { ...currentRules, [item.key]: "none" };
+                                            handleTrackChange(idx, "submissionRuleDescription", JSON.stringify(next));
+                                          }}
+                                          className="accent-zinc-500"
+                                        />
+                                        <span className={st === "none" ? "text-zinc-400 font-bold" : "text-zinc-600"}>Không</span>
+                                      </label>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

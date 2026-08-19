@@ -2,7 +2,7 @@
 
 import { Link } from "@/i18n/routing";
 import { Badge, Button } from "@/components/ui";
-import { Crown, LogOut, Pencil, Trophy, Users } from "lucide-react";
+import { Crown, LogOut, Pencil, Trophy, UserPlus, Users } from "lucide-react";
 import { TEAM_STATUS, TONE_TEXT } from "./teamStatus";
 import type { TeamView } from "./types";
 
@@ -14,6 +14,7 @@ interface Props {
   onConfirmRegistration: () => void;
   onLeave: () => void;
   onEdit?: () => void;
+  onOpenInvite?: () => void;
 }
 
 // Header một hành động chính duy nhất theo trạng thái đội; mọi lối đi khác
@@ -26,6 +27,7 @@ export function TeamHeader({
   onConfirmRegistration,
   onLeave,
   onEdit,
+  onOpenInvite,
 }: Props) {
   const status = TEAM_STATUS[team.status] ?? TEAM_STATUS.Forming;
   const isRegistered = team.status === "Registered" || team.status === "Approved";
@@ -89,6 +91,16 @@ export function TeamHeader({
         )}
 
         <div className="flex flex-wrap gap-[var(--space-xs)] md:justify-end">
+          {isLeader && (team.status === "Forming" || team.status === "Rejected") && onOpenInvite && (
+            <Button
+              variant="ghost"
+              accent="team"
+              className="text-xs font-bold border border-[var(--accent-team)]/40 bg-[var(--accent-team)]/10"
+              onClick={onOpenInvite}
+            >
+              <UserPlus className="size-3.5" /> Mời thành viên
+            </Button>
+          )}
           <Link href="/my-submissions">
             <Button id="view-submissions-btn" variant="ghost" accent="team" className="text-xs">
               Bài nộp

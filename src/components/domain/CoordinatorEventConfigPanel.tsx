@@ -1142,7 +1142,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
                             target="_blank"
                             className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400 hover:text-[#c084fc] transition-colors"
                           >
-                            <span>[KHO TIÊU CHÍ MẪU (MODULE 04) -&gt;]</span>
+                            <span>[KHO TIÊU CHÍ MẪU -&gt;]</span>
                           </Link>
                         </div>
                       </div>

@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { Link } from "@/i18n/routing";
+import { useAuth } from "@/providers/AuthProvider";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
 import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
-import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import { useToast } from "@/providers/ToastProvider";
+import { useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 
-// Chuông thông báo — gộp lời mời vào ĐỘI và lời mời VAI TRÒ SỰ KIỆN
-// (Judge/Mentor/EventCoordinator) trong 1 màn, đọc từ GET /Users/my-invitations
-// (usersRepository.useMyInvitations — xem file đó để biết vì sao KHÔNG dùng
-// /Teams/{teamId}/my-invitation, route đó cần biết trước teamId nên không hợp
-// với màn "lời mời của tôi" này).
 export function TeamInvitationsView() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { data, isLoading, isError, refetch, isFetching } = useMyInvitations();
   const invitations = data?.invitations ?? [];
 
@@ -22,17 +24,67 @@ export function TeamInvitationsView() {
 
   const [error, setError] = useState("");
 
-  const handleRespond = async (inv: MyInvitationItem, isAccepted: boolean) => {
+  const isProfileIncomplete = user?.isStudent && (!user?.schoolId || (!user?.isFpt && !user?.studentCode));
+
+  const handleRespond = async (inv: MyInvitationItem | any, isAccepted: boolean) => {
     setError("");
+    const invId = inv.invitationId || inv.InvitationId || inv.id || inv.Id;
+    const invType = String(inv.type || inv.Type || "TEAM").toUpperCase();
+    const targetName = inv.targetName || inv.TargetName || "đội thi";
+
+    if (!invId) {
+      toast.error("Không tìm thấy mã định danh lời mời.");
+      return;
+    }
+
     try {
-      if (inv.type === "TEAM") {
-        await respondTeam({ invitationId: inv.invitationId, isAccepted });
+      if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+        await respondTeam({ invitationId: invId, isAccepted });
       } else {
-        await respondEventRole({ invitationId: inv.invitationId, isAccepted });
+        await respondEventRole({ invitationId: invId, isAccepted });
+      }
+
+      if (isAccepted) {
+        if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+          toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+        } else if (inv.role === "Judge") {
+          toast.success(`🎉 Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
+        } else if (inv.role === "Mentor") {
+          toast.success(`🎉 Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
+        } else {
+          toast.success(`🎉 Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
+        }
+        queryClient.invalidateQueries({ queryKey: ["my-team"] });
+        queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+        queryClient.invalidateQueries({ queryKey: ["eventRoles"] });
+        queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+        queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
+        queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      } else {
+        toast.info(`Bạn đã từ chối lời mời tham gia "${targetName}".`);
+        queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+        queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
       }
     } catch (err: unknown) {
-      const detail = err as { message?: string; response?: { data?: { message?: string } } };
-      setError(detail?.response?.data?.message || detail?.message || "Không xử lý được lời mời. Thử lại sau.");
+      const detail = err as { message?: string; response?: { data?: { message?: string; detail?: string } } };
+      const rawMsg =
+        detail?.response?.data?.message ||
+        detail?.response?.data?.detail ||
+        detail?.message ||
+        "Không thể xử lý lời mời. Vui lòng thử lại sau.";
+
+      const isProfileErr =
+        rawMsg.toLowerCase().includes("profile") ||
+        rawMsg.toLowerCase().includes("hồ sơ") ||
+        rawMsg.toLowerCase().includes("school") ||
+        rawMsg.toLowerCase().includes("student");
+
+      const msg = isProfileErr && isAccepted
+        ? "Bạn cần hoàn tất cập nhật hồ sơ cá nhân/sinh viên trước khi đồng ý tham gia đội thi."
+        : rawMsg;
+
+      setError(msg);
+      toast.error(msg);
     } finally {
       refetch();
     }
@@ -41,12 +93,26 @@ export function TeamInvitationsView() {
   const pending = invitations.filter((i) => i.status === "PendingAccept");
   const history = invitations.filter((i) => i.status !== "PendingAccept");
 
+  const formatRoleLabel = (role?: string) => {
+    switch (role) {
+      case "Coordinator":
+      case "EventCoordinator":
+        return "Cán Bộ Điều Phối (Coordinator)";
+      case "Judge":
+        return "Ban Giám Khảo (Judge)";
+      case "Mentor":
+        return "Cố Vấn Chuyên Môn (Mentor)";
+      default:
+        return role || "Cán Bộ Sự Kiện";
+    }
+  };
+
   const titleOf = (inv: MyInvitationItem) =>
     inv.type === "TEAM"
       ? inv.role === "Trưởng nhóm"
-        ? `Yêu cầu chuyển quyền Trưởng nhóm đội ${inv.targetName}`
-        : `Lời mời gia nhập đội ${inv.targetName}`
-      : `Lời mời làm ${inv.role} — ${inv.targetName}${inv.trackName ? ` · ${inv.trackName}` : ""}`;
+        ? `👑 Yêu cầu chuyển quyền Đội trưởng đội ${inv.targetName}`
+        : `📩 Lời mời gia nhập đội thi ${inv.targetName} (Từ Đội trưởng)`
+      : `🎖️ Lời mời đảm nhiệm vai trò: ${formatRoleLabel(inv.role)} — Sự kiện ${inv.targetName}${inv.trackName ? ` · Hạng mục ${inv.trackName}` : ""}`;
 
   return (
     <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)]">
@@ -69,6 +135,21 @@ export function TeamInvitationsView() {
             Làm mới
           </Button>
         </header>
+
+        {/* Cảnh báo nếu hồ sơ chưa hoàn thiện */}
+        {isProfileIncomplete && (
+          <Card className="p-4 bg-amber-500/10 border border-amber-500/30 hud-clipped flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono text-xs text-amber-200">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-amber-400 shrink-0" />
+              <span>Hồ sơ sinh viên của bạn chưa hoàn thiện. Vui lòng cập nhật thông tin để đảm bảo có thể tham gia đội thi.</span>
+            </div>
+            <Link href="/profile">
+              <Button variant="primary" className="text-xs shrink-0 whitespace-nowrap">
+                CẬP NHẬT HỒ SƠ &gt;
+              </Button>
+            </Link>
+          </Card>
+        )}
 
         {error && (
           <p role="alert" className="font-mono text-xs text-pretty text-[color:var(--color-danger)]">

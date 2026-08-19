@@ -271,7 +271,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
                     { key: "school", label: "Trường Học" },
                     { key: "track", label: "Hạng Mục Track" },
                     { key: "roundName", label: "Vòng Thi" },
-                    { key: "score", label: "Điểm Số RBL" },
+                    { key: "score", label: "Điểm Số" },
                     { key: "status", label: "Thành Tích" },
                   ]);
                 });

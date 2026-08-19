@@ -5,27 +5,19 @@ import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useMentorWorkspaceViewModel, useMentorSubmissionDetailViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
 import { encodeMentorFeedbackComment, parseMentorFeedbackComment } from "@/repositories/submitResultsRepository";
-import { Card, Button, Badge } from "@/components/ui";
+import { Card } from "@/components/ui";
 import {
-  ChevronRight,
   Code,
   PlayCircle,
-  Presentation,
   Copy,
   Check,
-  BadgeCheck,
   Target,
-  FolderGit2,
-  FileText,
-  GitFork,
-  GitCommit,
-  Clock,
+  ExternalLink,
   MessageSquare,
   Plus,
   Trash2,
-  ExternalLink,
-  Info,
   Send,
+  FileText,
 } from "lucide-react";
 
 export function MentorSubmissionsView() {
@@ -39,6 +31,7 @@ export function MentorSubmissionsView() {
     submissions,
     teamNameById,
     isLoading,
+    eventId,
   } = useMentorWorkspaceViewModel();
 
   const currentTrackId = trackIdParam || selectedTrackId || (myTracks[0]?.id || myTracks[0]?.Id || "");
@@ -68,6 +61,7 @@ export function MentorSubmissionsView() {
   const [suggestedScore, setSuggestedScore] = useState<number | "">("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   const copyToClipboard = (text: string, field: string) => {
     if (!text) return;
@@ -85,6 +79,7 @@ export function MentorSubmissionsView() {
       return;
     }
     setErrorMsg("");
+    setSuccessMsg("");
     try {
       await createFeedback.mutateAsync({
         submitResultId: subId,
@@ -97,6 +92,8 @@ export function MentorSubmissionsView() {
       setFeedbackContent("");
       setTechnicalAdvice("");
       setSuggestedScore("");
+      setSuccessMsg("Gửi góp ý chuyên môn thành công!");
+      setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
       setErrorMsg(err?.response?.data?.message || err?.message || "Gửi nhận xét thất bại.");
     }
@@ -118,326 +115,243 @@ export function MentorSubmissionsView() {
   const description = activeSubmission?.description || activeSubmission?.Description || "Chưa có mô tả chi tiết bài nộp.";
 
   return (
-    <div className="bg-surface text-on-surface font-sans min-h-screen p-6 flex flex-col">
-      <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6">
-        {/* Top Context Header */}
-        <header className="w-full bg-surface-container-low border border-outline-variant p-5 rounded-lg">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant mb-2">
-            <span className="text-[#00d9ff] font-bold">[</span>
-            <Link href="/mentor/tracks" className="hover:text-on-surface transition-colors">
-              Bàn Làm Việc Cố Vấn
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span>{currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span>{activeTeamName}</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-on-surface font-bold">Chi tiết bài nộp</span>
-            <span className="text-[#00d9ff] font-bold">]</span>
-          </div>
+    <main className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans p-4 md:p-6 flex flex-col space-y-4">
+      <div className="max-w-[1600px] w-full mx-auto space-y-4 flex-1 flex flex-col">
 
-          {/* Title Row */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-outline-variant pb-3">
-            <h1 className="font-display text-2xl md:text-3xl text-[#00d9ff] font-extrabold tracking-wider uppercase flex items-center gap-3">
-              <span className="w-2 h-6 bg-[#00d9ff] inline-block rounded-xs" />
-              CHI TIẾT BÀI NỘP CỦA ĐỘI
+        {/* ── TẦNG 1: BREADCRUMB & HEADER ── */}
+        <header className="bg-[#10171a] border border-zinc-800 p-4 hud-clipped flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm font-mono text-xs">
+          <div className="space-y-1">
+            <div className="text-zinc-400 flex flex-wrap items-center gap-2">
+              <Link href={`/mentor/teams?trackId=${currentTrackId}`} className="text-zinc-400 hover:text-white font-bold transition-colors">
+                [ &lt; QUAY LẠI DANH SÁCH ĐỘI ]
+              </Link>
+              <span className="text-zinc-600">/</span>
+              <span className="text-teal-400 font-bold uppercase">[ KHÔNG GIAN CỐ VẤN ]</span>
+              <span className="text-zinc-600">/</span>
+              <span className="text-white font-bold">{activeTeamName}</span>
+            </div>
+            <h1 className="font-display text-xl md:text-2xl text-white font-extrabold tracking-wider uppercase pt-1">
+              CHI TIẾT BÀI NỘP &amp; KHÔNG GIAN CỐ VẤN
             </h1>
-            <div className="font-mono text-xs flex items-center gap-2 border border-[#00d9ff]/30 px-3 py-1 rounded bg-[#00d9ff]/5 text-[#00d9ff]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00d9ff] animate-pulse" />
-              MODE: READ-ONLY (MENTOR ASSIST)
-            </div>
           </div>
 
-          {/* Submissions Switcher Tabs if multiple */}
-          {filteredSubmissions.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2 pt-3">
-              <span className="text-[10px] font-mono text-on-surface-variant uppercase font-bold mr-1">
-                Chọn bài nộp ({filteredSubmissions.length}):
-              </span>
-              {filteredSubmissions.map((sub, idx) => {
-                const subId = sub.id || sub.Id || "";
-                const isSelected = (activeSubmission?.id || activeSubmission?.Id) === subId;
-                const tId = (sub.teamId || sub.TeamId || "") as string;
-                const tName = teamNameById.get(tId) || `Đội #${idx + 1}`;
-                return (
-                  <button
-                    key={subId || idx}
-                    type="button"
-                    onClick={() => setSelectedSubId(subId)}
-                    className={`px-3 py-1 text-xs font-mono rounded cursor-pointer transition-all border ${
-                      isSelected
-                        ? "bg-[#00d9ff] text-black font-extrabold border-[#00d9ff]"
-                        : "bg-surface text-on-surface-variant border-outline-variant hover:text-on-surface hover:border-outline"
-                    }`}
-                  >
-                    {tName} {(sub as any).roundName || (sub as any).RoundName ? `(${(sub as any).roundName || (sub as any).RoundName})` : `#${idx + 1}`}
-                  </button>
-                );
-              })}
+          <div className="flex items-center gap-3">
+            <div className="text-teal-300 bg-teal-950/50 px-3 py-1.5 border border-teal-500/40 hud-clipped font-bold">
+              [ CHẾ ĐỘ: CỐ VẤN CHUYÊN MÔN ]
             </div>
-          )}
+          </div>
         </header>
 
+        {/* ── TẦNG 2: CHỌN BÀI NỘP NẾU CÓ NHIỀU BÀI ── */}
+        {filteredSubmissions.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2 bg-[#10171a] p-3 border border-zinc-800 hud-clipped font-mono text-xs">
+            <span className="text-zinc-400 uppercase font-bold mr-1">
+              [ CHỌN BÀI NỘP ({filteredSubmissions.length}): ]
+            </span>
+            {filteredSubmissions.map((sub, idx) => {
+              const subId = sub.id || sub.Id || "";
+              const isSelected = (activeSubmission?.id || activeSubmission?.Id) === subId;
+              const tId = (sub.teamId || sub.TeamId || "") as string;
+              const tName = teamNameById.get(tId) || `Đội #${idx + 1}`;
+              return (
+                <button
+                  key={subId || idx}
+                  type="button"
+                  onClick={() => setSelectedSubId(subId)}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase hud-clipped cursor-pointer transition-all border ${
+                    isSelected
+                      ? "bg-teal-500 text-black border-teal-500 font-extrabold"
+                      : "bg-[#141f23] text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-600"
+                  }`}
+                >
+                  [ {tName} {(sub as any).roundName || (sub as any).RoundName ? `(${(sub as any).roundName || (sub as any).RoundName})` : `#${idx + 1}`} ]
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── TẦNG 3: NỘI DUNG BÀI THI & KHUNG GÓP Ý CỐ VẤN ── */}
         {isLoading ? (
-          <div className="flex justify-center py-20 font-mono text-xs text-[#2dd4bf] animate-pulse">
-            LOADING SUBMISSION ARTIFACTS...
+          <div className="flex-1 bg-[#10171a] border border-zinc-800 p-12 text-center flex flex-col items-center justify-center font-mono text-xs text-teal-400 animate-pulse hud-clipped">
+            [ ĐANG TẢI HỒ SƠ BÀI DỰ THI... ]
           </div>
         ) : !activeSubmission ? (
-          <Card className="p-12 bg-surface-container-low border border-outline-variant text-center font-mono text-xs text-on-surface-variant">
-            <Info className="w-8 h-8 mx-auto mb-2 text-on-surface-variant/60" />
-            Chưa tìm thấy bài nộp cho đội thi này trong Hạng mục hiện tại.
+          <Card className="p-12 bg-[#10171a] border border-zinc-800 text-center font-mono text-xs text-zinc-400 hud-clipped">
+            [ Chưa tìm thấy bài nộp cho đội thi này trong Hạng mục hiện tại ]
           </Card>
         ) : (
-          <div className="space-y-6">
-            {/* Bento Grid Canvas */}
-            <div className="grid grid-cols-12 gap-4">
-              {/* HUD Panel 1: Team Info (Col span 4) */}
-              <div className="col-span-12 lg:col-span-4 bg-surface-container-high border border-outline-variant rounded-lg flex flex-col overflow-hidden">
-                <div className="bg-surface-variant px-4 py-2 flex justify-between items-center border-b border-surface font-mono text-xs">
-                  <span className="text-[#00d9ff] font-bold tracking-widest uppercase">/ IDENTIFICATION</span>
-                  <BadgeCheck className="w-4 h-4 text-on-surface-variant" />
-                </div>
-                <div className="p-5 flex-1 flex flex-col gap-5 font-mono text-xs">
-                  <div>
-                    <div className="text-[10px] text-on-surface-variant uppercase mb-1">Team Designation</div>
-                    <div className="font-display text-xl font-bold text-on-surface">{activeTeamName}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-[10px] text-on-surface-variant uppercase mb-1">Track Assignment</div>
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-tertiary-container/10 border border-tertiary-container/30 text-tertiary-container rounded">
-                      <Target className="w-3.5 h-3.5" />
-                      {currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}
-                    </div>
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="text-[10px] text-on-surface-variant uppercase mb-2">Project Abstract</div>
-                    <p className="font-sans text-xs text-on-surface-variant leading-relaxed bg-surface p-3 border border-outline-variant rounded">
-                      {description}
-                    </p>
-                  </div>
-
-                  <div className="pt-3 border-t border-outline-variant flex justify-between items-center text-[11px]">
-                    <span className="text-on-surface-variant">SUBMISSION ID:</span>
-                    <span className="px-2 py-0.5 bg-surface border border-outline-variant rounded text-on-surface font-bold">
-                      {(activeSubmission.id || activeSubmission.Id || "SUB").substring(0, 10)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* HUD Panel 2: Submission URLs & Content (Col span 8) */}
-              <div className="col-span-12 lg:col-span-8 bg-surface-container-high border border-outline-variant rounded-lg flex flex-col overflow-hidden">
-                <div className="bg-surface-variant px-4 py-2 flex justify-between items-center border-b border-surface font-mono text-xs">
-                  <span className="text-[#00d9ff] font-bold tracking-widest uppercase">/ SUBMISSION ARTIFACTS</span>
-                  <FolderGit2 className="w-4 h-4 text-on-surface-variant" />
-                </div>
-
-                <div className="p-5 flex flex-col gap-4 flex-1">
-                  {/* Artifact Links */}
-                  <div className="flex flex-col gap-3 font-mono text-xs">
-                    {/* Repository URL */}
-                    <div className="flex items-stretch bg-surface border border-outline-variant rounded overflow-hidden group">
-                      <div className="w-12 bg-surface-variant flex items-center justify-center border-r border-outline-variant">
-                        <Code className="w-4 h-4 text-on-surface-variant group-hover:text-[#00d9ff] transition-colors" />
-                      </div>
-                      <div className="flex-1 flex flex-col justify-center px-4 py-2">
-                        <span className="text-[9px] text-on-surface-variant uppercase font-bold">Source Repository</span>
-                        <span className="text-[12px] text-on-surface truncate font-bold">
-                          {repoUrl || "Chưa cung cấp repository URL"}
-                        </span>
-                      </div>
-                      {repoUrl && (
-                        <>
-                          <button
-                            onClick={() => copyToClipboard(repoUrl, "repo")}
-                            className="w-10 flex items-center justify-center hover:bg-surface-variant text-on-surface-variant border-l border-outline-variant"
-                            title="Sao chép liên kết"
-                          >
-                            {copiedField === "repo" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                          </button>
-                          <a
-                            href={repoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="w-10 flex items-center justify-center hover:bg-[#00d9ff] hover:text-[#080f11] text-on-surface-variant border-l border-outline-variant transition-colors"
-                            title="Mở liên kết"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Live Demo URL */}
-                    <div className="flex items-stretch bg-surface border border-outline-variant rounded overflow-hidden group">
-                      <div className="w-12 bg-surface-variant flex items-center justify-center border-r border-outline-variant">
-                        <PlayCircle className="w-4 h-4 text-on-surface-variant group-hover:text-[#00d9ff] transition-colors" />
-                      </div>
-                      <div className="flex-1 flex flex-col justify-center px-4 py-2">
-                        <span className="text-[9px] text-on-surface-variant uppercase font-bold">Live Demo Endpoint</span>
-                        <span className="text-[12px] text-on-surface truncate font-bold">
-                          {demoUrl || "Chưa cung cấp demo URL"}
-                        </span>
-                      </div>
-                      {demoUrl && (
-                        <>
-                          <button
-                            onClick={() => copyToClipboard(demoUrl, "demo")}
-                            className="w-10 flex items-center justify-center hover:bg-surface-variant text-on-surface-variant border-l border-outline-variant"
-                          >
-                            {copiedField === "demo" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                          </button>
-                          <a
-                            href={demoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="w-10 flex items-center justify-center hover:bg-[#00d9ff] hover:text-[#080f11] text-on-surface-variant border-l border-outline-variant transition-colors"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Pitch Deck / Slide URL */}
-                    <div className="flex items-stretch bg-surface border border-outline-variant rounded overflow-hidden group">
-                      <div className="w-12 bg-surface-variant flex items-center justify-center border-r border-outline-variant">
-                        <Presentation className="w-4 h-4 text-on-surface-variant group-hover:text-[#00d9ff] transition-colors" />
-                      </div>
-                      <div className="flex-1 flex flex-col justify-center px-4 py-2">
-                        <span className="text-[9px] text-on-surface-variant uppercase font-bold">Pitch Deck / Slides</span>
-                        <span className="text-[12px] text-on-surface truncate font-bold">
-                          {slideUrl || "Chưa cung cấp slide URL"}
-                        </span>
-                      </div>
-                      {slideUrl && (
-                        <>
-                          <button
-                            onClick={() => copyToClipboard(slideUrl, "slide")}
-                            className="w-10 flex items-center justify-center hover:bg-surface-variant text-on-surface-variant border-l border-outline-variant"
-                          >
-                            {copiedField === "slide" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                          </button>
-                          <a
-                            href={slideUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="w-10 flex items-center justify-center hover:bg-[#00d9ff] hover:text-[#080f11] text-on-surface-variant border-l border-outline-variant transition-colors"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Submission Notes Box */}
-                  <div className="flex-1 bg-surface border border-outline-variant rounded flex flex-col">
-                    <div className="px-3 py-2 border-b border-outline-variant flex items-center gap-2 bg-surface-variant/50 font-mono text-[11px]">
-                      <FileText className="w-3.5 h-3.5 text-on-surface-variant" />
-                      <span className="text-on-surface-variant font-bold">SUBMISSION_NOTES.MD</span>
-                    </div>
-                    <div className="p-4 font-mono text-xs text-on-surface-variant leading-relaxed overflow-y-auto max-h-40">
-                      {description}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* HUD Panel 3: System Status & Telemetry (Col span 12) */}
-              <div className="col-span-12 bg-surface-container-high border border-outline-variant rounded-lg flex flex-col overflow-hidden font-mono text-xs">
-                <div className="bg-surface-variant px-4 py-2 flex justify-between items-center border-b border-surface">
-                  <span className="text-[#00d9ff] font-bold tracking-widest uppercase">
-                    / REPOSITORY TELEMETRY &amp; SYSTEM CHECK
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+            
+            {/* CỘT TRÁI (7 CỘT): HỒ SƠ BÀI THI & TÀI LIỆU */}
+            <div className="lg:col-span-7 space-y-4 flex flex-col">
+              
+              {/* Card 1: Thông tin đội & Hạng mục */}
+              <div className="bg-[#10171a] border border-zinc-800 p-5 space-y-3 hud-clipped shadow-sm font-mono text-xs">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <span className="text-teal-400 font-bold uppercase">[ BÀI DỰ THI ĐỘI THI ]</span>
+                  <span className="px-2 py-0.5 bg-[#090e11] border border-zinc-800 text-zinc-400 font-bold hud-clipped">
+                    SUB-{String(activeSubmission.id || activeSubmission.Id || "SUB").substring(0, 6).toUpperCase()}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[#2dd4bf]">LIVE FETCH</span>
-                    <span className="w-2 h-2 rounded-full bg-[#00d9ff] animate-ping" />
-                  </div>
                 </div>
 
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col gap-1">
-                    <div className="text-[9px] text-on-surface-variant uppercase">Host Provider</div>
-                    <div className="text-sm font-bold text-on-surface flex items-center gap-2">
-                      <GitFork className="w-4 h-4 text-[#2dd4bf]" /> GITHUB
-                    </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-zinc-500 uppercase block font-bold">Tên Đội Thi:</span>
+                  <h2 className="font-display text-xl font-bold text-white uppercase">{activeTeamName}</h2>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] text-zinc-500 uppercase block font-bold">Hạng Mục Phụ Trách:</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-950/40 border border-teal-500/30 text-teal-300 font-bold hud-clipped">
+                    <Target className="w-3.5 h-3.5" />
+                    {currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] text-zinc-400 uppercase font-bold block">[ TÓM TẮT ĐỀ ÁN / GIẢI PHÁP ]</span>
+                  <p className="font-sans text-xs text-zinc-300 leading-relaxed bg-[#090e11] p-3.5 border border-zinc-800/80 hud-clipped min-h-[80px]">
+                    {description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 2: Liên kết sản phẩm & Mã nguồn */}
+              <div className="bg-[#10171a] border border-zinc-800 p-5 space-y-3 hud-clipped shadow-sm font-mono text-xs flex-1">
+                <div className="text-cyan-400 font-bold uppercase border-b border-zinc-800 pb-2.5">
+                  [ LIÊN KẾT MÃ NGUỒN ]
+                </div>
+
+                <div className="space-y-3">
+                  {/* Repo URL */}
+                  <div className="p-3 bg-[#090e11] border border-zinc-800 space-y-1.5 hud-clipped">
+                    <span className="text-[10px] text-zinc-500 uppercase font-bold flex items-center gap-1.5">
+                      <Code className="w-3.5 h-3.5 text-teal-400" /> KHO MÃ NGUỒN (REPOSITORY)
+                    </span>
+                    {repoUrl ? (
+                      <div className="flex items-center gap-2">
+                        <span className="flex-1 text-cyan-300 text-xs truncate bg-[#141f23] px-2.5 py-1.5 border border-zinc-800">
+                          {repoUrl}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(repoUrl, "repo")}
+                          className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold hud-clipped cursor-pointer"
+                        >
+                          {copiedField === "repo" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                        <a
+                          href={repoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 bg-cyan-500 hover:bg-white text-black text-[11px] font-bold uppercase hud-clipped transition-all cursor-pointer"
+                        >
+                          [ MỞ &gt; ]
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="text-zinc-500 italic text-[11px] block">[ Đội thi chưa đính kèm link repository ]</span>
+                    )}
                   </div>
 
-                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col gap-1">
-                    <div className="text-[9px] text-on-surface-variant uppercase">Submission Code</div>
-                    <div className="text-sm font-bold text-on-surface flex items-center gap-2">
-                      <GitCommit className="w-4 h-4 text-amber-400" />
-                      {(activeSubmission.id || activeSubmission.Id || "N/A").substring(0, 12)}
+                  {/* Demo URL */}
+                  {demoUrl && (
+                    <div className="p-3 bg-[#090e11] border border-zinc-800 space-y-1.5 hud-clipped">
+                      <span className="text-[10px] text-zinc-500 uppercase font-bold flex items-center gap-1.5">
+                        <PlayCircle className="w-3.5 h-3.5 text-cyan-400" /> SẢN PHẨM TRỰC TUYẾN (LIVE DEMO)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="flex-1 text-cyan-300 text-xs truncate bg-[#141f23] px-2.5 py-1.5 border border-zinc-800">
+                          {demoUrl}
+                        </span>
+                        <a
+                          href={demoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 bg-cyan-500 hover:bg-white text-black text-[11px] font-bold uppercase hud-clipped transition-all cursor-pointer"
+                        >
+                          [ MỞ &gt; ]
+                        </a>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col gap-1">
-                    <div className="text-[9px] text-on-surface-variant uppercase">Submission Timestamp</div>
-                    <div className="text-sm font-bold text-on-surface flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#00d9ff]" />
-                      {activeSubmission.createdTime || activeSubmission.CreatedTime
-                        ? new Date(activeSubmission.createdTime || activeSubmission.CreatedTime!).toLocaleString("vi-VN")
-                        : "---"}
+                  {/* Slide URL */}
+                  {slideUrl && (
+                    <div className="p-3 bg-[#090e11] border border-zinc-800 space-y-1.5 hud-clipped">
+                      <span className="text-[10px] text-zinc-500 uppercase font-bold flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-amber-400" /> SLIDE THUYẾT TRÌNH (PRESENTATION)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="flex-1 text-amber-300 text-xs truncate bg-[#141f23] px-2.5 py-1.5 border border-zinc-800">
+                          {slideUrl}
+                        </span>
+                        <a
+                          href={slideUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-white text-black text-[11px] font-bold uppercase hud-clipped transition-all cursor-pointer"
+                        >
+                          [ MỞ &gt; ]
+                        </a>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="bg-surface border border-outline-variant rounded p-3 flex flex-col justify-center items-center gap-1">
-                    <span className="text-[#00d9ff] font-bold text-xs">[ STATUS: NOMINAL ]</span>
-                    <span className="text-[9px] text-on-surface-variant">API_CONN_ESTABLISHED</span>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Mentor Feedback Protocol Panel */}
-            <div className="bg-surface-container-high border border-outline-variant rounded-lg p-5 font-mono text-xs space-y-6">
-              <div className="flex items-center justify-between border-b border-outline-variant pb-3">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-[#2dd4bf]" />
-                  <h3 className="font-display text-base font-bold text-on-surface uppercase tracking-wider">
-                    GÓP Ý &amp; PHẢN HỒI CỐ VẤN (MENTOR FEEDBACK PROTOCOL)
-                  </h3>
-                </div>
-                <Badge tone="mentor">TOTAL: {feedbacks.length}</Badge>
-              </div>
-
-              {/* Feedback Form */}
-              <form onSubmit={handleSendFeedback} className="bg-surface p-4 border border-[#2dd4bf]/30 rounded space-y-4">
-                <div className="text-xs font-bold text-[#2dd4bf] flex items-center gap-1.5">
-                  <Plus className="w-4 h-4" /> THÊM GÓP Ý CHUYÊN MÔN CHO ĐỘI THI
+            {/* CỘT PHẢI (5 CỘT): GÓP Ý & PHẢN HỒI CỐ VẤN */}
+            <div className="lg:col-span-5 bg-[#10171a] border border-teal-500/40 p-5 space-y-4 hud-clipped shadow-sm flex flex-col justify-between font-mono text-xs">
+              <div className="space-y-4">
+                
+                {/* Header Góp ý */}
+                <div className="flex items-center justify-between border-b border-teal-500/20 pb-3">
+                  <div className="flex items-center gap-2 text-teal-300 font-bold uppercase">
+                    <MessageSquare className="w-4 h-4" />
+                    <span>[ GÓP Ý &amp; PHẢN HỒI CỐ VẤN ]</span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-teal-500/10 text-teal-300 border border-teal-500/30 text-[10px] font-bold hud-clipped">
+                    {feedbacks.length} GÓP Ý
+                  </span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-on-surface font-semibold">
-                    Nội dung nhận xét &amp; định hướng <span className="text-red-400">*</span>
-                  </label>
-                  <textarea
-                    value={feedbackContent}
-                    onChange={(e) => setFeedbackContent(e.target.value)}
-                    placeholder="Nhận xét về kiến trúc kĩ thuật, giải pháp, khả năng áp dụng thực tế..."
-                    rows={3}
-                    className="w-full bg-surface-container border border-outline-variant p-3 font-sans text-xs text-on-surface placeholder:text-on-surface-variant/50 rounded focus:outline-none focus:border-[#2dd4bf]"
-                  />
-                </div>
+                {/* Form gửi phản hồi */}
+                <form onSubmit={handleSendFeedback} className="bg-[#090e11] p-4 border border-zinc-800 space-y-3 hud-clipped">
+                  <div className="text-teal-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
+                    <Plus className="w-3.5 h-3.5" /> THÊM GÓP Ý MỚI CHO ĐỘI THI
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="md:col-span-2 space-y-1.5">
-                    <label className="text-on-surface font-semibold">Lời khuyên kỹ thuật / Công nghệ (Khuyên dùng)</label>
+                  <div className="space-y-1 font-sans">
+                    <label className="text-zinc-300 text-xs font-semibold block">
+                      Nội dung nhận xét &amp; định hướng <span className="text-red-400">*</span>
+                    </label>
+                    <textarea
+                      value={feedbackContent}
+                      onChange={(e) => setFeedbackContent(e.target.value)}
+                      placeholder="Nhận xét về kiến trúc kĩ thuật, giải pháp, khả năng áp dụng thực tế..."
+                      rows={3}
+                      className="w-full bg-[#141f23] border border-zinc-800 p-2.5 text-xs text-zinc-200 placeholder:text-zinc-600 hud-clipped focus:outline-none focus:border-teal-400"
+                    />
+                  </div>
+
+                  <div className="space-y-1 font-sans">
+                    <label className="text-zinc-300 text-xs font-semibold block">
+                      Lời khuyên kỹ thuật / Công nghệ đề xuất
+                    </label>
                     <input
                       type="text"
                       value={technicalAdvice}
                       onChange={(e) => setTechnicalAdvice(e.target.value)}
                       placeholder="VD: Nên dùng Redis cache, tối ưu Docker multi-stage..."
-                      className="w-full bg-surface-container border border-outline-variant px-3 py-2 font-sans text-xs text-on-surface rounded focus:outline-none focus:border-[#2dd4bf]"
+                      className="w-full bg-[#141f23] border border-zinc-800 px-3 py-2 text-xs text-zinc-200 hud-clipped focus:outline-none focus:border-teal-400"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-on-surface font-semibold">Điểm tham khảo (0-100)</label>
+                  <div className="space-y-1">
+                    <label className="text-zinc-300 text-xs font-semibold block font-sans">
+                      Điểm tham khảo nội bộ (0 - 100)
+                    </label>
                     <input
                       type="number"
                       min={0}
@@ -445,85 +359,91 @@ export function MentorSubmissionsView() {
                       value={suggestedScore}
                       onChange={(e) => setSuggestedScore(e.target.value ? Number(e.target.value) : "")}
                       placeholder="VD: 85"
-                      className="w-full bg-surface-container border border-outline-variant px-3 py-2 font-mono text-xs text-on-surface rounded focus:outline-none focus:border-[#2dd4bf]"
+                      className="w-32 bg-[#141f23] border border-zinc-800 px-3 py-2 text-xs text-teal-300 font-bold font-mono hud-clipped focus:outline-none focus:border-teal-400"
                     />
                   </div>
-                </div>
 
-                {errorMsg && <p className="text-red-400 text-xs font-bold">{errorMsg}</p>}
+                  {errorMsg && <p className="text-red-400 font-bold text-xs">{errorMsg}</p>}
+                  {successMsg && <p className="text-emerald-400 font-bold text-xs">[✓ {successMsg}]</p>}
 
-                <div className="flex justify-end pt-1">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    accent="mentor"
-                    disabled={createFeedback.isPending}
-                    className="text-xs py-2 px-5 font-bold"
-                  >
-                    <Send className="w-3.5 h-3.5 mr-1.5" />
-                    {createFeedback.isPending ? "Đang gửi..." : "Gửi góp ý cho đội thi"}
-                  </Button>
-                </div>
-              </form>
-
-              {/* Feedback History List */}
-              <div className="space-y-3">
-                <div className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                  Lịch sử góp ý của Cố vấn ({feedbacks.length})
-                </div>
-
-                {isLoadingFeedbacks ? (
-                  <p className="text-on-surface-variant italic">Đang tải lịch sử góp ý...</p>
-                ) : feedbacks.length === 0 ? (
-                  <p className="text-on-surface-variant/70 italic">Chưa có nhận xét nào từ Cố vấn cho bài nộp này.</p>
-                ) : (
-                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                    {feedbacks.map((fb) => {
-                      const parsed = parseMentorFeedbackComment(fb.comment);
-                      return (
-                        <div key={fb.id} className="p-4 bg-surface border border-outline-variant rounded space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Badge tone="mentor">Mentor: {fb.mentorName || "Cố vấn"}</Badge>
-                              {parsed.suggestedScore !== undefined && (
-                                <span className="text-[#00d9ff] font-bold">
-                                  Điểm gợi ý: {parsed.suggestedScore}/100
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-on-surface-variant">
-                                {new Date(fb.createdTime).toLocaleString("vi-VN")}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteFeedback(fb.id)}
-                                disabled={deleteFeedback.isPending}
-                                className="text-on-surface-variant hover:text-red-400 transition-colors p-1"
-                                title="Xóa nhận xét này"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <p className="font-sans text-xs text-on-surface leading-relaxed">{parsed.text}</p>
-
-                          {parsed.technicalAdvice && (
-                            <div className="p-2.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 text-[#2dd4bf] text-[11px] rounded">
-                              💡 Khuyên dùng: {parsed.technicalAdvice}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="submit"
+                      disabled={createFeedback.isPending}
+                      className="px-4 py-2 bg-teal-500 hover:bg-white text-black font-bold uppercase text-xs transition-all cursor-pointer hud-clipped flex items-center gap-1.5 shadow-sm disabled:opacity-40"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      {createFeedback.isPending ? "[ ĐANG GỬI... ]" : "[ GỬI GÓP Ý CHO ĐỘI THI ]"}
+                    </button>
                   </div>
-                )}
+                </form>
+
+                {/* Danh sách lịch sử phản hồi */}
+                <div className="space-y-2.5 pt-1">
+                  <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider block">
+                    [ LỊCH SỬ GÓP Ý CỦA CỐ VẤN ({feedbacks.length}) ]
+                  </span>
+
+                  {isLoadingFeedbacks ? (
+                    <p className="text-zinc-500 italic">[ Đang tải lịch sử góp ý... ]</p>
+                  ) : feedbacks.length === 0 ? (
+                    <p className="text-zinc-500 italic p-3 bg-[#090e11] border border-zinc-800 text-center hud-clipped">
+                      [ Chưa có nhận xét nào từ Cố vấn cho bài nộp này ]
+                    </p>
+                  ) : (
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                      {feedbacks.map((fb) => {
+                        const parsed = parseMentorFeedbackComment(fb.comment);
+                        return (
+                          <div key={fb.id} className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-2 hud-clipped">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 bg-teal-500/20 text-teal-300 border border-teal-500/30 font-bold hud-clipped">
+                                  {fb.mentorName || "Cố vấn"}
+                                </span>
+                                {parsed.suggestedScore !== undefined && (
+                                  <span className="text-cyan-400 font-bold">
+                                    Điểm gợi ý: {parsed.suggestedScore}/100
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-zinc-500">
+                                  {new Date(fb.createdTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteFeedback(fb.id)}
+                                  disabled={deleteFeedback.isPending}
+                                  className="text-zinc-500 hover:text-red-400 transition-colors p-0.5 cursor-pointer"
+                                  title="Xóa nhận xét này"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <p className="font-sans text-xs text-zinc-200 leading-relaxed">{parsed.text}</p>
+
+                            {parsed.technicalAdvice && (
+                              <div className="p-2 bg-teal-950/40 border border-teal-500/30 text-teal-300 text-[11px] hud-clipped">
+                                💡 <strong>Khuyên dùng:</strong> {parsed.technicalAdvice}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
+
           </div>
         )}
+
       </div>
-    </div>
+    </main>
   );
 }

@@ -8,6 +8,7 @@ import { useGetUsers } from "@/repositories/usersRepository";
 import { useGetEventRoles, staffRepository } from "@/repositories/staffRepository";
 import type { User, EventRole } from "@/models/entities";
 import { Link, useRouter } from "@/i18n/routing";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   UserCheck,
   Calendar,
@@ -30,6 +31,7 @@ function pickEventId(ev: any): string {
 
 export function AdminCoordinatorsView() {
   const router = useRouter();
+  const { user: currentUser, refreshRoles } = useAuth();
   const searchParams = useSearchParams();
   const initialEventId = searchParams.get("eventId") || "";
 
@@ -165,6 +167,9 @@ export function AdminCoordinatorsView() {
       await staffRepository.removeEventRole(roleId);
       setActionSuccess(`Đã thu hồi quyền Điều phối viên của ${name} thành công!`);
       await refetchRoles();
+      if (currentUser?.email && name && (currentUser.email.toLowerCase() === name.toLowerCase() || currentUser.fullName?.toLowerCase() === name.toLowerCase())) {
+        await refreshRoles();
+      }
       setTimeout(() => setActionSuccess(null), 3000);
     } catch (err: any) {
       setActionError(err?.response?.data?.message || err?.message || "Gỡ vai trò thất bại.");
@@ -271,7 +276,7 @@ export function AdminCoordinatorsView() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
           <div>
             <div className="font-mono text-[11px] text-amber-400 uppercase tracking-wider mb-1">
-              COORDINATOR APPOINTMENT &amp; ACCESS CONTROL
+              QUẢN LÝ VÀ PHÂN CÔNG ĐIỀU PHỐI VIÊN
             </div>
             <h1 className="font-display font-bold text-2xl md:text-3xl text-white uppercase tracking-wider flex items-center gap-2.5">
               <UserCheck className="w-6 h-6 text-red-500" />
@@ -298,7 +303,7 @@ export function AdminCoordinatorsView() {
                   type="button"
                   className="font-mono text-xs bg-purple-950/20 border border-purple-500/40 text-purple-300 hover:bg-purple-950/40 px-3.5 py-2 rounded flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" /> 👁️ Giám Sát EC
+                  <ExternalLink className="w-3.5 h-3.5" /> Giám Sát EC
                 </button>
               </Link>
             )}
@@ -531,7 +536,7 @@ export function AdminCoordinatorsView() {
               <ul className="list-disc pl-4 space-y-1">
                 <li>Toàn quyền cấu hình bộ tiêu chí &amp; mẫu đánh giá cho các Track.</li>
                 <li>Duyệt đăng ký đội thi và hồ sơ thẻ sinh viên Non-FPT.</li>
-                <li>Phân bổ ban giám khảo, giám sát tiến độ chấm điểm RBL.</li>
+                <li>Phân bổ ban giám khảo, giám sát tiến độ chấm điểm.</li>
                 <li>Tính điểm và công bố bảng vàng kết quả sự kiện.</li>
               </ul>
             </div>

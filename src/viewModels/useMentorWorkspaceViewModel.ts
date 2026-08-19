@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetTracksByEvent, type TrackWithStaffModel } from "@/repositories/tracksRepository";
+import { useGetMyEventRoles } from "@/repositories/events/eventRolesRepository";
 import {
   useGetSubmitResultsByTrack,
   useMentorFeedbacks,
@@ -12,37 +14,85 @@ import {
 } from "@/repositories/submitResultsRepository";
 import { useGetTeamsByEvent, useGetTeamById, type TeamListItem } from "@/repositories/teamsRepository";
 
-export function useMentorWorkspaceViewModel() {
-  const { user, activeRole } = useAuth();
-  const eventId = activeRole?.eventId || activeRole?.EventId || "";
-  const userId = user?.userId || user?.UserID || user?.id || "";
+const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
 
-  // 1. Fetch all tracks for current event
-  const { data: tracksData, isLoading: isLoadingTracks, refetch: refetchTracks } = useGetTracksByEvent(eventId || undefined);
+export function useMentorWorkspaceViewModel() {
+  const searchParams = useSearchParams();
+  const queryEventId = searchParams.get("eventId") || "";
+  const queryTrackId = searchParams.get("trackId") || "";
+
+  const { user, activeRole } = useAuth();
+  const userId = user?.userId || user?.UserID || user?.id || (user as any)?.Id || "";
+
+  // 1. Fetch user's event roles from DB to get all assigned mentor tracks
+  const { data: myEventRoles = [] } = useGetMyEventRoles(userId || undefined);
+
+  const mentorRoles = useMemo(() => {
+    return (Array.isArray(myEventRoles) ? myEventRoles : []).filter(
+      (r: any) => (r.roleName || r.RoleName) === "Mentor"
+    );
+  }, [myEventRoles]);
+
+  // Determine active eventId: priority searchParam > activeRole > mentorRoles[0]
+  const resolvedEventId = useMemo(() => {
+    if (queryEventId) return queryEventId;
+    if (activeRole?.eventId || (activeRole as any)?.EventId) return activeRole?.eventId || (activeRole as any)?.EventId || "";
+    const firstMentorEvent = mentorRoles[0]?.eventId || mentorRoles[0]?.EventId;
+    return firstMentorEvent || "";
+  }, [queryEventId, activeRole, mentorRoles]);
+
+  // 2. Fetch all tracks for current event
+  const { data: tracksData, isLoading: isLoadingTracks, refetch: refetchTracks } = useGetTracksByEvent(
+    resolvedEventId || undefined
+  );
   const allTracks: TrackWithStaffModel[] = Array.isArray(tracksData) ? tracksData : [];
 
-  // Filter tracks assigned to current mentor
+  // Filter tracks assigned to current mentor (cả qua EventRoles DB và qua Staff mapping)
   const myTracks = useMemo(() => {
     if (!userId) return allTracks;
+    const currentEventNorm = normalizeId(resolvedEventId);
+
+    const assignedTrackIds = new Set(
+      mentorRoles
+        .filter((r: any) => {
+          if (!currentEventNorm) return true;
+          const rEvNorm = normalizeId(r.eventId || r.EventId);
+          return !rEvNorm || rEvNorm === currentEventNorm;
+        })
+        .map((r: any) => normalizeId(r.trackId || r.TrackId))
+        .filter(Boolean)
+    );
+
     return allTracks.filter((t) => {
+      const tid = normalizeId(t.id || t.Id);
+      if (assignedTrackIds.has(tid)) return true;
       const mentors = t.mentors || t.Mentors || [];
-      return mentors.some((m) => (m.id || m.Id) === userId);
+      return mentors.some((m) => normalizeId(m.id || m.Id) === normalizeId(userId));
     });
-  }, [allTracks, userId]);
+  }, [allTracks, userId, mentorRoles, resolvedEventId]);
 
   // Selected Track ID state
   const [selectedTrackId, setSelectedTrackId] = useState<string>("");
-  const activeTrackId = selectedTrackId || myTracks[0]?.id || myTracks[0]?.Id || "";
+  const activeTrackId =
+    queryTrackId ||
+    selectedTrackId ||
+    myTracks[0]?.id ||
+    myTracks[0]?.Id ||
+    allTracks[0]?.id ||
+    allTracks[0]?.Id ||
+    "";
 
-  // 2. Fetch Teams for current event
-  const { data: teamsData = [], isLoading: isLoadingTeams, refetch: refetchTeams } = useGetTeamsByEvent(eventId);
+  // 3. Fetch Teams for current event
+  const { data: teamsData = [], isLoading: isLoadingTeams, refetch: refetchTeams } = useGetTeamsByEvent(
+    resolvedEventId || undefined
+  );
 
-  // 3. Fetch Submissions for active track
+  // 4. Fetch Submissions for active track
   const {
     data: submissions = [],
     isLoading: isLoadingSubs,
     refetch: refetchSubmissions,
-  } = useGetSubmitResultsByTrack(activeTrackId, eventId);
+  } = useGetSubmitResultsByTrack(activeTrackId || undefined, resolvedEventId || undefined);
 
   // Map of teamId -> teamName
   const teamNameById = useMemo(() => {
@@ -67,7 +117,8 @@ export function useMentorWorkspaceViewModel() {
   // Teams in the active track
   const teamsInTrack = useMemo(() => {
     if (!activeTrackId) return teamsData;
-    return teamsData.filter((t) => (t.trackId || t.TrackId) === activeTrackId);
+    const targetNorm = normalizeId(activeTrackId);
+    return teamsData.filter((t) => normalizeId(t.trackId || t.TrackId) === targetNorm);
   }, [teamsData, activeTrackId]);
 
   // Combined track stats for M1
@@ -76,7 +127,8 @@ export function useMentorWorkspaceViewModel() {
     allTracks.forEach((t) => {
       const tid = (t.id || t.Id) as string;
       if (!tid) return;
-      const teams = teamsData.filter((tm) => (tm.trackId || tm.TrackId) === tid);
+      const tidNorm = normalizeId(tid);
+      const teams = teamsData.filter((tm) => normalizeId(tm.trackId || tm.TrackId) === tidNorm);
       map.set(tid, { totalTeams: teams.length, submissionCount: 0 });
     });
     return map;
@@ -87,7 +139,7 @@ export function useMentorWorkspaceViewModel() {
   const totalSubmissionsCount = submissions.length;
 
   return {
-    eventId,
+    eventId: resolvedEventId,
     userId,
     myTracks,
     allTracks,

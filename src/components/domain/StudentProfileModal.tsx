@@ -232,15 +232,20 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                 <div className="pt-2 border-t border-zinc-800">
                   <span className="text-zinc-400 text-[11px] block uppercase">TRẠNG THÁI HỒ SƠ:</span>
                   <div className="mt-1">
-                    {user.isApproved !== false ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-lg font-bold">
-                        <CheckCircle2 className="w-4 h-4" />
-                        THẺ SINH VIÊN HỢP LỆ &amp; ĐÃ PHÊ DUYỆT
-                      </span>
-                    ) : rejectionCount >= 2 ? (
+                    {rejectionCount >= 2 ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-500/15 border border-rose-500/30 text-rose-400 rounded-lg font-bold">
                         <AlertTriangle className="w-4 h-4" />
                         TÀI KHOẢN TẠM KHÓA (Bị từ chối {rejectionCount} lần)
+                      </span>
+                    ) : !isFpt && !photoUrl ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-500/15 border border-rose-500/30 text-rose-400 rounded-lg font-bold">
+                        <AlertTriangle className="w-4 h-4" />
+                        CHƯA NỘP ẢNH THẺ SINH VIÊN (CHƯA ĐỦ ĐIỀU KIỆN DUYỆT)
+                      </span>
+                    ) : user.isApproved ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 rounded-lg font-bold">
+                        <CheckCircle2 className="w-4 h-4" />
+                        THẺ SINH VIÊN HỢP LỆ &amp; ĐÃ PHÊ DUYỆT
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-lg font-bold">

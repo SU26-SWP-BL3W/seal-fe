@@ -221,7 +221,7 @@ export function useEventDetail(eventId: string) {
   });
 }
 
-export function useEventRounds(eventId: string) {
+export function useEventRounds(eventId?: string) {
   const isValidId = Boolean(
     eventId &&
     eventId !== "new" &&

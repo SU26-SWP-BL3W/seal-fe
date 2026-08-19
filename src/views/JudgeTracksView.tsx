@@ -3,7 +3,6 @@
 import React from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyAssignedJudgeTracks } from "@/viewModels/useMyAssignedJudgeTracks";
-import { Award, CheckCircle2, Clock, ArrowRight, ShieldCheck, FileCheck2, Lock } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
 export const JudgeTracksView: React.FC = () => {
@@ -22,11 +21,9 @@ export const JudgeTracksView: React.FC = () => {
           <div className="corner-accent-tr text-[#ffbb2a]" />
           <div className="corner-accent-bl text-[#ffbb2a]" />
           <div className="corner-accent-br text-[#ffbb2a]" />
-          <div className="w-12 h-12 bg-[#ffbb2a]/10 border border-[#ffbb2a] rounded-full flex items-center justify-center mx-auto text-[#ffbb2a]">
-            <Lock className="w-6 h-6" />
-          </div>
+          
           <h2 className="font-display text-xl font-bold uppercase text-amber-300">
-            YÊU CẦU QUYỀN GIÁM KHẢO
+            [ YÊU CẦU QUYỀN GIÁM KHẢO ]
           </h2>
           <p className="font-mono text-xs text-zinc-400 leading-relaxed">
             Vui lòng đăng nhập với tài khoản Giám khảo để tiếp tục.
@@ -34,7 +31,7 @@ export const JudgeTracksView: React.FC = () => {
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
             <Link href="/login" className="w-full">
               <button className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer">
-                Đến trang đăng nhập
+                [ ĐẾN TRANG ĐĂNG NHẬP ]
               </button>
             </Link>
           </div>
@@ -49,39 +46,38 @@ export const JudgeTracksView: React.FC = () => {
         {/* Top Header Title */}
         <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-800 pb-4 gap-4">
           <div>
-            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>BẢNG PHÂN CÔNG GIÁM KHẢO</span>
+            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider">
+              [ BẢNG PHÂN CÔNG GIÁM KHẢO ]
             </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase flex items-center gap-3">
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
               HẠNG MỤC PHÂN CÔNG CHẤM ĐIỂM
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 font-mono text-xs">
             <Link href="/judge/scoring">
-              <button className="px-4 py-2 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-600/20 text-amber-300 border border-amber-500/40 font-mono font-bold text-xs uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-all flex items-center gap-2 cursor-pointer shadow-sm">
-                <FileCheck2 className="w-4 h-4" /> BÀN CHẤM ĐIỂM TRỰC TIẾP &gt;
+              <button className="px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-sm">
+                [ BÀN CHẤM ĐIỂM TRỰC TIẾP &gt; ]
               </button>
             </Link>
           </div>
         </div>
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-mono">
           <div className="bg-[#0e1518] border border-zinc-800 p-5 relative space-y-2 shadow-sm">
             <div className="corner-accent-tl text-amber-400/40" />
             <div className="corner-accent-tr text-amber-400/40" />
-            <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block">
+            <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
               Hạng Mục Thi Đang Phụ Trách
             </span>
             <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-3xl text-amber-300">
+              <span className="font-bold text-3xl text-amber-300">
                 {isLoading ? "..." : totalAssigned}
               </span>
-              <Award className="w-6 h-6 text-amber-400 opacity-60" />
+              <span className="text-xs text-amber-400/80 font-bold">[TRACKS]</span>
             </div>
-            <span className="font-mono text-[10px] text-zinc-500 block">
+            <span className="text-[10px] text-zinc-500 block">
               Phân công trực tiếp từ Ban Tổ Chức
             </span>
           </div>
@@ -89,16 +85,16 @@ export const JudgeTracksView: React.FC = () => {
           <div className="bg-[#0e1518] border border-zinc-800 p-5 relative space-y-2 shadow-sm">
             <div className="corner-accent-tl text-amber-400/40" />
             <div className="corner-accent-tr text-amber-400/40" />
-            <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block">
+            <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
               Bài Nộp Chờ Đánh Giá (Pending)
             </span>
             <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-3xl text-amber-400">
+              <span className="font-bold text-3xl text-amber-400">
                 {isLoading ? "..." : totalPendingScoring}
               </span>
-              <Clock className="w-6 h-6 text-amber-400 opacity-60" />
+              <span className="text-xs text-amber-400/80 font-bold">[PENDING]</span>
             </div>
-            <span className="font-mono text-[10px] text-amber-400/80 block">
+            <span className="text-[10px] text-amber-400/80 block">
               ● Cần hoàn tất trước hạn đóng cổng
             </span>
           </div>
@@ -106,41 +102,40 @@ export const JudgeTracksView: React.FC = () => {
           <div className="bg-[#0e1518] border border-zinc-800 p-5 relative space-y-2 shadow-sm">
             <div className="corner-accent-tl text-amber-400/40" />
             <div className="corner-accent-tr text-amber-400/40" />
-            <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block">
+            <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
               Tiến Độ Hoàn Thành
             </span>
             <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-3xl text-emerald-400">
+              <span className="font-bold text-3xl text-emerald-400">
                 {totalAssigned > 0 ? `${totalCompleted} Bài` : "100%"}
               </span>
-              <CheckCircle2 className="w-6 h-6 text-emerald-400 opacity-60" />
+              <span className="text-xs text-emerald-400 font-bold">[DONE]</span>
             </div>
-            <span className="font-mono text-[10px] text-zinc-500 block">
+            <span className="text-[10px] text-zinc-500 block">
               Tự động tính toán chỉ số đánh giá
             </span>
           </div>
         </div>
 
         {/* Assigned Tracks List */}
-        <div className="space-y-4">
+        <div className="space-y-4 font-mono">
           <div className="flex items-center justify-between">
-            <h2 className="font-display font-bold text-lg text-white uppercase tracking-wider flex items-center gap-2">
-              <Award className="w-5 h-5 text-amber-400" />
-              <span>HẠNG MỤC THI ĐẤU PHÂN CÔNG ({assignedTracks.length})</span>
+            <h2 className="font-display font-bold text-lg text-white uppercase tracking-wider">
+              HẠNG MỤC THI ĐẤU PHÂN CÔNG ({assignedTracks.length})
             </h2>
-            <span className="font-mono text-xs text-zinc-400">
+            <span className="text-xs text-zinc-400">
               Đánh giá chuyên môn &amp; Chấm điểm độc lập
             </span>
           </div>
 
           {isLoading ? (
-            <div className="p-12 text-center font-mono text-xs text-amber-400/80 animate-pulse bg-[#0e1518] border border-zinc-800">
-              ĐANG TRUY XUẤT DỮ LIỆU HẠNG MỤC...
+            <div className="p-12 text-center text-xs text-amber-400/80 animate-pulse bg-[#0e1518] border border-zinc-800">
+              [ ĐANG TRUY XUẤT DỮ LIỆU HẠNG MỤC PHÂN CÔNG... ]
             </div>
           ) : assignedTracks.length === 0 ? (
             <div className="p-12 bg-[#0c1214] border border-zinc-800 text-center space-y-3">
-              <p className="font-mono text-xs text-zinc-500">
-                Bạn hiện chưa được phân công chấm điểm cho Hạng mục nào trong sự kiện này.
+              <p className="text-xs text-zinc-500">
+                [ Bạn hiện chưa được phân công chấm điểm cho Hạng mục nào trong sự kiện này ]
               </p>
             </div>
           ) : assignedTracks.length === 1 ? (
@@ -162,10 +157,10 @@ export const JudgeTracksView: React.FC = () => {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="space-y-3 max-w-2xl">
                       <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="font-mono text-[11px] text-amber-300 font-bold px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 uppercase tracking-wider">
-                          HẠNG MỤC CHÍNH
+                        <span className="text-[11px] text-amber-300 font-bold px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 uppercase tracking-wider">
+                          [ HẠNG MỤC CHÍNH ]
                         </span>
-                        <span className="font-mono text-xs text-zinc-400">
+                        <span className="text-xs text-zinc-400">
                           {track.eventName} • {track.roundName}
                         </span>
                       </div>
@@ -173,14 +168,14 @@ export const JudgeTracksView: React.FC = () => {
                       <h3 className="font-display font-bold text-2xl md:text-3xl text-white">
                         {track.trackName}
                       </h3>
-                      <p className="font-mono text-xs text-zinc-400 leading-relaxed">
+                      <p className="text-xs text-zinc-400 leading-relaxed font-sans">
                         Hạng mục thi đấu chuyên môn. Thông tin đội thi được ẩn danh để đảm bảo tính khách quan và công bằng.
                       </p>
 
                       {/* Sleek Progress Bar */}
-                      <div className="pt-2 space-y-1.5 font-mono text-xs">
+                      <div className="pt-2 space-y-1.5 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-zinc-400">TIẾN ĐỘ ĐÁNH GIÁ CHUYÊN MÔN:</span>
+                          <span className="text-zinc-400">TIẾN ĐỘ ĐÁNH GIÁ:</span>
                           <span className="text-amber-300 font-bold">
                             {track.totalSubmissions - track.pendingSubmissions} / {track.totalSubmissions} Bài Nộp ({progressPct}%)
                           </span>
@@ -198,14 +193,14 @@ export const JudgeTracksView: React.FC = () => {
                     <div className="flex flex-col gap-3 min-w-[240px] shrink-0">
                       <Link
                         href={`/judge/scoring?trackId=${track.trackId}`}
-                        className="px-6 py-4 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-black font-mono text-sm font-extrabold uppercase hover:brightness-110 transition-all text-center flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                        className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-black text-sm font-extrabold uppercase transition-all text-center"
                       >
-                        <span>BẮT ĐẦU CHẤM ĐIỂM NGAY →</span>
+                        <span>[ BẮT ĐẦU CHẤM ĐIỂM NGAY &gt; ]</span>
                       </Link>
 
                       <Link
                         href={`/judge/tracks/${track.trackId}/teams`}
-                        className="px-6 py-3 bg-[#141f23] border border-zinc-700 hover:border-amber-500/40 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all text-center flex items-center justify-center gap-2"
+                        className="px-6 py-3 bg-[#141f23] border border-zinc-700 hover:border-amber-500/40 text-zinc-300 hover:text-white text-xs font-bold uppercase transition-all text-center"
                       >
                         <span>[ Xem Danh Sách Bài Nộp ({track.totalSubmissions}) ]</span>
                       </Link>
@@ -236,10 +231,10 @@ export const JudgeTracksView: React.FC = () => {
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] text-amber-300 font-bold px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 uppercase tracking-wider">
-                          TRACK 0{idx + 1}
+                        <span className="text-[10px] text-amber-300 font-bold px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 uppercase tracking-wider">
+                          [ TRACK 0{idx + 1} ]
                         </span>
-                        <span className="font-mono text-xs text-zinc-400">
+                        <span className="text-xs text-zinc-400">
                           {track.roundName}
                         </span>
                       </div>
@@ -247,12 +242,12 @@ export const JudgeTracksView: React.FC = () => {
                       <h3 className="font-display font-bold text-xl text-white">
                         {track.trackName}
                       </h3>
-                      <p className="font-mono text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed font-sans">
                         {(track as any).description || "Hạng mục thi đấu chuyên môn được đánh giá theo thang điểm chuẩn mực."}
                       </p>
 
                       {/* Progress Bar */}
-                      <div className="space-y-1.5 font-mono text-xs">
+                      <div className="space-y-1.5 text-xs">
                         <div className="flex items-center justify-between text-zinc-300">
                           <span className="text-[11px] text-zinc-400">TIẾN ĐỘ CHẤM:</span>
                           <span className="text-amber-300 font-bold">
@@ -272,15 +267,13 @@ export const JudgeTracksView: React.FC = () => {
 
                     <div className="pt-6 mt-4 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center gap-2 justify-between">
                       <Link href={`/judge/tracks/${track.trackId}/teams`} className="w-full sm:w-auto">
-                        <button className="w-full sm:w-auto px-3.5 py-2 bg-transparent border border-zinc-700/80 text-zinc-300 font-mono text-xs uppercase hover:border-amber-500/40 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                          <span>DS Bài Nộp ({track.pendingSubmissions})</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                        <button className="w-full sm:w-auto px-3.5 py-2 bg-transparent border border-zinc-700/80 text-zinc-300 text-xs uppercase hover:border-amber-500/40 hover:text-white transition-all cursor-pointer">
+                          <span>[ DS Bài Nộp ({track.pendingSubmissions}) ]</span>
                         </button>
                       </Link>
                       <Link href={`/judge/scoring?trackId=${track.trackId}`} className="w-full sm:w-auto">
-                        <button className="w-full sm:w-auto px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold uppercase hover:bg-amber-500 hover:text-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
-                          <FileCheck2 className="w-3.5 h-3.5" />
-                          <span>CHẤM TRACK NÀY &gt;</span>
+                        <button className="w-full sm:w-auto px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-sm">
+                          <span>[ CHẤM TRACK NÀY &gt; ]</span>
                         </button>
                       </Link>
                     </div>

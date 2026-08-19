@@ -90,7 +90,7 @@ export const ActivatePublicConfirmModal: React.FC<ActivatePublicConfirmModalProp
 
           <div className="p-4 bg-emerald-950/20 border border-emerald-500/40 space-y-2 text-zinc-300">
             <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase text-[11px]">
-              <span>✓ MỞ CỔNG THI ĐẤU &amp; HIỂN THỊ CÔNG KHAI</span>
+              <span>MỞ CỔNG THI ĐẤU &amp; HIỂN THỊ CÔNG KHAI</span>
             </div>
             <ul className="list-disc list-inside text-[11px] text-zinc-300 space-y-1 pl-1">
               <li>Sự kiện sẽ được <strong>hiển thị công khai</strong> trên Trang chủ và Cổng tuyển sinh.</li>

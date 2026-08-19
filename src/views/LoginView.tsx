@@ -10,6 +10,8 @@ import { SealShield } from "@/components/domain/SealShield";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
 
+import { AlreadyLoggedInNotice } from "@/components/domain/AlreadyLoggedInNotice";
+
 export function LoginView() {
   const toast = useToast();
   const searchParams = useSearchParams();
@@ -21,8 +23,12 @@ export function LoginView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { loginWithCredentials, loginWithGoogleCredential } = useAuth();
+  const { user: currentUser, loginWithCredentials, loginWithGoogleCredential } = useAuth();
   const router = useRouter();
+
+  if (currentUser) {
+    return <AlreadyLoggedInNotice />;
+  }
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);

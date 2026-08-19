@@ -154,7 +154,7 @@ export const CoordinatorCalibrationView: React.FC = () => {
                   className="px-3 py-1 border border-[#263339] text-[#e1e7ec] hover:border-[#8b5cf6] font-mono text-[11px] cursor-pointer flex items-center gap-1 transition-colors"
                 >
                   <Download className="w-3.5 h-3.5 text-[#8b5cf6]" />
-                  <span>XUẤT_EXCEL_CSV</span>
+                  <span>XUẤT CSV</span>
                 </button>
               </div>
 

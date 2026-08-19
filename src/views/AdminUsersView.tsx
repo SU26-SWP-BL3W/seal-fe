@@ -435,6 +435,8 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                     const isCoord = emailLower.includes("ec.") || emailLower.includes("coordinator");
                     const isStaff = isAdm || isCoord || isJudge || isMentor;
 
+                    const hasCard = Boolean(u.photoStudentCardUrl || (u as any).PhotoStudentCardUrl);
+                    const isFptUser = Boolean(u.isFpt || (u.schoolName && u.schoolName.toLowerCase().includes("fpt")) || emailLower.endsWith("@fpt.edu.vn"));
                     const isLocked = (u.rejectionCount ?? 0) >= 2;
                     const isApproved = !!u.isApproved;
 
@@ -479,15 +481,19 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                             <span className="text-zinc-500 font-mono text-[11px] italic">— (Cán bộ / Chuyên gia)</span>
                           ) : isLocked ? (
                             <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
-                              ✘ KHÓA ({u.rejectionCount})
+                              KHÓA ({u.rejectionCount})
+                            </span>
+                          ) : !isFptUser && !hasCard ? (
+                            <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
+                              THIẾU ẢNH THẺ
                             </span>
                           ) : isApproved ? (
                             <span className="px-2 py-0.5 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 rounded font-bold text-[10px]">
-                              ✔ ĐÃ DUYỆT
+                              ĐÃ DUYỆT
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
-                              ⚠ CHỜ DUYỆT
+                              CHỜ DUYỆT
                             </span>
                           )}
                         </td>

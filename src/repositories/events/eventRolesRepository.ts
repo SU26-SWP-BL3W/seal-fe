@@ -215,10 +215,11 @@ export function useGetEventRolesByUser(userId: string | undefined, params: GetEv
   return useQuery({
     queryKey: ["eventRolesByUser", userId, params],
     queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<EventRole>>("/EventRoles/user", {
-        params: { userId, ...params },
+      const res = await apiClient.get<any>("/EventRoles/user", {
+        params: { userId, UserId: userId, PageSize: 100, pageSize: 100, ...params },
       });
-      return data;
+      const raw = res.data?.data?.items ?? res.data?.items ?? res.data?.data ?? res.data ?? [];
+      return Array.isArray(raw) ? raw : [];
     },
     enabled: !!userId,
   });
@@ -296,10 +297,11 @@ export function useGetMyEventRoles(userId?: string) {
     queryKey: ["my-event-roles", userId],
     queryFn: async () => {
       try {
-        const res = await apiClient.get<PagedResult<EventRole>>("/EventRoles/user", {
-          params: { UserId: userId, PageSize: 100 },
+        const res = await apiClient.get<any>("/EventRoles/user", {
+          params: { UserId: userId, userId, PageSize: 100, pageSize: 100 },
         });
-        return res.data?.data ?? [];
+        const raw = res.data?.data?.items ?? res.data?.items ?? res.data?.data ?? res.data ?? [];
+        return Array.isArray(raw) ? raw : [];
       } catch (err: any) {
         console.warn("[SEAL BE-DATA MISSING] GET /api/EventRoles error:", err?.message);
         return [];
