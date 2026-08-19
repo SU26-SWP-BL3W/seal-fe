@@ -17,9 +17,11 @@ import {
 } from "@/repositories/teamsRepository";
 import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
 import {
+  AvailableTeamsList,
   buildRequirements,
   ConfirmRegistrationDialog,
   CreateTeamForm,
+  InviteMemberModal,
   InvitePanel,
   MemberRoster,
   RegistrationChecklist,
@@ -49,7 +51,6 @@ export function MyTeamView() {
   const { user, activeRole } = useAuth();
   const searchParams = useSearchParams();
   const roleName = pick(activeRole, "RoleName", "roleName");
-  const isLeader = roleName === "TeamLeader";
   const currentUserId = pick(user, "id", "userId", "UserID");
   const eventIdFromUrl = searchParams.get("eventId") || "";
   const eventIdFromRole =
@@ -84,24 +85,31 @@ export function MyTeamView() {
     school: pick(m, "studentCode", "StudentCode"),
   }));
 
+  const currentMember = members.find((m) => m.userId === currentUserId);
+  const isLeader =
+    roleName === "TeamLeader" ||
+    currentMember?.roleName === "TeamLeader" ||
+    Boolean(rawTeam?.leaderUserId && rawTeam.leaderUserId === currentUserId) ||
+    Boolean(rawTeam?.LeaderUserId && rawTeam.LeaderUserId === currentUserId) ||
+    Boolean(rawTeam?.leaderId && rawTeam.leaderId === currentUserId) ||
+    Boolean(rawTeam?.LeaderId && rawTeam.LeaderId === currentUserId) ||
+    Boolean(rawTeam?.isLeader && rawTeam.isLeader === true);
+
   const {
     data: rawInvitations = [],
     isLoading: isLoadingInvitations,
     isError: hasInvitationError,
   } = useTeamInvitations(team?.id);
 
-  const invitations: InvitationView[] = (rawInvitations as unknown[])
-    .filter((inv) => {
-      const status = pick(inv, "status", "Status");
-      return status === "PendingAccept" || status === "Pending";
-    })
-    .map((inv) => ({
-      id: pick(inv, "invitationId", "InvitationId", "id", "Id"),
-      email: pick(inv, "invitedUserEmail", "InvitedUserEmail", "email", "Email"),
-      fullName: pick(inv, "invitedUserFullName", "InvitedUserFullName"),
-      statusLabel: pick(inv, "statusLabel", "StatusLabel") || "Đang chờ",
-      sentAt: pick(inv, "createdTime", "CreatedTime", "sentAt"),
-    }));
+  const invitations: InvitationView[] = (rawInvitations as unknown[]).map((inv) => ({
+    id: pick(inv, "invitationId", "InvitationId", "id", "Id"),
+    email: pick(inv, "invitedUserEmail", "InvitedUserEmail", "email", "Email"),
+    fullName: pick(inv, "invitedUserFullName", "InvitedUserFullName"),
+    status: pick(inv, "status", "Status") || "PendingAccept",
+    statusLabel: pick(inv, "statusLabel", "StatusLabel") || "Đang chờ",
+    sentAt: pick(inv, "createdTime", "CreatedTime", "sentAt"),
+    respondedAt: pick(inv, "respondedAt", "RespondedAt"),
+  }));
 
   const { mutateAsync: inviteMember, isPending: isInviting } = useInviteMember();
   const { mutateAsync: kickMember, isPending: isKicking } = useRemoveTeamMember();
@@ -112,6 +120,8 @@ export function MyTeamView() {
   const { mutateAsync: leaveTeam, isPending: isLeaving } = useLeaveTeam();
   const { mutateAsync: updateTeam, isPending: isUpdatingTeam } = useUpdateTeam();
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [noTeamTab, setNoTeamTab] = useState<"create" | "find">("create");
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
@@ -201,8 +211,59 @@ export function MyTeamView() {
     }
 
     return (
-      <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)]">
-        <CreateTeamForm defaultEventId={targetEventId} />
+      <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-8">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 font-mono">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-zinc-400">
+                [ KHÔNG GIAN ĐỘI THI ]
+              </div>
+              <h1 className="mt-1 font-display text-2xl sm:text-3xl font-bold uppercase text-white">
+                Gia Nhập Hoặc Tạo Đội Thi Mới
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-2 bg-zinc-900/90 p-1 border border-zinc-800 rounded hud-clipped">
+              <button
+                type="button"
+                onClick={() => setNoTeamTab("create")}
+                className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer ${
+                  noTeamTab === "create"
+                    ? "bg-[var(--accent-team)] text-black shadow-sm font-extrabold"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                ⚡ Tạo Đội Mới
+              </button>
+              <button
+                type="button"
+                onClick={() => setNoTeamTab("find")}
+                className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer ${
+                  noTeamTab === "find"
+                    ? "bg-cyan-400 text-black shadow-sm font-extrabold"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                🔍 Tìm & Gia Nhập Đội
+              </button>
+            </div>
+          </div>
+
+          {noTeamTab === "create" ? (
+            <CreateTeamForm defaultEventId={targetEventId} />
+          ) : (
+            <div className="space-y-4">
+              <div className="p-4 bg-cyan-950/20 border border-cyan-500/30 rounded text-xs text-zinc-300 font-sans leading-relaxed">
+                💡 <strong>Dành cho thí sinh chưa có nhóm:</strong> Danh sách bên dưới hiển thị các đội thi trong sự kiện đang tuyển thêm thành viên. Bạn có thể nhấn <strong>Gửi Email Đề Nghị Gia Nhập</strong> để gửi thông tin ứng tuyển trực tiếp tới Đội trưởng.
+              </div>
+              <AvailableTeamsList
+                eventId={targetEventId}
+                eventName="Sự kiện SEAL"
+                onSwitchToCreate={() => setNoTeamTab("create")}
+              />
+            </div>
+          )}
+        </div>
       </main>
     );
   }
@@ -218,6 +279,7 @@ export function MyTeamView() {
     setShowRegisterDialog(false);
     setShowLeaveDialog(false);
     setShowEditDialog(false);
+    setShowInviteModal(false);
     setTransferTarget(null);
     setCancelTarget(null);
     setDialogError("");
@@ -242,6 +304,7 @@ export function MyTeamView() {
           isLeader={isLeader}
           canConfirm={canConfirm}
           isLeaving={isLeaving}
+          onOpenInvite={() => setShowInviteModal(true)}
           onConfirmRegistration={() => {
             setDialogError("");
             setShowRegisterDialog(true);
@@ -298,6 +361,7 @@ export function MyTeamView() {
               members={members}
               currentUserId={currentUserId}
               isLeader={isLeader}
+              onOpenInvite={() => setShowInviteModal(true)}
               onTransfer={(id, name) => {
                 setDialogError("");
                 setTransferTarget({ id, name });
@@ -320,7 +384,7 @@ export function MyTeamView() {
                 isInviting={isInviting}
                 isCancelling={isCancelling}
                 onInvite={async (email) => {
-                  await inviteMember({ teamId: team.id, email });
+                  return await inviteMember({ teamId: team.id, email });
                 }}
                 onCancel={(invitation) => {
                   setDialogError("");
@@ -465,6 +529,24 @@ export function MyTeamView() {
             </div>
           </Card>
         </div>
+      )}
+
+      {team && (
+        <InviteMemberModal
+          open={showInviteModal}
+          teamId={team.id}
+          teamName={team.teamName}
+          memberCount={requirements.memberCount}
+          pendingCount={
+            invitations.filter(
+              (i) => i.status === "PendingAccept" || i.status === "Pending" || !i.status
+            ).length
+          }
+          onClose={() => setShowInviteModal(false)}
+          onInvite={async (args) => {
+            return await inviteMember(args);
+          }}
+        />
       )}
     </main>
   );

@@ -15,6 +15,8 @@ export interface InvitationView {
   id: string;
   email: string;
   fullName: string;
+  status?: string;
   statusLabel: string;
   sentAt: string;
+  respondedAt?: string;
 }
