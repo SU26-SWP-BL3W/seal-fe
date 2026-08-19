@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +22,98 @@ import { useToast } from "@/providers/ToastProvider";
 import type { FptStudentResponse } from "@/models/entities";
 
 const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
+
+export const getRoleDetails = (
+  role: string,
+  assignedRoles: string[],
+  isAdmin?: boolean,
+  isStudent?: boolean
+) => {
+  if (isAdmin) {
+    return {
+      label: "Quản Trị Viên (Admin)",
+      badgeClass: "bg-red-950/40 border-red-500/30 text-red-300",
+      dotClass: "bg-red-400 animate-pulse",
+      typeLabel: "Quản Trị Viên Hệ Thống",
+      isStaff: true,
+    };
+  }
+  if (assignedRoles.includes("Judge") && assignedRoles.includes("Mentor")) {
+    return {
+      label: "Giám Khảo & Cố Vấn Học Thuật",
+      badgeClass: "bg-purple-950/40 border-purple-500/30 text-purple-300",
+      dotClass: "bg-purple-400",
+      typeLabel: "Ban Giám Khảo & Cố Vấn",
+      isStaff: true,
+    };
+  }
+  if (assignedRoles.includes("Judge") || role === "Judge") {
+    return {
+      label: "Ban Giám Khảo (Judge)",
+      badgeClass: "bg-indigo-950/40 border-indigo-500/30 text-indigo-300",
+      dotClass: "bg-indigo-400",
+      typeLabel: "Giám Khảo Chuyên Môn",
+      isStaff: true,
+    };
+  }
+  if (assignedRoles.includes("Mentor") || role === "Mentor") {
+    return {
+      label: "Cố Vấn Học Thuật (Mentor)",
+      badgeClass: "bg-cyan-950/40 border-cyan-500/30 text-cyan-300",
+      dotClass: "bg-cyan-400",
+      typeLabel: "Cố Vấn Dự Án",
+      isStaff: true,
+    };
+  }
+  if (
+    assignedRoles.includes("EventCoordinator") ||
+    assignedRoles.includes("Coordinator") ||
+    role === "Coordinator" ||
+    role === "EventCoordinator"
+  ) {
+    return {
+      label: "Điều Phối Viên Sự Kiện (Coordinator)",
+      badgeClass: "bg-amber-950/40 border-amber-500/30 text-amber-300",
+      dotClass: "bg-amber-400",
+      typeLabel: "Ban Tổ Chức / Điều Phối Viên",
+      isStaff: true,
+    };
+  }
+  if (assignedRoles.includes("TeamLeader") || role === "TeamLeader") {
+    return {
+      label: "Trưởng Nhóm (Team Leader)",
+      badgeClass: "bg-emerald-950/40 border-emerald-500/30 text-emerald-300",
+      dotClass: "bg-emerald-400",
+      typeLabel: "Trưởng Nhóm Thi Đấu",
+      isStaff: false,
+    };
+  }
+  if (assignedRoles.includes("TeamMember") || role === "TeamMember") {
+    return {
+      label: "Thành Viên Đội Thi (Team Member)",
+      badgeClass: "bg-teal-950/40 border-teal-500/30 text-teal-300",
+      dotClass: "bg-teal-400",
+      typeLabel: "Thí Sinh Tham Gia",
+      isStaff: false,
+    };
+  }
+  if (isStudent || role === "Student") {
+    return {
+      label: "Thí Sinh / Sinh Viên (Student)",
+      badgeClass: "bg-sky-950/40 border-sky-500/30 text-sky-300",
+      dotClass: "bg-sky-400",
+      typeLabel: "Sinh Viên / Thí Sinh",
+      isStaff: false,
+    };
+  }
+  return {
+    label: role ? `Vai Trò: ${role}` : "Thành Viên Hệ Thống",
+    badgeClass: "bg-zinc-800 border-zinc-700 text-zinc-300",
+    dotClass: "bg-zinc-400",
+    typeLabel: role || "Chuyên Gia / Cán Bộ",
+    isStaff: true,
+  };
+};
 
 export function UserProfileView() {
   const toast = useToast();
@@ -100,46 +192,50 @@ export function UserProfileView() {
     return [...new Set(userRoles.map((r: any) => r.roleName || r.RoleName).filter(Boolean))];
   }, [userRoles]);
 
-  const rawRole = activeRole?.roleName || activeRole?.RoleName;
+  const roleInfo = useMemo(() => {
+    const isAdmin = Boolean(user?.isAdmin || (user as any)?.IsAdmin);
+    const isStudent = user?.isStudent !== undefined ? user.isStudent : undefined;
+    const rawRole = activeRole?.roleName || (activeRole as any)?.RoleName || (user as any)?.role || (user as any)?.Role || "";
 
-  let roleName = "";
-  if (user?.isAdmin || user?.IsAdmin) {
-    roleName = "Admin";
-  } else if (assignedRoleNames.includes("Judge") && assignedRoleNames.includes("Mentor")) {
-    roleName = "JudgeAndMentor";
-  } else if (assignedRoleNames.includes("EventCoordinator") || assignedRoleNames.includes("Coordinator")) {
-    roleName = "Coordinator";
-  } else if (assignedRoleNames.includes("Judge")) {
-    roleName = "Judge";
-  } else if (assignedRoleNames.includes("Mentor")) {
-    roleName = "Mentor";
-  } else if (rawRole) {
-    roleName = rawRole === "EventCoordinator" ? "Coordinator" : rawRole;
-  } else {
-    roleName = user?.isStudent ? "Student" : "Staff";
-  }
+    return getRoleDetails(rawRole, assignedRoleNames, isAdmin, isStudent);
+  }, [user, activeRole, assignedRoleNames]);
 
-  // Tài khoản là Chuyên gia / Cán bộ nếu isStudent === false hoặc có vai trò chuyên môn
-  const isStaff =
-    user?.isStudent === false ||
-    roleName === "Coordinator" ||
-    roleName === "Admin" ||
-    roleName === "Judge" ||
-    roleName === "Mentor" ||
-    roleName === "JudgeAndMentor" ||
-    Boolean(user?.isAdmin || user?.IsAdmin);
+  const isStaff = roleInfo.isStaff;
 
   // Student & Staff shared state from database
   const [schoolChoice, setSchoolChoice] = useState<"FPT" | "OTHER">(
     user?.isFpt !== false ? "FPT" : "OTHER"
   );
-  const [schoolId, setSchoolId] = useState(user?.schoolId || "");
-  const [studentCode, setStudentCode] = useState(user?.studentCode || user?.StudentId || "");
-  const [fullName, setFullName] = useState(user?.fullName || user?.FullName || "");
+  const [schoolId, setSchoolId] = useState(user?.schoolId || (user as any)?.SchoolId || "");
+  const [studentCode, setStudentCode] = useState(user?.studentCode || (user as any)?.StudentId || (user as any)?.StudentCode || "");
+  const [fullName, setFullName] = useState(user?.fullName || (user as any)?.FullName || "");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(
-    user?.photoStudentCardUrl || null
+    user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl || null
   );
+
+  // Sync state when user loads
+  useEffect(() => {
+    if (user) {
+      if (user.fullName || (user as any).FullName) {
+        setFullName(user.fullName || (user as any).FullName || "");
+      }
+      if (user.schoolId || (user as any).SchoolId) {
+        setSchoolId(user.schoolId || (user as any).SchoolId || "");
+      }
+      if (user.studentCode || (user as any).StudentId || (user as any).StudentCode) {
+        const code = user.studentCode || (user as any).StudentId || (user as any).StudentCode || "";
+        setStudentCode(code);
+        setFptCode(code);
+      }
+      if (user.photoStudentCardUrl || (user as any).PhotoStudentCardUrl) {
+        setPhotoPreview(user.photoStudentCardUrl || (user as any).PhotoStudentCardUrl || null);
+      }
+      if (user.isFpt !== undefined) {
+        setSchoolChoice(user.isFpt ? "FPT" : "OTHER");
+      }
+    }
+  }, [user]);
 
   // FPT Verification state
   const [fptCode, setFptCode] = useState(studentCode || "");
@@ -180,8 +276,14 @@ export function UserProfileView() {
   const isBlocked = rejectionCount >= 2 && !user?.isApproved;
 
   // Lấy tên trường / đơn vị từ danh sách Schools trong DB
-  const userSchool = schools.find((s) => s.id === (user?.schoolId || schoolId));
-  const schoolNameDisplay = userSchool?.schoolName || "Chưa cập nhật";
+  const currentSchoolId = user?.schoolId || (user as any)?.SchoolId || schoolId;
+  const userSchool = schools.find((s) => s.id === currentSchoolId);
+  const schoolNameDisplay =
+    userSchool?.schoolName ||
+    (user as any)?.schoolName ||
+    (user as any)?.SchoolName ||
+    (user as any)?.school?.schoolName ||
+    "Chưa cập nhật";
 
   // Xử lý xác minh sinh viên FPT qua API tra cứu FPT DB thật
   const handleVerifyFpt = async () => {
@@ -229,32 +331,13 @@ export function UserProfileView() {
     setSubmitSuccess(false);
 
     if (!fullName.trim()) {
-      setSubmitError("Vui lòng nhập họ và tên");
+      setSubmitError("Vui lòng nhập họ và tên.");
       return;
     }
 
+    let selectedSchoolId = schoolId || user?.schoolId || (user as any)?.SchoolId || "";
+
     if (!isStaff) {
-      if (schoolChoice === "OTHER" && !schoolId) {
-        setSubmitError("Vui lòng chọn trường đại học");
-        return;
-      }
-      if (schoolChoice === "OTHER" && !studentCode.trim()) {
-        setSubmitError("Vui lòng nhập Mã số sinh viên (MSSV)");
-        return;
-      }
-    }
-
-    try {
-      let finalPhotoUrl = user?.photoStudentCardUrl;
-
-      if (!isStaff && photoFile) {
-        setIsUploadingPhoto(true);
-        const uploadRes = await uploadRepository.uploadFile(photoFile);
-        finalPhotoUrl = uploadRes.fileUrl;
-        setIsUploadingPhoto(false);
-      }
-
-      let selectedSchoolId: string = schoolId || "";
       if (schoolChoice === "FPT") {
         const fptSchool = schools.find(
           (s) =>
@@ -264,13 +347,43 @@ export function UserProfileView() {
         if (fptSchool?.id) {
           selectedSchoolId = fptSchool.id;
         }
+      } else {
+        if (!selectedSchoolId) {
+          setSubmitError("Vui lòng chọn trường đại học từ danh sách.");
+          return;
+        }
+        if (!studentCode.trim()) {
+          setSubmitError("Vui lòng nhập Mã số sinh viên (MSSV).");
+          return;
+        }
       }
+    } else {
+      if (!selectedSchoolId) {
+        setSubmitError("Vui lòng chọn Đơn vị công tác / Tổ chức / Trường học.");
+        return;
+      }
+    }
+
+    try {
+      let finalPhotoUrl = user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl;
+
+      if (!isStaff && photoFile) {
+        setIsUploadingPhoto(true);
+        const uploadRes = await uploadRepository.uploadFile(photoFile);
+        finalPhotoUrl = uploadRes.fileUrl;
+        setIsUploadingPhoto(false);
+      }
+
+      const isFptVal = !isStaff ? (schoolChoice === "FPT") : true;
+      const studentCodeVal = !isStaff
+        ? (studentCode.trim() || undefined)
+        : (user?.studentCode || (user as any)?.StudentCode || (user as any)?.StudentId || "STAFF");
 
       await updateProfileMutation.mutateAsync({
         schoolId: selectedSchoolId,
-        studentCode: isStaff ? undefined : (studentCode || undefined),
-        photoStudentCardUrl: isStaff ? undefined : (finalPhotoUrl || undefined),
-        isFpt: isStaff ? false : (schoolChoice === "FPT"),
+        studentCode: studentCodeVal,
+        photoStudentCardUrl: !isStaff ? (finalPhotoUrl || undefined) : undefined,
+        isFpt: isFptVal,
         fullName: fullName.trim(),
       });
 
@@ -279,7 +392,11 @@ export function UserProfileView() {
       toast.success("Cập nhật thông tin hồ sơ thành công!");
     } catch (err: any) {
       setIsUploadingPhoto(false);
-      const msg = err?.response?.data?.message || err?.message || "Cập nhật hồ sơ thất bại";
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Cập nhật hồ sơ thất bại. Vui lòng kiểm tra lại thông tin.";
       setSubmitError(msg);
       toast.error(msg);
     }
@@ -411,28 +528,12 @@ export function UserProfileView() {
                   </p>
                 </div>
 
-                {/* Dải trạng thái định danh tự nhiên (Không dùng badge vuông cồng kềnh) */}
+                {/* Dải trạng thái định danh chuẩn xác theo Role */}
                 <div className="pt-1">
-                  {user?.isAdmin ? (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-950/40 border border-red-500/30 text-red-300 font-mono text-[11px] font-bold uppercase hud-clipped">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                      <span>Quản Trị Viên Hệ Thống</span>
-                    </div>
-                  ) : isStaff ? (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-[11px] font-bold hud-clipped">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <span>{userRoles.length > 0 ? `Đang tham gia: ${userRoles.length} phân công sự kiện` : "Cán Bộ / Chuyên Gia"}</span>
-                    </div>
-                  ) : (
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] font-bold hud-clipped ${
-                      user?.isApproved
-                        ? "bg-emerald-950/40 border border-emerald-500/30 text-emerald-300"
-                        : "bg-amber-950/40 border border-amber-500/30 text-amber-300"
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${user?.isApproved ? "bg-emerald-400" : "bg-amber-400 animate-pulse"}`} />
-                      <span>{user?.isApproved ? "Thẻ Sinh Viên Đã Xác Thực" : "Thẻ Sinh Viên Chờ Duyệt"}</span>
-                    </div>
-                  )}
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] font-bold uppercase hud-clipped border ${roleInfo.badgeClass}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${roleInfo.dotClass}`} />
+                    <span>{roleInfo.label}</span>
+                  </div>
                 </div>
               </div>
 
@@ -448,7 +549,7 @@ export function UserProfileView() {
                 <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
                   <span className="text-zinc-400">LOẠI TÀI KHOẢN:</span>
                   <span className="font-bold text-cyan-300">
-                    {user?.isStudent ? "Sinh Viên / Thí Sinh" : "Chuyên Gia / Cán Bộ"}
+                    {roleInfo.typeLabel}
                   </span>
                 </div>
 
