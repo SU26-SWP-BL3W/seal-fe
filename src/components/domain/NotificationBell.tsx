@@ -141,7 +141,15 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
       }
 
       if (isAccepted) {
-        toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+        if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+          toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+        } else if (inv.role === "Judge") {
+          toast.success(`🎉 Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
+        } else if (inv.role === "Mentor") {
+          toast.success(`🎉 Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
+        } else {
+          toast.success(`🎉 Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
+        }
         queryClient.invalidateQueries({ queryKey: ["my-team"] });
         queryClient.invalidateQueries({ queryKey: ["myTeam"] });
         queryClient.invalidateQueries({ queryKey: ["eventRoles"] });
@@ -177,63 +185,54 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
     }
   };
 
+  const formatRoleLabel = (role?: string) => {
+    switch (role) {
+      case "Coordinator":
+      case "EventCoordinator":
+        return "Cán Bộ Điều Phối (Coordinator)";
+      case "Judge":
+        return "Ban Giám Khảo (Judge)";
+      case "Mentor":
+        return "Cố Vấn Chuyên Môn (Mentor)";
+      default:
+        return role || "Cán Bộ Sự Kiện";
+    }
+  };
+
   return (
-    <div className="relative inline-block" ref={dropdownRef}>
-      {/* ── Bell Icon Button ── */}
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2 hud-clipped transition-all border ${
-          isOpen
-            ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] shadow-[0_0_12px_rgba(0,217,255,0.2)]"
-            : "border-[var(--border-muted)] bg-[var(--bg-input)] text-[var(--text-primary)] hover:border-[var(--accent-primary)]/60"
-        }`}
-        title="Thông Báo In-App"
+        className="relative p-2 rounded hover:bg-[var(--bg-input)] transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+        aria-label="Thông báo"
       >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.8}
-            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-          />
-        </svg>
-
-        {/* Unread Red Neon Badge Counter */}
+        <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-danger)] font-mono text-[9px] font-extrabold text-white animate-pulse shadow-[0_0_8px_#EF4444]">
-            {unreadCount}
-          </span>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
         )}
       </button>
 
-      {/* ── Notifications HUD Popover Panel ── */}
       {isOpen && (
-        <div
-          className={`bg-[var(--bg-panel)] border border-[var(--accent-primary)]/50 shadow-2xl hud-clipped z-[100] overflow-hidden flex flex-col font-mono text-xs animate-in fade-in zoom-in-95 duration-150 ${
-            align === "right"
-              ? "absolute right-0 top-full mt-2 w-80 md:w-96"
-              : "fixed left-4 top-16 md:left-6 md:top-14 w-80 md:w-96"
-          }`}
-        >
-          
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 bg-[var(--bg-base)] border-b border-[var(--border-muted)]">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-2xl z-50 overflow-hidden font-mono text-xs animate-in fade-in zoom-in-95 duration-100">
+          <div className="p-3 border-b border-[var(--border-muted)] flex items-center justify-between bg-[var(--bg-input)]/50">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-              <span className="font-bold text-[var(--accent-primary)] tracking-wider uppercase text-[11px]">
-                LỜI MỜI & THÔNG BÁO ({unreadCount})
+              <span className="font-bold text-[var(--text-primary)] uppercase tracking-wider text-[11px]">
+                [ TRUNG TÂM THÔNG BÁO ]
               </span>
+              {unreadCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--accent-primary)] text-black">
+                  {unreadCount}
+                </span>
+              )}
             </div>
             <button
-              onClick={() => { refetch(); refetchNotifs(); }}
-              className="text-[10px] text-[var(--text-muted)] hover:text-white flex items-center gap-1 transition-colors"
+              onClick={() => {
+                refetch();
+                refetchNotifs();
+              }}
+              className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1 cursor-pointer"
             >
-              <RefreshCw className="w-3 h-3" /> Làm mới
+              <RefreshCw className={`w-3 h-3 ${isLoading || isLoadingNotifs ? "animate-spin" : ""}`} /> Làm mới
             </button>
           </div>
 
@@ -258,7 +257,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                     <div className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]" />
                       <span className="font-bold text-[var(--text-primary)] text-xs">
-                        {item.type === "TEAM" ? "📩 Lời Mời Gia Nhập Đội (Từ Đội Trưởng)" : `📩 Lời Mời Vai Trò: ${item.role || "Staff"}`}
+                        {item.type === "TEAM" ? "📩 Lời Mời Vào Đội (Từ Đội Trưởng)" : `🎖️ Lời Mời: ${formatRoleLabel(item.role)}`}
                       </span>
                     </div>
                     <span className="text-[10px] text-[var(--accent-team)] font-bold">
@@ -267,9 +266,13 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                   </div>
 
                   <p className="font-sans text-xs text-[var(--text-muted)] leading-relaxed">
-                    {item.inviterName
-                      ? `Đội trưởng ${item.inviterName} đã gửi lời mời bạn gia nhập đội thi "${item.targetName}". Nhấn "Đồng ý" để chính thức vào đội ngay!`
-                      : `Bạn nhận được lời mời gia nhập đội thi "${item.targetName}" từ Đội trưởng. Nhấn "Đồng ý" để chính thức vào đội ngay!`}
+                    {item.type === "TEAM"
+                      ? item.inviterName
+                        ? `Đội trưởng ${item.inviterName} đã gửi lời mời bạn gia nhập đội thi "${item.targetName}". Nhấn "Đồng ý" để chính thức vào đội ngay!`
+                        : `Bạn nhận được lời mời gia nhập đội thi "${item.targetName}" từ Đội trưởng. Nhấn "Đồng ý" để chính thức vào đội ngay!`
+                      : item.inviterName
+                      ? `Ban Tổ Chức (${item.inviterName}) đã gửi lời mời bạn đảm nhiệm vai trò ${formatRoleLabel(item.role)} cho sự kiện "${item.targetName}"${item.trackName ? ` (Hạng mục: ${item.trackName})` : ""}.`
+                      : `Ban Tổ Chức đã gửi lời mời bạn đảm nhiệm vai trò ${formatRoleLabel(item.role)} cho sự kiện "${item.targetName}"${item.trackName ? ` (Hạng mục: ${item.trackName})` : ""}.`}
                   </p>
 
                   <div className="flex items-center gap-2 pt-1 font-mono text-[10px]">
@@ -278,7 +281,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                       onClick={() => handleRespond(item, true)}
                       className="px-2.5 py-1 bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/40 font-bold uppercase hover:bg-[var(--color-success)] hover:text-black transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                     >
-                      <Check className="w-3 h-3" /> ĐỒNG Ý VÀO ĐỘI
+                      <Check className="w-3 h-3" /> {item.type === "TEAM" ? "ĐỒNG Ý VÀO ĐỘI" : "ĐỒNG Ý NHẬN VAI TRÒ"}
                     </button>
                     <button
                       disabled={isResponding}

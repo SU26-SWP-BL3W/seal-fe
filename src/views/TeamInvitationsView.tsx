@@ -45,7 +45,15 @@ export function TeamInvitationsView() {
       }
 
       if (isAccepted) {
-        toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+        if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+          toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+        } else if (inv.role === "Judge") {
+          toast.success(`🎉 Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
+        } else if (inv.role === "Mentor") {
+          toast.success(`🎉 Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
+        } else {
+          toast.success(`🎉 Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
+        }
         queryClient.invalidateQueries({ queryKey: ["my-team"] });
         queryClient.invalidateQueries({ queryKey: ["myTeam"] });
         queryClient.invalidateQueries({ queryKey: ["eventRoles"] });
@@ -85,12 +93,26 @@ export function TeamInvitationsView() {
   const pending = invitations.filter((i) => i.status === "PendingAccept");
   const history = invitations.filter((i) => i.status !== "PendingAccept");
 
+  const formatRoleLabel = (role?: string) => {
+    switch (role) {
+      case "Coordinator":
+      case "EventCoordinator":
+        return "Cán Bộ Điều Phối (Coordinator)";
+      case "Judge":
+        return "Ban Giám Khảo (Judge)";
+      case "Mentor":
+        return "Cố Vấn Chuyên Môn (Mentor)";
+      default:
+        return role || "Cán Bộ Sự Kiện";
+    }
+  };
+
   const titleOf = (inv: MyInvitationItem) =>
     inv.type === "TEAM"
       ? inv.role === "Trưởng nhóm"
-        ? `Yêu cầu chuyển quyền Trưởng nhóm đội ${inv.targetName}`
-        : `Lời mời gia nhập đội ${inv.targetName}`
-      : `Lời mời làm ${inv.role} — ${inv.targetName}${inv.trackName ? ` · ${inv.trackName}` : ""}`;
+        ? `👑 Yêu cầu chuyển quyền Đội trưởng đội ${inv.targetName}`
+        : `📩 Lời mời gia nhập đội thi ${inv.targetName} (Từ Đội trưởng)`
+      : `🎖️ Lời mời đảm nhiệm vai trò: ${formatRoleLabel(inv.role)} — Sự kiện ${inv.targetName}${inv.trackName ? ` · Hạng mục ${inv.trackName}` : ""}`;
 
   return (
     <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)]">
