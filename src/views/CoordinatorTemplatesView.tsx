@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
 import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles } from "lucide-react";
-import { Link } from "@/i18n/routing";
+import Link from "next/link";
 
 export interface CriteriaInsideSet {
   id: string;
@@ -20,6 +20,9 @@ export interface CriteriaSetItem {
   createdDate: string;
   criterias: CriteriaInsideSet[];
 }
+
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
 
 export const CoordinatorTemplatesView: React.FC = () => {
   const { data: dbTemplates = [], refetch: refetchTemplates } = useGetTemplates();
@@ -54,14 +57,60 @@ export const CoordinatorTemplatesView: React.FC = () => {
   }, [dbTemplates.length]);
 
   const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const { showModal, confirmLeave, cancelStay } = useUnsavedChanges(isDirty);
 
-  // New Criteria Set Form State
+  // New/Edit Criteria Set Form State
   const [newSetName, setNewSetName] = useState("");
   const [newSetDesc, setNewSetDesc] = useState("");
   const [builderCriterias, setBuilderCriterias] = useState<CriteriaInsideSet[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleOpenCreateModal = () => {
+    setEditingSetId(null);
+    setNewSetName("");
+    setNewSetDesc("");
+    setBuilderCriterias([
+      {
+        id: `new-${Date.now()}-1`,
+        criterionName: "Tiêu chí Đổi Mới & Sáng Tạo",
+        weight: 40,
+        maxScore: 10,
+        description: "Đánh giá tính độc đáo, khác biệt và hàm lượng công nghệ.",
+      },
+      {
+        id: `new-${Date.now()}-2`,
+        criterionName: "Tiêu chí Tính Khả Thi & Triển Khai",
+        weight: 60,
+        maxScore: 10,
+        description: "Đánh giá khả năng áp dụng thực tế và hoàn thiện mô hình.",
+      },
+    ]);
+    setIsBuilderModalOpen(true);
+  };
+
+  const handleOpenEditModal = (set: CriteriaSetItem) => {
+    setEditingSetId(set.id);
+    setNewSetName(set.templateName);
+    setNewSetDesc(set.description);
+    setBuilderCriterias(
+      set.criterias.length > 0
+        ? set.criterias.map((c) => ({ ...c }))
+        : [
+            {
+              id: `crit-${Date.now()}`,
+              criterionName: "Tiêu chí thành phần 1",
+              weight: 100,
+              maxScore: 10,
+              description: "Mô tả chi tiết tiêu chí chấm điểm...",
+            },
+          ]
+    );
+    setIsBuilderModalOpen(true);
+  };
 
   // Computed weight for builder
   const builderTotalWeight = builderCriterias.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
@@ -73,6 +122,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
   // Add Row inside Builder
   const handleAddCriteriaRow = () => {
+    setIsDirty(true);
     const nextIdx = builderCriterias.length + 1;
     setBuilderCriterias((prev) => [
       ...prev,
@@ -89,21 +139,23 @@ export const CoordinatorTemplatesView: React.FC = () => {
   // Remove Row inside Builder
   const handleRemoveCriteriaRow = (id: string) => {
     if (builderCriterias.length <= 1) return;
+    setIsDirty(true);
     setBuilderCriterias((prev) => prev.filter((c) => c.id !== id));
   };
 
   // Update Criteria Row inside Builder
   const handleUpdateCriteriaRow = (id: string, field: keyof CriteriaInsideSet, value: any) => {
+    setIsDirty(true);
     setBuilderCriterias((prev) =>
       prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
     );
   };
 
-  // Save New Criteria Set into State & Database
+  // Save New or Updated Criteria Set into State & Database
   const handleSaveCriteriaSet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSetName.trim()) {
-      alert("Vui lòng nhập tên cho Bộ Tiêu Chí mới!");
+      alert("Vui lòng nhập tên cho Bộ Tiêu Chí!");
       return;
     }
     if (!isBuilderValid100) {
@@ -113,27 +165,41 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      if (templatesRepository?.createTemplate) {
-        await templatesRepository.createTemplate({
+      if (editingSetId) {
+        setCriteriaSets((prev) =>
+          prev.map((s) =>
+            s.id === editingSetId
+              ? { ...s, templateName: newSetName, description: newSetDesc, criterias: builderCriterias }
+              : s
+          )
+        );
+        setSuccessMessage(`Đã cập nhật thành công Bộ tiêu chí "${newSetName}"!`);
+      } else {
+        if (templatesRepository?.createTemplate) {
+          await templatesRepository.createTemplate({
+            templateName: newSetName,
+            description: newSetDesc,
+          });
+        }
+
+        const newSet: CriteriaSetItem = {
+          id: `set-${Date.now()}`,
           templateName: newSetName,
-          description: newSetDesc,
-        });
+          description: newSetDesc || "Bộ tiêu chí đánh giá chuẩn cho sự kiện.",
+          createdDate: new Date().toISOString().split("T")[0],
+          criterias: builderCriterias,
+        };
+
+        setCriteriaSets((prev) => [newSet, ...prev]);
+        setSelectedSetId(newSet.id);
+        setSuccessMessage(`Đã tạo và lưu thành công "${newSetName}" vào Kho Bộ Tiêu Chí!`);
       }
 
-      const newSet: CriteriaSetItem = {
-        id: `set-${Date.now()}`,
-        templateName: newSetName,
-        description: newSetDesc || "Bộ tiêu chí đánh giá chuẩn cho sự kiện.",
-        createdDate: new Date().toISOString().split("T")[0],
-        criterias: builderCriterias,
-      };
-
-      setCriteriaSets((prev) => [newSet, ...prev]);
-      setSelectedSetId(newSet.id);
       setIsBuilderModalOpen(false);
+      setIsDirty(false);
       setNewSetName("");
       setNewSetDesc("");
-      setSuccessMessage(`Đã tạo và lưu thành công "${newSetName}" vào Kho Bộ Tiêu Chí!`);
+      setEditingSetId(null);
     } catch {
       alert("Lưu Bộ tiêu chí thất bại.");
     } finally {
@@ -163,7 +229,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
       await refetchTemplates();
 
-      setSuccessMessage(`✓ Đã xóa thành công bộ tiêu chí "${setName}" khỏi Kho Hệ Thống!`);
+      setSuccessMessage(`Đã xóa thành công bộ tiêu chí "${setName}" khỏi Kho Hệ Thống!`);
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch {
       alert("Xóa Bộ tiêu chí thất bại!");
@@ -182,7 +248,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
               <span>NGÂN HÀNG DỮ LIỆU BAN TỔ CHỨC</span>
             </div>
             <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
-              KHO BỘ TIÊU CHÍ CHẤM ĐIỂM (TEMPLATES BANK)
+              KHO BỘ TIÊU CHÍ CHẤM ĐIỂM
             </h1>
             <p className="text-xs font-sans text-[#8a9ba8] mt-1 max-w-3xl">
               Quản lý các <strong className="text-[#8b5cf6]">Bộ Tiêu Chí</strong> (mỗi Bộ Tiêu Chí gồm nhiều Tiêu Chí thành phần với tổng trọng số 100%) để tái sử dụng nhanh khi cấu hình Sự kiện &amp; Hạng mục.
@@ -298,11 +364,11 @@ export const CoordinatorTemplatesView: React.FC = () => {
                     </span>
                     {activeSetTotalWeight === 100 ? (
                       <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
-                        ✓ TRỌNG SỐ ĐỦ 100%
+                        TRỌNG SỐ ĐỦ 100%
                       </span>
                     ) : (
                       <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold">
-                        ⚠️ TRỌNG SỐ: {activeSetTotalWeight}% (CHƯA ĐỦ 100%)
+                        TRỌNG SỐ: {activeSetTotalWeight}% (CHƯA ĐỦ 100%)
                       </span>
                     )}
                   </div>
@@ -317,14 +383,25 @@ export const CoordinatorTemplatesView: React.FC = () => {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
-                      className="px-3 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>XÓA BỘ TIÊU CHÍ</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(activeSet)}
+                        className="px-3.5 py-1.5 bg-[#8b5cf6]/10 border border-[#8b5cf6]/40 hover:bg-[#8b5cf6]/20 text-[#c084fc] font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>SỬA BỘ TIÊU CHÍ</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSet(activeSet.id, activeSet.templateName, e)}
+                        className="px-3.5 py-1.5 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>XÓA BỘ TIÊU CHÍ</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -353,7 +430,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
                   <div className="space-y-3">
                     {activeSet.criterias.length === 0 ? (
                       <div className="p-6 bg-[#0a0e10] border border-[#263339] text-center text-[#8a9ba8] font-mono text-xs space-y-1">
-                        <p className="font-semibold text-amber-400">⚠️ Bộ tiêu chí này chưa có tiêu chí thành phần nào</p>
+                        <p className="font-semibold text-amber-400">Bộ tiêu chí này chưa có tiêu chí thành phần nào</p>
                         <p className="text-[11px] text-[#8a9ba8]/70">Dữ liệu hiện tại trên hệ thống chưa tạo các tiêu chí nhỏ cho bộ này.</p>
                       </div>
                     ) : (
@@ -411,7 +488,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
                 onClick={() => setIsBuilderModalOpen(false)}
                 className="text-[#8a9ba8] hover:text-white font-mono text-xs cursor-pointer"
               >
-                [ ĐÓNG ✕ ]
+                ĐÓNG
               </button>
             </div>
 
@@ -529,6 +606,11 @@ export const CoordinatorTemplatesView: React.FC = () => {
         </div>
       )}
 
+      <UnsavedChangesModal
+        isOpen={showModal}
+        onConfirmLeave={confirmLeave}
+        onCancelStay={cancelStay}
+      />
     </div>
   );
 };

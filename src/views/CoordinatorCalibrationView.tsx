@@ -20,7 +20,7 @@ export const CoordinatorCalibrationView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `RBL_Rater_Variance_Matrix_${Date.now()}.csv`);
+    link.setAttribute("download", `Rater_Variance_Matrix_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -62,13 +62,13 @@ export const CoordinatorCalibrationView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 font-mono text-xs text-[#8b5cf6] font-bold uppercase tracking-wider mb-1">
               <Activity className="w-4 h-4 text-[#8b5cf6]" />
-              <span>CHẨN ĐOÁN &amp; PHÂN TÍCH RBL</span>
+              <span>CHẨN ĐOÁN &amp; PHÂN TÍCH ĐIỂM SỐ</span>
             </div>
             <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
-              PHÒNG PHÂN TÍCH VÀ CHẨN ĐOÁN RBL
+              PHÒNG PHÂN TÍCH VÀ CHẨN ĐOÁN ĐIỂM SỐ
             </h1>
             <p className="font-sans text-xs text-[#8a9ba8] mt-1">
-              Phân tích độ lệch chuẩn điểm số giữa các giám khảo và chẩn đoán dữ liệu chấm điểm (Rubric-Based Leveling Diagnostics).
+              Phân tích độ lệch chuẩn điểm số giữa các giám khảo và chẩn đoán dữ liệu chấm điểm.
             </p>
           </div>
         </div>
@@ -175,7 +175,7 @@ export const CoordinatorCalibrationView: React.FC = () => {
                       <td colSpan={6} className="p-8 text-center text-[#8a9ba8]">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <Activity className="w-8 h-8 text-[#8a9ba8]/40" />
-                          <p className="font-semibold text-sm">Chưa có dữ liệu chẩn đoán RBL đối soát cho sự kiện này</p>
+                          <p className="font-semibold text-sm">Chưa có dữ liệu chẩn đoán đối soát cho sự kiện này</p>
                           <p className="text-xs text-[#8a9ba8]/70">Dữ liệu lệch điểm giữa các giám khảo sẽ tự động xuất hiện khi các bài thi bắt đầu được chấm.</p>
                         </div>
                       </td>
@@ -200,7 +200,7 @@ export const CoordinatorCalibrationView: React.FC = () => {
               {/* Stream List */}
               <div className="space-y-3 font-mono text-xs">
                 <div className="p-6 bg-[#0a0e10] border border-[#263339] text-center text-[#8a9ba8]">
-                  <p className="text-xs">Chưa ghi nhận nhật ký chấm điểm RBL nào.</p>
+                  <p className="text-xs">Chưa ghi nhận nhật ký chấm điểm nào.</p>
                 </div>
               </div>
             </div>

@@ -1,5 +1,4 @@
-"use client";
-
+import React, { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { Link } from "@/i18n/routing";
@@ -35,6 +34,8 @@ import {
   AlertTriangle,
   Activity,
   LayoutDashboard,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 export function NavigationBar() {
@@ -42,6 +43,16 @@ export function NavigationBar() {
   const { user, activeRole, logout } = useAuth();
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
   const userEmail = (user?.email || user?.Email || "").toLowerCase();
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    procedures: false,
+    scoring: false,
+    results: false,
+  });
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   
   let roleName = "Guest";
   if (!user) {
@@ -74,33 +85,48 @@ export function NavigationBar() {
     currentEvent?.eventName || currentEvent?.EventName || currentEvent?.name || "";
 
   // XÁC ĐỊNH NGHIỆP VỤ RENDER THANH NAVBAR DỌC HOẶC NGANG
+  const isAuthRoute =
+    pathname.includes("/login") ||
+    pathname.includes("/register") ||
+    pathname.includes("/verify-email") ||
+    pathname.includes("/forgot-password");
+
   const isCoordinatorRoute = pathname.includes("/coordinator");
   const isMentorRoute = pathname.includes("/mentor");
   const isJudgeRoute = pathname.includes("/judge");
   const isAdminRoute = pathname.includes("/admin");
-  const isCandidateRoute =
-    pathname.includes("/my-team") ||
-    pathname.includes("/my-submissions") ||
-    pathname.includes("/my-invitations");
 
-  const isCoordinatorRole = roleName === "Coordinator" || roleName === "EventCoordinator";
-  const isMentorRole = roleName === "Mentor";
-  const isJudgeRole = roleName === "Judge";
-  const isCandidateRole = roleName === "TeamLeader" || roleName === "TeamMember";
-
-  const showCoordinatorSidebar = (isCoordinatorRoute && roleName !== "Admin") || (isCoordinatorRole && (pathname.includes("/coordinator") || pathname.includes("/appeals")));
-  const showMentorSidebar = isMentorRoute;
-  const showJudgeSidebar = isJudgeRoute;
-  const showParticipantSidebar = isCandidateRoute && isCandidateRole;
-  const showAdminSidebar = isAdminRoute || (roleName === "Admin" && isCoordinatorRoute);
+  const showAdminSidebar = !isAuthRoute && (roleName === "Admin" || isAdminRoute);
+  const showCoordinatorSidebar =
+    !isAuthRoute &&
+    roleName !== "Admin" &&
+    !isAdminRoute &&
+    (roleName === "Coordinator" || isCoordinatorRoute);
+  const showMentorSidebar =
+    !isAuthRoute &&
+    roleName !== "Admin" &&
+    roleName !== "Coordinator" &&
+    !isAdminRoute &&
+    !isCoordinatorRoute &&
+    (roleName === "Mentor" || isMentorRoute);
+  const showJudgeSidebar =
+    !isAuthRoute &&
+    roleName !== "Admin" &&
+    roleName !== "Coordinator" &&
+    roleName !== "Mentor" &&
+    !isAdminRoute &&
+    !isCoordinatorRoute &&
+    !isMentorRoute &&
+    (roleName === "Judge" || isJudgeRoute);
+  const showParticipantSidebar = false;
 
   // ─────────────────────────────────────────────────────────────
   // CHẾ ĐỘ 10: NAVBAR DỌC DÀNH RIÊNG CHO SYSTEM ADMIN (ADMIN WORKSPACE)
   // ─────────────────────────────────────────────────────────────
   if (showAdminSidebar) {
     return (
-      <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--color-danger)]/40 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
-        <div className="flex flex-col gap-6">
+      <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--color-danger)]/40 flex flex-col justify-between p-4 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0 overflow-hidden">
+        <div className="flex flex-col gap-4 overflow-y-auto pr-1 text-xs [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#263339] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
           {/* Brand Logo & Notification Bell */}
           <div className="flex flex-col gap-3 pb-4 border-b border-[var(--border-muted)]">
             <div className="flex items-center justify-between">
@@ -111,10 +137,10 @@ export function NavigationBar() {
               <NotificationBell align="left" />
             </div>
             <Link
-              href="/"
+              href="/admin/dashboard"
               className="font-mono text-[11px] text-[var(--text-muted)] hover:text-[var(--color-danger)] flex items-center gap-1.5 transition-colors"
             >
-              <ArrowLeft className="w-3 h-3" /> Quay lại trang chủ
+              <ArrowLeft className="w-3 h-3" /> Quay lại Dashboard
             </Link>
           </div>
 
@@ -140,8 +166,8 @@ export function NavigationBar() {
             <Link
               href="/admin/dashboard"
               className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/admin/dashboard") || (pathname.includes("/admin") && !pathname.includes("/admin/users") && !pathname.includes("/admin/schools") && !pathname.includes("/admin/events"))
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                pathname === "/admin/dashboard"
+                  ? "bg-[var(--color-danger)] text-white shadow-sm"
                   : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
               }`}
             >
@@ -152,7 +178,7 @@ export function NavigationBar() {
               href="/admin/users"
               className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/admin/users")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                  ? "bg-[var(--color-danger)] text-white shadow-sm"
                   : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
               }`}
             >
@@ -163,7 +189,7 @@ export function NavigationBar() {
               href="/admin/schools"
               className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                 pathname.includes("/admin/schools")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                  ? "bg-[var(--color-danger)] text-white shadow-sm"
                   : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
               }`}
             >
@@ -171,33 +197,22 @@ export function NavigationBar() {
             </Link>
 
             <Link
-              href="/coordinator/teams"
+              href="/events"
               className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/coordinator/teams")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
+                pathname === "/events" || (pathname.includes("/events/") && !pathname.includes("/admin/events"))
+                  ? "bg-[var(--color-danger)] text-white shadow-sm"
                   : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
               }`}
             >
-              <ShieldCheck className="w-4 h-4 shrink-0" /> Đội Thi &amp; Thí Sinh
-            </Link>
-
-            <Link
-              href="/coordinator/dashboard"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/coordinator/dashboard") || pathname.includes("/coordinator/results")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/20"
-                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
-              }`}
-            >
-              <FileText className="w-4 h-4 shrink-0" /> Điều Hành EC &amp; Bài Thi
+              <Compass className="w-4 h-4 shrink-0" /> Khám Phá &amp; Chi Tiết Event
             </Link>
 
             <Link
               href="/admin/events/new"
-              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold mt-2 border border-[var(--color-danger)]/50 ${
+              className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold mt-2 border border-[var(--color-danger)]/40 ${
                 pathname.includes("/admin/events/new")
-                  ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/30"
-                  : "text-[var(--color-danger)] bg-[var(--color-danger)]/5 hover:bg-[var(--color-danger)]/15"
+                  ? "bg-[var(--color-danger)] text-white"
+                  : "text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
               }`}
             >
               <PlusCircle className="w-4 h-4 shrink-0" /> Tạo Event Mới
@@ -262,144 +277,171 @@ export function NavigationBar() {
             </span>
           </div>
 
-          {/* Vertical Coordinator Menu Section with Big Numbers 1 2 3 4 5 6 */}
-          <nav className="flex flex-col gap-2 font-mono text-xs">
-            <span className="font-mono text-[10px] font-bold text-[#a855f7] tracking-wider px-2 py-1 uppercase border-b border-[#263339] mb-1 flex items-center justify-between">
-              <span>LUỒNG ĐIỀU PHỐI VIÊN (EC)</span>
-              <span className="text-[9px] text-zinc-500 font-normal">6 MODULES</span>
+          {/* Vertical Coordinator Menu Section */}
+          <nav className="flex flex-col gap-1 font-mono text-xs">
+            <span className="font-mono text-[10px] font-bold text-[#8b5cf6] tracking-wider px-2 py-0.5 uppercase border-b border-[#263339] mb-1">
+              MENU BẢNG ĐIỀU KHIỂN
             </span>
 
-            {/* 01. Quản lý sự kiện */}
+            {/* 1. Control Center BTC */}
             <Link
-              href="/coordinator/staff"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
-                pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
+              href="/coordinator/dashboard"
+              className={`flex items-center gap-2.5 px-3 py-2 hud-clipped transition-all font-bold text-xs ${
+                pathname === "/coordinator/dashboard"
+                  ? "bg-[#8b5cf6] text-white shadow-sm"
+                  : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
               }`}
             >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
-                pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
-              }`}>
-                01
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Quản Lý Sự Kiện</div>
-                <div className="text-[10px] text-zinc-400 truncate">Vòng thi • Mentor • Judge Track</div>
-              </div>
+              <LayoutDashboard className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Control Center BTC
             </Link>
 
-            {/* 02. Quản lý đội thi */}
-            <Link
-              href="/coordinator/teams"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
-                pathname.includes("/coordinator/teams")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
-                pathname.includes("/coordinator/teams")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
-              }`}>
-                02
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Quản Lý Đội Thi</div>
-                <div className="text-[10px] text-zinc-400 truncate">Roster thành viên • Duyệt/Từ chối</div>
-              </div>
-            </Link>
+            {/* Accordion Group 1: THỦ TỤC & ĐỘI THI */}
+            <div className="mt-1.5 border-t border-[#263339]/60 pt-1">
+              <button
+                type="button"
+                onClick={() => toggleGroup("procedures")}
+                className="w-full flex items-center justify-between font-mono text-[10px] font-bold text-[#8a9ba8] hover:text-[#8b5cf6] tracking-wider px-2 py-1 uppercase cursor-pointer transition-colors"
+              >
+                <span>THỦ TỤC &amp; ĐỘI THI</span>
+                {openGroups.procedures ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                )}
+              </button>
 
-            {/* 03. Duyệt tài khoản sinh viên */}
-            <Link
-              href="/coordinator/profiles"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
-                pathname.includes("/coordinator/profiles")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
-                pathname.includes("/coordinator/profiles")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
-              }`}>
-                03
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Duyệt Tài Khoản</div>
-                <div className="text-[10px] text-zinc-400 truncate">Role Sinh viên • Thẻ SV 3x4</div>
-              </div>
-            </Link>
+              {openGroups.procedures && (
+                <div className="flex flex-col gap-1 pl-1 pt-0.5">
+                  <Link
+                    href="/coordinator/events/new"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/events/new")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <Sliders className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Cấu Hình Vòng &amp; Tiêu Chí
+                  </Link>
 
-            {/* 04. Kho tiêu chí Rubric */}
-            <Link
-              href="/coordinator/templates"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
-                pathname.includes("/coordinator/templates") || pathname.includes("/assign-template")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
-                pathname.includes("/coordinator/templates") || pathname.includes("/assign-template")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
-              }`}>
-                04
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Kho Tiêu Chí</div>
-                <div className="text-[10px] text-zinc-400 truncate">Rubric chấm thi • Trọng số %</div>
-              </div>
-            </Link>
+                  <Link
+                    href="/coordinator/profiles"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/profiles")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <IdCard className="w-4 h-4 shrink-0 text-[#00d9ff]" /> Duyệt Tài Khoản Thí Sinh
+                  </Link>
 
-            {/* 05. Quản lý bài nộp & Phúc khảo */}
-            <Link
-              href="/coordinator/submissions"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
-                (pathname.includes("/coordinator/submissions") || pathname.includes("/coordinator/appeals"))
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
-                (pathname.includes("/coordinator/submissions") || pathname.includes("/coordinator/appeals"))
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
-              }`}>
-                05
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Quản Lý Bài Nộp</div>
-                <div className="text-[10px] text-zinc-400 truncate">GitHub • Demo • Phúc Khảo</div>
-              </div>
-            </Link>
+                  <Link
+                    href="/coordinator/teams"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/teams")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <Users className="w-4 h-4 shrink-0 text-[#10b981]" /> Duyệt Đăng Ký Đội Thi
+                  </Link>
+                </div>
+              )}
+            </div>
 
-            {/* 06. Công bố kết quả & Giải thưởng */}
-            <Link
-              href="/coordinator/publish-results"
-              className={`group flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
-                pathname.includes("/coordinator/publish-results") || pathname.includes("/coordinator/prizes") || pathname.includes("/coordinator/calibration")
-                  ? "bg-[#a855f7]/15 border-[#a855f7] text-white shadow-lg shadow-[#a855f7]/10"
-                  : "bg-[#11191d]/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#a855f7]/50 hover:bg-[#152025]"
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-md flex items-center justify-center font-display font-black text-sm shrink-0 transition-all ${
-                pathname.includes("/coordinator/publish-results") || pathname.includes("/coordinator/prizes") || pathname.includes("/coordinator/calibration")
-                  ? "bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                  : "bg-zinc-800 text-zinc-400 group-hover:bg-[#a855f7]/30 group-hover:text-[#a855f7]"
-              }`}>
-                06
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-xs uppercase tracking-wide truncate text-white">Công Bố Kết Quả</div>
-                <div className="text-[10px] text-zinc-400 truncate">Bảng xếp hạng • Giải thưởng</div>
-              </div>
-            </Link>
+            {/* Accordion Group 2: CHẤM ĐIỂM & NHÂN SỰ */}
+            <div className="mt-1.5 border-t border-[#263339]/60 pt-1">
+              <button
+                type="button"
+                onClick={() => toggleGroup("scoring")}
+                className="w-full flex items-center justify-between font-mono text-[10px] font-bold text-[#8a9ba8] hover:text-[#8b5cf6] tracking-wider px-2 py-1 uppercase cursor-pointer transition-colors"
+              >
+                <span>CHẤM ĐIỂM &amp; NHÂN SỰ</span>
+                {openGroups.scoring ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                )}
+              </button>
+
+              {openGroups.scoring && (
+                <div className="flex flex-col gap-1 pl-1 pt-0.5">
+                  <Link
+                    href="/coordinator/templates"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/templates")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <Sliders className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Kho Tiêu Chí (Templates)
+                  </Link>
+
+                  <Link
+                    href="/coordinator/staff"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/staff")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <ShieldCheck className="w-4 h-4 shrink-0 text-[#8b5cf6]" /> Mời Giám Khảo &amp; Cố Vấn
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Accordion Group 3: KẾT QUẢ & PHÚC KHẢO */}
+            <div className="mt-1.5 border-t border-[#263339]/60 pt-1">
+              <button
+                type="button"
+                onClick={() => toggleGroup("results")}
+                className="w-full flex items-center justify-between font-mono text-[10px] font-bold text-[#8a9ba8] hover:text-[#8b5cf6] tracking-wider px-2 py-1 uppercase cursor-pointer transition-colors"
+              >
+                <span>KẾT QUẢ &amp; PHÚC KHẢO</span>
+                {openGroups.results ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-[#8a9ba8]" />
+                )}
+              </button>
+
+              {openGroups.results && (
+                <div className="flex flex-col gap-1 pl-1 pt-0.5">
+                  <Link
+                    href="/coordinator/publish-results"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/publish-results")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <FileCheck className="w-4 h-4 shrink-0 text-[#f59e0b]" /> Công Bố Kết Quả
+                  </Link>
+
+                  <Link
+                    href="/coordinator/prizes"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/prizes")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <Award className="w-4 h-4 shrink-0 text-[#f59e0b]" /> Cơ Cấu Giải Thưởng
+                  </Link>
+
+                  <Link
+                    href="/coordinator/appeals"
+                    className={`flex items-center gap-2.5 px-3 py-1.5 hud-clipped transition-all font-bold text-xs ${
+                      pathname.includes("/coordinator/appeals")
+                        ? "bg-[#8b5cf6] text-white shadow-sm"
+                        : "text-[#8a9ba8] hover:text-white hover:bg-[#13191c]"
+                    }`}
+                  >
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444]" /> Xử Lý Phúc Khảo
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
         </div>
 
@@ -609,7 +651,7 @@ export function NavigationBar() {
               {user?.FullName || "Giám Khảo Chuyên Môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedJudge ? "Hội đồng Chấm điểm RBL" : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedJudge ? "Hội đồng Chấm điểm" : "Quyền hạn: Read-Only (Chỉ Xem)"}
             </span>
           </div>
 
@@ -651,7 +693,7 @@ export function NavigationBar() {
                       : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Scale className="w-4 h-4 shrink-0" /> Bàn Chấm Điểm RBL
+                  <Scale className="w-4 h-4 shrink-0" /> Bàn Chấm Điểm
                 </Link>
 
                 <Link
@@ -971,7 +1013,7 @@ export function NavigationBar() {
                 className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[var(--color-warning)]/10 text-[var(--color-warning)] border border-[var(--color-warning)]/40 font-bold hover:bg-[var(--color-warning)] hover:text-black transition-all hud-clipped"
                 title="Hồ sơ chưa duyệt — Cập nhật thẻ sinh viên"
               >
-                ⚠️ Chưa duyệt thẻ SV ➔
+                Chưa duyệt thẻ SV →
               </Link>
             )}
 

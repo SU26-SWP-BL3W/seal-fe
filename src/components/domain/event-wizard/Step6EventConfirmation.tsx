@@ -100,16 +100,25 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         }
       }
 
-      // 3. Persist tracks to backend API
+      // 3. Persist tracks to backend API (update if id exists to prevent duplicate track records in DB)
       if (Array.isArray(tracks) && tracks.length > 0) {
         for (const trk of tracks) {
           try {
-            await tracksRepository.createTrack({
-              eventId: targetId,
-              trackName: trk.trackName,
-              templateId: trk.templateId,
-              description: trk.description,
-            });
+            if (trk.id && typeof trk.id === "string" && !trk.id.startsWith("trk-")) {
+              await tracksRepository.updateTrack(trk.id, {
+                eventId: targetId,
+                trackName: trk.trackName,
+                templateId: trk.templateId,
+                description: trk.description,
+              });
+            } else {
+              await tracksRepository.createTrack({
+                eventId: targetId,
+                trackName: trk.trackName,
+                templateId: trk.templateId,
+                description: trk.description,
+              });
+            }
           } catch (e) {
             // Ignore API network error
           }
@@ -158,7 +167,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold rounded-full hud-clipped">
             <EyeOff className="w-4 h-4 text-amber-400" />
-            <span>BẢN NHÁP (ĐANG ẨN — CHƯA CÔNG BỐ)</span>
+            <span>BẢN NHÁP — CHƯA CÔNG BỐ</span>
           </div>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold rounded-full hud-clipped">
             <Users className="w-4 h-4 text-cyan-400" />

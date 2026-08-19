@@ -76,3 +76,22 @@ export function useDeletePrize() {
     },
   });
 }
+
+export function saveStoredPrizesForEvent(eventId: string, prizes: any[]) {
+  if (typeof window === "undefined" || !eventId) return;
+  try {
+    localStorage.setItem(`seal_stored_prizes_${eventId}`, JSON.stringify(prizes));
+  } catch {
+    // ignore
+  }
+}
+
+export function getStoredPrizesForEvent(eventId: string): any[] {
+  if (typeof window === "undefined" || !eventId) return [];
+  try {
+    const raw = localStorage.getItem(`seal_stored_prizes_${eventId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}

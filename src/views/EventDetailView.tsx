@@ -395,13 +395,13 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                   : "bg-zinc-800 text-cyan-300 border border-cyan-500/30"
               }`}>
                 {roleName === "Coordinator"
-                  ? "BAN TỔ CHỨC (COORDINATOR)"
+                  ? "BAN TỔ CHỨC"
                   : roleName === "Admin"
                   ? "SYSTEM ADMIN"
                   : roleName === "Judge"
-                  ? "GIÁM KHẢO (JUDGE)"
+                  ? "GIÁM KHẢO"
                   : roleName === "Mentor"
-                  ? "CỐ VẤN (MENTOR)"
+                  ? "CỐ VẤN"
                   : roleName === "TeamLeader"
                   ? "TRƯỞNG ĐỘI THI"
                   : roleName === "TeamMember"
@@ -882,7 +882,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                     BẢNG ĐẤU TOÀN NĂNG (GENERAL TRACK)
                   </span>
                   <h3 className="text-xl sm:text-2xl font-display font-extrabold text-white">
-                    {tracks[0] || "Nghiên Cứu & Phát Triển Ứng Dụng RBL Project (Research-Based Learning)"}
+                    {tracks[0] || "Nghiên Cứu & Phát Triển Ứng Dụng Công Nghệ"}
                   </h3>
                 </div>
 
@@ -898,7 +898,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
 
               <div className="space-y-3 font-sans text-xs sm:text-sm text-zinc-300 leading-relaxed">
                 <p>
-                  Toàn bộ các đội thi trong giải đấu sẽ cùng tranh tài trong <strong>Hạng mục Dự án Nghiên cứu Ứng dụng RBL</strong>. Thí sinh được tự do lựa chọn đề tài thực tiễn trong đời sống, doanh nghiệp hoặc xã hội để thiết kế, phát triển và thử nghiệm một giải pháp công nghệ hoàn chỉnh.
+                  Toàn bộ các đội thi trong giải đấu sẽ cùng tranh tài trong <strong>Hạng mục Dự án Nghiên cứu &amp; Phát triển Công nghệ</strong>. Thí sinh được tự do lựa chọn đề tài thực tiễn trong đời sống, doanh nghiệp hoặc xã hội để thiết kế, phát triển và thử nghiệm một giải pháp công nghệ hoàn chỉnh.
                 </p>
               </div>
 

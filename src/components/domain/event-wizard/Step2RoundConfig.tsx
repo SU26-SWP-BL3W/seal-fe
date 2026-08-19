@@ -137,16 +137,18 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
 }) => {
   const [selectedRoundId, setSelectedRoundId] = useState<string>(rounds[0]?.id || "");
 
-  const activeRound = rounds.find((r) => r.id === selectedRoundId) || rounds[0] || {
-    id: "rnd-default",
-    roundName: "Vòng Thi 1",
-    roundNumber: 1,
-    startDate: "",
-    endDate: "",
-    scoringStartDate: "",
-    scoringEndDate: "",
-    advancementRule: "top:10",
-  };
+  React.useEffect(() => {
+    if (rounds.length > 0) {
+      if (!rounds.some((r) => r.id === selectedRoundId)) {
+        setSelectedRoundId(rounds[0].id);
+      }
+    } else {
+      setSelectedRoundId("");
+    }
+  }, [rounds, selectedRoundId]);
+
+  const hasRounds = rounds.length > 0;
+  const activeRound = rounds.find((r) => r.id === selectedRoundId) || (hasRounds ? rounds[0] : null);
 
   // Helper to parse advancementRule string (e.g. "top:10" => mode "top", num 10)
   const parseRule = (ruleStr?: string) => {
@@ -163,9 +165,10 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
     return { mode: "top", value: Number(raw.replace("top:", "")) || 10 };
   };
 
-  const { mode: currentRuleMode, value: currentRuleValue } = parseRule(activeRound.advancementRule);
+  const { mode: currentRuleMode, value: currentRuleValue } = parseRule(activeRound?.advancementRule);
 
   const handleRuleModeChange = (newMode: string) => {
+    if (!activeRound) return;
     if (newMode === "none") {
       onUpdateRound(activeRound.id, "advancementRule", "none");
       return;
@@ -175,36 +178,36 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
   };
 
   const handleRuleValueChange = (newVal: number) => {
-    if (currentRuleMode === "none") return;
+    if (!activeRound || currentRuleMode === "none") return;
     onUpdateRound(activeRound.id, "advancementRule", `${currentRuleMode}:${newVal}`);
   };
 
   // Comprehensive Date Logic Validations
-  const activeRoundIndex = rounds.findIndex((r) => r.id === activeRound.id);
+  const activeRoundIndex = activeRound ? rounds.findIndex((r) => r.id === activeRound.id) : -1;
   const prevRound = activeRoundIndex > 0 ? rounds[activeRoundIndex - 1] : null;
   const prevRoundEnd = prevRound?.scoringEndDate || prevRound?.endDate;
 
   const dateErrors: string[] = [];
 
-  if (activeRound.startDate && activeRound.endDate) {
+  if (activeRound?.startDate && activeRound?.endDate) {
     if (new Date(activeRound.startDate) > new Date(activeRound.endDate)) {
       dateErrors.push("Hạn chót nộp bài không được trước Ngày bắt đầu nộp bài!");
     }
   }
 
-  if (activeRound.endDate && activeRound.scoringStartDate) {
+  if (activeRound?.endDate && activeRound?.scoringStartDate) {
     if (new Date(activeRound.scoringStartDate) < new Date(activeRound.endDate)) {
       dateErrors.push("Ngày bắt đầu chấm điểm phải diễn ra sau (hoặc cùng lúc với) Hạn chót nộp bài!");
     }
   }
 
-  if (activeRound.scoringStartDate && activeRound.scoringEndDate) {
+  if (activeRound?.scoringStartDate && activeRound?.scoringEndDate) {
     if (new Date(activeRound.scoringEndDate) < new Date(activeRound.scoringStartDate)) {
       dateErrors.push("Hạn chót chấm điểm không được trước Ngày bắt đầu chấm điểm!");
     }
   }
 
-  if (prevRound) {
+  if (activeRound && prevRound) {
     const prevEnd = prevRound.scoringEndDate || prevRound.endDate;
     if (activeRound.startDate && prevEnd && new Date(activeRound.startDate) < new Date(prevEnd)) {
       dateErrors.push(`Ngày bắt đầu của [${activeRound.roundName || `Vòng ${activeRoundIndex + 1}`}] phải diễn ra sau kết thúc của [${prevRound.roundName || `Vòng ${activeRoundIndex}`}]!`);
@@ -217,7 +220,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
   const advancementErrors: string[] = [];
   const advancementWarnings: string[] = [];
 
-  if (activeRoundIndex > 0 && prevRound) {
+  if (activeRound && activeRoundIndex > 0 && prevRound) {
     const prevRule = parseRule(prevRound.advancementRule);
     const currRule = parseRule(activeRound.advancementRule);
 
@@ -242,6 +245,29 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Form Editor (7 cols) */}
+        {!hasRounds || !activeRound ? (
+          <div className="lg:col-span-7 bg-[#13191c] border border-[#263339] p-12 text-center flex flex-col items-center justify-center space-y-4 min-h-[420px]">
+            <div className="w-16 h-16 rounded-full bg-[#8b5cf6]/10 border border-[#8b5cf6]/30 flex items-center justify-center">
+              <Layers className="w-8 h-8 text-[#8b5cf6]" />
+            </div>
+            <div className="space-y-1.5 max-w-md">
+              <h3 className="font-mono text-base font-bold text-[#e1e7ec] uppercase">CHƯA CÓ VÒNG THI NÀO ĐƯỢC CẤU HÌNH</h3>
+              <p className="text-xs font-sans text-[#8a9ba8]">
+                Sự kiện chưa có vòng thi. Hãy bấm nút <strong className="text-[#8b5cf6]">+ THÊM VÒNG THI MỚI</strong> ở danh sách bên phải để bắt đầu thiết lập.
+              </p>
+            </div>
+            {!isReadOnly && (
+              <button
+                type="button"
+                onClick={onAddRound}
+                className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>THÊM VÒNG THI ĐẦU TIÊN</span>
+              </button>
+            )}
+          </div>
+        ) : (
         <div className="lg:col-span-7 bg-[#13191c] border border-[#263339] p-6 space-y-5">
           <div className="border-b border-[#263339] pb-3 font-mono text-xs font-bold text-[#8b5cf6] tracking-widest uppercase flex items-center gap-2">
             <Layers className="w-4 h-4 text-[#8b5cf6]" />
@@ -467,12 +493,13 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
               ) : (
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>✓ ĐÃ BẬT VÒNG BẢO TOÀN (KHÔNG LOẠI ĐỘI — 0 ĐỘI BỊ LOẠI, TẤT CẢ ĐI TIẾP)</span>
+                  <span>ĐÃ BẬT VÒNG BẢO TOÀN (KHÔNG LOẠI ĐỘI — 0 ĐỘI BỊ LOẠI, TẤT CẢ ĐI TIẾP)</span>
                 </div>
               )}
             </div>
           </div>
         </div>
+      )}
 
         {/* Right Column: Round List (5 cols) */}
         <div className="lg:col-span-5 bg-[#13191c] border border-[#263339] p-6 space-y-4 flex flex-col justify-between">
@@ -483,7 +510,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
 
             <div className="space-y-3">
               {rounds.map((rnd, idx) => {
-                const isSelected = rnd.id === activeRound.id;
+                const isSelected = activeRound ? rnd.id === activeRound.id : false;
                 const rndDateErr =
                   rnd.startDate && rnd.endDate && new Date(rnd.startDate) > new Date(rnd.endDate);
 

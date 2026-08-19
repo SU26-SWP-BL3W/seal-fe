@@ -26,10 +26,10 @@ const WORKFLOW_STEPS = [
   },
   {
     step: "04",
-    title: "CHẤM ĐIỂM MINH BẠCH RBL",
+    title: "CHẤM ĐIỂM MINH BẠCH",
     badge: "4 GIÁM KHẢO ĐỘC LẬP",
     accent: "var(--accent-judge)",
-    description: "Hội đồng 4 giám khảo độc lập chấm theo ma trận tiêu chuẩn, kiểm toán độ lệch RBL minh bạch.",
+    description: "Hội đồng 4 giám khảo độc lập chấm theo ma trận tiêu chuẩn, kiểm toán độ lệch điểm số minh bạch.",
   },
 ];
 
