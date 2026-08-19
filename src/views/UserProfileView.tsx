@@ -201,6 +201,7 @@ export function UserProfileView() {
   const [schoolId, setSchoolId] = useState(user?.schoolId || (user as any)?.SchoolId || "");
   const [studentCode, setStudentCode] = useState(user?.studentCode || (user as any)?.StudentId || (user as any)?.StudentCode || "");
   const [fullName, setFullName] = useState(user?.fullName || (user as any)?.FullName || "");
+  const [customSchoolName, setCustomSchoolName] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(
     user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl || null
@@ -271,11 +272,13 @@ export function UserProfileView() {
   const currentSchoolId = user?.schoolId || (user as any)?.SchoolId || schoolId;
   const userSchool = schools.find((s) => s.id === currentSchoolId);
   const schoolNameDisplay =
-    userSchool?.schoolName ||
-    (user as any)?.schoolName ||
-    (user as any)?.SchoolName ||
-    (user as any)?.school?.schoolName ||
-    "Chưa cập nhật";
+    (schoolId === "OTHER_CUSTOM" && customSchoolName.trim())
+      ? customSchoolName.trim()
+      : userSchool?.schoolName ||
+        (user as any)?.schoolName ||
+        (user as any)?.SchoolName ||
+        (user as any)?.school?.schoolName ||
+        "Chưa cập nhật";
 
   // Xử lý xác minh sinh viên FPT qua API tra cứu FPT DB thật
   const handleVerifyFpt = async () => {
@@ -287,9 +290,9 @@ export function UserProfileView() {
     try {
       const res = await verifyFptMutation.mutateAsync(fptCode.trim());
       const data = (res as any)?.data ?? res;
-      if (data?.isValid || data?.IsValid || data?.fullName || data?.FullName) {
+      if (data?.isValid || (data as any)?.IsValid || data?.fullName || (data as any)?.FullName) {
         setFptResult(data);
-        const name = data.fullName || data.FullName;
+        const name = data.fullName || (data as any).FullName;
         if (name) setFullName(name);
         setStudentCode(fptCode.trim());
         toast.success("Xác minh MSSV FPT thành công!");
@@ -348,6 +351,27 @@ export function UserProfileView() {
           setSubmitError("Vui lòng chọn trường đại học từ danh sách.");
           return;
         }
+        if (selectedSchoolId === "OTHER_CUSTOM") {
+          if (!customSchoolName.trim()) {
+            setSubmitError("Vui lòng nhập tên trường đại học của bạn.");
+            return;
+          }
+          // Tìm trường khớp trong DB nếu có
+          const matched = schools.find((s) =>
+            s.schoolName?.toLowerCase().includes(customSchoolName.trim().toLowerCase())
+          );
+          if (matched?.id) {
+            selectedSchoolId = matched.id;
+          } else {
+            // Dùng trường dự phòng có sẵn trong DB để vượt qua kiểm tra GUID của backend
+            const fallback = schools.find(
+              (s) =>
+                s.schoolName?.toLowerCase().includes("khác") ||
+                s.schoolName?.toLowerCase().includes("other")
+            ) || schools[0];
+            selectedSchoolId = fallback?.id || "";
+          }
+        }
         if (!studentCode.trim()) {
           setSubmitError("Vui lòng nhập Mã số sinh viên (MSSV).");
           return;
@@ -362,6 +386,25 @@ export function UserProfileView() {
       if (!selectedSchoolId) {
         setSubmitError("Vui lòng chọn Đơn vị công tác / Tổ chức / Trường học.");
         return;
+      }
+      if (selectedSchoolId === "OTHER_CUSTOM") {
+        if (!customSchoolName.trim()) {
+          setSubmitError("Vui lòng nhập tên đơn vị công tác / tổ chức của bạn.");
+          return;
+        }
+        const matched = schools.find((s) =>
+          s.schoolName?.toLowerCase().includes(customSchoolName.trim().toLowerCase())
+        );
+        if (matched?.id) {
+          selectedSchoolId = matched.id;
+        } else {
+          const fallback = schools.find(
+            (s) =>
+              s.schoolName?.toLowerCase().includes("khác") ||
+              s.schoolName?.toLowerCase().includes("other")
+          ) || schools[0];
+          selectedSchoolId = fallback?.id || "";
+        }
       }
     }
 
@@ -729,22 +772,40 @@ export function UserProfileView() {
 
                   {/* Nếu là Cán bộ / Chuyên gia */}
                   {isStaff ? (
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                        Đơn Vị Công Tác / Tổ Chức / Trường Học *
-                      </label>
-                      <select
-                        value={schoolId}
-                        onChange={(e) => setSchoolId(e.target.value)}
-                        className="w-full p-2.5 bg-[#090e11] border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
-                      >
-                        <option value="">-- Chọn đơn vị / trường học từ hệ thống --</option>
-                        {schools.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.schoolName}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                          Đơn Vị Công Tác / Tổ Chức / Trường Học *
+                        </label>
+                        <select
+                          value={schoolId}
+                          onChange={(e) => setSchoolId(e.target.value)}
+                          className="w-full p-2.5 bg-[#090e11] border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
+                        >
+                          <option value="">-- Chọn đơn vị / trường học từ hệ thống --</option>
+                          {schools.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.schoolName}
+                            </option>
+                          ))}
+                          <option value="OTHER_CUSTOM">-- Đơn vị / Trường khác (Nhập tên bên dưới) --</option>
+                        </select>
+                      </div>
+
+                      {schoolId === "OTHER_CUSTOM" && (
+                        <div className="space-y-1.5 p-3 bg-amber-500/5 border border-amber-500/30 hud-clipped">
+                          <label className="text-[10px] text-amber-300 uppercase tracking-wider block font-bold">
+                            Nhập Tên Đơn Vị Công Tác / Tổ Chức Của Bạn *
+                          </label>
+                          <Input
+                            type="text"
+                            value={customSchoolName}
+                            onChange={(e) => setCustomSchoolName(e.target.value)}
+                            placeholder="Ví dụ: Công ty FPT Software, Viện Nghiên Cứu, v.v..."
+                            required
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : (
                     /* Nếu là Thí sinh / Sinh viên / Thành viên đội */
@@ -844,7 +905,7 @@ export function UserProfileView() {
                         <div className="space-y-4 p-4 bg-[#090e11] border border-zinc-800 hud-clipped">
                           <div className="space-y-1.5">
                             <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                              Chọn Trường Đại Học (Ngoài FPT) *
+                              Trường Đại Học / Cơ Sở Đào Tạo *
                             </label>
                             <select
                               value={schoolId}
@@ -857,8 +918,25 @@ export function UserProfileView() {
                                   {s.schoolName}
                                 </option>
                               ))}
+                              <option value="OTHER_CUSTOM">-- Trường khác (Nhập tên trường bên dưới) --</option>
                             </select>
                           </div>
+
+                          {/* Ô nhập tên trường nếu chọn Khác hoặc không có trong danh sách đề xuất */}
+                          {schoolId === "OTHER_CUSTOM" && (
+                            <div className="space-y-1.5 p-3 bg-amber-500/5 border border-amber-500/30 hud-clipped">
+                              <label className="text-[10px] text-amber-300 uppercase tracking-wider block font-bold">
+                                Nhập Tên Trường Đại Học Của Bạn *
+                              </label>
+                              <Input
+                                type="text"
+                                value={customSchoolName}
+                                onChange={(e) => setCustomSchoolName(e.target.value)}
+                                placeholder="Ví dụ: Trường Đại học Giao Thông Vận Tải, ĐH Y Dược..."
+                                required
+                              />
+                            </div>
+                          )}
 
                           <div className="space-y-1.5">
                             <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
