@@ -333,65 +333,67 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               </button>
             </div>
 
-            {/* Filter Vai Trò */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-zinc-400 font-bold mr-1">VAI TRÒ:</span>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("all")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "all"
-                    ? "bg-cyan-500 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Tất Cả
-              </button>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("student")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "student"
-                    ? "bg-cyan-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Sinh Viên
-              </button>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("judge")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "judge"
-                    ? "bg-amber-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Giám Khảo
-              </button>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("mentor")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "mentor"
-                    ? "bg-teal-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Cố Vấn
-              </button>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("coordinator")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "coordinator"
-                    ? "bg-purple-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Điều Phối Viên
-              </button>
-            </div>
+            {/* Filter Vai Trò (Chỉ hiện khi Admin xem toàn bộ người dùng) */}
+            {!isCoordinatorView && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-zinc-400 font-bold mr-1">VAI TRÒ:</span>
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter("all")}
+                  className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                    roleFilter === "all"
+                      ? "bg-cyan-500 text-black font-extrabold"
+                      : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                  }`}
+                >
+                  Tất Cả
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter("student")}
+                  className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                    roleFilter === "student"
+                      ? "bg-cyan-400 text-black font-extrabold"
+                      : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                  }`}
+                >
+                  Sinh Viên
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter("judge")}
+                  className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                    roleFilter === "judge"
+                      ? "bg-amber-400 text-black font-extrabold"
+                      : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                  }`}
+                >
+                  Giám Khảo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter("mentor")}
+                  className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                    roleFilter === "mentor"
+                      ? "bg-teal-400 text-black font-extrabold"
+                      : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                  }`}
+                >
+                  Cố Vấn
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter("coordinator")}
+                  className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                    roleFilter === "coordinator"
+                      ? "bg-purple-400 text-black font-extrabold"
+                      : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+                  }`}
+                >
+                  Điều Phối Viên
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -399,7 +401,9 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
         <div className="bg-[#10171a] border border-zinc-800 rounded-lg overflow-hidden shadow-sm">
           <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-[#131d21]">
             <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">
-              DANH SÁCH TÀI KHOẢN NGƯỜI DÙNG ({filteredUsers.length})
+              {isCoordinatorView
+                ? `DANH SÁCH THÍ SINH & DUYỆT THẺ SINH VIÊN (${filteredUsers.length})`
+                : `DANH SÁCH TÀI KHOẢN NGƯỜI DÙNG (${filteredUsers.length})`}
             </span>
           </div>
 
@@ -420,7 +424,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                     <th className="py-3 px-4">HỌ VÀ TÊN</th>
                     <th className="py-3 px-4">EMAIL</th>
                     <th className="py-3 px-4">TRƯỜNG</th>
-                    <th className="py-3 px-4 text-center">VAI TRÒ</th>
+                    {!isCoordinatorView && <th className="py-3 px-4 text-center">VAI TRÒ</th>}
                     <th className="py-3 px-4 text-center">HỒ SƠ SV</th>
                     <th className="py-3 px-4 text-right">THAO TÁC</th>
                   </tr>
@@ -451,29 +455,31 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                         </td>
                         <td className="py-3.5 px-4 text-zinc-300">{u.email}</td>
                         <td className="py-3.5 px-4 text-zinc-400">{u.schoolName || (u.isFpt ? "FPT University" : "N/A")}</td>
-                        <td className="py-3.5 px-4 text-center">
-                          {isAdm ? (
-                            <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
-                              ADMIN
-                            </span>
-                          ) : isCoord ? (
-                            <span className="px-2 py-0.5 bg-purple-950/40 text-purple-300 border border-purple-500/30 rounded font-bold text-[10px]">
-                              COORD
-                            </span>
-                          ) : isJudge ? (
-                            <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
-                              JUDGE
-                            </span>
-                          ) : isMentor ? (
-                            <span className="px-2 py-0.5 bg-teal-950/40 text-teal-300 border border-teal-500/30 rounded font-bold text-[10px]">
-                              MENTOR
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-cyan-950/40 text-cyan-300 border border-cyan-500/30 rounded font-bold text-[10px]">
-                              STUDENT
-                            </span>
-                          )}
-                        </td>
+                        {!isCoordinatorView && (
+                          <td className="py-3.5 px-4 text-center">
+                            {isAdm ? (
+                              <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
+                                ADMIN
+                              </span>
+                            ) : isCoord ? (
+                              <span className="px-2 py-0.5 bg-purple-950/40 text-purple-300 border border-purple-500/30 rounded font-bold text-[10px]">
+                                COORD
+                              </span>
+                            ) : isJudge ? (
+                              <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
+                                JUDGE
+                              </span>
+                            ) : isMentor ? (
+                              <span className="px-2 py-0.5 bg-teal-950/40 text-teal-300 border border-teal-500/30 rounded font-bold text-[10px]">
+                                MENTOR
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-cyan-950/40 text-cyan-300 border border-cyan-500/30 rounded font-bold text-[10px]">
+                                STUDENT
+                              </span>
+                            )}
+                          </td>
+                        )}
                         <td className="py-3.5 px-4 text-center">
                           {isStaff ? (
                             <span className="text-zinc-500 font-mono text-[11px] italic">— (Cán bộ / Chuyên gia)</span>
@@ -493,30 +499,13 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {!isApproved && !isStaff && (
-                              <>
-                                <button
-                                  onClick={() => handleApprove(userId)}
-                                  className="px-2.5 py-1 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black font-bold text-[11px] rounded transition-all cursor-pointer"
-                                  title="Duyệt thẻ SV"
-                                >
-                                  Duyệt
-                                </button>
-                                <button
-                                  onClick={() => setRejectUserModal({ userId, fullName: u.fullName || u.email || "Sinh viên" })}
-                                  className="px-2.5 py-1 bg-rose-950/40 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white font-bold text-[11px] rounded transition-all cursor-pointer"
-                                  title="Từ chối thẻ SV"
-                                >
-                                  Từ chối
-                                </button>
-                              </>
-                            )}
                             <button
                               onClick={() => setDetailUserModal(u)}
-                              className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-300 font-mono text-xs rounded transition-all cursor-pointer"
-                              title="Xem chi tiết"
+                              className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-300 font-mono text-xs rounded transition-all cursor-pointer flex items-center gap-1.5"
+                              title="Xem ảnh 3x4, MSSV & Phê duyệt/Từ chối"
                             >
-                              <Eye className="w-3.5 h-3.5 inline" />
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>{isCoordinatorView ? "Xem & Duyệt" : "Chi Tiết"}</span>
                             </button>
                             {!isAdm && (currentUser?.isAdmin || currentUser?.IsAdmin) && (
                               <button
