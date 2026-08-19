@@ -73,11 +73,22 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
       }
     } catch (err: any) {
-      const msg =
+      const rawMsg =
         err?.response?.data?.message ||
         err?.response?.data?.detail ||
         err?.message ||
         "Không thể xử lý lời mời — vui lòng thử lại.";
+
+      const isProfileErr =
+        rawMsg.toLowerCase().includes("profile") ||
+        rawMsg.toLowerCase().includes("hồ sơ") ||
+        rawMsg.toLowerCase().includes("school") ||
+        rawMsg.toLowerCase().includes("student");
+
+      const msg = isProfileErr && isAccepted
+        ? "Bạn cần hoàn tất cập nhật hồ sơ cá nhân trước khi đồng ý tham gia đội thi."
+        : rawMsg;
+
       toast.error(msg);
     } finally {
       refetch();

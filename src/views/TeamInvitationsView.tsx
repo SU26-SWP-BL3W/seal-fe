@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { Link } from "@/i18n/routing";
+import { useAuth } from "@/providers/AuthProvider";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
 import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 
 export function TeamInvitationsView() {
   const toast = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { data, isLoading, isError, refetch, isFetching } = useMyInvitations();
   const invitations = data?.invitations ?? [];
 
@@ -20,6 +23,8 @@ export function TeamInvitationsView() {
   const isResponding = isRespondingTeam || isRespondingEventRole;
 
   const [error, setError] = useState("");
+
+  const isProfileIncomplete = user?.isStudent && (!user?.schoolId || (!user?.isFpt && !user?.studentCode));
 
   const handleRespond = async (inv: MyInvitationItem | any, isAccepted: boolean) => {
     setError("");
@@ -52,11 +57,22 @@ export function TeamInvitationsView() {
       }
     } catch (err: unknown) {
       const detail = err as { message?: string; response?: { data?: { message?: string; detail?: string } } };
-      const msg =
+      const rawMsg =
         detail?.response?.data?.message ||
         detail?.response?.data?.detail ||
         detail?.message ||
         "Không thể xử lý lời mời. Vui lòng thử lại sau.";
+
+      const isProfileErr =
+        rawMsg.toLowerCase().includes("profile") ||
+        rawMsg.toLowerCase().includes("hồ sơ") ||
+        rawMsg.toLowerCase().includes("school") ||
+        rawMsg.toLowerCase().includes("student");
+
+      const msg = isProfileErr && isAccepted
+        ? "Bạn cần hoàn tất cập nhật hồ sơ cá nhân/sinh viên trước khi đồng ý tham gia đội thi."
+        : rawMsg;
+
       setError(msg);
       toast.error(msg);
     } finally {
@@ -95,6 +111,21 @@ export function TeamInvitationsView() {
             Làm mới
           </Button>
         </header>
+
+        {/* Cảnh báo nếu hồ sơ chưa hoàn thiện */}
+        {isProfileIncomplete && (
+          <Card className="p-4 bg-amber-500/10 border border-amber-500/30 hud-clipped flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono text-xs text-amber-200">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-amber-400 shrink-0" />
+              <span>Hồ sơ sinh viên của bạn chưa hoàn thiện. Vui lòng cập nhật thông tin để đảm bảo có thể tham gia đội thi.</span>
+            </div>
+            <Link href="/profile">
+              <Button variant="primary" className="text-xs shrink-0 whitespace-nowrap">
+                CẬP NHẬT HỒ SƠ &gt;
+              </Button>
+            </Link>
+          </Card>
+        )}
 
         {error && (
           <p role="alert" className="font-mono text-xs text-pretty text-[color:var(--color-danger)]">
