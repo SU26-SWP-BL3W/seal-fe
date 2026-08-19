@@ -64,7 +64,8 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
 
       {isReadOnly && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-xs hud-clipped flex items-center gap-2">
-          <span>⚠️ Sự kiện đang ở trạng thái <strong>Công Khai (Public)</strong>. Để phân công thêm hoặc gỡ nhân sự, vui lòng bấm <strong>[ 🔒 TẠM ẨN ĐỂ SỬ A ]</strong> ở trên cùng.</span>
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>Sự kiện đang ở trạng thái <strong>Công Khai (Public)</strong>. Để phân công thêm hoặc gỡ nhân sự, vui lòng bấm <strong>[ TẠM ẨN ĐỂ SỬA ]</strong> ở trên cùng.</span>
         </div>
       )}
 

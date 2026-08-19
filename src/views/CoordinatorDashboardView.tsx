@@ -457,7 +457,7 @@ export const CoordinatorDashboardView: React.FC = () => {
                       {ms.scoringStart && (
                         <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[#263339]/60">
                           <span className="text-[#8a9ba8] flex items-center gap-1">
-                            <Activity className="w-3 h-3 text-[#10b981]" /> Chấm RBL:
+                            <Activity className="w-3 h-3 text-[#10b981]" /> Chấm điểm:
                           </span>
                           <span className="text-[#10b981] font-bold">
                             {formatDateStr(ms.scoringStart)} — {formatDateStr(ms.scoringEnd)}

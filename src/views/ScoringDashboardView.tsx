@@ -335,7 +335,7 @@ export function ScoringDashboardView({ teamId, teamName }: ScoringDashboardViewP
             className="hud-clipped flex-1 bg-[#2dd4bf] hover:bg-[#26c0a8] disabled:bg-[#0f4f46] text-[#0a0f1d] py-3 px-6 font-display font-bold text-lg uppercase tracking-wider transition-all group relative overflow-hidden disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <span className="relative z-10 flex items-center gap-2">
-              {isSubmitting ? 'ĐANG GỬI...' : '✓ GỬI ĐIỂM'}
+              {isSubmitting ? 'ĐANG GỬI...' : 'GỬI ĐIỂM'}
               {!isSubmitting && <Send className="w-5 h-5" />}
             </span>
             <div className="absolute inset-0 h-full w-full bg-gradient-to-b from-transparent via-white/20 to-transparent -translate-y-full group-hover:animate-[scan_1.5s_ease-in-out_infinite]"></div>

@@ -146,7 +146,7 @@ function EventCard({
           )}
           {isRegExpired && (
             <span className="font-mono text-[9px] px-2 py-0.5 border border-amber-500/40 text-amber-400 bg-amber-500/10 uppercase tracking-wider font-bold">
-              ⚠ ĐÃ HẾT HẠN ĐĂNG KÝ ĐỘI
+              ĐÃ HẾT HẠN ĐĂNG KÝ ĐỘI
             </span>
           )}
 
@@ -211,7 +211,7 @@ function EventCard({
 // ─── Sidebar Filter ────────────────────────────────────────────────────────────
 const STATUS_OPTIONS: { value: EventStatusFilter | "my_event"; label: string; dot: string }[] = [
   { value: "all",               label: "Tất cả sự kiện",   dot: "bg-[var(--text-muted)]" },
-  { value: "my_event",          label: "⭐ Sự kiện của tôi",dot: "bg-[var(--accent-team)] animate-pulse" },
+  { value: "my_event",          label: "Sự kiện của tôi",   dot: "bg-[var(--accent-team)] animate-pulse" },
   { value: "registration_open", label: "Đang mở đăng ký",  dot: "bg-[var(--color-success)]" },
   { value: "ongoing",           label: "Đang diễn ra",     dot: "bg-[var(--accent-primary)]" },
   { value: "upcoming",          label: "Sắp diễn ra",      dot: "bg-[var(--color-warning)]" },
@@ -432,7 +432,7 @@ export function EventsDiscoveryView() {
         <div className="border-b border-amber-500/30 bg-amber-500/10 px-6 py-3">
           <div className="mx-auto w-full max-w-[var(--container-max)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono text-xs">
             <div className="flex items-center gap-2.5 text-amber-300">
-              <span className="text-base shrink-0">⚠️</span>
+              <span className="text-base shrink-0">CẢNH BÁO:</span>
               <div>
                 <span className="font-bold uppercase tracking-wider">Hồ sơ sinh viên chưa xác thực:</span>{" "}
                 <span className="text-zinc-300">
@@ -637,8 +637,8 @@ export function EventsDiscoveryView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="w-full max-w-md bg-[#0f171d] border border-amber-500/40 p-6 shadow-2xl font-mono text-xs space-y-5 hud-clipped">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 text-xl font-bold">
-                ⚠️
+              <div className="w-10 h-10 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 font-bold">
+                !
               </div>
               <div className="space-y-1.5">
                 <h3 className="font-display text-base font-bold text-amber-300 uppercase tracking-wide">

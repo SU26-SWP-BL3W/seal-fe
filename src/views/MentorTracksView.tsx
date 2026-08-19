@@ -32,7 +32,7 @@ export function MentorTracksView() {
               CÁC HẠNG MỤC ĐANG HỖ TRỢ
             </h1>
             <p className="font-mono text-xs text-on-surface-variant/80 mt-1">
-              Danh sách Hạng mục (Track) chuyên môn bạn đang đảm nhận vai trò Cố vấn.
+              Danh sách Hạng mục chuyên môn bạn đang đảm nhận vai trò Cố vấn.
             </p>
           </div>
 

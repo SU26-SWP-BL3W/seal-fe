@@ -103,7 +103,7 @@ export const Step3TrackConfig: React.FC<Step3TrackConfigProps> = ({
                 <div className="space-y-1">
                   <label className="text-[11px] text-[#8a9ba8] uppercase flex items-center gap-1">
                     <LayoutTemplate className="w-3.5 h-3.5 text-[#8b5cf6]" />
-                    Mẫu tiêu chí chấm điểm RBL
+                    Mẫu tiêu chí chấm điểm
                   </label>
                   <select
                     value={track.templateId}

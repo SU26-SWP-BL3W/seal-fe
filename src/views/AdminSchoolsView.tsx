@@ -89,7 +89,7 @@ export const AdminSchoolsView: React.FC = () => {
               onClick={() => loginAsDemoRole("Admin")}
               className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors"
             >
-              [ 🛡️ Đăng Nhập System Admin Demo ]
+              [ Đăng Nhập System Admin Demo ]
             </button>
           </div>
         </div>
@@ -205,7 +205,7 @@ export const AdminSchoolsView: React.FC = () => {
                         <td className="py-3 px-4 text-[#bbc9ce]">{address}</td>
                         <td className="py-3 px-4 text-center">
                           <span className="px-2 py-0.5 bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30 font-bold text-[10px]">
-                            ✔ HOẠT ĐỘNG
+                            HOẠT ĐỘNG
                           </span>
                         </td>
                       </tr>

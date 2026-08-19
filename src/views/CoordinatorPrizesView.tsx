@@ -17,12 +17,17 @@ export interface PrizeItemState {
   trackName: string;
 }
 
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
+
 export const CoordinatorPrizesView: React.FC = () => {
   const params = useParams();
   const searchParams = useSearchParams();
   const urlEventId = (searchParams?.get("eventId") as string) || (params?.id as string) || "";
   const { data: eventsList = [] } = useMyEvents();
   const [selectedEventId, setSelectedEventId] = useState<string>(urlEventId);
+  const [isDirty, setIsDirty] = useState(false);
+  const { showModal, confirmLeave, cancelStay } = useUnsavedChanges(isDirty);
 
   React.useEffect(() => {
     if (eventsList.length > 0 && !selectedEventId) {
@@ -84,6 +89,7 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   // Handle Add New Editable Prize Row
   const handleAddPrize = () => {
+    setIsDirty(true);
     const nextNum = prizes.length + 1;
     setPrizes((prev) => [
       ...prev,
@@ -100,6 +106,7 @@ export const CoordinatorPrizesView: React.FC = () => {
   // Handle Remove Prize Row
   const handleRemovePrize = (id: string) => {
     if (prizes.length <= 1) return;
+    setIsDirty(true);
     const updated = prizes.filter((p) => p.id !== id);
     setPrizes(updated);
     if (activeEventId) {
@@ -109,6 +116,7 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   // Handle Update Prize Field
   const handleUpdatePrize = (id: string, field: keyof PrizeItemState, value: any) => {
+    setIsDirty(true);
     setPrizes((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p;
@@ -202,7 +210,8 @@ export const CoordinatorPrizesView: React.FC = () => {
           }
         }
       }
-      setSuccessMessage(`✓ Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
+      setSuccessMessage(`Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
+      setIsDirty(false);
     } catch (err: any) {
       setErrorMessage(`Lưu cấu hình thất bại: ${err?.message}`);
     } finally {
@@ -523,6 +532,11 @@ export const CoordinatorPrizesView: React.FC = () => {
         </div>
 
       </div>
+      <UnsavedChangesModal
+        isOpen={showModal}
+        onConfirmLeave={confirmLeave}
+        onCancelStay={cancelStay}
+      />
     </div>
   );
 };

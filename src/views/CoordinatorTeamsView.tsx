@@ -173,7 +173,7 @@ export function CoordinatorTeamsView() {
 
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs text-[#8a9ba8] flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5 text-[#8b5cf6]" /> Hạng mục thi (Track):
+            <Filter className="w-3.5 h-3.5 text-[#8b5cf6]" /> Hạng mục thi:
           </span>
           <select
             value={selectedTrackId}
@@ -339,7 +339,7 @@ export function CoordinatorTeamsView() {
                     Danh sách thành viên ({detailMembers.length} / 5 người):
                   </span>
                   <span className={`text-[10px] font-bold ${detailMembers.length >= 3 && detailMembers.length <= 5 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}`}>
-                    {detailMembers.length >= 3 && detailMembers.length <= 5 ? "✓ Sĩ số hợp lệ (3 - 5 người)" : "✗ Sĩ số không hợp lệ"}
+                    {detailMembers.length >= 3 && detailMembers.length <= 5 ? "Sĩ số hợp lệ (3 - 5 người)" : "Sĩ số không hợp lệ"}
                   </span>
                 </div>
 
@@ -358,7 +358,7 @@ export function CoordinatorTeamsView() {
                         <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Email: {m.email} · MSSV: {m.studentCode || "N/A"}</p>
                       </div>
                       <Badge tone={m.isApproved ? "success" : "danger"}>
-                        {m.isApproved ? "✓ HỒ SƠ THẺ SV OK" : "✗ CHƯA DUYỆT THẺ"}
+                        {m.isApproved ? "HỒ SƠ THẺ SV OK" : "CHƯA DUYỆT THẺ"}
                       </Badge>
                     </div>
                   ))}
@@ -380,7 +380,7 @@ export function CoordinatorTeamsView() {
                   })}
                   className="flex items-center gap-1.5 px-4 py-2 text-xs bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white font-mono"
                 >
-                  <XCircle className="w-4 h-4" /> ✗ TỪ CHỐI ĐĂNG KÝ
+                  <XCircle className="w-4 h-4" /> TỪ CHỐI ĐĂNG KÝ
                 </Button>
                 <Button
                   disabled={isApproving}

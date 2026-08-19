@@ -14,9 +14,13 @@ import { useRouter } from "next/navigation";
 
 import { useGetTemplates } from "@/repositories/templatesRepository";
 
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
+
 export const CreateEventWizardView: React.FC = () => {
   const router = useRouter();
   const wizard = useCreateEventWizardViewModel();
+  const { showModal, confirmLeave, cancelStay } = useUnsavedChanges(wizard.isDirty);
   const { data: templates = [] } = useGetTemplates();
 
   // Streamlined 5-Step Event Config Wizard (Staff Assignment managed in dedicated view C8)
@@ -44,7 +48,7 @@ export const CreateEventWizardView: React.FC = () => {
             </div>
             <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider flex items-center gap-3">
               <Shield className="w-7 h-7 text-[#8b5cf6]" />
-              CẤU HÌNH NGHIỆP VỤ SỰ KIỆN PHỤ TRÁCH
+              CẤU HÌNH SỰ KIỆN PHỤ TRÁCH
             </h1>
             <p className="text-xs font-sans text-[#8a9ba8] mt-1">
               Hoàn tất cấu hình các Vòng thi, Hạng mục và Tiêu chí chấm điểm cho sự kiện.
@@ -52,8 +56,8 @@ export const CreateEventWizardView: React.FC = () => {
           </div>
 
           <div className="px-4 py-2 bg-[#13191c] border border-[#263339] font-mono text-xs">
-            <span className="text-[#8a9ba8] block uppercase text-[10px]">Quyền Hạn Nghiệp Vụ:</span>
-            <span className="text-[#8b5cf6] font-bold">CẤU HÌNH BAN TỔ CHỨC (COORDINATOR)</span>
+            <span className="text-[#8a9ba8] block uppercase text-[10px]">Quyền Hạn:</span>
+            <span className="text-[#8b5cf6] font-bold">BAN TỔ CHỨC</span>
           </div>
         </div>
 
@@ -96,7 +100,7 @@ export const CreateEventWizardView: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 font-mono text-xs">
           {steps.map((step) => {
             const isActive = wizard.currentStep === step.number;
-            const isCompleted = step.number < wizard.currentStep || (step.number === 5 && wizard.canPublishEvent);
+            const isCompleted = step.number < wizard.currentStep && Boolean(wizard.stepDoneMap[step.number]);
             
             // Strictly disallow clicking future steps unless ALL previous steps are completed
             const isClickable =
@@ -217,6 +221,7 @@ export const CreateEventWizardView: React.FC = () => {
               templates={templates}
               criteriasByTrack={wizard.criteriasByTrack}
               onUpdateTrackCriterias={wizard.setCriteriasForTrack}
+              onUpdateTrack={wizard.handleUpdateTrack}
               onApplyToAllTracks={wizard.applyCriteriasToAllTracks}
               templateName={wizard.templateName}
               onUpdateTemplateName={wizard.setTemplateName}
@@ -249,6 +254,12 @@ export const CreateEventWizardView: React.FC = () => {
           )}
         </div>
       </main>
+
+      <UnsavedChangesModal
+        isOpen={showModal}
+        onConfirmLeave={confirmLeave}
+        onCancelStay={cancelStay}
+      />
     </div>
   );
 };

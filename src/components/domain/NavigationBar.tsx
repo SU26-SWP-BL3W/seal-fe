@@ -651,7 +651,7 @@ export function NavigationBar() {
               {user?.FullName || "Giám Khảo Chuyên Môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedJudge ? "Hội đồng Chấm điểm RBL" : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedJudge ? "Hội đồng Chấm điểm" : "Quyền hạn: Read-Only (Chỉ Xem)"}
             </span>
           </div>
 
@@ -693,7 +693,7 @@ export function NavigationBar() {
                       : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Scale className="w-4 h-4 shrink-0" /> Bàn Chấm Điểm RBL
+                  <Scale className="w-4 h-4 shrink-0" /> Bàn Chấm Điểm
                 </Link>
 
                 <Link
@@ -1013,7 +1013,7 @@ export function NavigationBar() {
                 className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[var(--color-warning)]/10 text-[var(--color-warning)] border border-[var(--color-warning)]/40 font-bold hover:bg-[var(--color-warning)] hover:text-black transition-all hud-clipped"
                 title="Hồ sơ chưa duyệt — Cập nhật thẻ sinh viên"
               >
-                ⚠️ Chưa duyệt thẻ SV ➔
+                Chưa duyệt thẻ SV →
               </Link>
             )}
 

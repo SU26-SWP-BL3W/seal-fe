@@ -170,7 +170,7 @@ export const JudgeTracksView: React.FC = () => {
                     <div className="space-y-3 max-w-2xl">
                       <div className="flex flex-wrap items-center gap-2.5">
                         <span className="font-mono text-[11px] text-amber-300 font-bold px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 uppercase tracking-wider">
-                          ★ HẠNG MỤC CHÍNH
+                          HẠNG MỤC CHÍNH
                         </span>
                         <span className="font-mono text-xs text-zinc-400">
                           {track.eventName} • {track.roundName}
@@ -207,7 +207,7 @@ export const JudgeTracksView: React.FC = () => {
                         href={`/judge/scoring?trackId=${track.trackId}`}
                         className="px-6 py-4 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-black font-mono text-sm font-extrabold uppercase hover:brightness-110 transition-all text-center flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
                       >
-                        <span>[ ⚡ BẮT ĐẦU CHẤM ĐIỂM NGAY &gt; ]</span>
+                        <span>BẮT ĐẦU CHẤM ĐIỂM NGAY →</span>
                       </Link>
 
                       <Link

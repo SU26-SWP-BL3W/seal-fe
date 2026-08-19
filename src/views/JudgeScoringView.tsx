@@ -75,7 +75,7 @@ export function JudgeScoringView() {
     [myScores],
   );
 
-  // Tính tổng điểm RBL theo trọng số
+  // Tính tổng điểm theo trọng số
   const calculatedTotalScore = useMemo(() => {
     let totalWeightedRatio = 0;
     let totalWeight = 0;
@@ -147,7 +147,7 @@ export function JudgeScoringView() {
         isSubmitted: isFinalSubmit,
         details: payloadDetails,
       });
-      setSaveOk(isFinalSubmit ? "✓ Đã khóa và chốt điểm chính thức thành công!" : "✓ Đã lưu nháp bảng điểm thành công.");
+      setSaveOk(isFinalSubmit ? "Đã khóa và chốt điểm chính thức thành công!" : "Đã lưu nháp bảng điểm thành công.");
       if (autoAdvance && currentSubIndex < apiSubmissions.length - 1) {
         setTimeout(() => handleNextSubmission(), 600);
       }
@@ -173,7 +173,7 @@ export function JudgeScoringView() {
               onClick={() => loginAsDemoRole("Judge")}
               className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-md"
             >
-              [ ⚖️ Vào Bằng Tài Khoản Giám Khảo Demo ]
+              [ Vào Bằng Tài Khoản Giám Khảo Demo ]
             </button>
           </div>
         </div>
@@ -444,7 +444,7 @@ export function JudgeScoringView() {
           {/* Tổng Điểm Spotlight */}
           <div className="text-center py-2 bg-[#090e10] border border-zinc-800 rounded-lg space-y-0.5">
             <span className="font-mono text-[11px] text-amber-400 uppercase tracking-widest block font-bold">
-              ★ TỔNG ĐIỂM RBL CHUNG CUỘC:
+              TỔNG ĐIỂM CHUNG CUỘC:
             </span>
             <div className="font-mono text-4xl font-extrabold text-amber-300 flex items-baseline justify-center gap-1.5">
               <span>{calculatedTotalScore.toFixed(2)}</span>

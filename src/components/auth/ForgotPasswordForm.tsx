@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { LogIn, Mail, ArrowLeft, Check } from 'lucide-react';
+import { LogIn, Mail, ArrowLeft, Check, Eye, EyeOff } from 'lucide-react';
 import { Link } from '@/i18n/routing';
 
 export interface ForgotPasswordFormProps {
@@ -138,7 +138,7 @@ export function ForgotPasswordForm({
           {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-sm text-red-400 text-sm font-mono">
-              ⚠ {error}
+              {error}
             </div>
           )}
 
@@ -265,7 +265,7 @@ export function ForgotPasswordForm({
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#2dd4bf] transition-colors"
                     disabled={isLoading_}
                   >
-                    {showPassword ? '✕' : '◉'}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                   <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#2dd4bf] opacity-50"></div>
                   <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#2dd4bf] opacity-50"></div>
@@ -297,7 +297,7 @@ export function ForgotPasswordForm({
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#2dd4bf] transition-colors"
                     disabled={isLoading_}
                   >
-                    {showConfirmPassword ? '✕' : '◉'}
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                   <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#2dd4bf] opacity-50"></div>
                   <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#2dd4bf] opacity-50"></div>

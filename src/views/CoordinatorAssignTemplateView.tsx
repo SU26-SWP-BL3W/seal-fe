@@ -7,12 +7,17 @@ import { tracksRepository } from "@/repositories/tracksRepository";
 import { AlertCircle, Lock, CheckCircle2, Info } from "lucide-react";
 import Link from "next/link";
 
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
+
 export const CoordinatorAssignTemplateView: React.FC = () => {
   const params = useParams();
   const router = useRouter();
   const trackId = (params?.trackId as string) || "";
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [isDirty, setIsDirty] = useState<boolean>(false);
+  const { showModal, confirmLeave, cancelStay } = useUnsavedChanges(isDirty);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -38,6 +43,7 @@ export const CoordinatorAssignTemplateView: React.FC = () => {
     try {
       await tracksRepository.assignTemplateToTrack(trackId, selectedTemplateId);
       setSuccessMessage("ĐÃ GÁN MẪU TIÊU CHÍ CHO HẠNG MỤC THÀNH CÔNG!");
+      setIsDirty(false);
     } catch (err: any) {
       setErrorMessage(`Gán mẫu thất bại: ${err?.response?.data?.message || err?.message}`);
     } finally {
@@ -115,7 +121,10 @@ export const CoordinatorAssignTemplateView: React.FC = () => {
                 </label>
                 <select
                   value={selectedTemplateId}
-                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedTemplateId(e.target.value);
+                    setIsDirty(true);
+                  }}
                   className="w-full px-4 py-3 bg-[#152238] border border-[#3c494d] text-[#dde4e6] font-mono text-xs focus:outline-none focus:border-[#00d9ff]"
                 >
                   <option value="TPL-CLOUD-02">Cloud Architect Standard V2 (ID: TPL-CLOUD-02)</option>
@@ -162,7 +171,7 @@ export const CoordinatorAssignTemplateView: React.FC = () => {
               </div>
               <div className="font-mono text-2xl font-bold text-[#febb29] flex items-center gap-2">
                 <span>{runningTotalWeight.toFixed(1)}%</span>
-                {!isWeightValid && <span className="text-xl">⚠️</span>}
+                {!isWeightValid && <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />}
               </div>
             </div>
 
@@ -255,6 +264,11 @@ export const CoordinatorAssignTemplateView: React.FC = () => {
         </div>
 
       </div>
+      <UnsavedChangesModal
+        isOpen={showModal}
+        onConfirmLeave={confirmLeave}
+        onCancelStay={cancelStay}
+      />
     </div>
   );
 };

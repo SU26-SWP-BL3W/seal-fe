@@ -67,7 +67,7 @@ export function JudgeTrackTeamsView() {
               onClick={() => loginAsDemoRole("Judge")}
               className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all"
             >
-              [ ⚖️ Vào Bằng Tài Khoản Giám Khảo Demo ]
+              [ Vào Bằng Tài Khoản Giám Khảo Demo ]
             </button>
           </div>
         </div>

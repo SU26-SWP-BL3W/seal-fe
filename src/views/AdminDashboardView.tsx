@@ -198,7 +198,7 @@ export function AdminDashboardView() {
             <Lock className="w-6 h-6" />
           </div>
           <h2 className="font-display text-xl font-bold uppercase text-white">
-            YÊU CẦU QUYỀN QUẢN TRỊ VIÊN (ADMIN)
+            YÊU CẦU QUYỀN QUẢN TRỊ VIÊN
           </h2>
           <p className="font-sans text-xs text-zinc-400 leading-relaxed">
             Khu vực quản trị hệ thống chỉ dành riêng cho Admin. Bấm nút bên dưới để vào bằng tài khoản Admin Demo:
@@ -209,7 +209,7 @@ export function AdminDashboardView() {
               onClick={() => loginAsDemoRole("Admin")}
               className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer rounded"
             >
-              [ 🛡️ Vào Bằng Tài Khoản System Admin Demo ]
+              [ Vào Bằng Tài Khoản System Admin Demo ]
             </button>
             <Link href="/login" className="w-full">
               <button className="w-full border border-zinc-800 text-zinc-400 py-2 uppercase hover:text-white hover:border-zinc-600 transition-colors rounded">
@@ -566,7 +566,8 @@ export function AdminDashboardView() {
 
             <div className="p-3 bg-[#162228] border border-zinc-700/70 text-[11px] text-zinc-400 space-y-1 rounded">
               <p className="text-amber-300 font-bold flex items-center gap-1">
-                <span>🛡️</span> <span>Nguyên tắc nghiệp vụ Xóa Mềm:</span>
+                <Shield className="w-3.5 h-3.5 inline text-amber-300" />
+                <span>Nguyên tắc nghiệp vụ Xóa Mềm:</span>
               </p>
               <ul className="list-disc pl-4 space-y-0.5 text-zinc-300">
                 <li>Sự kiện sẽ được ẩn khỏi trang danh sách công khai của thí sinh.</li>
@@ -663,7 +664,7 @@ export function AdminDashboardView() {
                         key={email}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-950/60 text-purple-300 border border-purple-500/40 rounded text-xs"
                       >
-                        <span className="font-bold">{idx === 0 ? "👑 " : ""}{email}</span>
+                        <span className="font-bold">{email}</span>
                         {idx === 0 && <span className="text-[10px] text-amber-400">(Trưởng ban)</span>}
                         <button
                           type="button"
@@ -671,7 +672,7 @@ export function AdminDashboardView() {
                           className="text-purple-400 hover:text-white font-bold ml-1 cursor-pointer"
                           title="Gỡ email này"
                         >
-                          ✕
+                          <X className="w-3 h-3 inline" />
                         </button>
                       </span>
                     ))}

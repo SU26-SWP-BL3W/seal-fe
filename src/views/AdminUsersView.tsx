@@ -178,7 +178,7 @@ export const AdminUsersView: React.FC = () => {
               onClick={() => loginAsDemoRole("Admin")}
               className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors"
             >
-              [ 🛡️ Đăng Nhập System Admin Demo ]
+              [ Đăng Nhập System Admin Demo ]
             </button>
           </div>
         </div>
@@ -451,15 +451,15 @@ export const AdminUsersView: React.FC = () => {
                             <span className="text-zinc-500 font-mono text-[11px] italic">— (Cán bộ / Chuyên gia)</span>
                           ) : isLocked ? (
                             <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
-                              ✘ KHÓA ({u.rejectionCount})
+                              TẠM KHÓA ({u.rejectionCount})
                             </span>
                           ) : isApproved ? (
                             <span className="px-2 py-0.5 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 rounded font-bold text-[10px]">
-                              ✔ ĐÃ DUYỆT
+                              ĐÃ DUYỆT
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
-                              ⚠ CHỜ DUYỆT
+                              CHỜ DUYỆT
                             </span>
                           )}
                         </td>
@@ -550,14 +550,14 @@ export const AdminUsersView: React.FC = () => {
                   <span className="text-zinc-400 block text-[11px]">VAI TRÒ TÀI KHOẢN:</span>
                   <span className="font-bold text-amber-300">
                     {modalIsAdm
-                      ? "Quản trị viên (Admin)"
+                      ? "Quản trị viên"
                       : modalIsCoord
-                      ? "Điều phối viên (Coordinator)"
+                      ? "Điều phối viên"
                       : modalIsJudge
-                      ? "Giám khảo chuyên môn (Judge)"
+                      ? "Giám khảo chuyên môn"
                       : modalIsMentor
-                      ? "Cố vấn học thuật (Mentor)"
-                      : "Thí sinh / Sinh viên (Student)"}
+                      ? "Cố vấn học thuật"
+                      : "Thí sinh / Sinh viên"}
                   </span>
                 </div>
                 <div>
@@ -573,11 +573,11 @@ export const AdminUsersView: React.FC = () => {
                   {modalIsStaff ? (
                     <span className="text-zinc-400 italic">Tài khoản chuyên môn (Miễn duyệt thẻ)</span>
                   ) : detailUserModal.isApproved ? (
-                    <span className="text-emerald-400 font-bold">✔ ĐÃ PHÊ DUYỆT THẺ</span>
+                    <span className="text-emerald-400 font-bold">ĐÃ PHÊ DUYỆT THẺ</span>
                   ) : (detailUserModal.rejectionCount ?? 0) >= 2 ? (
-                    <span className="text-rose-400 font-bold">✘ TẠM KHÓA (Bị từ chối ≥2 lần)</span>
+                    <span className="text-rose-400 font-bold">TẠM KHÓA (Bị từ chối ≥2 lần)</span>
                   ) : (
-                    <span className="text-amber-400 font-bold">⚠ CHỜ DUYỆT THẺ SV</span>
+                    <span className="text-amber-400 font-bold">CHỜ DUYỆT THẺ SV</span>
                   )}
                 </div>
               </div>
@@ -586,7 +586,7 @@ export const AdminUsersView: React.FC = () => {
               {(detailUserModal.rejectionReason || (detailUserModal.rejectionCount ?? 0) > 0) && (
                 <div className="bg-rose-950/30 border border-rose-500/40 p-3 rounded space-y-1 font-mono text-xs text-rose-300">
                   <div className="font-bold flex items-center gap-1.5">
-                    <span>⚠ LỊCH SỬ TỪ CHỐI HỒ SƠ ({detailUserModal.rejectionCount || 1} LẦN):</span>
+                    <span>LỊCH SỬ TỪ CHỐI HỒ SƠ ({detailUserModal.rejectionCount || 1} LẦN):</span>
                   </div>
                   <p className="text-zinc-300 text-[11px] leading-relaxed">
                     {detailUserModal.rejectionReason || "Ảnh thẻ sinh viên chưa đạt yêu cầu hoặc thông tin không trùng khớp."}
@@ -601,7 +601,7 @@ export const AdminUsersView: React.FC = () => {
                     <span>MINH CHỨNG THẺ SINH VIÊN:</span>
                     {detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
                       <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                        ✓ FPT Edu Verified
+                        FPT Edu Verified
                       </span>
                     ) : null}
                   </div>
@@ -620,7 +620,7 @@ export const AdminUsersView: React.FC = () => {
                           rel="noopener noreferrer"
                           className="text-amber-400 text-[11px] hover:underline"
                         >
-                          [ ↗ Mở ảnh gốc toàn màn hình ]
+                          [ Mở ảnh gốc toàn màn hình ]
                         </a>
                       </div>
                     </div>

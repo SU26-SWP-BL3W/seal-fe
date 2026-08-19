@@ -207,15 +207,15 @@ export function EventDetailsView({ eventId }: EventDetailsViewProps) {
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#94a3b8] font-mono">🥇 Hạng 1</span>
+                    <span className="text-sm text-[#94a3b8] font-mono">Hạng 1</span>
                     <span className="text-lg font-bold text-[#fbbf24]">{event.prizes.first}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#94a3b8] font-mono">🥈 Hạng 2</span>
+                    <span className="text-sm text-[#94a3b8] font-mono">Hạng 2</span>
                     <span className="text-lg font-bold text-[#94a3b8]">{event.prizes.second}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#94a3b8] font-mono">🥉 Hạng 3</span>
+                    <span className="text-sm text-[#94a3b8] font-mono">Hạng 3</span>
                     <span className="text-lg font-bold text-[#94a3b8]">{event.prizes.third}</span>
                   </div>
                 </div>
@@ -230,7 +230,7 @@ export function EventDetailsView({ eventId }: EventDetailsViewProps) {
                 className="hud-clipped w-full bg-[#2dd4bf] hover:bg-[#26c0a8] disabled:bg-[#0f4f46] text-[#0a0f1d] py-3 px-4 font-display font-bold text-lg uppercase tracking-wider transition-all group relative overflow-hidden disabled:cursor-not-allowed"
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  {isJoining ? 'ĐANG ĐĂNG KÝ...' : '✓ THAM GIA'}
+                  {isJoining ? 'ĐANG ĐĂNG KÝ...' : 'THAM GIA'}
                 </span>
                 <div className="absolute inset-0 h-full w-full bg-gradient-to-b from-transparent via-white/20 to-transparent -translate-y-full group-hover:animate-[scan_1.5s_ease-in-out_infinite]"></div>
               </button>
@@ -239,7 +239,7 @@ export function EventDetailsView({ eventId }: EventDetailsViewProps) {
                 onClick={() => setIsDeclineOpen(true)}
                 className="hud-clipped-reverse w-full bg-transparent hover:bg-[#1e293b]/50 text-[#f1f5f9] border border-[#24344d] hover:border-[#f87171]/50 py-3 px-4 font-display font-bold text-sm uppercase tracking-wider transition-all"
               >
-                ✕ TỪ CHỐI
+                TỪ CHỐI
               </button>
 
               <div className="flex gap-2">

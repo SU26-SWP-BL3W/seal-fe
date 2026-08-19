@@ -70,7 +70,7 @@ export function UserProfileView() {
     roleName === "Coordinator"
       ? "Trưởng ban tổ chức phụ trách điều phối các giải đấu Hackathon & quản trị tiêu chí chuyên môn."
       : roleName === "Judge"
-      ? "Hội đồng giám khảo chuyên môn đánh giá đồ án RBL & giải pháp công nghệ."
+      ? "Hội đồng giám khảo chuyên môn đánh giá đồ án & giải pháp công nghệ."
       : roleName === "Mentor"
       ? "Cố vấn kỹ thuật đồng hành hỗ trợ các đội thi trong quá trình phát triển sản phẩm."
       : "Quản trị viên toàn quyền hệ thống SEAL."
@@ -362,7 +362,7 @@ export function UserProfileView() {
                   onClick={() => setIsEditing(true)}
                   className="px-4 py-2 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono text-xs font-bold uppercase hover:bg-white transition-all hud-clipped cursor-pointer shrink-0"
                 >
-                  {user?.isRejected ? "CẬP NHẬT LẠI ➔" : "CẬP NHẬT ẢNH THẺ ➔"}
+                  {user?.isRejected ? "CẬP NHẬT LẠI →" : "CẬP NHẬT ẢNH THẺ →"}
                 </button>
               )}
             </div>
@@ -413,7 +413,7 @@ export function UserProfileView() {
                 }`}>
                   VAI TRÒ: {
                     roleName === "Coordinator"
-                      ? "BAN TỔ CHỨC (COORDINATOR)"
+                      ? "BAN TỔ CHỨC"
                       : roleName === "Judge"
                       ? "GIÁM KHẢO"
                       : roleName === "Mentor"
@@ -735,7 +735,7 @@ export function UserProfileView() {
                   {/* FPT Auto-Verify Badge */}
                   {fptResult?.isValid && (
                     <div className="p-3 bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 font-mono text-xs">
-                      <span className="text-[var(--color-success)] font-bold">✓ ĐÃ XÁC MINH FPT:</span> {fptResult.fullName} ({fptResult.studentCode}) - {fptResult.major}
+                      <span className="text-[var(--color-success)] font-bold">ĐÃ XÁC MINH FPT:</span> {fptResult.fullName} ({fptResult.studentCode}) - {fptResult.major}
                     </div>
                   )}
 

@@ -119,7 +119,7 @@ export function MySubmissionsView() {
               onClick={() => loginAsDemoRole("TeamLeader")}
               className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors"
             >
-              [ 🎯 Xem Bằng Tài Khoản Thí Sinh Demo ]
+              [ Xem Bằng Tài Khoản Thí Sinh Demo ]
             </button>
           </div>
         </div>
@@ -269,7 +269,7 @@ export function MySubmissionsView() {
                             <td className="py-4 px-4 whitespace-nowrap">
                               {isEliminated ? (
                                 <span className="px-2 py-0.5 border border-[#ffb4ab]/30 bg-[#ffb4ab]/10 text-[#ffb4ab] text-[10px] font-bold uppercase">
-                                  ✗ BỊ LOẠI
+                                  BỊ LOẠI
                                 </span>
                               ) : !isActive ? (
                                 <span className="px-2 py-0.5 border border-[#859398]/30 bg-[#859398]/10 text-[#859398] text-[10px] font-bold uppercase">
@@ -277,7 +277,7 @@ export function MySubmissionsView() {
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 border border-[#34d399]/30 bg-[#34d399]/10 text-[#34d399] text-[10px] font-bold uppercase">
-                                  ✓ ĐÃ NỘP
+                                  ĐÃ NỘP
                                 </span>
                               )}
                             </td>
@@ -357,7 +357,7 @@ export function MySubmissionsView() {
                     CHỈNH SỬA BÀI NỘP
                   </h3>
                   <button onClick={() => setEditingSub(null)} className="text-[#859398] hover:text-white font-mono">
-                    ✕
+                    ĐÓNG
                   </button>
                 </div>
 
@@ -468,7 +468,7 @@ export function MySubmissionsView() {
                   <p className="font-sans text-white text-xs leading-relaxed">"{fb.feedbackContent}"</p>
                   {fb.technicalAdvice && (
                     <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
-                      💡 Lời khuyên kỹ thuật: {fb.technicalAdvice}
+                      Lời khuyên kỹ thuật: {fb.technicalAdvice}
                     </div>
                   )}
                 </div>

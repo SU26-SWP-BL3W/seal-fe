@@ -70,7 +70,7 @@ export function useEventsDiscoveryViewModel() {
         eventName: eName,
         season: eSeason,
         year: eYear,
-        tagline: ev.tagline || ev.Tagline || ev.description || ev.Description || "Sự kiện cuộc thi RBL trên hệ thống SEAL",
+        tagline: ev.tagline || ev.Tagline || ev.description || ev.Description || "Sự kiện cuộc thi Hackathon trên hệ thống SEAL",
         description: ev.description || ev.Description || "",
         startDate: eStart,
         endDate: eEnd,

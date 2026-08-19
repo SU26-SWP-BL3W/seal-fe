@@ -167,7 +167,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold rounded-full hud-clipped">
             <EyeOff className="w-4 h-4 text-amber-400" />
-            <span>BẢN NHÁP (ĐANG ẨN — CHƯA CÔNG BỐ)</span>
+            <span>BẢN NHÁP — CHƯA CÔNG BỐ</span>
           </div>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold rounded-full hud-clipped">
             <Users className="w-4 h-4 text-cyan-400" />

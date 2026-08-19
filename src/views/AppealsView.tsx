@@ -201,7 +201,7 @@ export function AppealsView() {
               ) : (
                 <div className="p-4 border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 text-[var(--color-warning)] font-mono text-xs space-y-2">
                   <div className="font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    🔒 BẠN KHÔNG CÓ QUYỀN GỬI ĐƠN
+                    BẠN KHÔNG CÓ QUYỀN GỬI ĐƠN
                   </div>
                   <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
                     Quyền tạo và gửi đơn khiếu nại điểm số thuộc về <strong>Trưởng nhóm</strong>. Bạn đang xem ở chế độ chỉ đọc.

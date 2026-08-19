@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { ApiMissingDataBadge } from "@/components/ui";
 import { useEvents } from "@/repositories/eventsRepository";
 import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
-import { Trophy, Target } from "lucide-react";
+import { Trophy, Target, Download } from "lucide-react";
 
 interface TableTeam {
   rank: number;
@@ -172,14 +172,15 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
                     { key: "school", label: "Trường Học" },
                     { key: "track", label: "Hạng Mục Track" },
                     { key: "roundName", label: "Vòng Thi" },
-                    { key: "score", label: "Điểm Số RBL" },
+                    { key: "score", label: "Điểm Số" },
                     { key: "status", label: "Thành Tích" },
                   ]);
                 });
               }}
               className="px-4 py-2 bg-[var(--bg-input)] border border-[var(--accent-judge)]/50 hover:border-[var(--accent-judge)] text-[var(--accent-judge)] font-mono text-xs font-bold hud-clipped flex items-center gap-2 transition-all cursor-pointer"
             >
-              <span>📥</span> XUẤT EXCEL BẢNG XẾP HẠNG
+              <Download className="w-3.5 h-3.5" />
+              <span>XUẤT EXCEL BẢNG XẾP HẠNG</span>
             </button>
             <span className="font-mono text-xs text-[var(--text-muted)]">
               Hiển thị: <strong className="text-[var(--accent-judge)]">{filteredResults.length}</strong> / {realResults.length} đội

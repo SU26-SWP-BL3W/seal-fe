@@ -7,6 +7,8 @@ import { useGetUsers } from "@/repositories/usersRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Info } from "lucide-react";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
 import { Button, Card, Badge, Input } from "@/components/ui";
 
 export const checkEmailInSystem = (email: string, usersList: Array<any> = []) => {
@@ -44,6 +46,9 @@ export const CoordinatorStaffView: React.FC = () => {
   const [coordinatorEmail, setCoordinatorEmail] = useState("");
   const [coordinatorFullName, setCoordinatorFullName] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
+
+  const isDirty = Boolean(judgeEmail.trim() || mentorEmail.trim() || coordinatorEmail.trim());
+  const { showModal, confirmLeave, cancelStay } = useUnsavedChanges(isDirty);
   
   const [judgeMessage, setJudgeMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [mentorMessage, setMentorMessage] = useState<{ text: string; isError: boolean } | null>(null);
@@ -392,7 +397,7 @@ export const CoordinatorStaffView: React.FC = () => {
                     Hội Đồng Giám Khảo (Judges)
                   </h2>
                   <p className="text-xs font-mono text-[var(--text-muted)]">
-                    Gửi email mời Giám khảo chấm điểm bài nộp theo Mẫu RBL.
+                    Gửi email mời Giám khảo chấm điểm bài nộp theo Bộ tiêu chí.
                   </p>
                 </div>
               </div>
@@ -428,7 +433,7 @@ export const CoordinatorStaffView: React.FC = () => {
 
                 <div>
                   <label className="block font-mono text-xs text-[var(--text-muted)] uppercase mb-1">
-                    Hạng Mục Phụ Trách (Track)
+                    Hạng Mục Phụ Trách
                   </label>
                   <select
                     value={judgeTrackId}
@@ -517,7 +522,7 @@ export const CoordinatorStaffView: React.FC = () => {
 
                 <div>
                   <label className="block font-mono text-xs text-[var(--text-muted)] uppercase mb-1">
-                    Hạng Mục Phụ Trách (Track)
+                    Hạng Mục Phụ Trách
                   </label>
                   <select
                     value={mentorTrackId}
@@ -594,7 +599,7 @@ export const CoordinatorStaffView: React.FC = () => {
                   <tr className="border-b border-[var(--border-muted)] bg-[var(--bg-input)] text-[var(--text-muted)] uppercase text-[10px]">
                     <th className="p-3">Họ &amp; Tên / Email</th>
                     <th className="p-3">Vai Trò</th>
-                    <th className="p-3">Hạng Mục (Track)</th>
+                    <th className="p-3">Hạng Mục</th>
                     <th className="p-3 text-right">Thao Tác</th>
                   </tr>
                 </thead>
@@ -650,6 +655,11 @@ export const CoordinatorStaffView: React.FC = () => {
           })}
         </datalist>
 
+        <UnsavedChangesModal
+          isOpen={showModal}
+          onConfirmLeave={confirmLeave}
+          onCancelStay={cancelStay}
+        />
       </main>
     </div>
   );
