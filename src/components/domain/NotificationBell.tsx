@@ -258,7 +258,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                     <div className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)]" />
                       <span className="font-bold text-[var(--text-primary)] text-xs">
-                        {item.type === "TEAM" ? "📩 Lời Mời Gia Nhập Đội Thi" : `📩 Lời Mời Vai Trò: ${item.role || "Staff"}`}
+                        {item.type === "TEAM" ? "📩 Lời Mời Gia Nhập Đội (Từ Đội Trưởng)" : `📩 Lời Mời Vai Trò: ${item.role || "Staff"}`}
                       </span>
                     </div>
                     <span className="text-[10px] text-[var(--accent-team)] font-bold">
@@ -268,8 +268,8 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
 
                   <p className="font-sans text-xs text-[var(--text-muted)] leading-relaxed">
                     {item.inviterName
-                      ? `${item.inviterName} đã gửi lời mời bạn gia nhập đội thi.`
-                      : "Bạn nhận được một lời mời tham gia mới."}
+                      ? `Đội trưởng ${item.inviterName} đã gửi lời mời bạn gia nhập đội thi "${item.targetName}". Nhấn "Đồng ý" để chính thức vào đội ngay!`
+                      : `Bạn nhận được lời mời gia nhập đội thi "${item.targetName}" từ Đội trưởng. Nhấn "Đồng ý" để chính thức vào đội ngay!`}
                   </p>
 
                   <div className="flex items-center gap-2 pt-1 font-mono text-[10px]">
@@ -278,7 +278,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                       onClick={() => handleRespond(item, true)}
                       className="px-2.5 py-1 bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/40 font-bold uppercase hover:bg-[var(--color-success)] hover:text-black transition-all flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                     >
-                      <Check className="w-3 h-3" /> ĐỒNG Ý
+                      <Check className="w-3 h-3" /> ĐỒNG Ý VÀO ĐỘI
                     </button>
                     <button
                       disabled={isResponding}

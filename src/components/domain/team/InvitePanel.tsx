@@ -58,9 +58,9 @@ export function InvitePanel({
         res?.isNewTemporaryUser || res?.IsNewTemporaryUser || (res as any)?.data?.isNewTemporaryUser
       );
       if (isNewTemporary) {
-        setSuccessNotice(`Đã gửi lời mời tới ${value}. Thành viên mới đã được hệ thống cấp tài khoản tạm và gửi email kích hoạt.`);
+        setSuccessNotice(`Đã gửi lời mời tham gia đội tới ${value}. Hệ thống đã cấp tài khoản tạm và gửi email kích hoạt để thành viên vào đội ngay.`);
       } else {
-        setSuccessNotice(`Đã gửi lời mời thành công tới ${value}. Email thông báo đã được gửi.`);
+        setSuccessNotice(`Đã gửi lời mời tham gia đội tới ${value}. Ứng viên có thể mở email hoặc thông báo chuông trên SEAL để nhấn "Đồng ý vào đội" ngay.`);
       }
       setEmail("");
     } catch (err: unknown) {
@@ -77,7 +77,7 @@ export function InvitePanel({
             [ QUẢN LÝ THÀNH VIÊN ]
           </span>
           <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-white">
-            Mời Thành Viên
+            Mời Thành Viên Vào Đội
           </h2>
         </div>
         <div className="text-right font-mono">
@@ -112,15 +112,15 @@ export function InvitePanel({
       {canInvite && !isFull && (
         <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 px-4 py-3.5 border-b border-zinc-800">
           <Field
-            label="Email sinh viên"
+            label="Email sinh viên được mời"
             error={error || undefined}
-            hint="Lời mời sẽ tự hết hạn sau 24 giờ."
+            hint="Lời mời do Đội trưởng gửi. Ứng viên có thể bấm Đồng ý để vào đội ngay lập tức."
           >
             {(field) => (
               <Input
                 {...field}
                 type="email"
-                placeholder="sinhvien@fe.edu.vn / @fpt.edu.vn"
+                placeholder="sinhvien@fpt.edu.vn / email@truongkhac.edu.vn..."
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -134,7 +134,7 @@ export function InvitePanel({
           </Field>
 
           {successNotice && (
-            <p className="font-mono text-[11px] text-emerald-400 bg-emerald-950/40 p-2 rounded border border-emerald-500/30">
+            <p className="font-mono text-[11px] text-emerald-400 bg-emerald-950/40 p-2.5 rounded border border-emerald-500/30 leading-relaxed">
               ✓ {successNotice}
             </p>
           )}
