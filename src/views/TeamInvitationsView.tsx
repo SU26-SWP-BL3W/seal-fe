@@ -5,14 +5,13 @@ import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRep
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
 import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 
-// Chuông thông báo — gộp lời mời vào ĐỘI và lời mời VAI TRÒ SỰ KIỆN
-// (Judge/Mentor/EventCoordinator) trong 1 màn, đọc từ GET /Users/my-invitations
-// (usersRepository.useMyInvitations — xem file đó để biết vì sao KHÔNG dùng
-// /Teams/{teamId}/my-invitation, route đó cần biết trước teamId nên không hợp
-// với màn "lời mời của tôi" này).
 export function TeamInvitationsView() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
   const { data, isLoading, isError, refetch, isFetching } = useMyInvitations();
   const invitations = data?.invitations ?? [];
 
@@ -22,17 +21,44 @@ export function TeamInvitationsView() {
 
   const [error, setError] = useState("");
 
-  const handleRespond = async (inv: MyInvitationItem, isAccepted: boolean) => {
+  const handleRespond = async (inv: MyInvitationItem | any, isAccepted: boolean) => {
     setError("");
+    const invId = inv.invitationId || inv.InvitationId || inv.id || inv.Id;
+    const invType = String(inv.type || inv.Type || "TEAM").toUpperCase();
+    const targetName = inv.targetName || inv.TargetName || "đội thi";
+
+    if (!invId) {
+      toast.error("Không tìm thấy mã định danh lời mời.");
+      return;
+    }
+
     try {
-      if (inv.type === "TEAM") {
-        await respondTeam({ invitationId: inv.invitationId, isAccepted });
+      if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+        await respondTeam({ invitationId: invId, isAccepted });
       } else {
-        await respondEventRole({ invitationId: inv.invitationId, isAccepted });
+        await respondEventRole({ invitationId: invId, isAccepted });
+      }
+
+      if (isAccepted) {
+        toast.success(`Đã chấp nhận lời mời tham gia "${targetName}"!`);
+        queryClient.invalidateQueries({ queryKey: ["my-team"] });
+        queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+        queryClient.invalidateQueries({ queryKey: ["eventRoles"] });
+        queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+        queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      } else {
+        toast.info(`Đã từ chối lời mời tham gia "${targetName}".`);
+        queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
       }
     } catch (err: unknown) {
-      const detail = err as { message?: string; response?: { data?: { message?: string } } };
-      setError(detail?.response?.data?.message || detail?.message || "Không xử lý được lời mời. Thử lại sau.");
+      const detail = err as { message?: string; response?: { data?: { message?: string; detail?: string } } };
+      const msg =
+        detail?.response?.data?.message ||
+        detail?.response?.data?.detail ||
+        detail?.message ||
+        "Không thể xử lý lời mời. Vui lòng thử lại sau.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       refetch();
     }

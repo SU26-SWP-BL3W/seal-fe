@@ -5,6 +5,8 @@ import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRep
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
 import { useMyNotifications, useMarkNotificationRead } from "@/repositories/notificationsRepository";
+import { useToast } from "@/providers/ToastProvider";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, X, ExternalLink, RefreshCw } from "lucide-react";
 
 interface NotificationBellProps {
@@ -12,6 +14,8 @@ interface NotificationBellProps {
 }
 
 export function NotificationBell({ align = "left" }: NotificationBellProps) {
+  const toast = useToast();
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -21,7 +25,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
   const { data: systemNotifs = [], isLoading: isLoadingNotifs, refetch: refetchNotifs } = useMyNotifications(isAuthed);
   const { mutateAsync: markRead } = useMarkNotificationRead();
   const invitations = invData?.invitations ?? [];
-  const pendingInvitations = invitations.filter((i) => i.status === "PendingAccept");
+  const pendingInvitations = invitations.filter((i) => i.status === "PendingAccept" || (i as any).Status === "PendingAccept");
   const unreadNotifs = systemNotifs.filter((n) => !n.isRead);
   const unreadCount = (invData?.totalPending ?? pendingInvitations.length) + unreadNotifs.length;
 
@@ -40,17 +44,44 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleRespond = async (inv: MyInvitationItem, isAccepted: boolean) => {
+  const handleRespond = async (inv: MyInvitationItem | any, isAccepted: boolean) => {
+    const invId = inv.invitationId || inv.InvitationId || inv.id || inv.Id;
+    const invType = String(inv.type || inv.Type || "TEAM").toUpperCase();
+    const targetName = inv.targetName || inv.TargetName || "đội thi";
+
+    if (!invId) {
+      toast.error("Không tìm thấy mã định danh lời mời.");
+      return;
+    }
+
     try {
-      if (inv.type === "TEAM") {
-        await respondTeam({ invitationId: inv.invitationId, isAccepted });
+      if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+        await respondTeam({ invitationId: invId, isAccepted });
       } else {
-        await respondEventRole({ invitationId: inv.invitationId, isAccepted });
+        await respondEventRole({ invitationId: invId, isAccepted });
       }
-    } catch {
-      alert("Không thể xử lý lời mời — vui lòng thử lại.");
+
+      if (isAccepted) {
+        toast.success(`Đã chấp nhận lời mời tham gia "${targetName}"!`);
+        queryClient.invalidateQueries({ queryKey: ["my-team"] });
+        queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+        queryClient.invalidateQueries({ queryKey: ["eventRoles"] });
+        queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+        queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      } else {
+        toast.info(`Đã từ chối lời mời tham gia "${targetName}".`);
+        queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+      }
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Không thể xử lý lời mời — vui lòng thử lại.";
+      toast.error(msg);
     } finally {
       refetch();
+      refetchNotifs();
     }
   };
 
