@@ -287,18 +287,25 @@ export function UserProfileView() {
         (user as any)?.school?.schoolName ||
         "Chưa cập nhật";
 
-  // Xác định rõ ràng sinh viên FPT hay sinh viên trường ngoài:
-  const isFptStudent = useMemo(() => {
-    if (schoolChoice === "OTHER") return false;
-    if (userSchool?.schoolName && !userSchool.schoolName.toLowerCase().includes("fpt")) return false;
-    if (user?.isFpt === false) return false;
-    const emailLower = (user?.email || "").toLowerCase();
-    return Boolean(user?.isFpt || userSchool?.schoolName?.toLowerCase().includes("fpt") || emailLower.endsWith("@fpt.edu.vn"));
-  }, [schoolChoice, userSchool, user]);
-
+  const userStudentCode = user?.studentCode || (user as any)?.StudentCode || (user as any)?.StudentId || "";
+  const hasMSSV = Boolean(userStudentCode && userStudentCode.trim() !== "");
+  const hasSchool = Boolean((userSchool?.schoolName && userSchool.schoolName.trim() !== "") || (user?.schoolId && user.schoolId !== "OTHER_CUSTOM"));
   const hasStudentCardPhoto = Boolean(user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl || photoPreview);
 
-  // RÀNG BUỘC: Đối với sinh viên trường ngoài, BẮT BUỘC phải có ảnh thẻ sinh viên mới ở trạng thái ĐÃ DUYỆT
+  // Xác định rõ ràng sinh viên FPT hay sinh viên trường ngoài:
+  // CHỈ xem là FPT nếu email có đuôi fpt.edu.vn hoặc tên trường chọn là FPT
+  const isFptStudent = useMemo(() => {
+    const emailLower = (user?.email || "").toLowerCase();
+    const isFptEmail = emailLower.endsWith("@fpt.edu.vn") || emailLower.endsWith("@fe.edu.vn");
+    const isFptSchool = userSchool?.schoolName?.toLowerCase().includes("fpt") || false;
+
+    if (schoolChoice === "OTHER") return false;
+    if (isFptEmail || isFptSchool) return true;
+    if (user?.isFpt && hasMSSV && !userSchool) return true;
+    return false;
+  }, [schoolChoice, userSchool, user, hasMSSV]);
+
+  // RÀNG BUỘC CHẶT CHẼ: Kiểm tra đầy đủ thông tin thực tế trước khi xác nhận ĐÃ DUYỆT
   const cardApprovalStatus = useMemo(() => {
     if (isBlocked) {
       return {
@@ -308,6 +315,18 @@ export function UserProfileView() {
         isApproved: false,
       };
     }
+
+    // Nếu người dùng chưa cập nhật đầy đủ MSSV hoặc chưa chọn trường
+    if (!hasMSSV || (!hasSchool && !customSchoolName.trim())) {
+      return {
+        label: "[ CHƯA HOÀN TẤT HỒ SƠ ]",
+        colorClass: "text-amber-400 font-bold animate-pulse",
+        badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+        isApproved: false,
+      };
+    }
+
+    // Trường hợp 1: Sinh viên FPT Edu
     if (isFptStudent) {
       if (user?.isApproved) {
         return {
@@ -324,15 +343,17 @@ export function UserProfileView() {
         isApproved: false,
       };
     }
-    // Sinh viên trường ngoài:
+
+    // Trường hợp 2: Sinh viên trường ngoài (BẮT BUỘC PHẢI CÓ ẢNH THẺ)
     if (!hasStudentCardPhoto) {
       return {
         label: "[ CHƯA NỘP ẢNH THẺ ]",
-        colorClass: "text-amber-400 font-bold",
+        colorClass: "text-amber-400 font-bold animate-pulse",
         badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
         isApproved: false,
       };
     }
+
     if (user?.isApproved) {
       return {
         label: "[ ĐÃ DUYỆT THẺ SV ]",
@@ -341,13 +362,14 @@ export function UserProfileView() {
         isApproved: true,
       };
     }
+
     return {
       label: "[ CHỜ PHÊ DUYỆT THẺ ]",
       colorClass: "text-amber-300 font-bold",
       badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
       isApproved: false,
     };
-  }, [isBlocked, isFptStudent, hasStudentCardPhoto, user?.isApproved]);
+  }, [isBlocked, hasMSSV, hasSchool, customSchoolName, isFptStudent, hasStudentCardPhoto, user?.isApproved]);
 
   // Xử lý xác minh sinh viên FPT qua API tra cứu FPT DB thật
   const handleVerifyFpt = async () => {
