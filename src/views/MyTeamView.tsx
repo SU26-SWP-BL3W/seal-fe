@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
@@ -14,10 +14,13 @@ import {
   useTransferLeadership,
   useRemoveTeamMember,
   useUpdateTeam,
+  useAcceptOrDeclineInvitation,
 } from "@/repositories/teamsRepository";
+import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Check, X, Mail, Sparkles, User, RefreshCw } from "lucide-react";
 import {
   AvailableTeamsList,
   buildRequirements,
@@ -114,6 +117,14 @@ export function MyTeamView() {
     respondedAt: pick(inv, "respondedAt", "RespondedAt"),
   }));
 
+  const queryClient = useQueryClient();
+  const { data: invData, isLoading: isLoadingMyInv, refetch: refetchMyInv } = useMyInvitations(!!user);
+  const { mutateAsync: respondInvitation, isPending: isRespondingInv } = useAcceptOrDeclineInvitation();
+  const myInvitations = invData?.invitations ?? [];
+  const pendingMyInvitations = myInvitations.filter(
+    (i) => i.status === "PendingAccept" || (i as any).Status === "PendingAccept"
+  );
+
   const { mutateAsync: inviteMember, isPending: isInviting } = useInviteMember();
   const { mutateAsync: kickMember, isPending: isKicking } = useRemoveTeamMember();
   const [kickTarget, setKickTarget] = useState<{ id: string; name: string } | null>(null);
@@ -124,9 +135,50 @@ export function MyTeamView() {
   const { mutateAsync: updateTeam, isPending: isUpdatingTeam } = useUpdateTeam();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [noTeamTab, setNoTeamTab] = useState<"create" | "find">("create");
+  const [noTeamTab, setNoTeamTab] = useState<"invitations" | "create" | "find">("create");
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
+
+  // Tự động chuyển sang tab Lời mời nếu thí sinh đang có lời mời vào đội chờ duyệt
+  useEffect(() => {
+    if (pendingMyInvitations.length > 0 && !rawTeam) {
+      setNoTeamTab("invitations");
+    }
+  }, [pendingMyInvitations.length, rawTeam]);
+
+  const handleAcceptInv = async (inv: any) => {
+    const invId = inv.invitationId || (inv as any).InvitationId || inv.id || (inv as any).Id;
+    const targetName = inv.targetName || (inv as any).TargetName || "đội thi";
+    if (!invId) return;
+
+    try {
+      await respondInvitation({ invitationId: invId, isAccepted: true });
+      toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}".`);
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      refetchMyInv();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "Không thể tham gia đội. Vui lòng kiểm tra lại hồ sơ sinh viên.";
+      toast.error(msg);
+    }
+  };
+
+  const handleDeclineInv = async (inv: any) => {
+    const invId = inv.invitationId || (inv as any).InvitationId || inv.id || (inv as any).Id;
+    const targetName = inv.targetName || (inv as any).TargetName || "đội thi";
+    if (!invId) return;
+
+    try {
+      await respondInvitation({ invitationId: invId, isAccepted: false });
+      toast.info(`Bạn đã từ chối lời mời tham gia đội "${targetName}".`);
+      queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+      refetchMyInv();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || "Lỗi xử lý lời mời.");
+    }
+  };
 
   const { data: rawDbRounds = [] } = useEventRounds(team?.eventId || targetEventId);
   const eventRounds: any[] = Array.isArray(rawDbRounds) ? rawDbRounds : [];
@@ -227,6 +279,19 @@ export function MyTeamView() {
             </div>
 
             <div className="flex items-center gap-2 bg-zinc-900/90 p-1 border border-zinc-800 rounded hud-clipped">
+              {pendingMyInvitations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setNoTeamTab("invitations")}
+                  className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${
+                    noTeamTab === "invitations"
+                      ? "bg-cyan-400 text-black shadow-sm font-extrabold"
+                      : "text-cyan-300 hover:text-white"
+                  }`}
+                >
+                  <Mail className="size-3.5" /> Lời Mời Nhận Được ({pendingMyInvitations.length})
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setNoTeamTab("create")}
@@ -252,7 +317,79 @@ export function MyTeamView() {
             </div>
           </div>
 
-          {noTeamTab === "create" ? (
+          {noTeamTab === "invitations" && pendingMyInvitations.length > 0 ? (
+            <div className="space-y-4">
+              <div className="p-5 bg-gradient-to-r from-cyan-950/60 to-[#101e24] border-2 border-cyan-400 hud-clipped shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-500/30 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-3 rounded-full bg-cyan-400 animate-pulse" />
+                    <span className="font-mono text-xs font-bold text-cyan-300 uppercase tracking-wider">
+                      [ BẠN CÓ {pendingMyInvitations.length} LỜI MỜI GIA NHẬP ĐỘI THI ĐANG CHỜ ]
+                    </span>
+                  </div>
+                  <span className="font-mono text-[10px] text-zinc-400">
+                    Do Đội trưởng gửi lời mời chính thức
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {pendingMyInvitations.map((inv: any) => {
+                    const invId = inv.invitationId || inv.InvitationId || inv.id || inv.Id;
+                    const targetName = inv.targetName || inv.TargetName || "Đội thi";
+                    const inviter = inv.inviterName || inv.InviterName || "Đội trưởng";
+
+                    return (
+                      <div
+                        key={invId}
+                        className="p-5 bg-black/60 border border-cyan-500/40 hud-clipped flex flex-col md:flex-row md:items-center justify-between gap-5"
+                      >
+                        <div className="space-y-2 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold uppercase rounded">
+                              LỜI MỜI VÀO ĐỘI
+                            </span>
+                            <h3 className="font-display text-xl font-bold text-white uppercase truncate">
+                              {targetName}
+                            </h3>
+                          </div>
+                          <p className="font-sans text-xs text-zinc-300 leading-relaxed">
+                            Đội trưởng <strong>{inviter}</strong> đã gửi lời mời bạn tham gia đội thi này. Nhấn <strong>[ Đồng ý vào đội ]</strong> để chính thức gia nhập đội và mở không gian làm việc của đội ngay lập tức!
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
+                          <button
+                            disabled={isRespondingInv}
+                            onClick={() => handleAcceptInv(inv)}
+                            className="px-5 py-2.5 bg-emerald-500 hover:bg-white text-black font-bold uppercase hud-clipped transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-1.5 text-xs"
+                          >
+                            <Check className="size-4" /> [ ✓ ĐỒNG Ý VÀO ĐỘI ]
+                          </button>
+                          <button
+                            disabled={isRespondingInv}
+                            onClick={() => handleDeclineInv(inv)}
+                            className="px-4 py-2.5 bg-rose-950/40 hover:bg-rose-900 text-rose-300 border border-rose-500/40 font-bold uppercase hud-clipped transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 text-xs"
+                          >
+                            <X className="size-4" /> [ ✕ TỪ CHỐI ]
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-2 font-mono text-xs text-zinc-400">
+                <span>Hoặc bạn muốn tự tạo đội riêng của mình?</span>
+                <button
+                  onClick={() => setNoTeamTab("create")}
+                  className="text-cyan-400 hover:underline cursor-pointer font-bold"
+                >
+                  Chuyển sang Khởi tạo đội mới &gt;
+                </button>
+              </div>
+            </div>
+          ) : noTeamTab === "create" ? (
             <CreateTeamForm defaultEventId={targetEventId} />
           ) : (
             <div className="space-y-4">
