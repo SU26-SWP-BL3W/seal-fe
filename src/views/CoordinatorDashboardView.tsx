@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { Button, Card } from "@/components/ui";
@@ -14,21 +14,6 @@ import apiClient from "@/models/apiClient";
 import { PagedResult } from "@/models/types";
 import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
 import { AdminMonitoringBanner } from "@/components/domain/AdminMonitoringBanner";
-import {
-  FileCode,
-  Globe,
-  FileSpreadsheet,
-  Code2,
-  Users,
-  Shield,
-  FolderGit2,
-  Award,
-  ArrowRight,
-  Sparkles,
-  Zap,
-  CheckCircle2,
-  Calendar,
-} from "lucide-react";
 
 export const CoordinatorDashboardView: React.FC = () => {
   const searchParams = useSearchParams();
@@ -43,6 +28,8 @@ export const CoordinatorDashboardView: React.FC = () => {
     : myEvents;
 
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isComboboxOpen, setIsComboboxOpen] = useState(false);
 
   useEffect(() => {
     if (queryEventId) {
@@ -60,6 +47,18 @@ export const CoordinatorDashboardView: React.FC = () => {
     (e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId
   );
   const selectedEventName = selectedEventObj?.eventName || selectedEventObj?.EventName || "";
+
+  const filteredEvents = useMemo(() => {
+    if (!searchQuery.trim()) return eventsList;
+    const q = searchQuery.toLowerCase().trim();
+    return eventsList.filter((ev: any) => {
+      const name = (ev.eventName || ev.EventName || "").toLowerCase();
+      const season = (ev.season || ev.Season || "").toLowerCase();
+      const year = String(ev.year || ev.Year || "");
+      const id = (ev.id || ev.Id || ev.eventId || ev.EventId || "").toLowerCase();
+      return name.includes(q) || season.includes(q) || year.includes(q) || id.includes(q);
+    });
+  }, [eventsList, searchQuery]);
 
   // Query submissions
   const {
@@ -94,7 +93,6 @@ export const CoordinatorDashboardView: React.FC = () => {
       title: "QUẢN LÝ SỰ KIỆN & NHÂN SỰ",
       desc: "Mời & phân bổ Giám khảo, Cố vấn vào các Hạng mục (Tracks) và cấu hình thể lệ.",
       href: `/coordinator/staff?eventId=${selectedEventId}`,
-      icon: Shield,
       accent: "text-[#a855f7]",
       border: "hover:border-[#a855f7]",
       tag: "Vòng thi & Nhân sự",
@@ -104,7 +102,6 @@ export const CoordinatorDashboardView: React.FC = () => {
       title: "QUẢN LÝ ĐỘI THI",
       desc: "Xem roster đội hình, duyệt đăng ký tham gia thi đấu và theo dõi sĩ số thành viên.",
       href: "/coordinator/teams",
-      icon: Users,
       accent: "text-[var(--accent-team)]",
       border: "hover:border-[var(--accent-team)]",
       tag: `${teams.length} Đội tham gia`,
@@ -114,7 +111,6 @@ export const CoordinatorDashboardView: React.FC = () => {
       title: "DUYỆT HỒ SƠ THÍ SINH",
       desc: "Xét duyệt ảnh thẻ sinh viên 3x4, xác minh mã số sinh viên MSSV toàn diện.",
       href: "/coordinator/profiles",
-      icon: CheckCircle2,
       accent: "text-emerald-400",
       border: "hover:border-emerald-400",
       tag: "Hồ sơ thẻ SV",
@@ -124,7 +120,6 @@ export const CoordinatorDashboardView: React.FC = () => {
       title: "KHO BỘ TIÊU CHÍ (RUBRICS)",
       desc: "Soạn thảo ngân hàng mẫu tiêu chí chấm điểm, đảm bảo phân bổ trọng số 100%.",
       href: "/coordinator/templates",
-      icon: FolderGit2,
       accent: "text-blue-400",
       border: "hover:border-blue-400",
       tag: "Ngân hàng Rubric",
@@ -134,7 +129,6 @@ export const CoordinatorDashboardView: React.FC = () => {
       title: "QUẢN LÝ BÀI NỘP (SUBMISSIONS)",
       desc: "Tổng hợp mã nguồn GitHub, Live Demo và Slide thuyết trình từ tất cả các đội thi.",
       href: "/coordinator/submissions",
-      icon: FileCode,
       accent: "text-[#f59e0b]",
       border: "hover:border-[#f59e0b]",
       tag: `${submissions.length} Bài nộp`,
@@ -144,7 +138,6 @@ export const CoordinatorDashboardView: React.FC = () => {
       title: "XÉT KẾT QUẢ & CÔNG BỐ",
       desc: "Tự động tính điểm xếp hạng Top N, gán cơ cấu giải thưởng và công bố công khai.",
       href: "/coordinator/publish-results",
-      icon: Award,
       accent: "text-amber-400",
       border: "hover:border-amber-400",
       tag: `${prizes.length} Giải thưởng`,
@@ -163,7 +156,7 @@ export const CoordinatorDashboardView: React.FC = () => {
         {/* Breadcrumb Navigation with Back Links */}
         <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase">
           <Link href="/admin/events" className="text-[var(--color-danger)] font-bold hover:underline">
-            SEAL ADMIN
+            [ SEAL ADMIN ]
           </Link>
           <span>&gt;</span>
           <Link href="/admin/events" className="text-[var(--text-muted)] hover:text-white transition-colors">
@@ -178,20 +171,19 @@ export const CoordinatorDashboardView: React.FC = () => {
             </>
           )}
           <span>&gt;</span>
-          <span className="text-[var(--text-primary)] font-bold">GIÁM SÁT BÀI THI &amp; SUBMISSIONS</span>
+          <span className="text-[var(--text-primary)] font-bold">[ GIÁM SÁT BÀI THI &amp; SUBMISSIONS ]</span>
         </div>
 
-        {/* Header with Event Selector */}
+        {/* Header with Searchable Tactical Combobox */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse" />
               <span className="font-mono text-[10px] text-[#a855f7] font-bold tracking-widest uppercase">
-                COORDINATOR CONTROL DECK v2.0
+                [ COORDINATOR CONTROL DECK v2.0 ]
               </span>
             </div>
             <h1 className="font-display font-bold text-2xl text-[var(--text-primary)] uppercase tracking-wider mt-1 flex items-center gap-2.5">
-              <Zap className="w-6 h-6 text-[#a855f7]" />
               Trung Tâm Điều Hành Sự Kiện &amp; Ban Tổ Chức
             </h1>
             <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
@@ -199,24 +191,106 @@ export const CoordinatorDashboardView: React.FC = () => {
             </p>
           </div>
 
-          {/* Event Dropdown */}
-          <div className="flex items-center gap-2 bg-[var(--bg-panel)] border border-[var(--border-muted)] px-3 py-2 hud-clipped font-mono text-xs">
-            <Calendar className="w-4 h-4 text-[#a855f7] shrink-0" />
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="bg-transparent text-[var(--text-primary)] font-bold focus:outline-none cursor-pointer max-w-[260px] truncate"
-            >
-              {eventsList.map((ev: any) => {
-                const id = ev.id || ev.Id || ev.eventId || ev.EventId;
-                const name = ev.eventName || ev.EventName || "Sự kiện";
-                return (
-                  <option key={id} value={id} className="bg-[var(--bg-panel)] text-[var(--text-primary)]">
-                    {name} ({ev.season || ev.Season || ""} {ev.year || ev.Year || ""})
-                  </option>
-                );
-              })}
-            </select>
+          {/* Searchable Tactical Combobox */}
+          <div className="relative w-full md:w-80 font-mono text-xs">
+            <div className="flex items-center gap-2 bg-[#10171a] border border-zinc-700 focus-within:border-[#a855f7] px-3 py-2 hud-clipped transition-colors">
+              <span className="text-[#a855f7] font-bold text-[11px] shrink-0">[ TÌM SK: ]</span>
+              <input
+                type="text"
+                value={isComboboxOpen ? searchQuery : (selectedEventName || "Chọn sự kiện điều phối...")}
+                onFocus={() => {
+                  setIsComboboxOpen(true);
+                  setSearchQuery("");
+                }}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsComboboxOpen(true);
+                }}
+                placeholder="Gõ tên sự kiện, mùa giải..."
+                className="w-full bg-transparent text-white font-mono text-xs focus:outline-none placeholder:text-zinc-500"
+              />
+              {isComboboxOpen && (
+                <button
+                  type="button"
+                  onClick={() => setIsComboboxOpen(false)}
+                  className="text-zinc-400 hover:text-white text-[10px] font-bold shrink-0 cursor-pointer"
+                >
+                  [ ĐÓNG ]
+                </button>
+              )}
+            </div>
+
+            {/* Popover Dropdown Results */}
+            {isComboboxOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-full md:w-96 bg-[#0c1215] border border-[#a855f7]/50 shadow-2xl z-50 hud-clipped max-h-72 overflow-y-auto divide-y divide-zinc-800/80">
+                <div className="p-2 bg-[#10171a] border-b border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400">
+                  <span>DANH SÁCH SỰ KIỆN ({filteredEvents.length}/{eventsList.length})</span>
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="text-[#a855f7] hover:underline cursor-pointer"
+                    >
+                      [ Xem tất cả ]
+                    </button>
+                  )}
+                </div>
+
+                {filteredEvents.length === 0 ? (
+                  <div className="p-4 text-center text-zinc-500 text-xs">
+                    [ KHÔNG TÌM THẤY SỰ KIỆN NÀO ]
+                  </div>
+                ) : (
+                  filteredEvents.map((ev: any) => {
+                    const id = ev.id || ev.Id || ev.eventId || ev.EventId;
+                    const name = ev.eventName || ev.EventName || "Sự kiện không tên";
+                    const season = ev.season || ev.Season || "Mùa giải";
+                    const year = ev.year || ev.Year || 2026;
+                    const isSelected = id === selectedEventId;
+                    const isEnded = ev.status === false || (ev.endDate && new Date(ev.endDate).getTime() < Date.now());
+
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedEventId(id);
+                          setIsComboboxOpen(false);
+                          setSearchQuery("");
+                          if (typeof window !== "undefined") {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set("eventId", id);
+                            window.history.replaceState(null, "", url.toString());
+                          }
+                        }}
+                        className={`w-full p-3 text-left transition-colors flex flex-col gap-1 cursor-pointer ${
+                          isSelected
+                            ? "bg-[#a855f7]/15 text-white border-l-2 border-[#a855f7]"
+                            : "hover:bg-zinc-800/60 text-zinc-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-white text-xs truncate uppercase">
+                            {name}
+                          </span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 hud-clipped ${
+                            isEnded ? "bg-zinc-800 text-zinc-400" : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+                          }`}>
+                            {isEnded ? "[ ĐÃ ĐÓNG ]" : "[ ĐANG MỞ ]"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                          <span>{season} {year}</span>
+                          {isSelected && (
+                            <span className="text-[#a855f7] font-bold">[ ĐANG CHỌN ]</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -261,15 +335,13 @@ export const CoordinatorDashboardView: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-2 font-mono text-xs">
             <span className="font-bold text-[#a855f7] uppercase tracking-wider flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#a855f7]" />
-              LUỒNG CÔNG VIỆC ĐIỀU PHỐI (6 MODULES WORKFLOW)
+              [ LUỒNG CÔNG VIỆC ĐIỀU PHỐI (6 MODULES WORKFLOW) ]
             </span>
             <span className="text-[10px] text-[var(--text-muted)]">Bấm vào từng module để truy cập nhanh</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {MODULES.map((mod) => {
-              const Icon = mod.icon;
               return (
                 <Link
                   key={mod.num}
@@ -286,7 +358,7 @@ export const CoordinatorDashboardView: React.FC = () => {
                           {mod.tag}
                         </span>
                       </div>
-                      <Icon className={`w-5 h-5 ${mod.accent}`} />
+                      <span className={`font-mono text-xs font-bold ${mod.accent}`}>[ MOD-{mod.num} ]</span>
                     </div>
 
                     <h3 className="font-display font-bold text-sm text-[var(--text-primary)] uppercase tracking-wide group-hover:text-white transition-colors">
@@ -299,8 +371,7 @@ export const CoordinatorDashboardView: React.FC = () => {
                   </div>
 
                   <div className="pt-2 border-t border-[var(--border-muted)] flex items-center justify-between font-mono text-[11px] text-[var(--text-muted)] group-hover:text-white">
-                    <span>Truy cập module</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    <span>[ TRUY CẬP MODULE &gt; ]</span>
                   </div>
                 </Link>
               );
@@ -313,8 +384,7 @@ export const CoordinatorDashboardView: React.FC = () => {
           <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
             <div>
               <h3 className="font-display font-bold text-sm text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                <FileCode className="w-4 h-4 text-[#f59e0b]" />
-                Bài Nộp Mới Nhất ({submissions.slice(0, 5).length}/{submissions.length})
+                [ BÀI NỘP MỚI NHẤT ({submissions.slice(0, 5).length}/{submissions.length}) ]
               </h3>
               <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                 Các sản phẩm dự thi mới nộp gần đây nhất của các đội.
@@ -326,29 +396,28 @@ export const CoordinatorDashboardView: React.FC = () => {
                 variant="ghost"
                 className="text-xs font-mono border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer hover:border-white hud-clipped"
               >
-                <span>Xem Toàn Bộ Bài Nộp</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>[ XEM TOÀN BỘ BÀI NỘP &gt; ]</span>
               </Button>
             </Link>
           </div>
 
           {isLoadingSubmissions ? (
             <div className="py-12 text-center text-xs text-[var(--text-muted)]">
-              Đang tải danh sách bài làm...
+              [ Đang tải danh sách bài làm... ]
             </div>
           ) : submissions.length === 0 ? (
             <div className="p-8 text-center text-xs text-[var(--text-muted)] bg-[var(--bg-input)] border border-[var(--border-muted)]">
-              Chưa có bài nộp nào trong sự kiện này.
+              [ Chưa có bài nộp nào trong sự kiện này. ]
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full table-fixed min-w-[700px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-[var(--border-muted)] bg-[var(--bg-input)] text-[var(--text-muted)] uppercase text-[10px]">
-                    <th className="w-[30%] p-3">Đội Thi</th>
-                    <th className="w-[20%] p-3">Hạng Mục</th>
-                    <th className="w-[35%] p-3">Liên Kết Bài Làm</th>
-                    <th className="w-[15%] p-3 text-right">Thời Gian</th>
+                    <th className="w-[30%] p-3">ĐỘI THI</th>
+                    <th className="w-[20%] p-3">HẠNG MỤC</th>
+                    <th className="w-[35%] p-3">LIÊN KẾT BÀI LÀM</th>
+                    <th className="w-[15%] p-3 text-right">THỜI GIAN</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-muted)]">
@@ -367,17 +436,17 @@ export const CoordinatorDashboardView: React.FC = () => {
                           <div className="flex items-center gap-2 flex-wrap">
                             {repoUrl && (
                               <a href={repoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-[var(--bg-base)] border border-[var(--border-muted)] text-[10px] flex items-center gap-1 hover:text-white">
-                                <Code2 className="w-3 h-3 text-blue-400" /> Repo
+                                [ REPO ]
                               </a>
                             )}
                             {demoUrl && (
                               <a href={demoUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] flex items-center gap-1 hover:bg-emerald-500/20">
-                                <Globe className="w-3 h-3" /> Demo
+                                [ DEMO ]
                               </a>
                             )}
                             {slideUrl && (
                               <a href={slideUrl} target="_blank" rel="noopener noreferrer" className="px-2 py-0.5 bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] flex items-center gap-1 hover:bg-purple-500/20">
-                                <FileSpreadsheet className="w-3 h-3" /> Slides
+                                [ SLIDES ]
                               </a>
                             )}
                           </div>

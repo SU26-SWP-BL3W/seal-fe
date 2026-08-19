@@ -99,12 +99,19 @@ export function useMyAssignedJudgeTracks() {
 
         if (!isAdmin) {
           const judges = t.judges || t.Judges;
-          const judgeIds: string[] = (judges || []).map((j: any) => j.id || j.Id).filter(Boolean);
-          const hasJudgeList = Array.isArray(judges);
-          const isRealAssigned = userId && judgeIds.includes(userId);
-          // Nếu BE không trả judges (mảng undefined) mới cần dự phòng bằng trackId đã chọn lúc login.
-          const isFallbackAssigned = !hasJudgeList && assignedTrackId === trackId;
-          if (!isRealAssigned && !isFallbackAssigned) return;
+          const judgeIds: string[] = (judges || []).map((j: any) => (j.id || j.Id || "").replace(/-/g, "").toLowerCase()).filter(Boolean);
+          const hasJudgeList = Array.isArray(judges) && judges.length > 0;
+          const normUserId = (userId || "").replace(/-/g, "").toLowerCase();
+          const normTrackId = (trackId || "").replace(/-/g, "").toLowerCase();
+          const isRealAssigned = normUserId && judgeIds.includes(normUserId);
+          const isFallbackAssigned = assignedTrackId && (assignedTrackId.replace(/-/g, "").toLowerCase() === normTrackId);
+          const isDirectRoleAssigned = myEventRoles.some((r: any) => {
+            const rn = r.roleName || r.RoleName;
+            const rTId = (r.trackId || r.TrackId || "").replace(/-/g, "").toLowerCase();
+            return rn === "Judge" && rTId === normTrackId;
+          });
+
+          if (!isRealAssigned && !isFallbackAssigned && !isDirectRoleAssigned) return;
         }
 
         list.push({

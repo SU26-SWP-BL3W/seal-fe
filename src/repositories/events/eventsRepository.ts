@@ -213,7 +213,7 @@ export function useEventDetail(eventId: string) {
   });
 }
 
-export function useEventRounds(eventId: string) {
+export function useEventRounds(eventId?: string) {
   return useQuery({
     queryKey: ["event-rounds", eventId],
     queryFn: async () => {

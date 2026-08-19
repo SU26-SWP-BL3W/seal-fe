@@ -165,12 +165,11 @@ export function useGetTracksByEvent(eventId: string | undefined, params: GetTrac
   return useQuery({
     queryKey: ["tracksByEvent", eventId, params],
     queryFn: async (): Promise<TrackWithStaffModel[]> => {
-      const res = await apiClient.get<PagedResult<TrackWithStaffModel>>("/Tracks/event", {
+      const res = await apiClient.get<any>("/Tracks/event", {
         params: { eventId, EventId: eventId, ...params, PageSize: 100 },
       });
-      if (Array.isArray(res.data?.data)) return res.data.data;
-      if (Array.isArray(res.data)) return res.data as unknown as TrackWithStaffModel[];
-      return [];
+      const items = res.data?.data?.items ?? res.data?.items ?? res.data?.data ?? res.data ?? [];
+      return Array.isArray(items) ? items : [];
     },
     enabled: !!eventId,
   });

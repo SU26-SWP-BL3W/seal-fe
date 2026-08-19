@@ -90,8 +90,8 @@ export function NavigationBar() {
   const isCandidateRole = roleName === "TeamLeader" || roleName === "TeamMember";
 
   const showCoordinatorSidebar = (isCoordinatorRoute && roleName !== "Admin") || (isCoordinatorRole && (pathname.includes("/coordinator") || pathname.includes("/appeals")));
-  const showMentorSidebar = isMentorRoute;
-  const showJudgeSidebar = isJudgeRoute;
+  const showMentorSidebar = false;
+  const showJudgeSidebar = false;
   const showParticipantSidebar = isCandidateRoute && isCandidateRole;
   const showAdminSidebar = isAdminRoute || (roleName === "Admin" && isCoordinatorRoute);
 
@@ -911,70 +911,33 @@ export function NavigationBar() {
         <div className="hidden md:flex gap-5 items-center font-mono text-xs">
           <Link
             href="/"
-            className={`transition-colors flex items-center gap-1.5 ${
+            className={`transition-colors uppercase font-bold ${
               pathname === "/" || pathname.endsWith("/vi") || pathname.endsWith("/en")
                 ? "text-[var(--accent-primary)] font-bold"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
-            <Globe className="w-3.5 h-3.5" /> Trang chủ
+            Trang chủ
           </Link>
 
           <Link
             href="/events"
-            className={`transition-colors flex items-center gap-1.5 ${
+            className={`transition-colors uppercase font-bold ${
               pathname.includes("/events")
                 ? "text-[var(--accent-primary)] font-bold"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
-            <Compass className="w-3.5 h-3.5" /> Khám phá Sự kiện
+            Khám phá Sự kiện
           </Link>
 
-          {/* Single Workspace Access Link for Coordinator */}
-          {user && roleName === "Coordinator" && (
-            <Link
-              href="/coordinator/dashboard"
-              className="text-[#a855f7] font-bold hover:underline flex items-center gap-1.5 bg-[#a855f7]/10 border border-[#a855f7]/30 px-3 py-1 hud-clipped text-xs"
-            >
-              <Target className="w-3.5 h-3.5" /> Control Center BTC
-            </Link>
-          )}
-
-          {user && roleName === "Mentor" && (
-            <Link
-              href="/mentor/tracks"
-              className="text-[#2dd4bf] font-bold hover:underline flex items-center gap-1.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 px-3 py-1 hud-clipped text-xs"
-            >
-              <Briefcase className="w-3.5 h-3.5" /> Bàn Làm Việc Mentor
-            </Link>
-          )}
-
-          {user && roleName === "Judge" && (
-            <Link
-              href="/judge/scoring"
-              className="text-[var(--accent-judge)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--accent-judge)]/10 border border-[var(--accent-judge)]/30 px-3 py-1 hud-clipped text-xs"
-            >
-              <Scale className="w-3.5 h-3.5" /> Bàn Chấm Giám Khảo
-            </Link>
-          )}
-
-          {/* Single Workspace Access Link for System Admin */}
-          {user && roleName === "Admin" && (
+          {/* Single Workspace Access Link for System Admin only */}
+          {user && (user.isAdmin || user.IsAdmin || roleName === "Admin") && (
             <Link
               href="/admin/dashboard"
-              className="text-[var(--color-danger)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 px-3 py-1 hud-clipped text-xs"
+              className="text-[var(--color-danger)] font-bold hover:underline bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 px-3 py-1 hud-clipped text-xs uppercase"
             >
-              <ShieldCheck className="w-3.5 h-3.5" /> Bảng Điều Hành Admin
-            </Link>
-          )}
-
-          {user && (roleName === "TeamLeader" || roleName === "TeamMember") && (
-            <Link
-              href="/my-team"
-              className="text-[var(--accent-team)] font-bold hover:underline flex items-center gap-1.5 bg-[var(--accent-team)]/10 border border-[var(--accent-team)]/30 px-3 py-1 hud-clipped text-xs"
-            >
-              <Users className="w-3.5 h-3.5" /> Đội Thi Của Tôi
+              [ BẢNG ĐIỀU HÀNH ADMIN ]
             </Link>
           )}
         </div>
@@ -990,25 +953,25 @@ export function NavigationBar() {
             {user.isStudent && !user.isApproved && roleName !== "Coordinator" && roleName !== "Admin" && roleName !== "Judge" && roleName !== "Mentor" && (
               <Link
                 href="/profile"
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[var(--color-warning)]/10 text-[var(--color-warning)] border border-[var(--color-warning)]/40 font-bold hover:bg-[var(--color-warning)] hover:text-black transition-all hud-clipped"
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[var(--color-warning)]/10 text-[var(--color-warning)] border border-[var(--color-warning)]/40 font-bold hover:bg-[var(--color-warning)] hover:text-black transition-all hud-clipped uppercase"
                 title="Hồ sơ chưa duyệt — Cập nhật thẻ sinh viên"
               >
-                ⚠️ Chưa duyệt thẻ SV ➔
+                [ CHƯA DUYỆT THẺ SV &gt; ]
               </Link>
             )}
 
             <Link
               href="/profile"
-              className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] font-bold flex items-center gap-1.5 border border-[var(--border-muted)] px-2.5 py-1 bg-[var(--bg-input)] hud-clipped"
+              className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] font-bold border border-[var(--border-muted)] px-2.5 py-1 bg-[var(--bg-input)] hud-clipped uppercase"
             >
-              <User className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> Hồ sơ cá nhân
+              [ HỒ SƠ CÁ NHÂN ]
             </Link>
 
             <button
               onClick={logout}
-              className="text-[var(--color-danger)] hover:underline border border-[var(--color-danger)]/30 px-2.5 py-1 hud-clipped cursor-pointer flex items-center gap-1"
+              className="text-[var(--color-danger)] hover:underline border border-[var(--color-danger)]/30 px-2.5 py-1 hud-clipped cursor-pointer uppercase font-bold"
             >
-              <LogOut className="w-3.5 h-3.5" /> Đăng xuất
+              [ ĐĂNG XUẤT ]
             </button>
           </div>
         ) : (

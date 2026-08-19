@@ -24,21 +24,76 @@ interface RoleGuardProps {
 }
 
 // Lấy dashboard URL theo role
-function getRoleDashboardUrl(user: { isAdmin?: boolean; IsAdmin?: boolean; isStudent?: boolean; IsStudent?: boolean } | null, activeRole: { roleName?: string; RoleName?: string } | null): string {
+function getRoleDashboardUrl(
+  user: { isAdmin?: boolean; IsAdmin?: boolean; isStudent?: boolean; IsStudent?: boolean } | null,
+  activeRole: { roleName?: string; RoleName?: string; eventId?: string; EventId?: string } | null,
+): string {
   const roleName = getRoleName(activeRole);
+  const eventId = activeRole?.eventId || activeRole?.EventId;
 
   if (user?.isAdmin || user?.IsAdmin) return "/admin/dashboard";
-  if (roleName === "EventCoordinator" || roleName === "Coordinator") return "/coordinator/dashboard";
-  if (roleName === "Judge") return "/judge/scoring";
-  if (roleName === "Mentor") return "/mentor/tracks";
+  if (roleName === "EventCoordinator" || roleName === "Coordinator") {
+    return eventId ? `/coordinator/dashboard?eventId=${eventId}` : "/coordinator/dashboard";
+  }
+  if (roleName === "Judge") return eventId ? `/judge/events?eventId=${eventId}` : "/judge/events";
+  if (roleName === "Mentor") return eventId ? `/events/${eventId}` : "/events";
   if (roleName === "TeamLeader" || roleName === "TeamMember") return "/my-team";
   if (user?.isStudent || user?.IsStudent) return "/events";
   return "/login";
 }
 
+interface AccessDeniedScreenProps {
+  redirectUrl: string;
+  isUserAdmin?: boolean;
+  userRoleDisplay?: string;
+}
+
+function AccessDeniedScreen({ redirectUrl, isUserAdmin, userRoleDisplay }: AccessDeniedScreenProps) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace(redirectUrl);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [router, redirectUrl]);
+
+  return (
+    <div className="min-h-[70vh] flex items-center justify-center px-4 py-12 hud-lattice">
+      <Card className="max-w-lg p-8 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)] space-y-4 text-center">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[rgba(239,68,68,0.1)] text-[var(--color-danger)] border border-[var(--color-danger)]/30 mx-auto">
+          <ShieldAlert className="w-6 h-6 text-[var(--color-danger)]" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-display font-bold text-2xl text-[var(--color-danger)] uppercase tracking-wider">
+            403 // TRUY CẬP BỊ TỪ CHỐI
+          </h3>
+          <p className="font-mono text-xs text-[var(--text-muted)]">
+            Tài khoản <span className="text-[var(--text-primary)] font-bold">[{isUserAdmin ? "System Admin" : userRoleDisplay || "Guest"}]</span> không có quyền truy cập trang này.
+          </p>
+          <p className="font-mono text-xs text-[var(--accent-primary)]">
+            Đang chuyển hướng về trang của bạn...
+          </p>
+        </div>
+        <div className="pt-4 flex justify-center gap-3">
+          <Link href={redirectUrl}>
+            <Button variant="primary" className="font-mono text-xs">
+              Chuyển về trang của tôi
+            </Button>
+          </Link>
+          <Link href="/">
+            <Button variant="ghost" className="font-mono text-xs">
+              Về Trang Chủ
+            </Button>
+          </Link>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
   const { user, activeRole, isInitialized } = useAuth();
-  const router = useRouter();
 
   if (!isInitialized) {
     return (
@@ -92,48 +147,15 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
     (userRoleDisplay && allowedRoles.includes(userRoleDisplay as AllowedRole)) ||
     (allowedRoles.includes("Student") && user.isStudent);
 
-  // Không có quyền -> redirect về dashboard đúng role
+  // Không có quyền -> render AccessDeniedScreen có useEffect riêng
   if (!hasAccess) {
     const redirectUrl = getRoleDashboardUrl(user, activeRole);
-
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        router.replace(redirectUrl);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }, [router, redirectUrl]);
-
     return (
-      <div className="min-h-[70vh] flex items-center justify-center px-4 py-12 hud-lattice">
-        <Card className="max-w-lg p-8 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)] space-y-4 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[rgba(239,68,68,0.1)] text-[var(--color-danger)] border border-[var(--color-danger)]/30 mx-auto">
-            <ShieldAlert className="w-6 h-6 text-[var(--color-danger)]" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-display font-bold text-2xl text-[var(--color-danger)] uppercase tracking-wider">
-              403 // TRUY CẬP BỊ TỪ CHỐI
-            </h3>
-            <p className="font-mono text-xs text-[var(--text-muted)]">
-              Tài khoản <span className="text-[var(--text-primary)] font-bold">[{isUserAdmin ? "System Admin" : userRoleDisplay || "Guest"}]</span> không có quyền truy cập trang này.
-            </p>
-            <p className="font-mono text-xs text-[var(--accent-primary)]">
-              Đang chuyển hướng về trang của bạn...
-            </p>
-          </div>
-          <div className="pt-4 flex justify-center gap-3">
-            <Link href={redirectUrl}>
-              <Button variant="primary" className="font-mono text-xs">
-                Chuyển về trang của tôi
-              </Button>
-            </Link>
-            <Link href="/">
-              <Button variant="ghost" className="font-mono text-xs">
-                Về Trang Chủ
-              </Button>
-            </Link>
-          </div>
-        </Card>
-      </div>
+      <AccessDeniedScreen
+        redirectUrl={redirectUrl}
+        isUserAdmin={isUserAdmin}
+        userRoleDisplay={userRoleDisplay}
+      />
     );
   }
 

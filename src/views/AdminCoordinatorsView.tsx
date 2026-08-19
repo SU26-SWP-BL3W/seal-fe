@@ -8,6 +8,7 @@ import { useGetUsers } from "@/repositories/usersRepository";
 import { useGetEventRoles, staffRepository } from "@/repositories/staffRepository";
 import type { User, EventRole } from "@/models/entities";
 import { Link, useRouter } from "@/i18n/routing";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   UserCheck,
   Calendar,
@@ -30,6 +31,7 @@ function pickEventId(ev: any): string {
 
 export function AdminCoordinatorsView() {
   const router = useRouter();
+  const { user: currentUser, refreshRoles } = useAuth();
   const searchParams = useSearchParams();
   const initialEventId = searchParams.get("eventId") || "";
 
@@ -165,6 +167,9 @@ export function AdminCoordinatorsView() {
       await staffRepository.removeEventRole(roleId);
       setActionSuccess(`Đã thu hồi quyền Điều phối viên của ${name} thành công!`);
       await refetchRoles();
+      if (currentUser?.email && name && (currentUser.email.toLowerCase() === name.toLowerCase() || currentUser.fullName?.toLowerCase() === name.toLowerCase())) {
+        await refreshRoles();
+      }
       setTimeout(() => setActionSuccess(null), 3000);
     } catch (err: any) {
       setActionError(err?.response?.data?.message || err?.message || "Gỡ vai trò thất bại.");

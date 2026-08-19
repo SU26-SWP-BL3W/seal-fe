@@ -69,8 +69,8 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   // Sidebar dọc: Chỉ hiện ở các trang quản trị / dashboard nội bộ, không bao giờ hiện ở trang public (/events, /events/[id], /events/[id]/leaderboard)
   const showAdminSidebar = isAdminRoute || (isAdminRole && isCoordinatorRoute);
   const showCoordinatorSidebar = (isCoordinatorRoute && !isAdminRole) || (isCoordinatorRole && (pathname.includes("/coordinator") || pathname.includes("/appeals")));
-  const showMentorSidebar = isMentorRoute;
-  const showJudgeSidebar = isJudgeRoute;
+  const showMentorSidebar = false;
+  const showJudgeSidebar = false;
   const showParticipantSidebar = isCandidateRoute && isCandidateRole;
 
   const hasVerticalSidebar =

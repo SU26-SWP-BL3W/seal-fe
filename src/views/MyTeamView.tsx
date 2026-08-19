@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import {
   useCancelInvitation,
@@ -143,6 +144,62 @@ export function MyTeamView() {
   }
 
   if (!team) {
+    const isJudge = roleName === "Judge";
+    const isMentor = roleName === "Mentor";
+    const isEC = roleName === "EventCoordinator" || roleName === "Coordinator";
+    const isAdmin = Boolean(user?.isAdmin || user?.IsAdmin);
+
+    if (isJudge || isMentor || isEC || isAdmin) {
+      const redirectUrl = isJudge
+        ? `/judge/scoring${targetEventId ? `?eventId=${targetEventId}` : ""}`
+        : isMentor
+        ? `/mentor/tracks${targetEventId ? `?eventId=${targetEventId}` : ""}`
+        : isEC
+        ? `/coordinator/dashboard${targetEventId ? `?eventId=${targetEventId}` : ""}`
+        : "/admin/dashboard";
+
+      const workspaceTitle = isJudge
+        ? "BÀN CHẤM ĐIỂM GIÁM KHẢO"
+        : isMentor
+        ? "BÀN CỐ VẤN CHUYÊN MÔN"
+        : isEC
+        ? "BÀN ĐIỀU PHỐI BAN TỔ CHỨC"
+        : "BẢNG ĐIỀU HÀNH ADMIN";
+
+      return (
+        <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-12 flex items-center justify-center font-mono">
+          <Card className="max-w-xl w-full p-8 bg-[#10171a] border border-amber-500/40 hud-clipped space-y-6 text-center shadow-lg">
+            <div className="space-y-2">
+              <span className="px-3 py-1 bg-amber-500/15 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase hud-clipped inline-block">
+                [ CHÍNH SÁCH BẢO VỆ TÍNH LIÊM CHÍNH CUỘC THI ]
+              </span>
+              <h2 className="font-display text-xl font-bold text-white uppercase tracking-wide">
+                Không Thể Tham Gia Hoặc Tạo Đội Thi
+              </h2>
+            </div>
+
+            <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+              Tài khoản của bạn đang giữ vai trò <strong>{isJudge ? "Giám Khảo (Judge)" : isMentor ? "Cố Vấn (Mentor)" : isEC ? "Ban Tổ Chức (Coordinator)" : "Quản Trị Viên"}</strong> trong hệ thống.
+              Theo quy chế chống xung đột lợi ích (Conflict of Interest), Chuyên gia chuyên môn và Ban tổ chức không được phép đăng ký hoặc tham gia đội thi của thí sinh.
+            </p>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link href={redirectUrl}>
+                <button className="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-white text-black font-bold uppercase text-xs hud-clipped transition-all cursor-pointer shadow-sm">
+                  [ VÀO {workspaceTitle} &gt; ]
+                </button>
+              </Link>
+              <Link href="/events">
+                <button className="w-full sm:w-auto px-4 py-2.5 bg-[#141f23] border border-zinc-700 hover:border-zinc-500 text-zinc-300 font-bold uppercase text-xs hud-clipped transition-all cursor-pointer">
+                  [ KHÁM PHÁ SỰ KIỆN ]
+                </button>
+              </Link>
+            </div>
+          </Card>
+        </main>
+      );
+    }
+
     return (
       <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)]">
         <CreateTeamForm defaultEventId={targetEventId} />

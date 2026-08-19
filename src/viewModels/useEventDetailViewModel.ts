@@ -24,6 +24,12 @@ export interface RoundSummary {
   status: RoundStatus;
 }
 
+export interface TrackDetailItem {
+  id: string;
+  trackName: string;
+  description: string;
+}
+
 function computeRoundStatus(startIso: string, endIso: string, now: number): RoundStatus {
   const start = new Date(startIso).getTime();
   const end = new Date(endIso).getTime();
@@ -45,11 +51,22 @@ export function useEventDetailViewModel(eventId: string) {
     if (!realEvent) return null;
     const ev: any = realEvent;
 
-    // Event API khong tra ve teamCount/tracks long san — lay that tu Teams/Tracks theo eventId,
-    // extractTrackNames(ev) chi doc ev.rounds[].tracks[] nhung GET /Events/{id} luon tra rounds rong.
+    // Event API khong tra ve teamCount/tracks long san — lay that tu Teams/Tracks theo eventId
     const trackNames = Array.isArray(realTracks) && realTracks.length > 0
       ? [...new Set((realTracks as any[]).map((t) => t.trackName || t.TrackName || "").filter(Boolean))]
       : extractTrackNames(ev);
+
+    const trackItems: TrackDetailItem[] = Array.isArray(realTracks) && realTracks.length > 0
+      ? (realTracks as any[]).map((t) => ({
+          id: t.id || t.Id || "",
+          trackName: t.trackName || t.TrackName || "Hạng mục",
+          description: t.description || t.Description || "",
+        }))
+      : trackNames.map((name, i) => ({
+          id: `track-${i}`,
+          trackName: name,
+          description: "",
+        }));
 
     return {
       id: ev.id || ev.Id || ev.eventId || ev.EventId || eventId,
@@ -82,6 +99,8 @@ export function useEventDetailViewModel(eventId: string) {
         return 0;
       })(),
       tracks: trackNames,
+      trackItems,
+      status: ev.status !== undefined ? Boolean(ev.status) : (ev.Status !== undefined ? Boolean(ev.Status) : true),
     };
   }, [realEvent, eventId, realTracks, realTeams]);
 
@@ -101,32 +120,43 @@ export function useEventDetailViewModel(eventId: string) {
         startDate: regStart,
         endDate: regEnd,
         submissionDeadline: regEnd,
-        evaluationEndDate: event.startDate || regEnd,
-        resultAnnouncementDate: event.startDate || regEnd,
-        appealDeadline: event.startDate || regEnd,
+        evaluationEndDate: regEnd,
+        resultAnnouncementDate: regEnd,
+        appealDeadline: regEnd,
         description: "Mở cổng nhận hồ sơ thành lập Đội thi (3-5 thành viên) và ghi danh chính thức với Ban Tổ Chức.",
-        deliverables: "Hồ sơ đăng ký đội thi (3-5 thành viên) & thẻ sinh viên hợp lệ.",
+        deliverables: "Hồ sơ đăng ký & Thẻ sinh viên hợp lệ của các thành viên.",
         status: computeRoundStatus(regStart, regEnd, now),
       });
     }
 
+    // Các vòng thi từ API
     if (Array.isArray(realRounds) && realRounds.length > 0) {
-      const fetchedRounds: RoundSummary[] = realRounds.map((r: any, idx: number) => ({
-        id: r.id || r.Id || r.roundId || r.RoundId || `rnd-${idx + 1}`,
-        roundNumber: Number(r.roundNumber || r.RoundNumber || idx + 1),
-        roundName: r.roundName || r.RoundName || `Vòng ${idx + 1}`,
-        startDate: r.startDate || r.StartDate || event.startDate,
-        endDate: r.endDate || r.EndDate || event.endDate,
-        submissionDeadline: r.submissionDeadline || r.SubmissionDeadline || r.endDate || event.endDate,
-        evaluationEndDate: r.evaluationEndDate || r.EvaluationEndDate || r.endDate || event.endDate,
-        resultAnnouncementDate: r.resultAnnouncementDate || r.ResultAnnouncementDate || r.endDate || event.endDate,
-        appealDeadline: r.appealDeadline || r.AppealDeadline || r.endDate || event.endDate,
-        description: r.description || r.Description || "Hoàn thiện sản phẩm theo yêu cầu tiêu chí chấm thi của Hạng mục.",
-        deliverables: r.deliverables || "Mã nguồn, Slide báo cáo, Video demo.",
-        status: computeRoundStatus(r.startDate || r.StartDate || event.startDate, r.endDate || r.EndDate || event.endDate, now),
-      }));
+      realRounds.forEach((r: any, idx: number) => {
+        const rName = r.roundName || r.RoundName || `Vòng Thi Số ${idx + 1}`;
+        const sDate = r.startDate || r.StartDate || event.startDate;
+        const eDate = r.endDate || r.EndDate || event.endDate;
+        const subDate = r.submissionDeadline || r.SubmissionDeadline || eDate;
+        const evalDate = r.evaluationEndDate || r.EvaluationEndDate || eDate;
+        const resDate = r.resultAnnouncementDate || r.ResultAnnouncementDate || eDate;
+        const appDate = r.appealDeadline || r.AppealDeadline || eDate;
+        const desc = r.description || r.Description || `Giai đoạn đánh giá chuyên môn vòng ${idx + 1}.`;
+        const deliv = r.deliverables || r.Deliverables || "Mã nguồn, Slide thuyết trình & Video demo.";
 
-      result.push(...fetchedRounds);
+        result.push({
+          id: r.id || r.Id || `round-${idx + 1}`,
+          roundNumber: r.roundNumber || r.RoundNumber || idx + 1,
+          roundName: rName,
+          startDate: sDate,
+          endDate: eDate,
+          submissionDeadline: subDate,
+          evaluationEndDate: evalDate,
+          resultAnnouncementDate: resDate,
+          appealDeadline: appDate,
+          description: desc,
+          deliverables: deliv,
+          status: computeRoundStatus(sDate, eDate, now),
+        });
+      });
     } else if (event.startDate && event.endDate) {
       // Nếu chưa tạo vòng thi chi tiết trong DB, hiển thị vòng thi đấu chính thức theo ngày của sự kiện
       result.push({
@@ -151,6 +181,7 @@ export function useEventDetailViewModel(eventId: string) {
   const currentRound = rounds.find((r) => r.status === "current") ?? null;
 
   return {
+    event,
     isLoading: loadingEvent || loadingRounds,
     notFound: !loadingEvent && !event,
     eventName: event?.eventName ?? "",
@@ -159,6 +190,7 @@ export function useEventDetailViewModel(eventId: string) {
     tagline: event?.tagline ?? "",
     description: event?.description ?? "",
     tracks: event?.tracks ?? [],
+    trackItems: event?.trackItems ?? [],
     rounds,
     teamCount: event?.teamCount ?? 0,
     maxTeams: event?.maxTeams ?? 0,

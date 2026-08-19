@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
+import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
+import { useQuery } from "@tanstack/react-query";
+import apiClient from "@/models/apiClient";
 import {
   useUpdateStudentProfile,
   useFptStudentVerification,
@@ -10,75 +13,123 @@ import {
 } from "@/repositories/authRepository";
 import { useGetUserRejections } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
+import { useGetEventRolesByUser } from "@/repositories/events/eventRolesRepository";
+import { useEvents } from "@/repositories/eventsRepository";
+import { useMyTeam } from "@/repositories/teamsRepository";
 import { uploadRepository } from "@/repositories/uploadRepository";
 import { Button, Input, Card, Badge } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
-import {
-  User,
-  ShieldCheck,
-  Upload,
-  Search,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Lock,
-  RefreshCw,
-  IdCard,
-  Building2,
-  Mail,
-  Send,
-  Edit3,
-  Key,
-} from "lucide-react";
 import type { FptStudentResponse } from "@/models/entities";
+
+const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
 
 export function UserProfileView() {
   const toast = useToast();
   const { user, activeRole } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
+  const currentUserId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
+  const { data: userRolesResult } = useGetEventRolesByUser(currentUserId, { pageSize: 100 });
+  const userRoles = useMemo(() => {
+    const raw = (userRolesResult as any)?.data?.items ?? (userRolesResult as any)?.items ?? (Array.isArray(userRolesResult) ? userRolesResult : []);
+    return Array.isArray(raw) ? raw : [];
+  }, [userRolesResult]);
+
+  // Phân tách vai trò Chuyên môn (Staff) vs Đội thi Thí sinh (Student)
+  const staffRoles = useMemo(() => {
+    return userRoles.filter((r: any) => {
+      const rn = r.roleName || r.RoleName;
+      return rn === "Judge" || rn === "Mentor" || rn === "EventCoordinator" || rn === "Coordinator" || rn === "Admin";
+    });
+  }, [userRoles]);
+
+  const studentRoles = useMemo(() => {
+    return userRoles.filter((r: any) => {
+      const rn = r.roleName || r.RoleName;
+      return rn === "TeamLeader" || rn === "TeamMember" || rn === "Student";
+    });
+  }, [userRoles]);
+
+  // Lấy danh sách sự kiện để map tên sự kiện thực tế trong DB
+  const { data: rawEvents } = useEvents();
+  const eventsList = useMemo(() => {
+    const ev = (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data) || [];
+    return Array.isArray(ev) ? ev : [];
+  }, [rawEvents]);
+
+  // Lấy toàn bộ Hạng mục (Tracks) thuộc các sự kiện của người dùng để map tên Track thực tế (thay vì hiện GUID)
+  const { data: allTracks = [] } = useQuery({
+    queryKey: ["user-profile-tracks", userRoles.map((r: any) => r.eventId || r.EventId).join(",")],
+    queryFn: async () => {
+      const eventIds = [...new Set(userRoles.map((r: any) => r.eventId || r.EventId).filter(Boolean))];
+      if (eventIds.length === 0) return [];
+      const trackPromises = eventIds.map(async (evId) => {
+        try {
+          const res = await apiClient.get<any>(`/Tracks/event`, { params: { EventId: evId, PageSize: 100 } });
+          const items = res.data?.data?.items ?? res.data?.data ?? res.data?.items ?? res.data ?? [];
+          return Array.isArray(items) ? items : [];
+        } catch {
+          return [];
+        }
+      });
+      const results = await Promise.all(trackPromises);
+      return results.flat();
+    },
+    enabled: userRoles.length > 0,
+  });
+
+  const trackNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    allTracks.forEach((t: any) => {
+      const tid = normalizeId(t.id || t.Id || t.trackId || t.TrackId);
+      if (tid) map.set(tid, t.trackName || t.TrackName || "Hạng mục");
+    });
+    return map;
+  }, [allTracks]);
+
+  const eventNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    eventsList.forEach((e: any) => {
+      const eid = normalizeId(e.id || e.Id);
+      if (eid) map.set(eid, e.eventName || e.EventName || "Sự kiện");
+    });
+    return map;
+  }, [eventsList]);
+
+  const assignedRoleNames = useMemo(() => {
+    return [...new Set(userRoles.map((r: any) => r.roleName || r.RoleName).filter(Boolean))];
+  }, [userRoles]);
+
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
-  const userEmail = (user?.email || user?.Email || "").toLowerCase();
 
   let roleName = "";
   if (user?.isAdmin || user?.IsAdmin) {
     roleName = "Admin";
+  } else if (assignedRoleNames.includes("Judge") && assignedRoleNames.includes("Mentor")) {
+    roleName = "JudgeAndMentor";
+  } else if (assignedRoleNames.includes("EventCoordinator") || assignedRoleNames.includes("Coordinator")) {
+    roleName = "Coordinator";
+  } else if (assignedRoleNames.includes("Judge")) {
+    roleName = "Judge";
+  } else if (assignedRoleNames.includes("Mentor")) {
+    roleName = "Mentor";
+  } else if (rawRole) {
+    roleName = rawRole === "EventCoordinator" ? "Coordinator" : rawRole;
   } else {
-    roleName = rawRole || "";
-    if (roleName === "EventCoordinator") roleName = "Coordinator";
-    if (!roleName) {
-      if (userEmail.includes("ec_") || userEmail.includes("ec.") || userEmail.includes("coordinator")) {
-        roleName = "Coordinator";
-      } else if (userEmail.includes("judge")) {
-        roleName = "Judge";
-      } else if (userEmail.includes("mentor")) {
-        roleName = "Mentor";
-      } else {
-        roleName = "Student";
-      }
-    }
+    roleName = user?.isStudent ? "Student" : "Staff";
   }
 
+  // Tài khoản là Chuyên gia / Cán bộ nếu isStudent === false hoặc có vai trò chuyên môn
   const isStaff =
+    user?.isStudent === false ||
     roleName === "Coordinator" ||
     roleName === "Admin" ||
     roleName === "Judge" ||
     roleName === "Mentor" ||
+    roleName === "JudgeAndMentor" ||
     Boolean(user?.isAdmin || user?.IsAdmin);
 
-  // Staff Form states
-  const [staffOrg, setStaffOrg] = useState("");
-  const [staffBio, setStaffBio] = useState(
-    roleName === "Coordinator"
-      ? "Trưởng ban tổ chức phụ trách điều phối các giải đấu Hackathon & quản trị tiêu chí chuyên môn."
-      : roleName === "Judge"
-      ? "Hội đồng giám khảo chuyên môn đánh giá đồ án RBL & giải pháp công nghệ."
-      : roleName === "Mentor"
-      ? "Cố vấn kỹ thuật đồng hành hỗ trợ các đội thi trong quá trình phát triển sản phẩm."
-      : "Quản trị viên toàn quyền hệ thống SEAL."
-  );
-
-  // Student Form states
+  // Student & Staff shared state from database
   const [schoolChoice, setSchoolChoice] = useState<"FPT" | "OTHER">(
     user?.isFpt !== false ? "FPT" : "OTHER"
   );
@@ -106,73 +157,70 @@ export function UserProfileView() {
   const [showPasswordCard, setShowPasswordCard] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
-  const { mutateAsync: updateProfile, isPending: isSubmittingProfile } = useUpdateStudentProfile();
-  const isSubmitting = isSubmittingProfile || isUploadingPhoto;
-  const { mutateAsync: verifyFpt, isPending: isVerifying } = useFptStudentVerification();
-  const { mutateAsync: requestUnblock, isPending: isUnblocking } = useRequestUnblock();
-  const { mutateAsync: changePassword, isPending: isChangingPassword } = useChangePassword();
-  const { data: schools = [], isLoading: loadingSchools } = useGetSchools();
+  // API mutations
+  const updateProfileMutation = useUpdateStudentProfile();
+  const verifyFptMutation = useFptStudentVerification();
+  const requestUnblockMutation = useRequestUnblock();
+  const changePasswordMutation = useChangePassword();
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError("");
-    setPasswordSuccess(false);
+  const { data: schoolsData, isLoading: loadingSchools } = useGetSchools();
+  const schools = schoolsData || [];
 
-    if (!oldPassword) {
-      setPasswordError("Vui lòng nhập mật khẩu hiện tại.");
+  const { data: myTeamData } = useMyTeam();
+  const myTeam = (myTeamData as any)?.data ?? myTeamData;
+
+  const { data: rejectionsData } = useGetUserRejections(user?.id || user?.userId);
+  const rejections: any[] = Array.isArray(rejectionsData) ? rejectionsData : ((rejectionsData as any)?.data || []);
+
+  const rejectionCount = rejections.length;
+  const isBlocked = rejectionCount >= 2 && !user?.isApproved;
+
+  // Lấy tên trường / đơn vị từ danh sách Schools trong DB
+  const userSchool = schools.find((s) => s.id === (user?.schoolId || schoolId));
+  const schoolNameDisplay = userSchool?.schoolName || "Chưa cập nhật";
+
+  // Xử lý xác minh sinh viên FPT qua API tra cứu FPT DB thật
+  const handleVerifyFpt = async () => {
+    if (!fptCode.trim()) {
+      setFptError("Vui lòng nhập Mã số sinh viên FPT");
       return;
     }
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordError("Mật khẩu mới phải có ít nhất 6 ký tự.");
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      setPasswordError("Mật khẩu xác nhận không khớp.");
-      return;
-    }
-
+    setFptError("");
     try {
-      await changePassword({
-        oldPassword,
-        newPassword,
-        confirmNewPassword,
-      });
-      setPasswordSuccess(true);
-      toast.success("Đổi mật khẩu thành công!");
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmNewPassword("");
+      const res = await verifyFptMutation.mutateAsync(fptCode.trim());
+      const data = (res as any)?.data ?? res;
+      if (data?.isValid || data?.IsValid || data?.fullName || data?.FullName) {
+        setFptResult(data);
+        const name = data.fullName || data.FullName;
+        if (name) setFullName(name);
+        setStudentCode(fptCode.trim());
+        toast.success("Xác minh MSSV FPT thành công!");
+      } else {
+        setFptError("Mã số sinh viên không tồn tại trong hệ thống FPT Edu");
+        setFptResult(null);
+      }
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.";
-      setPasswordError(errMsg);
-      toast.error(errMsg);
+      setFptError(err?.message || "Không thể kết nối đến máy chủ xác minh FPT");
+      setFptResult(null);
     }
   };
 
-  // Two-strike rejection history
-  const { data: rejections = [] } = useGetUserRejections(user?.id);
-  const rejectionCount = rejections.filter((r) => r.isActive !== false).length;
-  const isBlocked = rejectionCount >= 2;
-  const lastRejection = rejections[rejections.length - 1];
-
-  const handleFileDrop = (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setSubmitError("Chỉ chấp nhận định dạng file ảnh (PNG, JPG, WEBP).");
-      return;
-    }
+  const handleFileChange = (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
-      setSubmitError("Dung lượng file ảnh không được vượt quá 5MB.");
+      setSubmitError("Kích thước file không được vượt quá 5MB");
       return;
     }
-    setSubmitError("");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setSubmitError("Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)");
+      return;
+    }
     setPhotoFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setPhotoPreview(e.target?.result as string);
-    reader.readAsDataURL(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setSubmitError("");
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -180,361 +228,306 @@ export function UserProfileView() {
     setSubmitError("");
     setSubmitSuccess(false);
 
-    if (isStaff) {
+    if (!fullName.trim()) {
+      setSubmitError("Vui lòng nhập họ và tên");
+      return;
+    }
+
+    if (!isStaff) {
+      if (schoolChoice === "OTHER" && !schoolId) {
+        setSubmitError("Vui lòng chọn trường đại học");
+        return;
+      }
+      if (schoolChoice === "OTHER" && !studentCode.trim()) {
+        setSubmitError("Vui lòng nhập Mã số sinh viên (MSSV)");
+        return;
+      }
+    }
+
+    try {
+      let finalPhotoUrl = user?.photoStudentCardUrl;
+
+      if (!isStaff && photoFile) {
+        setIsUploadingPhoto(true);
+        const uploadRes = await uploadRepository.uploadFile(photoFile);
+        finalPhotoUrl = uploadRes.fileUrl;
+        setIsUploadingPhoto(false);
+      }
+
+      let selectedSchoolId: string = schoolId || "";
+      if (schoolChoice === "FPT") {
+        const fptSchool = schools.find(
+          (s) =>
+            s.schoolName?.toLowerCase().includes("fpt") ||
+            s.schoolName?.toLowerCase().includes("đại học fpt")
+        );
+        if (fptSchool?.id) {
+          selectedSchoolId = fptSchool.id;
+        }
+      }
+
+      await updateProfileMutation.mutateAsync({
+        schoolId: selectedSchoolId,
+        studentCode: isStaff ? undefined : (studentCode || undefined),
+        photoStudentCardUrl: isStaff ? undefined : (finalPhotoUrl || undefined),
+        isFpt: isStaff ? false : (schoolChoice === "FPT"),
+        fullName: fullName.trim(),
+      });
+
       setSubmitSuccess(true);
       setIsEditing(false);
+      toast.success("Cập nhật thông tin hồ sơ thành công!");
+    } catch (err: any) {
+      setIsUploadingPhoto(false);
+      const msg = err?.response?.data?.message || err?.message || "Cập nhật hồ sơ thất bại";
+      setSubmitError(msg);
+      toast.error(msg);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess(false);
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setPasswordError("Vui lòng điền đầy đủ các trường mật khẩu");
       return;
     }
 
-    if (!studentCode.trim()) {
-      setSubmitError("Vui lòng nhập Mã số sinh viên (MSSV).");
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Mật khẩu mới và xác nhận mật khẩu không khớp");
       return;
     }
 
-    if (schoolChoice === "OTHER" && !schoolId) {
-      setSubmitError("Vui lòng chọn Trường học của bạn.");
-      return;
-    }
-
-    if (schoolChoice === "OTHER" && !photoPreview && !photoFile) {
-      setSubmitError("Sinh viên trường ngoài FPT bắt buộc phải tải lên Ảnh thẻ sinh viên HD.");
+    if (newPassword.length < 6) {
+      setPasswordError("Mật khẩu mới phải có ít nhất 6 ký tự");
       return;
     }
 
     try {
-      let photoCardUrl = user?.photoStudentCardUrl || undefined;
-      if (photoFile) {
-        setIsUploadingPhoto(true);
-        const uploaded = await uploadRepository.uploadFile(photoFile);
-        photoCardUrl = uploaded.fileUrl;
-      }
-
-      await updateProfile({
-        fullName: fullName.trim() || undefined,
-        isFpt: schoolChoice === "FPT",
-        schoolId: schoolChoice === "OTHER" ? schoolId : undefined,
-        studentCode: studentCode.trim(),
-        photoStudentCardUrl: photoCardUrl,
-      } as any);
-
-      setSubmitSuccess(true);
-      toast.success("Cập nhật thông tin hồ sơ thành công!");
-      setIsEditing(false);
+      await changePasswordMutation.mutateAsync({
+        oldPassword,
+        newPassword,
+        confirmNewPassword: confirmPassword,
+      });
+      setPasswordSuccess(true);
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Đổi mật khẩu thành công!");
+      setTimeout(() => setShowPasswordCard(false), 2000);
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || "Không thể cập nhật hồ sơ. Vui lòng thử lại sau.";
-      setSubmitError(errMsg);
-      toast.error(errMsg);
-    } finally {
-      setIsUploadingPhoto(false);
+      const msg = err?.response?.data?.message || err?.message || "Đổi mật khẩu thất bại";
+      setPasswordError(msg);
+      toast.error(msg);
     }
   };
 
   return (
-    <div className="hud-lattice min-h-[calc(100vh-4rem)] py-8 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-8 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+
+        {/* ── Top Header Title ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
           <div>
-            <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--accent-primary)] tracking-widest uppercase font-bold">
-              <User className="w-3.5 h-3.5" /> QUẢN LÝ THÔNG TIN HỒ SƠ
+            <div className="font-mono text-xs text-amber-400 mb-1 uppercase tracking-wider">
+              [ HỒ SƠ TÀI KHOẢN HỆ THỐNG ]
             </div>
-            <h1 className="font-display text-3xl font-extrabold uppercase tracking-wide text-[var(--text-primary)] mt-1">
-              {isStaff ? "HỒ SƠ CÁN BỘ & BAN TỔ CHỨC" : "HỒ SƠ CÁ NHÂN & THẺ SINH VIÊN"}
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase tracking-wide">
+              HỒ SƠ CÁ NHÂN &amp; PHÂN CÔNG
             </h1>
-            <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
-              {isStaff
-                ? "Quản lý thông tin cán bộ ban tổ chức, hội đồng chuyên môn và thông tin liên hệ."
-                : "Quản lý thông tin tài khoản, cập nhật Mã Số Sinh Viên (MSSV) & Ảnh thẻ để Admin/BTC phê duyệt."}
+            <p className="font-mono text-xs text-zinc-400 mt-1">
+              Quản lý thông tin định danh, đơn vị công tác và bảo mật tài khoản.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 font-mono text-xs">
             <button
+              type="button"
               onClick={() => setIsEditing(!isEditing)}
-              className="px-4 py-2 border border-[var(--accent-primary)]/40 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10 font-mono text-xs font-bold hud-clipped cursor-pointer flex items-center gap-1.5"
+              className={`px-4 py-2 border font-bold uppercase transition-all cursor-pointer hud-clipped ${
+                isEditing
+                  ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:text-white"
+                  : "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500 hover:text-black shadow-sm"
+              }`}
             >
-              <Edit3 className="w-4 h-4" />
-              {isEditing ? "HỦY CẬP NHẬT" : "CHỈNH SỬA HỒ SƠ"}
+              {isEditing ? "[ HỦY CHỈNH SỬA ]" : "[ CHỈNH SỬA HỒ SƠ ]"}
             </button>
           </div>
         </div>
 
-        {/* ── Status Banner Card ── */}
-        {isStaff ? (
-          /* Staff Status Banner */
-          <Card className="p-6 hud-clipped border border-[var(--accent-coordinator)]/40 bg-[var(--accent-coordinator)]/5">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 flex items-center justify-center hud-clipped shrink-0 bg-[var(--accent-coordinator)]/10 text-[var(--accent-coordinator)] border border-[var(--accent-coordinator)]/30">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <div>
-                  <span className="font-mono text-[10px] font-bold tracking-widest uppercase block text-[var(--accent-coordinator)]">
-                    TÀI KHOẢN CÁN BỘ BAN TỔ CHỨC
-                  </span>
-                  <h3 className="font-display text-xl font-bold text-[var(--text-primary)] mt-0.5">
-                    {roleName === "Coordinator"
-                      ? "Tài Khoản Event Coordinator Đã Kích Hoạt"
-                      : roleName === "Judge"
-                      ? "Tài Khoản Giám Khảo Chấm Điểm Đã Kích Hoạt"
-                      : roleName === "Mentor"
-                      ? "Tài Khoản Cố Vấn Chuyên Môn Đã Kích Hoạt"
-                      : "Tài Khoản Quản Trị Viên Hệ Thống (System Admin)"}
-                  </h3>
-                  <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
-                    Tài khoản của bạn đã được xác thực với đầy đủ quyền hạn vận hành trong hệ thống SEAL Hackathon.
-                  </p>
-                </div>
-              </div>
+        {/* ── Two-Strike Warning Banner for Students ── */}
+        {!isStaff && isBlocked && (
+          <div className="p-4 bg-red-950/40 border border-red-500/40 hud-clipped flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono text-xs">
+            <div className="space-y-1">
+              <span className="font-bold text-red-400 uppercase">[ TÀI KHOẢN BỊ KHÓA ĐĂNG KÝ THI ĐẤU ]</span>
+              <p className="text-zinc-300">
+                Hồ sơ sinh viên của bạn đã bị từ chối 2 lần. Vui lòng gửi yêu cầu mở khóa đến Quản trị viên.
+              </p>
             </div>
-          </Card>
-        ) : (
-          /* Student Status Banner */
-          <Card className={`p-6 hud-clipped border ${
-            isBlocked
-              ? "border-[var(--color-danger)]/50 bg-[var(--color-danger)]/5"
-              : user?.isApproved
-              ? "border-[var(--color-success)]/50 bg-[var(--color-success)]/5"
-              : user?.isRejected
-              ? "border-[var(--color-danger)]/50 bg-[var(--color-danger)]/5"
-              : "border-[var(--color-warning)]/50 bg-[var(--color-warning)]/5"
-          }`}>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 flex items-center justify-center hud-clipped shrink-0 ${
-                  isBlocked
-                    ? "bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
-                    : user?.isApproved
-                    ? "bg-[var(--color-success)]/10 text-[var(--color-success)] border border-[var(--color-success)]/30"
-                    : user?.isRejected
-                    ? "bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
-                    : "bg-[var(--color-warning)]/10 text-[var(--color-warning)] border border-[var(--color-warning)]/30 animate-pulse"
-                }`}>
-                  {isBlocked ? (
-                    <Lock className="w-6 h-6" />
-                  ) : user?.isApproved ? (
-                    <CheckCircle2 className="w-6 h-6" />
-                  ) : user?.isRejected ? (
-                    <XCircle className="w-6 h-6" />
-                  ) : (
-                    <RefreshCw className="w-6 h-6 animate-spin" />
-                  )}
-                </div>
-
-                <div>
-                  <span className={`font-mono text-[10px] font-bold tracking-widest uppercase block ${
-                    isBlocked
-                      ? "text-[var(--color-danger)]"
-                      : user?.isApproved
-                      ? "text-[var(--color-success)]"
-                      : user?.isRejected
-                      ? "text-[var(--color-danger)]"
-                      : "text-[var(--color-warning)]"
-                  }`}>
-                    {isBlocked
-                      ? "TÀI KHOẢN BỊ TẠM KHÓA"
-                      : user?.isApproved
-                      ? "HỒ SƠ SINH VIÊN HỢP LỆ (APPROVED)"
-                      : user?.isRejected
-                      ? "HỒ SƠ BỊ TỪ CHỐI BỞI BAN TỔ CHỨC"
-                      : "ĐANG CHỜ DUYỆT THẺ SINH VIÊN (PENDING)"}
-                  </span>
-
-                  <h3 className="font-display text-xl font-bold text-[var(--text-primary)] mt-0.5">
-                    {isBlocked
-                      ? "Hồ Sơ Đã Bị Từ Chối 2 Lần — Tài Khoản Tạm Khóa"
-                      : user?.isApproved
-                      ? "Tài Khoản Sinh Viên Đã Được Phê Duyệt"
-                      : user?.isRejected
-                      ? "Hồ Sơ Của Bạn Cần Được Cập Nhật Lại"
-                      : "Hồ Sơ Đang Trong Hàng Đợi Duyệt Của BTC & Admin"}
-                  </h3>
-
-                  <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
-                    {isBlocked
-                      ? "Bạn có thể gửi Yêu cầu mở khóa (Request Unblock) bên dưới để BTC xem xét thủ công."
-                      : user?.isApproved
-                      ? "Bạn đã được cấp đầy đủ quyền tham gia các giải đấu Hackathon & tạo Đội thi."
-                      : user?.isRejected
-                      ? `Lý do từ chối: "${lastRejection?.reason || "Ảnh thẻ không rõ nét hoặc MSSV không khớp"}". Vui lòng bấm Cập nhật hồ sơ bên dưới.`
-                      : "BTC và System Admin sẽ đối chiếu ảnh thẻ SV / hệ thống FPT để duyệt tài khoản trong 24h."}
-                  </p>
-                </div>
-              </div>
-
-              {!user?.isApproved && !isBlocked && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono text-xs font-bold uppercase hover:bg-white transition-all hud-clipped cursor-pointer shrink-0"
-                >
-                  {user?.isRejected ? "CẬP NHẬT LẠI ➔" : "CẬP NHẬT ẢNH THẺ ➔"}
-                </button>
-              )}
-            </div>
-          </Card>
-        )}
-
-        {/* ── Submission Success Toast Banner ── */}
-        {submitSuccess && (
-          <div className="p-4 bg-[var(--color-success)]/10 border border-[var(--color-success)]/40 font-mono text-xs text-[var(--color-success)] flex items-center justify-between hud-clipped">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" />
-              <span>Đã lưu cập nhật thông tin hồ sơ thành công!</span>
-            </div>
-            <button onClick={() => setSubmitSuccess(false)} className="hover:underline font-bold">
-              ĐÓNG
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await requestUnblockMutation.mutateAsync(user?.email || "");
+                  setRequestUnblockSuccess(true);
+                  toast.success("Đã gửi yêu cầu mở khóa!");
+                } catch {
+                  toast.error("Gửi yêu cầu thất bại");
+                }
+              }}
+              disabled={requestUnblockSuccess || requestUnblockMutation.isPending}
+              className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold uppercase hud-clipped shrink-0 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {requestUnblockSuccess ? "[ ĐÃ GỬI YÊU CẦU ]" : "[ GỬI YÊU CẦU MỞ KHÓA ]"}
             </button>
           </div>
         )}
 
-        {/* ── Main Content Grid ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Left Col: User Identity Card */}
+        {/* ── Main Layout: Left Identification & Right Form ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          {/* ── CỘT TRÁI (1 COL / 33%): THẺ ĐỊNH DANH ── */}
           <div className="space-y-6">
-            <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-6">
-              <div className="flex flex-col items-center text-center pb-6 border-b border-[var(--border-muted)]">
-                <div className="w-20 h-20 rounded-full bg-[var(--accent-primary)]/10 border-2 border-[var(--accent-primary)]/40 flex items-center justify-center text-[var(--accent-primary)] text-2xl font-bold font-mono mb-3">
-                  {fullName ? fullName.charAt(0).toUpperCase() : (user?.fullName || user?.email || "U").charAt(0).toUpperCase()}
+            <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-6 shadow-sm">
+              <div className="flex flex-col items-center text-center space-y-3 pb-6 border-b border-zinc-800">
+                {/* Avatar Initial with Soft Glow */}
+                <div className="w-20 h-20 bg-gradient-to-br from-amber-500/20 to-amber-500/5 border-2 border-amber-500/40 rounded-full flex items-center justify-center font-display text-2xl font-extrabold text-amber-300 shadow-md">
+                  {user?.fullName?.charAt(0).toUpperCase() || user?.FullName?.charAt(0).toUpperCase() || "U"}
                 </div>
-                <h3 className="font-display font-bold text-lg text-[var(--text-primary)]">
-                  {fullName || user?.fullName || user?.FullName || user?.email || "Thí sinh"}
-                </h3>
-                <span className="font-mono text-xs text-[var(--text-muted)] flex items-center gap-1 mt-1">
-                  <Mail className="w-3.5 h-3.5" /> {user?.email || "Chưa có email"}
-                </span>
-                
-                {/* Dynamic Role Badge */}
-                <span className={`mt-2 px-3 py-1 font-mono text-[10px] font-bold uppercase hud-clipped ${
-                  roleName === "Coordinator"
-                    ? "bg-[#a855f7]/10 text-[#a855f7] border border-[#a855f7]/30"
-                    : roleName === "Judge"
-                    ? "bg-[var(--accent-judge)]/10 text-[var(--accent-judge)] border border-[var(--accent-judge)]/30"
-                    : roleName === "Mentor"
-                    ? "bg-[#2dd4bf]/10 text-[#2dd4bf] border border-[#2dd4bf]/30"
-                    : roleName === "Admin"
-                    ? "bg-[var(--color-danger)]/10 text-[var(--color-danger)] border border-[var(--color-danger)]/30"
-                    : "bg-[var(--accent-team)]/10 text-[var(--accent-team)] border border-[var(--accent-team)]/30"
-                }`}>
-                  VAI TRÒ: {
-                    roleName === "Coordinator"
-                      ? "BAN TỔ CHỨC (COORDINATOR)"
-                      : roleName === "Judge"
-                      ? "GIÁM KHẢO"
-                      : roleName === "Mentor"
-                      ? "CỐ VẤN"
-                      : roleName === "Admin"
-                      ? "QUẢN TRỊ VIÊN HỆ THỐNG"
-                      : "THÍ SINH (STUDENT)"
-                  }
-                </span>
+
+                <div className="space-y-1">
+                  <h3 className="font-display font-bold text-xl text-white uppercase tracking-wide">
+                    {user?.fullName || user?.FullName || "Người dùng"}
+                  </h3>
+                  <p className="font-mono text-xs text-zinc-400">
+                    {user?.email || "user@seal.vn"}
+                  </p>
+                  <p className="text-xs text-zinc-300 font-medium pt-0.5">
+                    {isStaff
+                      ? (schoolNameDisplay || "Chuyên gia Chuyên môn")
+                      : `${schoolNameDisplay} ${user?.studentCode ? `• MSSV: ${user.studentCode}` : ""}`}
+                  </p>
+                </div>
+
+                {/* Dải trạng thái định danh tự nhiên (Không dùng badge vuông cồng kềnh) */}
+                <div className="pt-1">
+                  {user?.isAdmin ? (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-950/40 border border-red-500/30 text-red-300 font-mono text-[11px] font-bold uppercase hud-clipped">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                      <span>Quản Trị Viên Hệ Thống</span>
+                    </div>
+                  ) : isStaff ? (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-[11px] font-bold hud-clipped">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      <span>{userRoles.length > 0 ? `Đang tham gia: ${userRoles.length} phân công sự kiện` : "Cán Bộ / Chuyên Gia"}</span>
+                    </div>
+                  ) : (
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] font-bold hud-clipped ${
+                      user?.isApproved
+                        ? "bg-emerald-950/40 border border-emerald-500/30 text-emerald-300"
+                        : "bg-amber-950/40 border border-amber-500/30 text-amber-300"
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${user?.isApproved ? "bg-emerald-400" : "bg-amber-400 animate-pulse"}`} />
+                      <span>{user?.isApproved ? "Thẻ Sinh Viên Đã Xác Thực" : "Thẻ Sinh Viên Chờ Duyệt"}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {isStaff ? (
-                /* Staff Professional Info Summary */
-                <div className="space-y-4 font-mono text-xs">
-                  <div className="flex justify-between items-center py-2 border-b border-[var(--border-muted)]/50">
-                    <span className="text-[var(--text-muted)] flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> Đơn Vị Công Tác:
-                    </span>
-                    <span className="font-bold text-[var(--text-primary)] truncate max-w-[160px]">
-                      {staffOrg || "Chưa cập nhật"}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 border-b border-[var(--border-muted)]/50">
-                    <span className="text-[var(--text-muted)] flex items-center gap-1.5">
-                      <IdCard className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> Phân Quyền:
-                    </span>
-                    <span className="font-bold text-[var(--accent-coordinator)]">
-                      Ban Tổ Chức Hệ Thống
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 border-b border-[var(--border-muted)]/50">
-                    <span className="text-[var(--text-muted)] flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> Trạng Thái:
-                    </span>
-                    <span className="font-bold text-[var(--color-success)]">
-                      Đang Hoạt Động
-                    </span>
-                  </div>
+              {/* Thông tin chi tiết trong DB */}
+              <div className="space-y-3 font-mono text-xs">
+                <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
+                  <span className="text-zinc-400">ĐƠN VỊ / TRƯỜNG:</span>
+                  <span className="font-bold text-white text-right max-w-[160px] truncate" title={schoolNameDisplay}>
+                    {schoolNameDisplay}
+                  </span>
                 </div>
-              ) : (
-                /* Student Info Summary */
-                <div className="space-y-4 font-mono text-xs">
-                  <div className="flex justify-between items-center py-2 border-b border-[var(--border-muted)]/50">
-                    <span className="text-[var(--text-muted)] flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> Trường Học:
-                    </span>
-                    <span className="font-bold text-[var(--text-primary)] truncate max-w-[160px]">
-                      {schoolChoice === "FPT" ? "Trường Đại Học FPT" : (schools.find(s => s.id === schoolId || s.schoolId === schoolId)?.schoolName || (schoolId ? schoolId : "Chưa chọn trường"))}
-                    </span>
-                  </div>
 
-                  <div className="flex justify-between items-center py-2 border-b border-[var(--border-muted)]/50">
-                    <span className="text-[var(--text-muted)] flex items-center gap-1.5">
-                      <IdCard className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> Mã Số SV (MSSV):
-                    </span>
-                    <span className="font-bold text-[var(--accent-primary)]">
-                      {studentCode || "Chưa cập nhật"}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-2 border-b border-[var(--border-muted)]/50">
-                    <span className="text-[var(--text-muted)] flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> Xác Minh FPT:
-                    </span>
-                    <span className={`font-bold ${schoolChoice === "FPT" ? "text-[var(--color-success)]" : "text-[var(--text-muted)]"}`}>
-                      {schoolChoice === "FPT" ? "Tự động" : "Trường ngoài"}
-                    </span>
-                  </div>
+                <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
+                  <span className="text-zinc-400">LOẠI TÀI KHOẢN:</span>
+                  <span className="font-bold text-cyan-300">
+                    {user?.isStudent ? "Sinh Viên / Thí Sinh" : "Chuyên Gia / Cán Bộ"}
+                  </span>
                 </div>
-              )}
 
-              {/* Student Card Photo Preview Area (Only for Students) */}
+                {/* Các trường chỉ dành cho Sinh Viên thực tế */}
+                {!isStaff && (
+                  <>
+                    <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
+                      <span className="text-zinc-400">MSSV:</span>
+                      <span className="font-bold text-amber-300">
+                        {user?.studentCode || "Chưa cập nhật"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
+                      <span className="text-zinc-400">XÁC MINH FPT:</span>
+                      <span className="font-bold text-zinc-300">
+                        {user?.isFpt ? "[FPT EDU]" : "[TRƯỜNG NGOÀI]"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
+                      <span className="text-zinc-400">TRẠNG THÁI THẺ:</span>
+                      <span className="font-bold text-emerald-400">
+                        {user?.isApproved ? "[ ĐÃ DUYỆT ]" : "[ CHỜ DUYỆT ]"}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-zinc-400">NGÀY THAM GIA:</span>
+                  <span className="text-zinc-300">
+                    {user?.createdTime ? new Date(user.createdTime).toLocaleDateString("vi-VN") : "18/07/2026"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Xem ảnh thẻ sinh viên (Chỉ hiện cho Sinh Viên nếu có ảnh trong DB) */}
               {!isStaff && (
-                <div className="pt-2">
-                  <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-bold mb-2">
+                <div className="pt-2 border-t border-zinc-800 space-y-2">
+                  <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
                     ẢNH THẺ SINH VIÊN ĐÃ NỘP:
                   </span>
                   {photoPreview ? (
-                    <div className="relative border border-[var(--border-muted)] bg-[var(--bg-base)] p-1 hud-clipped">
+                    <div className="relative border border-zinc-800 bg-black/40 p-1 hud-clipped">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={photoPreview}
                         alt="Ảnh thẻ sinh viên"
-                        className="w-full h-40 object-cover rounded-none"
+                        className="w-full h-40 object-cover"
                       />
-                      <div className="mt-1 font-mono text-[10px] text-center text-[var(--text-muted)]">
-                        Chất lượng: HD Standard
+                      <div className="mt-1 font-mono text-[10px] text-center text-zinc-400">
+                        [ BẢN ĐÃ NỘP ]
                       </div>
                     </div>
                   ) : (
-                    <div className="p-6 border border-dashed border-[var(--border-muted)] bg-[var(--bg-input)]/50 text-center font-mono text-xs text-[var(--text-muted)] hud-clipped">
-                      Chưa có ảnh thẻ sinh viên.
+                    <div className="p-6 border border-dashed border-zinc-800 bg-[#090e11] text-center font-mono text-xs text-zinc-500 hud-clipped">
+                      [ CHƯA CÓ ẢNH THẺ SINH VIÊN ]
                     </div>
                   )}
                 </div>
               )}
             </Card>
 
-            {/* Rejection History Section (Only for Students) */}
+            {/* Lịch sử từ chối thẻ sinh viên */}
             {!isStaff && rejections.length > 0 && (
-              <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--color-danger)]/30 hud-clipped space-y-3">
-                <h4 className="font-mono text-xs font-bold text-[var(--color-danger)] uppercase tracking-wider flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4" /> LỊCH SỬ TỪ CHỐI HỒ SƠ ({rejections.length})
+              <Card className="p-5 bg-[#10171a] border border-red-500/30 hud-clipped space-y-3">
+                <h4 className="font-mono text-xs font-bold text-red-400 uppercase tracking-wider">
+                  [ LỊCH SỬ TỪ CHỐI THẺ ({rejections.length}) ]
                 </h4>
                 <div className="space-y-2 font-mono text-xs">
-                  {rejections.map((r, i) => (
-                    <div key={r.id || i} className="p-3 bg-[var(--bg-base)] border border-[var(--border-muted)] space-y-1">
-                      <div className="flex justify-between text-[10px] text-[var(--text-muted)]">
-                        <span className="text-[var(--color-danger)] font-bold">Lần #{i + 1}</span>
+                  {rejections.map((r: any, i: number) => (
+                    <div key={r.id || i} className="p-3 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped">
+                      <div className="flex justify-between text-[10px] text-zinc-500">
+                        <span className="text-red-400 font-bold">LẦN #{i + 1}</span>
                         <span>{r.createdTime ? new Date(r.createdTime).toLocaleDateString("vi-VN") : "Gần đây"}</span>
                       </div>
-                      <p className="text-[var(--text-primary)]">
-                        Lý do: <span className="text-[var(--color-danger)] font-semibold">{r.reason || "Ảnh thẻ không đạt tiêu chuẩn"}</span>
+                      <p className="text-zinc-300">
+                        Lý do: <span className="text-red-300">{r.reason || "Ảnh thẻ không hợp lệ"}</span>
                       </p>
                     </div>
                   ))}
@@ -543,38 +536,86 @@ export function UserProfileView() {
             )}
           </div>
 
-          {/* Right Col: Form Editing */}
+          {/* ── CỘT PHẢI (2 COLS / 67%): FORM THÔNG TIN CHUẨN DATABASE ── */}
           <div className="md:col-span-2 space-y-6">
-            {isStaff ? (
-              /* Staff Professional Edit Form */
-              <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-6">
-                <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
-                  <h3 className="font-display font-bold text-lg text-[var(--text-primary)] flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-[var(--accent-primary)]" />
-                    THÔNG TIN CÔNG TÁC &amp; BAN TỔ CHỨC
-                  </h3>
-                  <span className="font-mono text-[10px] px-2.5 py-1 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-muted)]">
-                    {isEditing ? "CHẾ ĐỘ CHỈNH SỬA" : "CHẾ ĐỘ XEM"}
-                  </span>
-                </div>
+            
+            {/* Thẻ Thông tin Hồ sơ (Chế độ xem tự nhiên & Chế độ chỉnh sửa) */}
+            <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-6 shadow-sm">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+                <h3 className="font-display font-bold text-base text-white uppercase">
+                  {isStaff ? "THÔNG TIN ĐỊNH DANH & ĐƠN VỊ CÔNG TÁC" : "THÔNG TIN HỒ SƠ & THẺ SINH VIÊN"}
+                </h3>
+                <span className="font-mono text-[10px] px-2.5 py-1 bg-[#090e11] border border-zinc-800 text-zinc-400 uppercase hud-clipped">
+                  {isEditing ? "[ ĐANG CHỈNH SỬA ]" : "[ CHẾ ĐỘ XEM ]"}
+                </span>
+              </div>
 
+              {!isEditing ? (
+                <div className="space-y-4 font-mono text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped">
+                      <span className="text-[10px] text-zinc-500 uppercase block font-bold">HỌ VÀ TÊN</span>
+                      <span className="text-sm font-bold text-white block">{fullName || user?.fullName || "Chưa cập nhật"}</span>
+                    </div>
+
+                    <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped">
+                      <span className="text-[10px] text-zinc-500 uppercase block font-bold">EMAIL TÀI KHOẢN</span>
+                      <span className="text-sm font-bold text-zinc-300 block truncate">{user?.email || "N/A"}</span>
+                    </div>
+
+                    <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped sm:col-span-2">
+                      <span className="text-[10px] text-zinc-500 uppercase block font-bold">
+                        {isStaff ? "ĐƠN VỊ CÔNG TÁC / TỔ CHỨC / TRƯỜNG HỌC" : "TRƯỜNG ĐẠI HỌC"}
+                      </span>
+                      <span className="text-sm font-bold text-amber-300 block">{schoolNameDisplay}</span>
+                    </div>
+
+                    {!isStaff && (
+                      <>
+                        <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped">
+                          <span className="text-[10px] text-zinc-500 uppercase block font-bold">MÃ SỐ SINH VIÊN (MSSV)</span>
+                          <span className="text-sm font-bold text-cyan-300 block">{studentCode || "Chưa cập nhật"}</span>
+                        </div>
+
+                        <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped">
+                          <span className="text-[10px] text-zinc-500 uppercase block font-bold">PHÂN LOẠI TRƯỜNG</span>
+                          <span className="text-sm font-bold text-zinc-300 block">
+                            {schoolChoice === "FPT" ? "Sinh Viên FPT Edu" : "Sinh Viên Trường Ngoài"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="pt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="px-4 py-2 bg-amber-500/15 border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-black font-bold uppercase text-xs transition-all cursor-pointer hud-clipped shadow-sm"
+                    >
+                      [ CHỈNH SỬA THÔNG TIN HỒ SƠ ]
+                    </button>
+                  </div>
+                </div>
+              ) : (
                 <form onSubmit={handleFormSubmit} className="space-y-5 font-mono text-xs">
+                  {/* Họ và tên */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-bold">
-                      Họ và Tên Cán Bộ *
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                      Họ và Tên *
                     </label>
                     <Input
                       type="text"
-                      value={fullName || user?.fullName || user?.FullName || ""}
+                      value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      disabled={!isEditing}
                       required
                     />
                   </div>
 
+                  {/* Email (Read-only từ DB) */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-bold">
-                      Email Công Tác
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                      Email Tài Khoản (Không thể thay đổi)
                     </label>
                     <Input
                       type="email"
@@ -584,371 +625,413 @@ export function UserProfileView() {
                     />
                   </div>
 
+                  {/* Đơn vị công tác / Trường học (Select từ bảng Schools thật trong DB) */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-bold">
-                      Đơn Vị Công Tác / Bộ Môn / Viện
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                      {isStaff ? "Đơn Vị Công Tác / Tổ Chức / Trường Học *" : "Trường Đại Học *"}
                     </label>
-                    <Input
-                      type="text"
-                      value={staffOrg}
-                      onChange={(e) => setStaffOrg(e.target.value)}
-                      disabled={!isEditing}
-                      placeholder="FPT University - Ban Công Tác Học Đường"
-                    />
+                    <select
+                      value={schoolId}
+                      onChange={(e) => setSchoolId(e.target.value)}
+                      className="w-full p-2.5 bg-[#090e11] border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="">-- Chọn đơn vị / trường học từ hệ thống --</option>
+                      {schools.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.schoolName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-bold">
-                      Giới Thiệu Chuyên Môn / Trách Nhiệm Sự Kiện
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={staffBio}
-                      onChange={(e) => setStaffBio(e.target.value)}
-                      disabled={!isEditing}
-                      className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-primary)] disabled:opacity-70 disabled:cursor-not-allowed"
-                    />
-                  </div>
-
-                  {isEditing && (
-                    <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border-muted)]">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setIsEditing(false)}
-                      >
-                        HỦY
-                      </Button>
-                      <Button type="submit" variant="primary">
-                        <CheckCircle2 className="w-4 h-4 mr-1.5" /> LƯU THAY ĐỔI
-                      </Button>
-                    </div>
-                  )}
-                </form>
-              </Card>
-            ) : (
-              /* Student Verification Form */
-              <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-6">
-                <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
-                  <h3 className="font-display font-bold text-lg text-[var(--text-primary)] flex items-center gap-2">
-                    <IdCard className="w-5 h-5 text-[var(--accent-primary)]" />
-                    CẬP NHẬT THÔNG TIN &amp; THẺ SINH VIÊN
-                  </h3>
-                  <Badge tone={isEditing ? "warning" : "neutral"}>
-                    {isEditing ? "ĐANG CHỈNH SỬA" : "CHẾ ĐỘ XEM"}
-                  </Badge>
-                </div>
-
-                {submitError && (
-                  <div className="p-3 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 font-mono text-xs text-[var(--color-danger)]">
-                    {submitError}
-                  </div>
-                )}
-
-                <form onSubmit={handleFormSubmit} className="space-y-5 font-mono text-xs">
-                  
-                  {/* Full Name */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">
-                      Họ Và Tên Sinh Viên *
-                    </label>
-                    <Input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      disabled={!isEditing}
-                      placeholder="Nhập họ và tên đầy đủ..."
-                    />
-                  </div>
-
-                  {/* School Choice Dropdown */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">
-                        Phân Loại Trường *
-                      </label>
-                      <select
-                        value={schoolChoice}
-                        onChange={(e) => setSchoolChoice(e.target.value as "FPT" | "OTHER")}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent-primary)]"
-                      >
-                        <option value="FPT">Sinh Viên FPT University</option>
-                        <option value="OTHER">Sinh Viên Trường Khác (Non-FPT)</option>
-                      </select>
-                    </div>
-
-                    {schoolChoice === "OTHER" && (
+                  {/* Các trường dành riêng cho Sinh Viên (MSSV, FPT, Ảnh thẻ) */}
+                  {!isStaff && (
+                    <>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">
-                          Chọn Trường Học *
+                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                          Phân Loại Trường *
                         </label>
-                        <select
-                          value={schoolId}
-                          onChange={(e) => setSchoolId(e.target.value)}
-                          disabled={!isEditing || loadingSchools}
-                          className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent-primary)]"
-                        >
-                          <option value="">-- Chọn trường học --</option>
-                          {schools.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.schoolName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Student Code (MSSV) */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">
-                      Mã Số Sinh Viên (MSSV) *
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        value={studentCode}
-                        onChange={(e) => setStudentCode(e.target.value.toUpperCase())}
-                        disabled={!isEditing}
-                        placeholder="Ví dụ: SE171234..."
-                        className="flex-1"
-                      />
-                      {schoolChoice === "FPT" && isEditing && (
-                        <Button
-                          type="button"
-                          variant="primary"
-                          disabled={isVerifying || studentCode.length < 4}
-                          onClick={async () => {
-                            setFptError("");
-                            try {
-                              const result = await verifyFpt(studentCode);
-                              setFptResult(result);
-                              if (!result?.isValid) setFptError("MSSV không tìm thấy trên hệ thống FPT.");
-                            } catch {
-                              setFptError("Lỗi kết nối xác minh FPT.");
-                            }
-                          }}
-                          className="flex items-center gap-1.5 px-3"
-                        >
-                          {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                        </Button>
-                      )}
-                    </div>
-                    {fptError && <span className="text-xs text-[var(--color-danger)] font-mono">{fptError}</span>}
-                  </div>
-
-                  {/* FPT Auto-Verify Badge */}
-                  {fptResult?.isValid && (
-                    <div className="p-3 bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 font-mono text-xs">
-                      <span className="text-[var(--color-success)] font-bold">✓ ĐÃ XÁC MINH FPT:</span> {fptResult.fullName} ({fptResult.studentCode}) - {fptResult.major}
-                    </div>
-                  )}
-
-                  {/* Photo Upload Area */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">
-                      Tải Lên Ảnh Thẻ Sinh Viên HD (Mặt Trước) *
-                    </label>
-                    
-                    {photoPreview ? (
-                      <div className="relative border border-[var(--border-muted)] bg-[var(--bg-base)] p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={photoPreview} alt="Preview" className="w-16 h-12 object-cover border border-[var(--border-muted)]" />
-                          <div>
-                            <span className="font-bold text-[var(--text-primary)] block">Ảnh Thẻ Sinh Viên HD</span>
-                            <span className="text-[10px] text-[var(--text-muted)]">File hợp lệ (PNG/JPG)</span>
-                          </div>
-                        </div>
-                        {isEditing && (
+                        <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
-                            onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
-                            className="text-[var(--color-danger)] font-bold hover:underline"
+                            onClick={() => setSchoolChoice("FPT")}
+                            className={`p-2.5 text-center font-bold uppercase transition-all hud-clipped ${
+                              schoolChoice === "FPT"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 font-extrabold"
+                                : "bg-[#090e11] text-zinc-400 border border-zinc-800"
+                            }`}
                           >
-                            Xóa ảnh
+                            [ SINH VIÊN FPT ]
                           </button>
-                        )}
+                          <button
+                            type="button"
+                            onClick={() => setSchoolChoice("OTHER")}
+                            className={`p-2.5 text-center font-bold uppercase transition-all hud-clipped ${
+                              schoolChoice === "OTHER"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 font-extrabold"
+                                : "bg-[#090e11] text-zinc-400 border border-zinc-800"
+                            }`}
+                          >
+                            [ TRƯỜNG KHÁC ]
+                          </button>
+                        </div>
                       </div>
-                    ) : (
-                      <div
-                        className={`p-6 border-2 border-dashed flex flex-col items-center justify-center hud-clipped transition-all ${
-                          !isEditing ? "opacity-50 pointer-events-none" : "cursor-pointer"
-                        } ${
-                          isDragging ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/5" : "border-[var(--border-muted)] hover:border-[var(--accent-primary)]/50"
-                        }`}
-                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                        onDragLeave={() => setIsDragging(false)}
-                        onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFileDrop(f); }}
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload className="w-8 h-8 text-[var(--text-muted)] mb-2" />
-                        <span className="text-xs font-mono text-[var(--text-primary)]">
-                          Kéo thả file ảnh thẻ vào đây hoặc <span className="text-[var(--accent-primary)] underline">Chọn từ máy</span>
-                        </span>
-                        <span className="text-[10px] text-[var(--text-muted)] mt-1">Dung lượng tối đa 5MB</span>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileDrop(f); }}
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                          Mã Số Sinh Viên (MSSV) *
+                        </label>
+                        <Input
+                          type="text"
+                          value={studentCode}
+                          onChange={(e) => setStudentCode(e.target.value)}
+                          placeholder="Ví dụ: SE171234..."
                         />
                       </div>
-                    )}
-                  </div>
 
-                  {/* Form Action Buttons */}
-                  {isEditing && (
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--border-muted)]">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditing(false)}
-                        className="px-4 py-2 border border-[var(--border-muted)] text-[var(--text-muted)] font-bold hover:bg-white/5 cursor-pointer"
-                      >
-                        HỦY
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="px-6 py-2 bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold hover:bg-white transition-all cursor-pointer hud-clipped flex items-center gap-2"
-                      >
-                        {isSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                        GỬI CẬP NHẬT HỒ SƠ
-                      </button>
-                    </div>
-                  )}
-                </form>
-              </Card>
-            )}
-
-            {/* Change Password Card */}
-            <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-mono text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                  <Key className="w-4 h-4 text-[var(--accent-primary)]" /> ĐỔI MẬT KHẨU
-                </h4>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setShowPasswordCard(!showPasswordCard);
-                    setPasswordError("");
-                    setPasswordSuccess(false);
-                  }}
-                  className="text-xs font-mono text-[var(--accent-primary)]"
-                >
-                  {showPasswordCard ? "ĐÓNG LẠI" : "THAY ĐỔI MẬT KHẨU"}
-                </Button>
-              </div>
-
-              {showPasswordCard && (
-                <form onSubmit={handleChangePassword} className="space-y-4 pt-2 border-t border-[var(--border-muted)]">
-                  {passwordError && (
-                    <div className="p-3 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 text-xs font-mono text-[var(--color-danger)] flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                      {passwordError}
-                    </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                          Tải Lên Ảnh Thẻ Sinh Viên Mới (Mặt Trước)
+                        </label>
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                          onDragLeave={() => setIsDragging(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setIsDragging(false);
+                            if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]);
+                          }}
+                          className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${
+                            isDragging
+                              ? "border-amber-400 bg-amber-500/10"
+                              : "border-zinc-800 hover:border-zinc-700 bg-[#090e11]"
+                          }`}
+                        >
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                            className="hidden"
+                          />
+                          <p className="text-zinc-300 font-bold uppercase text-[11px]">
+                            [ Kéo thả file ảnh thẻ vào đây hoặc Bấm để chọn ]
+                          </p>
+                          <span className="text-[10px] text-zinc-500 block mt-1">Dung lượng tối đa 5MB (JPG, PNG)</span>
+                        </div>
+                      </div>
+                    </>
                   )}
 
-                  {passwordSuccess && (
-                    <div className="p-3 bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 text-xs font-mono text-[var(--color-success)] flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                      Mật khẩu đã được thay đổi thành công!
-                    </div>
-                  )}
+                  {submitError && <p className="text-red-400 font-bold">{submitError}</p>}
+                  {submitSuccess && <p className="text-emerald-400 font-bold">[✓ CẬP NHẬT HỒ SƠ THÀNH CÔNG]</p>}
 
-                  <div>
-                    <label className="block text-xs font-mono text-[var(--text-muted)] mb-1 uppercase">
-                      Mật khẩu hiện tại
-                    </label>
-                    <input
-                      type="password"
-                      value={oldPassword}
-                      onChange={(e) => setOldPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-primary)]"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-mono text-[var(--text-muted)] mb-1 uppercase">
-                        Mật khẩu mới
-                      </label>
-                      <input
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="•••••••• (Tối thiểu 6 ký tự)"
-                        className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-primary)]"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono text-[var(--text-muted)] mb-1 uppercase">
-                        Xác nhận mật khẩu mới
-                      </label>
-                      <input
-                        type="password"
-                        value={confirmNewPassword}
-                        onChange={(e) => setConfirmNewPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-primary)]"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-2">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
                     <Button
-                      type="submit"
-                      variant="primary"
-                      disabled={isChangingPassword}
-                      className="justify-center flex items-center gap-2"
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setIsEditing(false)}
                     >
-                      {isChangingPassword ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
-                      XÁC NHẬN ĐỔI MẬT KHẨU
+                      HỦY
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={isUploadingPhoto || updateProfileMutation.isPending}>
+                      {isUploadingPhoto ? "[ ĐANG TẢI ẢNH... ]" : "[ LƯU THAY ĐỔI ]"}
                     </Button>
                   </div>
                 </form>
               )}
             </Card>
 
-            {/* Unblock Request Card for Blocked Accounts */}
-            {!isStaff && isBlocked && (
-              <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--color-danger)]/40 hud-clipped space-y-4">
-                <h4 className="font-mono text-sm font-bold text-[var(--color-danger)] uppercase tracking-wider flex items-center gap-2">
-                  <Lock className="w-4 h-4" /> YÊU CẦU MỞ KHÓA TÀI KHOẢN (REQUEST UNBLOCK)
-                </h4>
-                <p className="font-mono text-xs text-[var(--text-muted)] leading-relaxed">
-                  Tài khoản của bạn đã vượt quá giới hạn 2 lần từ chối hồ sơ. Bạn có thể gửi yêu cầu giải trình cho Ban Tổ Chức để xem xét mở khóa thủ công.
-                </p>
-
-                {requestUnblockSuccess ? (
-                  <div className="p-3 bg-[var(--color-success)]/10 border border-[var(--color-success)]/30 text-xs font-mono text-[var(--color-success)] flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Yêu cầu mở khóa đã được gửi tới Ban Tổ Chức. Phản hồi sẽ gửi qua email trong 24h.
+            {/* ── CARD ĐỘI THI CỦA TÔI (CHO THÍ SINH / SINH VIÊN NẾU CÓ) ── */}
+            {!isStaff && myTeam && (
+              <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <div className="space-y-0.5">
+                    <h3 className="font-display font-bold text-base text-white uppercase">
+                      ĐỘI THI ĐANG THAM GIA
+                    </h3>
+                    <span className="font-mono text-[10px] text-zinc-500 uppercase">
+                      Đội thi của bạn trong sự kiện
+                    </span>
                   </div>
-                ) : (
-                  <Button
-                    variant="primary"
-                    disabled={isUnblocking}
-                    onClick={async () => {
-                      if (!user?.email) return;
-                      await requestUnblock(user.email).catch(console.warn);
-                      setRequestUnblockSuccess(true);
-                    }}
-                    className="w-full justify-center bg-[var(--color-danger)] text-white hover:bg-white hover:text-black font-bold"
-                  >
-                    {isUnblocking ? "ĐANG GỬI YÊU CẦU..." : "GỬI YÊU CẦU MỞ KHÓA CHO BTC"}
-                  </Button>
-                )}
+                  <span className="font-mono text-xs px-2.5 py-1 bg-cyan-950/60 text-cyan-300 border border-cyan-500/40 font-bold hud-clipped">
+                    {myTeam.name || "Đội thi của tôi"}
+                  </span>
+                </div>
+
+                <div className="p-4 bg-[#090e11] border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hud-clipped font-mono text-xs">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white text-sm uppercase">
+                        {myTeam.name}
+                      </span>
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-zinc-800 text-zinc-300 hud-clipped">
+                        {myTeam.status || "Forming"}
+                      </span>
+                    </div>
+                    <p className="text-zinc-400 text-[11px]">
+                      Sự kiện: <strong className="text-zinc-200">{myTeam.eventName || "Sự kiện hiện tại"}</strong>
+                      {myTeam.members && ` • ${myTeam.members.length} thành viên`}
+                    </p>
+                  </div>
+
+                  <Link href={`/my-team${myTeam.eventId ? `?eventId=${myTeam.eventId}` : ""}`}>
+                    <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-cyan-400 text-cyan-300 hover:text-white font-bold uppercase text-[11px] hud-clipped transition-all cursor-pointer">
+                      [ VÀO QUẢN TRỊ ĐỘI THI &gt; ]
+                    </button>
+                  </Link>
+                </div>
               </Card>
             )}
 
+            {/* ── BẢNG PHÂN CÔNG NHIỆM VỤ CHUYÊN MÔN (STAFF: JUDGE / MENTOR / COORDINATOR) ── */}
+            {staffRoles.length > 0 && (
+              <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <div className="space-y-0.5">
+                    <h3 className="font-display font-bold text-base text-white uppercase">
+                      PHÂN CÔNG NHIỆM VỤ CHUYÊN MÔN
+                    </h3>
+                    <span className="font-mono text-[10px] text-zinc-500 uppercase">
+                      Vai trò Giám khảo, Cố vấn và Ban tổ chức theo sự kiện
+                    </span>
+                  </div>
+                  <span className="font-mono text-xs px-2.5 py-1 bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold hud-clipped">
+                    {staffRoles.length} PHÂN CÔNG
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 font-mono text-xs">
+                  {staffRoles.map((r: any, idx: number) => {
+                    const rEventId = r.eventId || r.EventId;
+                    const rEventObj = eventsList.find((e: any) => normalizeId(e.id || e.Id) === normalizeId(rEventId));
+                    const rEventName = rEventObj?.eventName || rEventObj?.EventName || eventNameMap.get(normalizeId(rEventId)) || "Sự kiện SEAL";
+                    const isEnded = rEventObj?.status === false || (rEventObj?.endDate && new Date(rEventObj.endDate).getTime() < Date.now());
+                    const rRoleName = r.roleName || r.RoleName || "Chuyên gia";
+                    const rTrackId = r.trackId || r.TrackId;
+                    const rTrackName = r.track?.trackName || r.Track?.TrackName || (rTrackId ? trackNameMap.get(normalizeId(rTrackId)) : null);
+
+                    let targetUrl = `/events/${rEventId}`;
+                    let actionLabel = "[ VÀO SỰ KIỆN > ]";
+
+                    if (rRoleName === "Judge") {
+                      targetUrl = `/judge/events?eventId=${rEventId}`;
+                      actionLabel = isEnded ? "[ XEM BÀI ĐÃ CHẤM > ]" : "[ BÀN CHẤM ĐIỂM > ]";
+                    } else if (rRoleName === "Mentor") {
+                      targetUrl = `/events/${rEventId}`;
+                      actionLabel = isEnded ? "[ XEM SỰ KIỆN > ]" : "[ VÀO SỰ KIỆN > ]";
+                    } else if (rRoleName === "EventCoordinator" || rRoleName === "Coordinator") {
+                      targetUrl = `/coordinator/dashboard?eventId=${rEventId}`;
+                      actionLabel = "[ BÀN ĐIỀU PHỐI > ]";
+                    }
+
+                    return (
+                      <div
+                        key={r.id || idx}
+                        className="p-4 bg-[#090e11] border border-zinc-800/80 hover:border-zinc-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 hud-clipped"
+                      >
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2 py-0.5 font-bold uppercase text-[10px] hud-clipped ${
+                              rRoleName === "Judge"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                : rRoleName === "Mentor"
+                                ? "bg-teal-500/20 text-teal-300 border border-teal-500/40"
+                                : "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                            }`}>
+                              VAI TRÒ: {rRoleName.toUpperCase()}
+                            </span>
+
+                            {rTrackName ? (
+                              <span className="px-2 py-0.5 bg-blue-950/40 text-blue-300 border border-blue-500/30 font-bold uppercase text-[10px] hud-clipped truncate max-w-xs">
+                                HẠNG MỤC: {rTrackName}
+                              </span>
+                            ) : rTrackId ? (
+                              <span className="px-2 py-0.5 bg-zinc-900 text-zinc-400 border border-zinc-700 font-mono text-[10px] hud-clipped">
+                                TRACK: {String(rTrackId).substring(0, 8)}...
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-zinc-900 text-zinc-400 border border-zinc-700 font-mono text-[10px] hud-clipped">
+                                PHẠM VI: TOÀN SỰ KIỆN
+                              </span>
+                            )}
+
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 hud-clipped ${
+                              isEnded ? "bg-zinc-800 text-zinc-400" : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+                            }`}>
+                              {isEnded ? "[ ĐÃ ĐÓNG ]" : "[ ĐANG MỞ ]"}
+                            </span>
+                          </div>
+
+                          <div className="font-display font-bold text-white text-sm truncate">
+                            {rEventName}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {rEventId && (
+                            <Link href={targetUrl}>
+                              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-amber-400 text-zinc-300 hover:text-white font-bold uppercase text-[11px] hud-clipped transition-all cursor-pointer">
+                                {actionLabel}
+                              </button>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {/* ── BẢNG LỊCH SỬ THAM GIA ĐỘI THI (STUDENT ROLES) ── */}
+            {studentRoles.length > 0 && (
+              <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-4 shadow-sm">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                  <div className="space-y-0.5">
+                    <h3 className="font-display font-bold text-base text-white uppercase">
+                      LỊCH SỬ ĐỘI THI ĐÃ THAM GIA
+                    </h3>
+                    <span className="font-mono text-[10px] text-zinc-500 uppercase">
+                      Các sự kiện bạn đã tham gia với tư cách Thí sinh
+                    </span>
+                  </div>
+                  <span className="font-mono text-xs px-2.5 py-1 bg-cyan-950/60 text-cyan-300 border border-cyan-500/40 font-bold hud-clipped">
+                    {studentRoles.length} SỰ KIỆN
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 font-mono text-xs">
+                  {studentRoles.map((r: any, idx: number) => {
+                    const rEventId = r.eventId || r.EventId;
+                    const rEventObj = eventsList.find((e: any) => normalizeId(e.id || e.Id) === normalizeId(rEventId));
+                    const rEventName = rEventObj?.eventName || rEventObj?.EventName || eventNameMap.get(normalizeId(rEventId)) || "Sự kiện SEAL";
+                    const isEnded = rEventObj?.status === false || (rEventObj?.endDate && new Date(rEventObj.endDate).getTime() < Date.now());
+                    const rRoleName = r.roleName || r.RoleName || "Thành viên";
+
+                    return (
+                      <div
+                        key={r.id || idx}
+                        className="p-4 bg-[#090e11] border border-zinc-800/80 hover:border-zinc-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 hud-clipped"
+                      >
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-2 py-0.5 font-bold uppercase text-[10px] hud-clipped bg-cyan-950/40 text-cyan-300 border border-cyan-500/30">
+                              VAI TRÒ: {rRoleName === "TeamLeader" ? "TRƯỞNG ĐỘI" : "THÀNH VIÊN ĐỘI"}
+                            </span>
+
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 hud-clipped ${
+                              isEnded ? "bg-zinc-800 text-zinc-400" : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+                            }`}>
+                              {isEnded ? "[ ĐÃ ĐÓNG ]" : "[ ĐANG MỞ ]"}
+                            </span>
+                          </div>
+
+                          <div className="font-display font-bold text-white text-sm truncate">
+                            {rEventName}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {rEventId && (
+                            <Link href={`/my-team?eventId=${rEventId}`}>
+                              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-cyan-400 text-cyan-300 hover:text-white font-bold uppercase text-[11px] hud-clipped transition-all cursor-pointer">
+                                [ ĐỘI THI CỦA TÔI &gt; ]
+                              </button>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {userRoles.length === 0 && (
+              <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-3 text-center shadow-sm font-mono text-xs text-zinc-400">
+                <p className="font-bold text-white uppercase">[ CHƯA CÓ PHÂN CÔNG HOẶC ĐỘI THI ]</p>
+                <p className="text-zinc-500">Bạn hiện tại chưa được phân công vai trò chuyên môn hoặc tham gia đội thi nào trong hệ thống.</p>
+              </Card>
+            )}
+
+            {/* ── CARD ĐỔI MẬT KHẨU TÀI KHOẢN (DATABASE GROUNDED) ── */}
+            <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-4 shadow-sm">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div>
+                  <h3 className="font-display font-bold text-base text-white uppercase">
+                    BẢO MẬT &amp; MẬT KHẨU TÀI KHOẢN
+                  </h3>
+                  <p className="font-mono text-[10px] text-zinc-400 mt-0.5">
+                    Đổi mật khẩu định kỳ để bảo vệ tài khoản của bạn.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordCard(!showPasswordCard)}
+                  className="px-3.5 py-1.5 bg-[#141f23] border border-zinc-700 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase hud-clipped transition-all cursor-pointer"
+                >
+                  {showPasswordCard ? "[ ĐÓNG FORM ]" : "[ THAY ĐỔI MẬT KHẨU ]"}
+                </button>
+              </div>
+
+              {showPasswordCard && (
+                <form onSubmit={handleChangePassword} className="space-y-4 pt-2 font-mono text-xs">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                      Mật Khẩu Hiện Tại *
+                    </label>
+                    <Input
+                      type="password"
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                        Mật Khẩu Mới *
+                      </label>
+                      <Input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Ít nhất 6 ký tự"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                        Xác Nhận Mật Khẩu Mới *
+                      </label>
+                      <Input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Nhập lại mật khẩu mới"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {passwordError && <p className="text-red-400 font-bold">{passwordError}</p>}
+                  {passwordSuccess && <p className="text-emerald-400 font-bold">[✓ ĐỔI MẬT KHẨU THÀNH CÔNG]</p>}
+
+                  <div className="flex justify-end pt-2">
+                    <Button type="submit" variant="primary" disabled={changePasswordMutation.isPending}>
+                      {changePasswordMutation.isPending ? "[ ĐANG XỬ LÝ... ]" : "[ XÁC NHẬN ĐỔI MẬT KHẨU ]"}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </Card>
+
           </div>
+
         </div>
 
       </div>

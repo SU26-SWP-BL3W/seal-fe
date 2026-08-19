@@ -2,162 +2,152 @@
 
 import { Link } from "@/i18n/routing";
 import { useMentorWorkspaceViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
-import { Card, Button } from "@/components/ui";
-import { Compass, RefreshCw, Users, Upload, ChevronRight, Info, Brain, Cpu, Code2 } from "lucide-react";
+import { Card } from "@/components/ui";
 
 export function MentorTracksView() {
-  const { myTracks, totalTeamsCount, totalSubmissionsCount, trackStatsMap, isLoading, refetchAll } =
+  const { myTracks, totalTeamsCount, totalSubmissionsCount, trackStatsMap, isLoading, refetchAll, eventId } =
     useMentorWorkspaceViewModel();
 
-  const getTrackIcon = (index: number) => {
-    const icons = [Brain, Cpu, Code2];
-    const IconComp = icons[index % icons.length];
-    return <IconComp className="w-8 h-8 text-[#2dd4bf]" />;
-  };
-
   return (
-    <div className="bg-[#0d1b1f] text-on-surface font-sans min-h-screen p-6 relative overflow-hidden scan-lines">
-      {/* Background Ambient Glow */}
-      <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-[#2dd4bf]/5 blur-[120px] rounded-full pointer-events-none" />
-
-      <div className="max-w-[1400px] mx-auto flex flex-col gap-6 relative z-10">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#2dd4bf]/20 pb-4 gap-4">
-          <div>
-            <div className="font-mono text-xs text-[#2dd4bf] mb-2 flex items-center gap-2 tracking-widest">
-              <Compass className="w-3.5 h-3.5" />
-              [ SYS_LOC: MENTOR_WORKSPACE / ACTIVE_TRACKS ]
-            </div>
-            <h1 className="font-display text-2xl md:text-3xl text-on-surface font-extrabold uppercase tracking-wide">
-              CÁC HẠNG MỤC ĐANG HỖ TRỢ
-            </h1>
-            <p className="font-mono text-xs text-on-surface-variant/80 mt-1">
-              Danh sách Hạng mục (Track) chuyên môn bạn đang đảm nhận vai trò Cố vấn.
-            </p>
+    <main className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans p-4 md:p-6 flex flex-col space-y-4">
+      <div className="max-w-[1600px] w-full mx-auto space-y-4 flex-1 flex flex-col">
+        
+        {/* ── TẦNG 1: BREADCRUMB & THAO TÁC ── */}
+        <div className="bg-[#10171a] border border-zinc-800 p-3.5 hud-clipped flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-sm">
+          {/* Breadcrumb */}
+          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+            {eventId ? (
+              <Link href={`/events/${eventId}`} className="text-zinc-400 hover:text-white font-bold transition-colors">
+                [ &lt; QUAY LẠI CHI TIẾT SỰ KIỆN ]
+              </Link>
+            ) : (
+              <Link href="/events" className="text-zinc-400 hover:text-white font-bold transition-colors">
+                [ &lt; KHÁM PHÁ SỰ KIỆN ]
+              </Link>
+            )}
+            <span className="text-zinc-600">/</span>
+            <span className="text-teal-400 font-bold uppercase">[ KHÔNG GIAN CỐ VẤN ]</span>
+            <span className="text-zinc-600">/</span>
+            <span className="text-white font-extrabold uppercase">CÁC HẠNG MỤC PHỤ TRÁCH</span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="bg-surface-container-high px-4 py-2 border-l-2 border-[#2dd4bf]">
-              <p className="font-mono text-[10px] text-on-surface-variant uppercase mb-0.5">TOTAL TEAMS</p>
-              <p className="font-mono text-[#2dd4bf] text-xl font-bold">{String(totalTeamsCount).padStart(3, "0")}</p>
-            </div>
-            <div className="bg-surface-container-high px-4 py-2 border-l-2 border-[#00d9ff]">
-              <p className="font-mono text-[10px] text-on-surface-variant uppercase mb-0.5">NEW SUBS</p>
-              <p className="font-mono text-[#00d9ff] text-xl font-bold">{String(totalSubmissionsCount).padStart(3, "0")}</p>
-            </div>
-            <Button variant="ghost" accent="mentor" onClick={() => refetchAll()} className="text-xs ml-2">
-              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Làm mới
-            </Button>
+          {/* Thao tác làm mới */}
+          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+            <button
+              type="button"
+              onClick={() => refetchAll()}
+              className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold uppercase text-[11px] transition-all cursor-pointer hud-clipped"
+            >
+              [ LÀM MỚI DỮ LIỆU ]
+            </button>
           </div>
         </div>
 
-        {/* Content Section */}
+        {/* ── TẦNG 2: THỐNG KÊ HOẠT ĐỘNG CỐ VẤN ── */}
+        <div className="bg-[#10171a] border border-teal-500/30 p-4 hud-clipped flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+          <div>
+            <div className="font-mono text-xs text-teal-400 font-bold uppercase tracking-wider mb-1">
+              [ THỐNG KÊ HOẠT ĐỘNG CỐ VẤN ]
+            </div>
+            <h1 className="font-display text-xl md:text-2xl font-bold text-white uppercase">
+              CÁC HẠNG MỤC ĐANG HỖ TRỢ ({myTracks.length})
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 font-mono text-xs">
+            <div className="bg-[#090e11] px-4 py-2 border-l-2 border-teal-400 hud-clipped">
+              <span className="text-[10px] text-zinc-400 uppercase block">TỔNG ĐỘI PHỤ TRÁCH</span>
+              <span className="text-teal-400 text-lg font-bold">{String(totalTeamsCount).padStart(2, "0")} ĐỘI</span>
+            </div>
+            <div className="bg-[#090e11] px-4 py-2 border-l-2 border-cyan-400 hud-clipped">
+              <span className="text-[10px] text-zinc-400 uppercase block">BÀI NỘP GẦN ĐÂY</span>
+              <span className="text-cyan-400 text-lg font-bold">{String(totalSubmissionsCount).padStart(2, "0")} BÀI</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── TẦNG 3: DANH SÁCH HẠNG MỤC CỐ VẤN ── */}
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <svg className="w-12 h-12 animate-spin text-[#2dd4bf]" viewBox="0 0 100 100">
-              <polygon
-                points="50,5 91,27.5 91,72.5 50,95 9,72.5 9,27.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeDasharray="240"
-                strokeDashoffset="60"
-              />
-            </svg>
-            <span className="font-mono text-xs text-[#2dd4bf] tracking-widest animate-pulse">CONNECTING TO MENTOR DATABANK...</span>
+          <div className="flex-1 bg-[#10171a] border border-zinc-800 p-12 text-center flex flex-col items-center justify-center font-mono text-xs text-teal-400 animate-pulse hud-clipped">
+            [ ĐANG KẾT NỐI DỮ LIỆU HẠNG MỤC CỐ VẤN... ]
           </div>
         ) : myTracks.length === 0 ? (
-          <Card className="p-12 bg-surface-container-low/80 border border-[#2dd4bf]/20 hud-clipped text-center flex flex-col items-center gap-3">
-            <Info className="w-10 h-10 text-[#2dd4bf] opacity-60" />
-            <p className="font-mono text-sm text-on-surface font-semibold">
-              Bạn chưa được phân công Cố vấn cho Hạng mục nào trong sự kiện này.
-            </p>
-            <p className="font-mono text-xs text-on-surface-variant max-w-md">
-              Ban Tổ chức (Event Coordinator) cần gán tài khoản của bạn vào Track trong trang Quản lý Nhân sự để bắt đầu công việc cố vấn.
+          <Card className="p-12 bg-[#10171a] border border-zinc-800 hud-clipped text-center flex flex-col items-center gap-3 font-mono">
+            <span className="text-sm text-white font-bold uppercase">
+              [ BẠN CHƯA ĐƯỢC PHÂN CÔNG CỐ VẤN CHO HẠNG MỤC NÀO TRONG SỰ KIỆN NÀY ]
+            </span>
+            <p className="text-xs text-zinc-400 max-w-md leading-relaxed font-sans">
+              Ban Tổ chức (Event Coordinator) sẽ phân công tài khoản của bạn vào Track trong danh mục nhân sự để bắt đầu hỗ trợ các đội thi.
             </p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-4">
             {myTracks.map((track, idx) => {
               const trackId = (track.id || track.Id || "") as string;
               const trackName = track.trackName || track.TrackName || "Hạng mục";
               const description = track.description || track.Description || "";
-              const judges = track.judges || track.Judges || [];
               const mentors = track.mentors || track.Mentors || [];
               const stats = trackStatsMap.get(trackId) || { totalTeams: 0, submissionCount: 0 };
-
               const progressPct = Math.min(100, Math.max(25, (idx + 1) * 35));
 
               return (
                 <div
                   key={trackId}
-                  className="glass-panel hud-glow-mentor corner-accent-tl corner-accent-br bg-surface-container-low/80 relative group overflow-hidden border border-[#2dd4bf]/20 hover:border-[#2dd4bf]/50 transition-all"
+                  className="bg-[#10171a] border border-teal-500/40 hover:border-teal-400 transition-all p-5 md:p-6 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-6 shadow-md hud-clipped"
                 >
-                  {/* Panel Header Bar */}
-                  <div className="h-7 bg-[#2dd4bf]/10 border-b border-[#2dd4bf]/20 flex items-center px-4 justify-between font-mono text-xs">
-                    <span className="text-[#2dd4bf] font-bold tracking-widest uppercase">
-                      TRACK // {trackName}
-                    </span>
-                    <span className="text-on-surface-variant text-[11px]">ID: {trackId}</span>
+                  {/* Track Details */}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 bg-teal-500/20 text-teal-300 border border-teal-500/40 font-mono text-[10px] font-bold uppercase hud-clipped">
+                        TRACK 0{idx + 1} // CỐ VẤN CHUYÊN MÔN
+                      </span>
+                    </div>
+
+                    <h3 className="font-display text-lg md:text-xl font-bold text-white uppercase">{trackName}</h3>
+                    {description && (
+                      <p className="font-sans text-xs text-zinc-300 leading-relaxed max-w-3xl">
+                        {description}
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap gap-4 pt-1 font-mono text-xs">
+                      <span className="text-zinc-300">
+                        Quy mô: <strong className="text-teal-400">{stats.totalTeams} Đội Thi</strong>
+                      </span>
+                      <span className="text-zinc-600">|</span>
+                      <span className="text-cyan-300">
+                        Bài nộp: <strong className="text-cyan-400">{stats.submissionCount} Bài</strong>
+                      </span>
+                      <span className="text-zinc-600">|</span>
+                      <span className="text-zinc-400">
+                        Cố vấn cùng Track: <strong className="text-zinc-200">{mentors.length > 0 ? mentors.map((m) => m.fullName || m.FullName).join(", ") : "Chính bạn"}</strong>
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="p-6 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-6">
-                    {/* Track Info */}
-                    <div className="flex-1 flex gap-6 items-center">
-                      <div className="w-16 h-16 bg-surface-container-highest flex items-center justify-center border border-[#2dd4bf]/30 shrink-0">
-                        {getTrackIcon(idx)}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <h3 className="font-display text-xl font-bold text-on-surface">{trackName}</h3>
-                        {description && (
-                          <p className="font-sans text-xs text-on-surface-variant leading-relaxed max-w-xl">
-                            {description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-4 mt-2 font-mono text-xs">
-                          <div className="flex items-center gap-1.5 text-on-surface">
-                            <Users className="w-3.5 h-3.5 text-[#2dd4bf]" />
-                            <span>{stats.totalTeams} đội thi</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[#00d9ff]">
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>[ {totalSubmissionsCount} bài nộp ]</span>
-                          </div>
-                        </div>
-
-                        {/* Co-mentors and Judges info */}
-                        <div className="flex flex-wrap gap-3 mt-2 text-[11px] font-mono text-on-surface-variant/80">
-                          <span>Cố vấn: <strong className="text-on-surface">{mentors.length > 0 ? mentors.map((m) => m.fullName || m.FullName).join(", ") : "Bạn"}</strong></span>
-                          <span>|</span>
-                          <span>Giám khảo: <strong className="text-on-surface">{judges.length > 0 ? judges.map((j) => j.fullName || j.FullName).join(", ") : "Chưa phân công"}</strong></span>
-                        </div>
-                      </div>
+                  {/* Action Area */}
+                  <div className="flex flex-col gap-2.5 w-full lg:w-72 shrink-0 justify-center font-mono">
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="text-zinc-400 uppercase">TIẾN ĐỘ HỖ TRỢ</span>
+                      <span className="text-teal-400 font-bold">{progressPct}%</span>
+                    </div>
+                    <div className="w-full bg-[#090e11] h-2 hud-clipped overflow-hidden border border-zinc-800">
+                      <div className="h-full bg-teal-400 transition-all duration-500" style={{ width: `${progressPct}%` }} />
                     </div>
 
-                    {/* Action Area */}
-                    <div className="flex flex-col gap-3 w-full lg:w-72 shrink-0 justify-center">
-                      <div className="w-full bg-[#152238] h-2 rounded-full overflow-hidden border border-white/5">
-                        <div className="h-full bg-[#2dd4bf] transition-all duration-500" style={{ width: `${progressPct}%` }} />
-                      </div>
-                      <div className="flex justify-between items-center px-1 font-mono text-[11px]">
-                        <span className="text-on-surface-variant">MENTORING PROGRESS</span>
-                        <span className="text-[#2dd4bf] font-bold">{progressPct}%</span>
-                      </div>
-
-                      <Link href={`/mentor/teams?trackId=${trackId}`}>
-                        <button className="w-full bg-transparent border border-[#2dd4bf] text-[#2dd4bf] hover:bg-[#2dd4bf] hover:text-[#080f11] font-mono text-xs font-bold py-2.5 px-4 rounded-lg flex items-center justify-between gap-2 transition-all active:scale-[0.98]">
-                          <span>XEM CHI TIẾT HỖ TRỢ</span>
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </Link>
-                    </div>
+                    <Link href={`/mentor/teams?trackId=${trackId}`} className="pt-1">
+                      <button className="w-full bg-teal-500 text-black hover:bg-white text-xs font-bold py-2.5 px-4 uppercase transition-all cursor-pointer hud-clipped shadow-sm">
+                        [ VÀO KHÔNG GIAN HỖ TRỢ &gt; ]
+                      </button>
+                    </Link>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
+
       </div>
-    </div>
+    </main>
   );
 }
