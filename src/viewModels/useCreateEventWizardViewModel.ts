@@ -38,6 +38,7 @@ export interface TrackFormState {
   trackName: string;
   templateId: string;
   description: string;
+  submissionRuleDescription?: string;
   startDate?: string;
   endDate?: string;
   scoringStartDate?: string;
@@ -167,6 +168,7 @@ export function useCreateEventWizardViewModel() {
             trackName: t.trackName || t.TrackName || `Hạng mục ${idx + 1}`,
             description: t.description || t.Description || "",
             templateId: t.templateId || t.TemplateId || "",
+            submissionRuleDescription: t.submissionRuleDescription || t.SubmissionRuleDescription || "",
           }));
           setTracks(mappedTracks);
         }

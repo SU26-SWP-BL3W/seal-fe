@@ -18,6 +18,8 @@ import { useToast } from "@/providers/ToastProvider";
 
 import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
 
+import { parseLinkRules } from "@/components/domain/event-wizard/Step3TrackConfig";
+
 // ─── Deliverable Icon Metadata ────────────────────────────────────────────────
 const DELIVERABLE_ICONS: Record<DeliverableType, { label: string; icon: string; badgeColor: string }> = {
   github:       { label: "GITHUB REPO",     icon: "⌥", badgeColor: "text-[var(--text-primary)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
@@ -44,11 +46,76 @@ function TrackSubmissionCard({
   roundId: string;
 }) {
   const toast = useToast();
-  const deliverables: DeliverableItem[] = [
-    { id: "github", type: "github", label: "GitHub / GitLab repo", placeholder: "https://github.com/org/repo", required: true, trackId: track.id },
-    { id: "deployed_url", type: "deployed_url", label: "Live demo", placeholder: "https://demo.example.com", required: true, trackId: track.id },
-    { id: "slides", type: "slides", label: "Slides", placeholder: "https://docs.google.com/presentation/...", required: true, trackId: track.id },
-  ];
+
+  const linkRules = useMemo(() => {
+    const raw = (track as any)?.submissionRuleDescription || (track as any)?.SubmissionRuleDescription || track.description;
+    return parseLinkRules(raw);
+  }, [track]);
+
+  const deliverables: DeliverableItem[] = useMemo(() => {
+    const list: DeliverableItem[] = [];
+    if (linkRules.github !== "none") {
+      list.push({
+        id: "github",
+        type: "github",
+        label: "Mã nguồn GitHub / GitLab",
+        placeholder: "https://github.com/org/repo",
+        required: linkRules.github === "required",
+        trackId: track.id,
+      });
+    }
+    if (linkRules.demo !== "none") {
+      list.push({
+        id: "deployed_url",
+        type: "demo_video",
+        label: "Video Demo / Live Demo",
+        placeholder: "https://youtube.com/watch?v=... hoặc https://demo.com",
+        required: linkRules.demo === "required",
+        trackId: track.id,
+      });
+    }
+    if (linkRules.slides !== "none") {
+      list.push({
+        id: "slides",
+        type: "slides",
+        label: "Slide Thuyết Trình",
+        placeholder: "https://docs.google.com/presentation/... hoặc Canva",
+        required: linkRules.slides === "required",
+        trackId: track.id,
+      });
+    }
+    if (linkRules.figma !== "none") {
+      list.push({
+        id: "figma",
+        type: "figma",
+        label: "Thiết Kế UI/UX Figma / XD",
+        placeholder: "https://figma.com/file/...",
+        required: linkRules.figma === "required",
+        trackId: track.id,
+      });
+    }
+    if (linkRules.docs !== "none") {
+      list.push({
+        id: "docs",
+        type: "report",
+        label: "Báo Cáo / Tài Liệu PDF",
+        placeholder: "https://docs.google.com/document/... hoặc Drive PDF",
+        required: linkRules.docs === "required",
+        trackId: track.id,
+      });
+    }
+    if (list.length === 0) {
+      list.push({
+        id: "github",
+        type: "github",
+        label: "Mã nguồn GitHub / GitLab",
+        placeholder: "https://github.com/org/repo",
+        required: true,
+        trackId: track.id,
+      });
+    }
+    return list;
+  }, [linkRules, track.id]);
   const createSubmission = useCreateSubmission();
   const updateSubmission = useUpdateSubmission();
 
@@ -373,6 +440,7 @@ export function NewSubmissionView() {
       id: t.id || t.Id,
       trackName: t.trackName || t.TrackName || "",
       description: t.description || t.Description || "",
+      submissionRuleDescription: t.submissionRuleDescription || t.SubmissionRuleDescription || "",
       roundId,
       templateId: t.templateId || t.TemplateId || null,
     }));
