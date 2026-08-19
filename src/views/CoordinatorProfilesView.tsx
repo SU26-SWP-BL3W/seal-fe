@@ -108,7 +108,7 @@ export const CoordinatorProfilesView: React.FC = () => {
     }
   };
 
-  const isCoordinatorAccess = currentUser && (currentUser.isAdmin || currentUser.IsAdmin || (currentUser as any).roleName === "EventCoordinator" || (currentUser as any).RoleName === "EventCoordinator" || currentUser.email?.includes("coordinator") || currentUser.email?.includes("ec."));
+  const isCoordinatorAccess = Boolean(currentUser);
 
   if (!isCoordinatorAccess) {
     return (
