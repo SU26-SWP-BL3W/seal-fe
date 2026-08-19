@@ -347,6 +347,10 @@ export function UserProfileView() {
         if (fptSchool?.id) {
           selectedSchoolId = fptSchool.id;
         }
+        if (!studentCode.trim()) {
+          setSubmitError("Vui lòng nhập Mã số sinh viên FPT.");
+          return;
+        }
       } else {
         if (!selectedSchoolId) {
           setSubmitError("Vui lòng chọn trường đại học từ danh sách.");
@@ -354,6 +358,11 @@ export function UserProfileView() {
         }
         if (!studentCode.trim()) {
           setSubmitError("Vui lòng nhập Mã số sinh viên (MSSV).");
+          return;
+        }
+        const hasExistingPhoto = Boolean(user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl);
+        if (!hasExistingPhoto && !photoFile) {
+          setSubmitError("Vui lòng tải lên ảnh thẻ sinh viên để Ban Tổ Chức xét duyệt.");
           return;
         }
       }
@@ -792,35 +801,74 @@ export function UserProfileView() {
 
                       <div className="space-y-2">
                         <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                          Tải Lên Ảnh Thẻ Sinh Viên Mới (Mặt Trước)
+                          Ảnh Thẻ Sinh Viên (Mặt Trước) {schoolChoice === "OTHER" ? "*" : ""}
                         </label>
-                        <div
-                          onClick={() => fileInputRef.current?.click()}
-                          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                          onDragLeave={() => setIsDragging(false)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setIsDragging(false);
-                            if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]);
-                          }}
-                          className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${
-                            isDragging
-                              ? "border-amber-400 bg-amber-500/10"
-                              : "border-zinc-800 hover:border-zinc-700 bg-[#090e11]"
-                          }`}
-                        >
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-                            className="hidden"
-                          />
-                          <p className="text-zinc-300 font-bold uppercase text-[11px]">
-                            [ Kéo thả file ảnh thẻ vào đây hoặc Bấm để chọn ]
-                          </p>
-                          <span className="text-[10px] text-zinc-500 block mt-1">Dung lượng tối đa 5MB (JPG, PNG)</span>
-                        </div>
+                        {photoPreview ? (
+                          <div className="relative border border-zinc-700 bg-black/60 p-3 hud-clipped flex flex-col items-center gap-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={photoPreview}
+                              alt="Xem trước ảnh thẻ sinh viên"
+                              className="max-h-44 object-contain rounded border border-zinc-800"
+                            />
+                            <div className="flex items-center gap-2 pt-1 font-mono text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black font-bold uppercase hud-clipped cursor-pointer transition-all"
+                              >
+                                [ Thay Đổi Ảnh Khác ]
+                              </button>
+                              {photoFile && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPhotoFile(null);
+                                    setPhotoPreview(user?.photoStudentCardUrl || null);
+                                  }}
+                                  className="px-3 py-1 bg-zinc-800 text-zinc-300 hover:text-white text-[10px] uppercase hud-clipped cursor-pointer transition-all"
+                                >
+                                  [ Khôi Phục Ảnh Cũ ]
+                                </button>
+                              )}
+                            </div>
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                              className="hidden"
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => fileInputRef.current?.click()}
+                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                            onDragLeave={() => setIsDragging(false)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setIsDragging(false);
+                              if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]);
+                            }}
+                            className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${
+                              isDragging
+                                ? "border-amber-400 bg-amber-500/10"
+                                : "border-zinc-800 hover:border-zinc-700 bg-[#090e11]"
+                            }`}
+                          >
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                              className="hidden"
+                            />
+                            <p className="text-zinc-300 font-bold uppercase text-[11px]">
+                              [ Kéo thả file ảnh thẻ vào đây hoặc Bấm để chọn ]
+                            </p>
+                            <span className="text-[10px] text-zinc-500 block mt-1">Dung lượng tối đa 5MB (JPG, PNG, WEBP)</span>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
