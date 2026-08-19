@@ -46,15 +46,38 @@ interface ComprehensiveEventEditModalProps {
   onSuccess?: () => void;
 }
 
-function toDateTimeLocal(val?: string, defaultTime = "08:00") {
-  if (!val) return "";
-  if (val.includes("T")) {
-    const parts = val.split("T");
-    const datePart = parts[0];
-    const timePart = parts[1]?.substring(0, 5) || defaultTime;
-    return `${datePart}T${timePart}`;
+function parseDateOnly(dateStr?: string): string {
+  if (!dateStr) return "";
+  return dateStr.split("T")[0];
+}
+
+function addDaysToDate(dateStr: string, days: number): string {
+  const base = parseDateOnly(dateStr);
+  if (!base) return "";
+  const d = new Date(base);
+  if (isNaN(d.getTime())) return base;
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+function formatDateTimeInput(dateStr?: string, explicitTime?: string): string {
+  if (!dateStr) return "";
+  const datePart = dateStr.split("T")[0];
+  if (!datePart) return "";
+  if (explicitTime) {
+    return `${datePart}T${explicitTime}`;
   }
-  return `${val}T${defaultTime}`;
+  if (dateStr.includes("T")) {
+    const timePart = dateStr.split("T")[1]?.substring(0, 5);
+    if (timePart) return `${datePart}T${timePart}`;
+  }
+  return `${datePart}T08:00`;
+}
+
+function toValidIso(val?: string): string | undefined {
+  if (!val) return undefined;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
 function parseRuleString(ruleStr?: string): { type: "none" | "top" | "percent" | "minScore"; val: string } {
@@ -82,13 +105,13 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
   const [year, setYear] = useState<number>(Number(event?.year || event?.Year) || new Date().getFullYear());
   const [maxTeams, setMaxTeams] = useState<number>(Number(event?.maxTeams || event?.MaxTeams) || 50);
   const [description, setDescription] = useState(event?.description || event?.Description || "");
-  const [startDate, setStartDate] = useState(toDateTimeLocal(event?.startDate || event?.StartDate, "08:00"));
-  const [endDate, setEndDate] = useState(toDateTimeLocal(event?.endDate || event?.EndDate, "23:59"));
+  const [startDate, setStartDate] = useState(formatDateTimeInput(event?.startDate || event?.StartDate, "08:00"));
+  const [endDate, setEndDate] = useState(formatDateTimeInput(event?.endDate || event?.EndDate, "23:59"));
   const [registrationStartDate, setRegistrationStartDate] = useState(
-    toDateTimeLocal(event?.registrationStartDate || event?.RegistrationStartDate, "08:00")
+    formatDateTimeInput(event?.registrationStartDate || event?.RegistrationStartDate, "08:00")
   );
   const [registrationEndDate, setRegistrationEndDate] = useState(
-    toDateTimeLocal(event?.registrationEndDate || event?.RegistrationEndDate, "23:59")
+    formatDateTimeInput(event?.registrationEndDate || event?.RegistrationEndDate, "23:59")
   );
   const [isPublished, setIsPublished] = useState<boolean>(
     event?.status !== undefined ? Boolean(event.status) : (event?.Status !== undefined ? Boolean(event.Status) : false)
@@ -125,19 +148,44 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
         if (items.length > 0) {
           setRounds(
             items.map((r: any, idx: number) => {
+              const rStart = r.startDate || r.StartDate || event?.startDate || new Date().toISOString();
+              const rEnd = r.endDate || r.EndDate || rStart;
+              const startFormatted = formatDateTimeInput(rStart, "08:00");
+              const endFormatted = formatDateTimeInput(rEnd, "23:59");
+
+              const scoringStartRaw = r.scoringStartDate || r.ScoringStartDate;
+              const scoringEndRaw = r.scoringEndDate || r.ScoringEndDate;
+              const appealStartRaw = r.appealStartDate || r.AppealStartDate;
+              const appealEndRaw = r.appealEndDate || r.AppealEndDate;
+
+              const defaultScoringStart = scoringStartRaw
+                ? formatDateTimeInput(scoringStartRaw)
+                : `${addDaysToDate(endFormatted, 1)}T08:00`;
+
+              const defaultScoringEnd = scoringEndRaw
+                ? formatDateTimeInput(scoringEndRaw)
+                : `${addDaysToDate(defaultScoringStart, 3)}T18:00`;
+
+              const defaultAppealStart = appealStartRaw
+                ? formatDateTimeInput(appealStartRaw)
+                : `${addDaysToDate(defaultScoringEnd, 1)}T09:00`;
+
+              const defaultAppealEnd = appealEndRaw
+                ? formatDateTimeInput(appealEndRaw)
+                : `${addDaysToDate(defaultAppealStart, 3)}T23:59`;
+
               const ruleObj = parseRuleString(r.advancementRule || r.AdvancementRule);
-              const defaultStartDate = toDateTimeLocal(r.startDate || r.StartDate, "08:00");
-              const defaultEndDate = toDateTimeLocal(r.endDate || r.EndDate, "23:59");
+
               return {
                 id: r.id || r.Id,
-                roundName: r.roundName || r.RoundName || `VÒNG THI SỐ ${idx + 1}`,
+                roundName: r.roundName || r.RoundName || `Vòng thi ${idx + 1}`,
                 roundNumber: r.roundNumber || r.RoundNumber || idx + 1,
-                startDate: defaultStartDate,
-                endDate: defaultEndDate,
-                scoringStartDate: toDateTimeLocal(r.scoringStartDate || r.ScoringStartDate || defaultEndDate, "08:00"),
-                scoringEndDate: toDateTimeLocal(r.scoringEndDate || r.ScoringEndDate || defaultEndDate, "18:00"),
-                appealStartDate: toDateTimeLocal(r.appealStartDate || r.AppealStartDate || defaultEndDate, "09:00"),
-                appealEndDate: toDateTimeLocal(r.appealEndDate || r.AppealEndDate || defaultEndDate, "23:59"),
+                startDate: startFormatted,
+                endDate: endFormatted,
+                scoringStartDate: defaultScoringStart,
+                scoringEndDate: defaultScoringEnd,
+                appealStartDate: defaultAppealStart,
+                appealEndDate: defaultAppealEnd,
                 advancementRuleType: ruleObj.type,
                 advancementRuleValue: ruleObj.val,
                 requiredDeliverables: ["github", "deployed_url", "slides"],
@@ -145,18 +193,23 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
             })
           );
         } else {
+          const evStart = event?.startDate || event?.StartDate || new Date().toISOString();
+          const evEnd = event?.endDate || event?.EndDate || addDaysToDate(evStart, 30);
+          const startFmt = formatDateTimeInput(evStart, "08:00");
+          const endFmt = formatDateTimeInput(evEnd, "23:59");
+
           setRounds([
             {
               id: undefined,
               isNew: true,
               roundName: "VÒNG TUYỂN CHỌN & Ý TƯỞNG",
               roundNumber: 1,
-              startDate: toDateTimeLocal(event?.startDate || event?.StartDate, "08:00"),
-              endDate: toDateTimeLocal(event?.endDate || event?.EndDate, "23:59"),
-              scoringStartDate: toDateTimeLocal(event?.endDate || event?.EndDate, "08:00"),
-              scoringEndDate: toDateTimeLocal(event?.endDate || event?.EndDate, "18:00"),
-              appealStartDate: toDateTimeLocal(event?.endDate || event?.EndDate, "09:00"),
-              appealEndDate: toDateTimeLocal(event?.endDate || event?.EndDate, "23:59"),
+              startDate: startFmt,
+              endDate: endFmt,
+              scoringStartDate: `${addDaysToDate(endFmt, 1)}T08:00`,
+              scoringEndDate: `${addDaysToDate(endFmt, 4)}T18:00`,
+              appealStartDate: `${addDaysToDate(endFmt, 5)}T09:00`,
+              appealEndDate: `${addDaysToDate(endFmt, 7)}T23:59`,
               advancementRuleType: "top",
               advancementRuleValue: "10",
               requiredDeliverables: ["github", "deployed_url", "slides"],
@@ -196,12 +249,21 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
       .catch(() => { if (isMounted) setTracks([]); })
       .finally(() => { if (isMounted) setIsLoadingTracks(false); });
 
-    return () => { isMounted = false; };
-  }, [eventId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId, event]);
 
   // Round handlers
   const handleAddRound = () => {
     const nextNumber = rounds.length + 1;
+    const prevRound = rounds[rounds.length - 1];
+
+    const baseStartDate = prevRound?.endDate
+      ? addDaysToDate(prevRound.endDate, 1)
+      : (endDate ? addDaysToDate(endDate, 1) : new Date().toISOString().split("T")[0]);
+    const baseEndDate = addDaysToDate(baseStartDate, 7);
+
     setRounds([
       ...rounds,
       {
@@ -209,12 +271,12 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
         isNew: true,
         roundName: `VÒNG THI SỐ ${nextNumber}`,
         roundNumber: nextNumber,
-        startDate: toDateTimeLocal(endDate, "08:00"),
-        endDate: toDateTimeLocal(endDate, "23:59"),
-        scoringStartDate: toDateTimeLocal(endDate, "08:00"),
-        scoringEndDate: toDateTimeLocal(endDate, "18:00"),
-        appealStartDate: toDateTimeLocal(endDate, "09:00"),
-        appealEndDate: toDateTimeLocal(endDate, "23:59"),
+        startDate: `${baseStartDate}T08:00`,
+        endDate: `${baseEndDate}T23:59`,
+        scoringStartDate: `${addDaysToDate(baseEndDate, 1)}T08:00`,
+        scoringEndDate: `${addDaysToDate(baseEndDate, 4)}T18:00`,
+        appealStartDate: `${addDaysToDate(baseEndDate, 5)}T09:00`,
+        appealEndDate: `${addDaysToDate(baseEndDate, 7)}T23:59`,
         advancementRuleType: "top",
         advancementRuleValue: "10",
         requiredDeliverables: ["github", "deployed_url", "slides"],
@@ -278,50 +340,52 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
       return;
     }
 
-    // Validate Event Timeline
-    const evStart = startDate ? new Date(startDate) : new Date();
-    const evEnd = endDate ? new Date(endDate) : new Date();
-    if (evStart >= evEnd) {
-      const msg = "Ngày bắt đầu sự kiện phải trước ngày kết thúc sự kiện!";
+    // 1. Kiểm tra ngày sự kiện
+    if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+      const msg = "Ngày kết thúc sự kiện phải sau ngày bắt đầu sự kiện!";
       setErrorMsg(msg);
       toast.error(msg);
+      setActiveTab("general");
       return;
     }
 
-    // Validate Rounds Timeline & AdvancementRule
+    // 2. Kiểm tra tính hợp lệ của từng vòng thi
     for (let i = 0; i < rounds.length; i++) {
       const r = rounds[i];
-      const rName = r.roundName.trim() || `Vòng ${i + 1}`;
-      const rStart = r.startDate ? new Date(r.startDate) : evStart;
-      const rEnd = r.endDate ? new Date(r.endDate) : evEnd;
+      const rName = r.roundName.trim() || `Vòng thi số ${i + 1}`;
 
-      if (rStart >= rEnd) {
-        const msg = `[${rName}]: Ngày bắt đầu nộp bài phải trước hạn chót nộp bài!`;
+      if (!r.startDate || !r.endDate) {
+        const msg = `${rName}: Vui lòng nhập đầy đủ ngày Mở đề (Phase 1) và Hạn nộp bài (Phase 2)!`;
         setErrorMsg(msg);
         toast.error(msg);
+        setActiveTab("rounds");
         return;
       }
 
-      if (rStart < evStart || rEnd > evEnd) {
-        const msg = `[${rName}]: Thời gian nộp bài phải nằm trong khoảng diễn ra sự kiện (${toDateTimeLocal(startDate)} - ${toDateTimeLocal(endDate)})!`;
+      if (new Date(r.startDate) >= new Date(r.endDate)) {
+        const msg = `${rName}: Hạn nộp bài (Phase 2) phải sau ngày Mở đề bài (Phase 1)!`;
         setErrorMsg(msg);
         toast.error(msg);
+        setActiveTab("rounds");
         return;
       }
 
       if (r.scoringStartDate && r.scoringEndDate) {
-        const sStart = new Date(r.scoringStartDate);
-        const sEnd = new Date(r.scoringEndDate);
-        if (sStart < rEnd) {
-          const msg = `[${rName}]: Thời gian bắt đầu chấm điểm phải từ sau hạn nộp bài!`;
+        if (new Date(r.scoringStartDate) >= new Date(r.scoringEndDate)) {
+          const msg = `${rName}: Thời gian kết thúc chấm điểm phải sau thời gian bắt đầu chấm điểm (Phase 3)!`;
           setErrorMsg(msg);
           toast.error(msg);
+          setActiveTab("rounds");
           return;
         }
-        if (sEnd <= sStart) {
-          const msg = `[${rName}]: Hạn chót chấm điểm phải sau thời điểm bắt đầu chấm!`;
+      }
+
+      if (r.appealStartDate && r.appealEndDate) {
+        if (new Date(r.appealStartDate) >= new Date(r.appealEndDate)) {
+          const msg = `${rName}: Hạn nộp phúc khảo phải sau ngày bắt đầu công bố/phúc khảo (Phase 4 & 5)!`;
           setErrorMsg(msg);
           toast.error(msg);
+          setActiveTab("rounds");
           return;
         }
       }
@@ -339,10 +403,10 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
         year: Number(year),
         maxTeams: Number(maxTeams) || 50,
         description: description.trim(),
-        startDate: evStart.toISOString(),
-        endDate: evEnd.toISOString(),
-        registrationStartDate: registrationStartDate ? new Date(registrationStartDate).toISOString() : undefined,
-        registrationEndDate: registrationEndDate ? new Date(registrationEndDate).toISOString() : undefined,
+        startDate: toValidIso(startDate) || new Date().toISOString(),
+        endDate: toValidIso(endDate) || new Date().toISOString(),
+        registrationStartDate: toValidIso(registrationStartDate),
+        registrationEndDate: toValidIso(registrationEndDate),
         status: targetPublishStatus,
       });
 
@@ -363,12 +427,12 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
           eventId,
           roundName: r.roundName.trim() || `VÒNG THI SỐ ${i + 1}`,
           roundNumber: i + 1,
-          startDate: r.startDate ? new Date(r.startDate).toISOString() : evStart.toISOString(),
-          endDate: r.endDate ? new Date(r.endDate).toISOString() : evEnd.toISOString(),
-          scoringStartDate: r.scoringStartDate ? new Date(r.scoringStartDate).toISOString() : undefined,
-          scoringEndDate: r.scoringEndDate ? new Date(r.scoringEndDate).toISOString() : undefined,
-          appealStartDate: r.appealStartDate ? new Date(r.appealStartDate).toISOString() : undefined,
-          appealEndDate: r.appealEndDate ? new Date(r.appealEndDate).toISOString() : undefined,
+          startDate: toValidIso(r.startDate) || new Date().toISOString(),
+          endDate: toValidIso(r.endDate) || new Date().toISOString(),
+          scoringStartDate: toValidIso(r.scoringStartDate),
+          scoringEndDate: toValidIso(r.scoringEndDate),
+          appealStartDate: toValidIso(r.appealStartDate),
+          appealEndDate: toValidIso(r.appealEndDate),
           advancementRule: rulePayload,
         };
 
@@ -414,16 +478,32 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
       }, 1000);
     } catch (err: any) {
       setIsSaving(false);
-      const rawMsg = err?.response?.data?.message || err?.message || "LỖI KHI LƯU DỮ LIỆU SỰ KIỆN.";
-      setErrorMsg(rawMsg);
-      toast.error(rawMsg);
+      const data = err?.response?.data;
+      let apiMsg = "";
+      if (data?.errors && typeof data.errors === "object") {
+        const errList: string[] = [];
+        for (const [k, v] of Object.entries(data.errors)) {
+          if (Array.isArray(v)) errList.push(...v);
+          else if (typeof v === "string") errList.push(v);
+        }
+        if (errList.length > 0) apiMsg = errList.join(" | ");
+      }
+      if (!apiMsg) {
+        apiMsg = data?.message || data?.title || (typeof data === "string" ? data : "") || err?.message || "Lưu thay đổi thất bại.";
+      }
+      if (apiMsg.includes("BadRequestException") || apiMsg.includes("SEAL_Domain.Base")) {
+        apiMsg = "Dữ liệu mốc thời gian của các vòng thi không hợp lệ (thời gian kết thúc phải sau thời gian bắt đầu và các giai đoạn không được trùng nhau). Vui lòng kiểm tra lại.";
+      }
+      setErrorMsg(apiMsg);
+      toast.error(apiMsg);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      {/* Modal Container: Fixed Dimensions to prevent jumping/layout shift across tabs */}
+      {/* Modal Container */}
       <div className="w-[940px] max-w-[95vw] h-[730px] max-h-[92vh] flex flex-col bg-[#0b1013] border border-cyan-500/50 shadow-2xl font-mono text-xs text-zinc-300 hud-clipped overflow-hidden">
+        
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-5 border-b border-zinc-800 bg-[#0b1013] shrink-0">
           <div>
@@ -768,7 +848,7 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
                       </div>
                     </div>
 
-                    {/* Regex-safe Advancement Rule Selector */}
+                    {/* Advancement Rule Selector */}
                     <div className="p-3.5 bg-[#0b1013] border border-zinc-800 space-y-2">
                       <label className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">
                         QUY TẮC CHỌN ĐỘI ĐI TIẾP VÀO VÒNG SAU (ADVANCEMENT CRITERIA):
@@ -934,4 +1014,3 @@ export const ComprehensiveEventEditModal: React.FC<ComprehensiveEventEditModalPr
     </div>
   );
 };
-
