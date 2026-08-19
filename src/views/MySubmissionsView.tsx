@@ -10,6 +10,7 @@ import {
   useUpdateSubmission,
   useMentorFeedbacks,
   readApiError,
+  parseMentorFeedbackComment,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
 import {
@@ -33,15 +34,17 @@ import {
 } from "lucide-react";
 
 export function MySubmissionsView() {
-  const { user, loginAsDemoRole } = useAuth();
+  const { user } = useAuth();
   const { data: teamResponse, isLoading: isLoadingTeam } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
 
   const teamId = team?.id || team?.Id || "";
-  const isLeader = team?.leaderId === user?.id || team?.LeaderId === user?.id;
+  const isLeader = (team?.members || []).some(
+    (m: any) => m.userId === user?.id && m.roleName === "TeamLeader",
+  );
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
-  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions();
+  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
 
   // Edit Modal State
   const [editingSub, setEditingSub] = useState<SubmitResultListItem | null>(null);
@@ -111,16 +114,14 @@ export function MySubmissionsView() {
           <div className="corner-accent-br" />
           <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
           <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Vui lòng đăng nhập hoặc bấm nút Demo bên dưới để kiểm tra giao diện bảng bài nộp:
+            Vui lòng đăng nhập để xem danh sách bài nộp của đội.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("TeamLeader")}
-              className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors"
-            >
-              [ Xem Bằng Tài Khoản Thí Sinh Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors">
+                Đến Trang Đăng Nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -269,7 +270,7 @@ export function MySubmissionsView() {
                             <td className="py-4 px-4 whitespace-nowrap">
                               {isEliminated ? (
                                 <span className="px-2 py-0.5 border border-[#ffb4ab]/30 bg-[#ffb4ab]/10 text-[#ffb4ab] text-[10px] font-bold uppercase">
-                                  BỊ LOẠI
+                                  ✗ BỊ LOẠI
                                 </span>
                               ) : !isActive ? (
                                 <span className="px-2 py-0.5 border border-[#859398]/30 bg-[#859398]/10 text-[#859398] text-[10px] font-bold uppercase">
@@ -277,7 +278,7 @@ export function MySubmissionsView() {
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 border border-[#34d399]/30 bg-[#34d399]/10 text-[#34d399] text-[10px] font-bold uppercase">
-                                  ĐÃ NỘP
+                                  ✓ ĐÃ NỘP
                                 </span>
                               )}
                             </td>
@@ -357,7 +358,7 @@ export function MySubmissionsView() {
                     CHỈNH SỬA BÀI NỘP
                   </h3>
                   <button onClick={() => setEditingSub(null)} className="text-[#859398] hover:text-white font-mono">
-                    ĐÓNG
+                    ✕
                   </button>
                 </div>
 
@@ -457,22 +458,25 @@ export function MySubmissionsView() {
 
           {isOpen && (
             <div className="mt-3 pt-3 border-t border-[#3c494d]/50 space-y-3">
-              {feedbacks.map((fb) => (
-                <div key={fb.id} className="p-3 bg-[#0e1417] border border-[#34d399]/20 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#34d399] font-bold">Mentor: {fb.mentorName || "Cố vấn"}</span>
-                    {fb.suggestedScore !== undefined && (
-                      <span className="text-[#fbbf24] font-bold">Điểm gợi ý: {fb.suggestedScore}/100</span>
+              {feedbacks.map((fb) => {
+                const parsed = parseMentorFeedbackComment(fb.comment);
+                return (
+                  <div key={fb.id} className="p-3 bg-[#0e1417] border border-[#34d399]/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#34d399] font-bold">Mentor: {fb.mentorName || "Cố vấn"}</span>
+                      {parsed.suggestedScore !== undefined && (
+                        <span className="text-[#fbbf24] font-bold">Điểm gợi ý: {parsed.suggestedScore}/100</span>
+                      )}
+                    </div>
+                    <p className="font-sans text-white text-xs leading-relaxed">"{parsed.text}"</p>
+                    {parsed.technicalAdvice && (
+                      <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
+                        💡 Lời khuyên kỹ thuật: {parsed.technicalAdvice}
+                      </div>
                     )}
                   </div>
-                  <p className="font-sans text-white text-xs leading-relaxed">"{fb.feedbackContent}"</p>
-                  {fb.technicalAdvice && (
-                    <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
-                      Lời khuyên kỹ thuật: {fb.technicalAdvice}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

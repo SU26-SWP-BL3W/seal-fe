@@ -12,6 +12,7 @@ import { useGetUserRejections } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
 import { uploadRepository } from "@/repositories/uploadRepository";
 import { Button, Input, Card, Badge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 import {
   User,
   ShieldCheck,
@@ -32,6 +33,7 @@ import {
 import type { FptStudentResponse } from "@/models/entities";
 
 export function UserProfileView() {
+  const toast = useToast();
   const { user, activeRole } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -140,13 +142,14 @@ export function UserProfileView() {
         confirmNewPassword,
       });
       setPasswordSuccess(true);
+      toast.success("Đổi mật khẩu thành công!");
       setOldPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
     } catch (err: any) {
-      setPasswordError(
-        err?.response?.data?.message || err?.message || "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ."
-      );
+      const errMsg = err?.response?.data?.message || err?.message || "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại mật khẩu cũ.";
+      setPasswordError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -215,9 +218,12 @@ export function UserProfileView() {
       } as any);
 
       setSubmitSuccess(true);
+      toast.success("Cập nhật thông tin hồ sơ thành công!");
       setIsEditing(false);
     } catch (err: any) {
-      setSubmitError(err?.response?.data?.message || "Không thể cập nhật hồ sơ. Vui lòng thử lại sau.");
+      const errMsg = err?.response?.data?.message || "Không thể cập nhật hồ sơ. Vui lòng thử lại sau.";
+      setSubmitError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsUploadingPhoto(false);
     }

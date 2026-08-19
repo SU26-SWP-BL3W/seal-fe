@@ -5,10 +5,12 @@ import { useRegister, useResendVerification } from "@/repositories/authRepositor
 import { Button, Input, Card } from "@/components/ui";
 import { Link } from "@/i18n/routing";
 import { Shield, Mail, Lock, User, Eye, EyeOff, CheckCircle2, ArrowLeft } from "lucide-react";
+import { useToast } from "@/providers/ToastProvider";
 
 type RegisterStep = "form" | "success";
 
 export function RegisterView() {
+  const toast = useToast();
   const [step, setStep] = useState<RegisterStep>("form");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -36,20 +38,23 @@ export function RegisterView() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      toast.error("Vui lòng kiểm tra và hoàn thiện các trường thông tin bắt buộc.");
+      return;
+    }
     setErrors({});
     try {
-      // Chi chuyen sang man "da gui email" khi API THAT SU thanh cong. Truoc day
-      // co .catch() nuot loi roi van setStep("success") -> dang ky that bai van
-      // bao "da gui email xac thuc", nguoi dung cho mai khong thay mail.
       await registerApi({ email: email.trim(), password, fullName: fullName.trim() });
+      toast.success("Đăng ký tài khoản thành công! Vui lòng kiểm tra email để xác thực.");
       setStep("success");
     } catch (err) {
       const apiMessage = (err as { response?: { data?: { message?: string } }; message?: string })
         ?.response?.data?.message;
+      const finalMsg = apiMessage || "Đăng ký thất bại. Vui lòng kiểm tra kết nối và thử lại.";
       setErrors({
-        submit: apiMessage || "Đăng ký thất bại. Vui lòng kiểm tra kết nối và thử lại.",
+        submit: finalMsg,
       });
+      toast.error(finalMsg);
     }
   };
 

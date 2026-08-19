@@ -214,6 +214,8 @@ export function useGetSubmitResults(filters: SubmitResultListFilters = {}) {
       if (Array.isArray(res.data)) return res.data as unknown as SubmitResultListItem[];
       return [];
     },
+    // BE bat buoc it nhat 1 filter (teamId/trackId/eventId), goi rong luon 400.
+    enabled: Object.values(filters).some((v) => !!v),
   });
 }
 
@@ -242,10 +244,41 @@ export interface MentorFeedbackItem {
   createdTime: string;
 }
 
+// BE (MentorFeedbackModel) chỉ lưu duy nhất 1 field Comment — không có cột riêng cho
+// "lời khuyên kỹ thuật" hay "điểm tham khảo". Để không mất 2 trường có cấu trúc đó khi
+// Mentor nhập (khớp pattern JSON.stringify trong Description của SubmitResult), FE tự
+// mã hoá cả 3 field vào Comment dạng JSON và giải mã lại khi hiển thị. Comment cũ dạng
+// chuỗi thường (trước khi có encode này) vẫn hiển thị được, chỉ mất phần text gốc.
+export interface MentorFeedbackContent {
+  text: string;
+  technicalAdvice?: string;
+  suggestedScore?: number;
+}
+
+export function encodeMentorFeedbackComment(content: MentorFeedbackContent): string {
+  return JSON.stringify(content);
+}
+
+export function parseMentorFeedbackComment(raw: string): MentorFeedbackContent {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
+      return {
+        text: parsed.text,
+        technicalAdvice: typeof parsed.technicalAdvice === "string" ? parsed.technicalAdvice : undefined,
+        suggestedScore: typeof parsed.suggestedScore === "number" ? parsed.suggestedScore : undefined,
+      };
+    }
+  } catch {
+    // Không phải JSON -> comment cũ dạng chuỗi thường, hiển thị nguyên văn.
+  }
+  return { text: raw };
+}
+
 export function useMentorFeedbacks(submitResultId?: string) {
   return useQuery({
     queryKey: ["mentor-feedbacks", submitResultId],
-    queryFn: async () => {
+    queryFn: async (): Promise<MentorFeedbackItem[]> => {
       if (!submitResultId) return [];
       try {
         const res = await apiClient.get<any>(`/SubmitResults/${submitResultId}/mentor-feedback`);

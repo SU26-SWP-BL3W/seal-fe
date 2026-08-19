@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useMentorWorkspaceViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
 import { Card, Button } from "@/components/ui";
 import { Users, RefreshCw, ChevronRight, Eye, Info } from "lucide-react";

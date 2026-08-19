@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useMentorWorkspaceViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
 import { Card, Button } from "@/components/ui";
 import { Compass, RefreshCw, Users, Upload, ChevronRight, Info, Brain, Cpu, Code2 } from "lucide-react";

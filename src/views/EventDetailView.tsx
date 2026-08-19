@@ -40,6 +40,10 @@ import { roundsRepository } from "@/repositories/roundsRepository";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 
+function formatVnd(value: number): string {
+  return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
+}
+
 function formatShortDate(iso?: string): string {
   if (!iso) return "N/A";
   const d = new Date(iso);
@@ -158,6 +162,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
     teamCount,
     maxTeams,
     prizes,
+    totalPrizeVnd,
     deadline,
     deadlineRoundName,
     refetch,
@@ -317,8 +322,12 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 {eventName}
               </h1>
 
-              <p className="font-mono text-sm text-cyan-400">{tagline}</p>
-              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">{description}</p>
+              {tagline && tagline.trim() !== description?.trim() && (
+                <p className="font-mono text-sm text-cyan-400">{tagline}</p>
+              )}
+              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">
+                {description || "Đấu trường công nghệ quy mô lớn dành cho sinh viên toàn quốc do Ban Quản Trị SEAL phê duyệt."}
+              </p>
             </div>
 
             {/* Right-side Countdown Widget */}
@@ -345,9 +354,9 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           {/* 4 Summary Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-zinc-800/80 font-mono text-xs">
             <div className="p-3 bg-[#0b1013] rounded border border-zinc-800 space-y-0.5">
-              <span className="text-zinc-500 text-[10px] uppercase block">Giải Thưởng</span>
-              <span className="text-cyan-300 font-bold text-base">
-                {prizes.length > 0 ? `${prizes.length} Giải` : "Chưa công bố"}
+              <span className="text-zinc-500 text-[10px] uppercase block">Tổng Giải Thưởng</span>
+              <span className="text-emerald-400 font-bold text-base truncate block">
+                {totalPrizeVnd > 0 ? formatVnd(totalPrizeVnd) : prizes.length > 0 ? `${prizes.length} Hạng Mục Giải` : "Đang cập nhật"}
               </span>
             </div>
             <div className="p-3 bg-[#0b1013] rounded border border-zinc-800 space-y-0.5">
@@ -535,13 +544,13 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
         </div>
 
         {/* Tab Navigation Controls */}
-        <div className="flex items-center gap-1 bg-[#10171a] p-1.5 border border-zinc-800 rounded-lg font-mono text-xs">
+        <div className="flex items-center gap-1 bg-[#10171a] p-1.5 border border-zinc-800 rounded-xl font-mono text-xs shadow-sm">
           <button
             type="button"
             onClick={() => setActiveTab("timeline")}
-            className={`flex-1 py-2.5 rounded font-bold transition-all cursor-pointer text-center ${
+            className={`flex-1 py-2.5 rounded-lg font-bold transition-all cursor-pointer text-center ${
               activeTab === "timeline"
-                ? "bg-[#00d9ff] text-black font-extrabold shadow-[0_0_15px_rgba(0,217,255,0.3)]"
+                ? "bg-zinc-800 text-white font-extrabold shadow-sm border border-zinc-700"
                 : "text-zinc-400 hover:text-white"
             }`}
           >
@@ -550,9 +559,9 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           <button
             type="button"
             onClick={() => setActiveTab("tracks")}
-            className={`flex-1 py-2.5 rounded font-bold transition-all cursor-pointer text-center ${
+            className={`flex-1 py-2.5 rounded-lg font-bold transition-all cursor-pointer text-center ${
               activeTab === "tracks"
-                ? "bg-[#00d9ff] text-black font-extrabold shadow-[0_0_15px_rgba(0,217,255,0.3)]"
+                ? "bg-zinc-800 text-white font-extrabold shadow-sm border border-zinc-700"
                 : "text-zinc-400 hover:text-white"
             }`}
           >
@@ -561,9 +570,9 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           <button
             type="button"
             onClick={() => setActiveTab("prizes")}
-            className={`flex-1 py-2.5 rounded font-bold transition-all cursor-pointer text-center ${
+            className={`flex-1 py-2.5 rounded-lg font-bold transition-all cursor-pointer text-center ${
               activeTab === "prizes"
-                ? "bg-[#00d9ff] text-black font-extrabold shadow-[0_0_15px_rgba(0,217,255,0.3)]"
+                ? "bg-zinc-800 text-white font-extrabold shadow-sm border border-zinc-700"
                 : "text-zinc-400 hover:text-white"
             }`}
           >
@@ -572,9 +581,9 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           <button
             type="button"
             onClick={() => setActiveTab("rules")}
-            className={`flex-1 py-2.5 rounded font-bold transition-all cursor-pointer text-center ${
+            className={`flex-1 py-2.5 rounded-lg font-bold transition-all cursor-pointer text-center ${
               activeTab === "rules"
-                ? "bg-[#00d9ff] text-black font-extrabold shadow-[0_0_15px_rgba(0,217,255,0.3)]"
+                ? "bg-zinc-800 text-white font-extrabold shadow-sm border border-zinc-700"
                 : "text-zinc-400 hover:text-white"
             }`}
           >

@@ -9,60 +9,28 @@ import apiClient from "@/models/apiClient";
 export interface Prize {
   id: string;
   eventId: string;
+  /** Hạng mục (Track) áp dụng. null/undefined = giải chung toàn sự kiện. */
+  trackId?: string | null;
   prizeName: string;
   /** Giá trị giải — kiểu string (vd "10,000,000 VNĐ" hoặc mô tả hiện vật), không phải số tiền thuần. */
   value: string;
   quantity: number;
 }
 
-const PRIZES_STORAGE_PREFIX = "seal_prizes_";
-
-export function getStoredPrizesForEvent(eventId: string): Prize[] {
-  if (typeof window === "undefined" || !eventId) return [];
-  try {
-    const raw = localStorage.getItem(`${PRIZES_STORAGE_PREFIX}${eventId}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveStoredPrizesForEvent(eventId: string, list: any[]) {
-  if (typeof window === "undefined" || !eventId) return;
-  try {
-    localStorage.setItem(`${PRIZES_STORAGE_PREFIX}${eventId}`, JSON.stringify(list));
-  } catch {
-    // ignore
-  }
-}
-
 /** GET /Events/{eventId}/Prizes */
 export function useGetPrizesByEvent(eventId: string | undefined) {
   return useQuery({
     queryKey: ["prizesByEvent", eventId],
-    queryFn: async () => {
-      if (!eventId) return [];
-      
-      const localList = getStoredPrizesForEvent(eventId);
-      if (localList.length > 0) {
-        return localList;
-      }
-
-      try {
-        const { data } = await apiClient.get<Prize[]>(`/Events/${eventId}/Prizes`);
-        if (Array.isArray(data) && data.length > 0) {
-          return data;
-        }
-      } catch (e) {
-        // ignore
-      }
-      return [];
+    queryFn: async (): Promise<Prize[]> => {
+      const { data } = await apiClient.get<Prize[]>(`/Events/${eventId}/Prizes`);
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!eventId,
   });
 }
 
 export interface CreatePrizePayload {
+  trackId?: string | null;
   prizeName: string;
   value: string;
   quantity: number;
@@ -107,4 +75,23 @@ export function useDeletePrize() {
       queryClient.invalidateQueries({ queryKey: ["prizesByEvent"] });
     },
   });
+}
+
+export function saveStoredPrizesForEvent(eventId: string, prizes: any[]) {
+  if (typeof window === "undefined" || !eventId) return;
+  try {
+    localStorage.setItem(`seal_stored_prizes_${eventId}`, JSON.stringify(prizes));
+  } catch {
+    // ignore
+  }
+}
+
+export function getStoredPrizesForEvent(eventId: string): any[] {
+  if (typeof window === "undefined" || !eventId) return [];
+  try {
+    const raw = localStorage.getItem(`seal_stored_prizes_${eventId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }

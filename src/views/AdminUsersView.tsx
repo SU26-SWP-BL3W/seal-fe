@@ -3,8 +3,6 @@
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetUsers, useApproveUser, useRejectUser, useDeleteUser } from "@/repositories/usersRepository";
-import { staffRepository } from "@/repositories/staffRepository";
-import { useEvents } from "@/repositories/eventsRepository";
 import {
   Users,
   Search,
@@ -29,11 +27,17 @@ import {
 import { Link } from "@/i18n/routing";
 import type { User } from "@/models/entities";
 import { readApiError } from "@/repositories/submitResultsRepository";
+import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
 
-export const AdminUsersView: React.FC = () => {
-  const { user: currentUser, loginAsDemoRole } = useAuth();
+export interface AdminUsersViewProps {
+  mode?: "admin" | "coordinator";
+}
+
+export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }) => {
+  const { user: currentUser } = useAuth();
+  const isCoordinator = mode === "coordinator" || (!currentUser?.isAdmin && !currentUser?.IsAdmin);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState(isCoordinator ? "student" : "all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Modals state
@@ -42,14 +46,10 @@ export const AdminUsersView: React.FC = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [deleteUserModal, setDeleteUserModal] = useState<User | null>(null);
 
-  const { data: eventsList = [] } = useEvents();
-  const [selectedUserForEc, setSelectedUserForEc] = useState<User | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data: rawUsersData, isLoading, refetch } = useGetUsers();
+  const { data: rawUsersData, isLoading, refetch } = useGetUsers({ pageSize: 500 });
   const usersList: User[] = useMemo(() => {
     const list = rawUsersData?.data ?? (Array.isArray(rawUsersData) ? rawUsersData : []);
     return Array.isArray(list) ? list : [];
@@ -58,6 +58,15 @@ export const AdminUsersView: React.FC = () => {
   const { mutateAsync: approveUser } = useApproveUser();
   const { mutateAsync: rejectUser } = useRejectUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
+
+  // LOI_12: Check if user has card submission (studentCode OR photoStudentCardUrl)
+  const hasCardSubmission = (u: User) => {
+    const hasStudentCode = Boolean(u.studentCode && u.studentCode.trim() !== "");
+    const hasPhotoCardUrl = Boolean(
+      (u as any).photoStudentCardUrl && (u as any).photoStudentCardUrl.trim() !== ""
+    );
+    return hasStudentCode || hasPhotoCardUrl;
+  };
 
   // Filtered Users List
   const filteredUsers = useMemo(() => {
@@ -92,9 +101,15 @@ export const AdminUsersView: React.FC = () => {
       else if (statusFilter === "pending") matchesStatus = !u.isApproved && (u.rejectionCount ?? 0) < 2;
       else if (statusFilter === "locked") matchesStatus = (u.rejectionCount ?? 0) >= 2;
 
-      return matchesSearch && matchesRole && matchesStatus;
+      // LOI_12: EC mode - ONLY show students with card submissions
+      let matchesCardSubmission = true;
+      if (isCoordinator) {
+        matchesCardSubmission = hasCardSubmission(u);
+      }
+
+      return matchesSearch && matchesRole && matchesStatus && matchesCardSubmission;
     });
-  }, [usersList, searchTerm, roleFilter, statusFilter]);
+  }, [usersList, searchTerm, roleFilter, statusFilter, isCoordinator]);
 
   const handleApprove = async (userId: string) => {
     setActionError(null);
@@ -127,6 +142,11 @@ export const AdminUsersView: React.FC = () => {
 
   const handleDeleteUser = async () => {
     if (!deleteUserModal) return;
+    if (!currentUser?.isAdmin && !currentUser?.IsAdmin) {
+      alert("Chỉ Quản trị viên (Admin) mới có quyền xóa tài khoản người dùng!");
+      setDeleteUserModal(null);
+      return;
+    }
     const targetId = deleteUserModal.id || (deleteUserModal as any).Id || deleteUserModal.userId;
 
     // Guard an toan: Khong tu xoa chinh minh
@@ -155,7 +175,9 @@ export const AdminUsersView: React.FC = () => {
     }
   };
 
-  if (!currentUser || (!currentUser.isAdmin && !currentUser.IsAdmin)) {
+  const hasAccess = currentUser && (currentUser.isAdmin || currentUser.IsAdmin || isCoordinator);
+
+  if (!hasAccess) {
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-[#080f11] border border-[#ef4444] p-8 text-center glow-box-red relative space-y-4">
@@ -167,24 +189,25 @@ export const AdminUsersView: React.FC = () => {
             <Lock className="w-6 h-6" />
           </div>
           <h2 className="font-display text-xl font-bold uppercase text-[#ef4444]">
-            YÊU CẦU QUYỀN SYSTEM ADMIN
+            YÊU CẦU QUYỀN TRUY CẬP
           </h2>
           <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Khu vực quản lý danh sách người dùng toàn hệ thống chỉ dành cho Quản trị viên. Bấm chọn nhanh tài khoản Admin Demo để tiếp tục:
+            Khu vực duyệt và quản lý danh sách hồ sơ chỉ dành cho Ban Tổ Chức &amp; Quản trị viên.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Admin")}
-              className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors"
-            >
-              [ Đăng Nhập System Admin Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors">
+                Đến trang đăng nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>
     );
   }
+
+  const isCoordinatorView = isCoordinator;
+  const dashboardUrl = isCoordinatorView ? "/coordinator/dashboard" : "/admin/dashboard";
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
@@ -192,23 +215,28 @@ export const AdminUsersView: React.FC = () => {
         {/* Top Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
           <div>
-            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider">
-              QUẢN TRỊ HỆ THỐNG / TÀI KHOẢN &amp; HỒ SƠ
+            <div className="font-mono text-[11px] text-cyan-400 mb-1 uppercase tracking-wider">
+              {isCoordinatorView ? "BAN TỔ CHỨC / DUYỆT & QUẢN LÝ HỒ SƠ THÍ SINH" : "QUẢN TRỊ HỆ THỐNG / TÀI KHOẢN & HỒ SƠ"}
             </div>
             <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
-              QUẢN LÝ NGƯỜI DÙNG TOÀN HỆ THỐNG
+              {isCoordinatorView ? "DANH SÁCH THÍ SINH & DUYỆT THẺ SINH VIÊN" : "QUẢN LÝ NGƯỜI DÙNG TOÀN HỆ THỐNG"}
             </h1>
+            <p className="text-xs text-zinc-400 font-sans mt-1">
+              {isCoordinatorView
+                ? "Tra cứu danh sách sinh viên, xem ảnh thẻ 3x4, kiểm tra MSSV và phê duyệt/từ chối hồ sơ đăng ký tham gia cuộc thi."
+                : "Quản lý và kiểm soát toàn bộ tài khoản Admin, Điều phối viên, Giám khảo, Cố vấn và Sinh viên trong toàn hệ thống."}
+            </p>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Link href="/admin/dashboard">
-              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-amber-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
+            <Link href={dashboardUrl}>
+              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-cyan-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
                 <span>← Bảng Điều Hành</span>
               </button>
             </Link>
             <button
               onClick={() => refetch()}
-              className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 text-zinc-300 font-mono text-xs uppercase hover:border-amber-400 hover:text-white transition-colors rounded cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 text-zinc-300 font-mono text-xs uppercase hover:border-cyan-400 hover:text-white transition-colors rounded cursor-pointer flex items-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Làm Mới</span>
@@ -451,15 +479,15 @@ export const AdminUsersView: React.FC = () => {
                             <span className="text-zinc-500 font-mono text-[11px] italic">— (Cán bộ / Chuyên gia)</span>
                           ) : isLocked ? (
                             <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
-                              TẠM KHÓA ({u.rejectionCount})
+                              ✘ KHÓA ({u.rejectionCount})
                             </span>
                           ) : isApproved ? (
                             <span className="px-2 py-0.5 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 rounded font-bold text-[10px]">
-                              ĐÃ DUYỆT
+                              ✔ ĐÃ DUYỆT
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
-                              CHỜ DUYỆT
+                              ⚠ CHỜ DUYỆT
                             </span>
                           )}
                         </td>
@@ -490,7 +518,7 @@ export const AdminUsersView: React.FC = () => {
                             >
                               <Eye className="w-3.5 h-3.5 inline" />
                             </button>
-                            {!isAdm && (
+                            {!isAdm && (currentUser?.isAdmin || currentUser?.IsAdmin) && (
                               <button
                                 onClick={() => setDeleteUserModal(u)}
                                 className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 text-rose-400 hover:bg-rose-500 hover:text-white font-mono text-xs rounded transition-all cursor-pointer"
@@ -511,177 +539,31 @@ export const AdminUsersView: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal Chi tiết User Đầy Đủ Ảnh Thẻ, Lý Do & Nút Thao Tác Trực Tiếp */}
-      {detailUserModal && (() => {
-        const modalEmail = (detailUserModal.email || "").toLowerCase();
-        const modalIsAdm = !!detailUserModal.isAdmin || !!detailUserModal.IsAdmin || modalEmail.includes("admin");
-        const modalIsJudge = modalEmail.includes("judge");
-        const modalIsMentor = modalEmail.includes("mentor");
-        const modalIsCoord = modalEmail.includes("ec.") || modalEmail.includes("coordinator");
-        const modalIsStaff = modalIsAdm || modalIsCoord || modalIsJudge || modalIsMentor;
-        const modalUserId = detailUserModal.id || (detailUserModal as any).Id || detailUserModal.userId || "";
-
-        return (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-            <div className="max-w-xl w-full bg-[#11181c] border border-zinc-700 p-6 rounded-lg space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-              
-              {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="font-display font-bold text-lg text-white uppercase flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-amber-400" />
-                  <span>HỒ SƠ CHI TIẾT NGƯỜI DÙNG</span>
-                </h3>
-                <button onClick={() => setDetailUserModal(null)} className="text-zinc-400 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Thông tin cốt lõi */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs bg-[#0b1013] p-4 rounded border border-zinc-800">
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">HỌ VÀ TÊN:</span>
-                  <span className="text-white font-bold text-sm">{detailUserModal.fullName || "Chưa cập nhật"}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">EMAIL HỆ THỐNG:</span>
-                  <span className="text-cyan-300 font-semibold">{detailUserModal.email}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">VAI TRÒ TÀI KHOẢN:</span>
-                  <span className="font-bold text-amber-300">
-                    {modalIsAdm
-                      ? "Quản trị viên"
-                      : modalIsCoord
-                      ? "Điều phối viên"
-                      : modalIsJudge
-                      ? "Giám khảo chuyên môn"
-                      : modalIsMentor
-                      ? "Cố vấn học thuật"
-                      : "Thí sinh / Sinh viên"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">TRƯỜNG ĐẠI HỌC:</span>
-                  <span className="text-white">{detailUserModal.schoolName || (detailUserModal.isFpt ? "Đại học FPT" : "N/A")}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">MÃ SỐ SINH VIÊN:</span>
-                  <span className="text-white font-mono">{detailUserModal.studentCode || (modalIsStaff ? "— (Cán bộ)" : "Chưa cập nhật")}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">TRẠNG THÁI HỒ SƠ:</span>
-                  {modalIsStaff ? (
-                    <span className="text-zinc-400 italic">Tài khoản chuyên môn (Miễn duyệt thẻ)</span>
-                  ) : detailUserModal.isApproved ? (
-                    <span className="text-emerald-400 font-bold">ĐÃ PHÊ DUYỆT THẺ</span>
-                  ) : (detailUserModal.rejectionCount ?? 0) >= 2 ? (
-                    <span className="text-rose-400 font-bold">TẠM KHÓA (Bị từ chối ≥2 lần)</span>
-                  ) : (
-                    <span className="text-amber-400 font-bold">CHỜ DUYỆT THẺ SV</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Lịch sử & Lý do từ chối (Nếu có) */}
-              {(detailUserModal.rejectionReason || (detailUserModal.rejectionCount ?? 0) > 0) && (
-                <div className="bg-rose-950/30 border border-rose-500/40 p-3 rounded space-y-1 font-mono text-xs text-rose-300">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <span>LỊCH SỬ TỪ CHỐI HỒ SƠ ({detailUserModal.rejectionCount || 1} LẦN):</span>
-                  </div>
-                  <p className="text-zinc-300 text-[11px] leading-relaxed">
-                    {detailUserModal.rejectionReason || "Ảnh thẻ sinh viên chưa đạt yêu cầu hoặc thông tin không trùng khớp."}
-                  </p>
-                </div>
-              )}
-
-              {/* Khung Minh Chứng & Ảnh Thẻ Sinh Viên */}
-              {!modalIsStaff && (
-                <div className="border border-zinc-800 p-3.5 bg-[#0b1013] rounded space-y-2 font-mono text-xs">
-                  <div className="flex items-center justify-between text-zinc-300 font-bold">
-                    <span>MINH CHỨNG THẺ SINH VIÊN:</span>
-                    {detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
-                      <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                        FPT Edu Verified
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {detailUserModal.photoStudentCardUrl ? (
-                    <div className="space-y-2">
-                      <img
-                        src={detailUserModal.photoStudentCardUrl}
-                        alt="Ảnh Thẻ Sinh Viên"
-                        className="w-full max-h-56 object-contain rounded border border-zinc-800 bg-black/40"
-                      />
-                      <div className="text-right">
-                        <a
-                          href={detailUserModal.photoStudentCardUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-amber-400 text-[11px] hover:underline"
-                        >
-                          [ Mở ảnh gốc toàn màn hình ]
-                        </a>
-                      </div>
-                    </div>
-                  ) : detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
-                    <div className="p-4 bg-emerald-950/20 border border-emerald-500/20 rounded text-center space-y-1 text-emerald-300">
-                      <p className="font-bold text-xs">Tài khoản Sinh viên FPT</p>
-                      <p className="text-[11px] text-zinc-400">
-                        Đã xác thực tự động qua địa chỉ email @fpt.edu.vn. Không yêu cầu nộp ảnh thẻ sinh viên vật lý.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-zinc-900 border border-zinc-800 rounded text-center space-y-1 text-zinc-400">
-                      <p className="text-xs">Sinh viên chưa tải ảnh thẻ sinh viên đính kèm.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Nút Thao Tác Trực Tiếp Dưới Chân Modal */}
-              <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
-                <div className="flex items-center gap-2">
-                  {!modalIsStaff && !detailUserModal.isApproved && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await handleApprove(modalUserId);
-                          setDetailUserModal(null);
-                        }}
-                        className="px-4 py-2 bg-emerald-500 text-black hover:bg-emerald-400 font-mono text-xs font-extrabold uppercase rounded cursor-pointer transition-all flex items-center gap-1.5"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Duyệt Hồ Sơ</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const target = { userId: modalUserId, fullName: detailUserModal.fullName || detailUserModal.email || "Sinh viên" };
-                          setDetailUserModal(null);
-                          setRejectUserModal(target);
-                        }}
-                        className="px-4 py-2 bg-rose-950/60 text-rose-300 border border-rose-500/40 hover:bg-rose-600 hover:text-white font-mono text-xs font-bold uppercase rounded cursor-pointer transition-all"
-                      >
-                        Từ Chối
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setDetailUserModal(null)}
-                  className="px-4 py-2 border border-zinc-700 text-zinc-300 font-mono text-xs rounded hover:text-white hover:border-zinc-500 cursor-pointer"
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Modal Chi tiết User Đầy Đủ Ảnh Thẻ 3x4, MSSV Spotlight & Thao Tác Trực Tiếp */}
+      {detailUserModal && (
+        <StudentProfileModal
+          user={detailUserModal as any}
+          isOpen={!!detailUserModal}
+          onClose={() => setDetailUserModal(null)}
+          canManage={true}
+          onApprove={async (uId) => {
+            await handleApprove(uId);
+            setDetailUserModal(null);
+          }}
+          onReject={async (uId, reason) => {
+            setActionError(null);
+            try {
+              await rejectUser({ userId: uId, reason });
+              setDetailUserModal(null);
+              setActionSuccess("Đã từ chối hồ sơ sinh viên và ghi lại lịch sử.");
+              refetch();
+              setTimeout(() => setActionSuccess(null), 2500);
+            } catch (err) {
+              setActionError("Lỗi từ chối hồ sơ: " + readApiError(err));
+            }
+          }}
+        />
+      )}
 
       {/* Modal Từ Chối Hồ Sơ */}
       {rejectUserModal && (

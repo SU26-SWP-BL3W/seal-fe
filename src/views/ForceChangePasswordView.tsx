@@ -5,11 +5,13 @@ import { AlertTriangle, Key, RefreshCw, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useChangePassword } from "@/repositories/authRepository";
 import { Button, Card } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 
 // Chặn TOÀN BỘ app (không có nav, không có nút bỏ qua) cho tới khi tài khoản tạm
 // đổi xong mật khẩu — AppLayoutWrapper redirect mọi trang khác về đây khi
 // user.mustChangePassword === true.
 export function ForceChangePasswordView() {
+  const toast = useToast();
   const { user } = useAuth();
   const { mutateAsync: changePassword, isPending } = useChangePassword();
 
@@ -23,20 +25,27 @@ export function ForceChangePasswordView() {
     setError("");
 
     if (!oldPassword) {
-      setError("Vui lòng nhập mật khẩu tạm đã nhận qua email.");
+      const msg = "Vui lòng nhập mật khẩu tạm đã nhận qua email.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
     if (!newPassword || newPassword.length < 6) {
-      setError("Mật khẩu mới phải có ít nhất 6 ký tự.");
+      const msg = "Mật khẩu mới phải có ít nhất 6 ký tự.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setError("Mật khẩu xác nhận không khớp.");
+      const msg = "Mật khẩu xác nhận không khớp.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
     try {
       await changePassword({ oldPassword, newPassword, confirmNewPassword });
+      toast.success("Đổi mật khẩu mới thành công!");
 
       // Cập nhật cờ trong session đã lưu rồi reload cứng để AuthProvider tự
       // fetch lại /Users/profile — tránh phải mở rộng AuthContext chỉ để lộ 1 setter.
@@ -50,9 +59,10 @@ export function ForceChangePasswordView() {
         window.location.href = user?.isAdmin ? "/admin/dashboard" : "/events";
       }
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message || err?.message || "Đổi mật khẩu thất bại. Kiểm tra lại mật khẩu tạm đã nhận qua email."
-      );
+      const msg =
+        err?.response?.data?.message || err?.message || "Đổi mật khẩu thất bại. Kiểm tra lại mật khẩu tạm đã nhận qua email.";
+      setError(msg);
+      toast.error(msg);
     }
   };
 

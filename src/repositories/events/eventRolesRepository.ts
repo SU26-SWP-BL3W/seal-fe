@@ -296,8 +296,8 @@ export function useGetMyEventRoles(userId?: string) {
     queryKey: ["my-event-roles", userId],
     queryFn: async () => {
       try {
-        const res = await apiClient.get<PagedResult<EventRole>>("/EventRoles", {
-          params: userId ? { UserId: userId, PageSize: 100 } : { PageSize: 100 },
+        const res = await apiClient.get<PagedResult<EventRole>>("/EventRoles/user", {
+          params: { UserId: userId, PageSize: 100 },
         });
         return res.data?.data ?? [];
       } catch (err: any) {

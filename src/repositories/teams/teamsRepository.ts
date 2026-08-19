@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import type { PagedResult } from "@/models/types";
-import type { SubmitResultListItem } from "@/repositories/scoring/submitResultsRepository";
 
 // Field/route đối chiếu trực tiếp TeamsController.cs + Features/Teams/**/Models.
 // 19 endpoint — controller lớn nhất trong dự án.
@@ -156,16 +155,6 @@ export interface GetTeamsParams {
   myTeamsOnly?: boolean;
   eventId?: string;
   status?: TeamStatusValue;
-}
-
-export function useGetTeams(params: GetTeamsParams = {}) {
-  return useQuery({
-    queryKey: ["teams", params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<TeamListItem>>("/Teams", { params });
-      return data;
-    },
-  });
 }
 
 // ─── Thành viên ─────────────────────────────────────────────────────────────
@@ -451,86 +440,18 @@ export interface MyTeam {
   members: MyTeamMember[];
 }
 
-/** GET /Teams/my-team?eventId=... — trả null (không phải 404 rỗng) nếu chưa có đội trong sự kiện đó. */
-export function useGetMyTeam(eventId: string | undefined) {
-  return useQuery({
-    queryKey: ["myTeam", eventId],
-    queryFn: async () => {
-      const { data } = await apiClient.get<MyTeam | null>("/Teams/my-team", { params: { eventId } });
-      return data;
-    },
-    enabled: !!eventId,
-  });
-}
-
-export interface MyTeamInvitation {
-  invitationId: string;
-  teamId: string;
-  teamName: string;
-  invitedByUserId: string;
-  status: string;
-  expiresAt: string;
-  notes?: string | null;
-}
-
-/** GET /Teams/{teamId}/my-invitation — lời mời CHỜ PHẢN HỒI của chính người gọi cho đội này (404 nếu không có). */
-export function useGetMyTeamInvitation(teamId: string | undefined) {
-  return useQuery({
-    queryKey: ["myTeamInvitation", teamId],
-    queryFn: async () => {
-      const { data } = await apiClient.get<MyTeamInvitation>(`/Teams/${teamId}/my-invitation`);
-      return data;
-    },
-    enabled: !!teamId,
-    retry: false,
-  });
-}
-
-export interface GetMySubmissionsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  sortBy?: string;
-  isAscending?: boolean;
-}
-
-/** GET /Teams/my-submissions — bài nộp của (các) đội mà người dùng hiện tại đang tham gia. */
-export function useGetMySubmissions(params: GetMySubmissionsParams = {}) {
-  return useQuery({
-    queryKey: ["mySubmissions", params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<SubmitResultListItem>>("/Teams/my-submissions", {
-        params,
-      });
-      return data;
-    },
-  });
-}
-
 // ─── Legacy / Compatibility Helpers & Aliases ────────────────────────────────
 
 export function useGetTeamsByEvent(eventId?: string, status?: string) {
   return useQuery({
-    queryKey: ["teams-by-event", eventId, status],
+    queryKey: ["teams-by-event", eventId || "all", status || "all"],
     queryFn: async () => {
-      const res = await apiClient.get<PagedResult<TeamListItem>>("/Teams", {
-        params: { EventId: eventId, Status: status, PageSize: 200 },
-      });
+      const params: Record<string, any> = { PageSize: 200 };
+      if (eventId) params.EventId = eventId;
+      if (status) params.Status = status;
+      const res = await apiClient.get<PagedResult<TeamListItem>>("/Teams", { params });
       return res.data?.data ?? [];
     },
-    enabled: !!eventId,
-  });
-}
-
-export function useGetTeamsByTrack(trackId?: string) {
-  return useQuery({
-    queryKey: ["teams-by-track", trackId],
-    queryFn: async () => {
-      const res = await apiClient.get<PagedResult<TeamListItem>>("/Teams", {
-        params: { TrackId: trackId, PageSize: 200 },
-      });
-      return res.data?.data ?? [];
-    },
-    enabled: !!trackId,
   });
 }
 
@@ -576,7 +497,6 @@ export const useConfirmRegistration = useConfirmTeamRegistration;
 export const useTransferLeadership = useTransferTeamLeader;
 export const useCancelInvitation = useCancelTeamInvitation;
 export const useInviteMember = useInviteTeamMember;
-export const useKickMember = useRemoveTeamMember;
 export const useAcceptOrDeclineInvitation = useRespondTeamInvitation;
 export const useRejectTeam = useRejectTeamRegistration;
 export const useApproveTeam = useApproveTeamRegistration;

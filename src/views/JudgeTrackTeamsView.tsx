@@ -23,7 +23,7 @@ import {
 export function JudgeTrackTeamsView() {
   const params = useParams();
   const trackId = (params?.trackId as string) || "";
-  const { user, activeRole, loginAsDemoRole } = useAuth();
+  const { user, activeRole } = useAuth();
   const eventId = activeRole?.eventId || activeRole?.EventId || "";
 
   const { data: tracks = [] } = useGetTracksByEvent(eventId || undefined);
@@ -59,16 +59,14 @@ export function JudgeTrackTeamsView() {
             YÊU CẦU QUYỀN GIÁM KHẢO
           </h2>
           <p className="font-mono text-xs text-zinc-400 leading-relaxed">
-            Vui lòng đăng nhập với tài khoản Giám khảo hoặc chọn nhanh vai trò Demo bên dưới để kiểm tra giao diện:
+            Vui lòng đăng nhập với tài khoản Giám khảo để tiếp tục.
           </p>
           <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Judge")}
-              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all"
-            >
-              [ Vào Bằng Tài Khoản Giám Khảo Demo ]
-            </button>
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all">
+                Đến trang đăng nhập
+              </button>
+            </Link>
           </div>
         </div>
       </div>

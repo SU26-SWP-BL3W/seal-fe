@@ -86,6 +86,16 @@ export function useEventsDiscoveryViewModel() {
               quantity: Number(p.quantity ?? p.Quantity ?? 1),
             }))
           : [],
+        // Parse totalPrizeVnd từ string "10.000.000 VN�" / "10,000,000" hoặc số thuần.
+        totalPrizeVnd: (() => {
+          const raw = ev.totalPrizeVnd ?? ev.TotalPrizeVnd;
+          if (typeof raw === "number") return raw;
+          if (typeof raw === "string") {
+            const digits = raw.replace(/[^\d]/g, "");
+            return digits ? Number(digits) : 0;
+          }
+          return 0;
+        })(),
         tracks: extractTrackNames(ev),
         rounds: Array.isArray(ev.rounds || ev.Rounds) ? (ev.rounds || ev.Rounds) : [],
         status: "upcoming",
