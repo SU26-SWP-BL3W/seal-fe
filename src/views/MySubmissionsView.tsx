@@ -31,6 +31,7 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  X,
 } from "lucide-react";
 
 export function MySubmissionsView() {
@@ -270,7 +271,7 @@ export function MySubmissionsView() {
                             <td className="py-4 px-4 whitespace-nowrap">
                               {isEliminated ? (
                                 <span className="px-2 py-0.5 border border-[#ffb4ab]/30 bg-[#ffb4ab]/10 text-[#ffb4ab] text-[10px] font-bold uppercase">
-                                  ✗ BỊ LOẠI
+                                  BỊ LOẠI
                                 </span>
                               ) : !isActive ? (
                                 <span className="px-2 py-0.5 border border-[#859398]/30 bg-[#859398]/10 text-[#859398] text-[10px] font-bold uppercase">
@@ -278,7 +279,7 @@ export function MySubmissionsView() {
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 border border-[#34d399]/30 bg-[#34d399]/10 text-[#34d399] text-[10px] font-bold uppercase">
-                                  ✓ ĐÃ NỘP
+                                  ĐÃ NỘP
                                 </span>
                               )}
                             </td>
@@ -357,8 +358,8 @@ export function MySubmissionsView() {
                   <h3 className="font-display text-lg font-bold text-[#00d9ff] uppercase">
                     CHỈNH SỬA BÀI NỘP
                   </h3>
-                  <button onClick={() => setEditingSub(null)} className="text-[#859398] hover:text-white font-mono">
-                    ✕
+                  <button onClick={() => setEditingSub(null)} className="text-[#859398] hover:text-white font-mono cursor-pointer">
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -471,7 +472,7 @@ export function MySubmissionsView() {
                     <p className="font-sans text-white text-xs leading-relaxed">"{parsed.text}"</p>
                     {parsed.technicalAdvice && (
                       <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
-                        💡 Lời khuyên kỹ thuật: {parsed.technicalAdvice}
+                        Lời khuyên kỹ thuật: {parsed.technicalAdvice}
                       </div>
                     )}
                   </div>

@@ -403,15 +403,15 @@ export const CoordinatorSubmissionsView: React.FC = () => {
           <Link href="/coordinator/publish-results" className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hover:border-[#a855f7] transition-all hud-clipped flex items-center justify-between group">
             <div>
               <span className="text-[10px] text-[#a855f7] font-bold uppercase block">TIẾP THEO</span>
-              <span className="font-bold text-sm text-[var(--text-primary)]">Tính Điểm &amp; Công Bố Kết Quả ➔</span>
+              <span className="font-bold text-sm text-[var(--text-primary)]">Tính Điểm &amp; Công Bố Kết Quả</span>
             </div>
-            <Award className="w-5 h-5 text-[#a855f7] group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-5 h-5 text-[#a855f7] group-hover:translate-x-1 transition-transform" />
           </Link>
 
           <Link href="/coordinator/prizes" className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hover:border-amber-400 transition-all hud-clipped flex items-center justify-between group">
             <div>
               <span className="text-[10px] text-amber-400 font-bold uppercase block">CƠ CẤU</span>
-              <span className="font-bold text-sm text-[var(--text-primary)]">Quản Lý Danh Sách Giải Thưởng ➔</span>
+              <span className="font-bold text-sm text-[var(--text-primary)]">Quản Lý Danh Sách Giải Thưởng</span>
             </div>
             <Award className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -419,7 +419,7 @@ export const CoordinatorSubmissionsView: React.FC = () => {
           <Link href="/coordinator/appeals" className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hover:border-red-400 transition-all hud-clipped flex items-center justify-between group">
             <div>
               <span className="text-[10px] text-red-400 font-bold uppercase block">KHIẾU NẠI</span>
-              <span className="font-bold text-sm text-[var(--text-primary)]">Xử Lý Đơn Phúc Khảo Điểm ➔</span>
+              <span className="font-bold text-sm text-[var(--text-primary)]">Xử Lý Đơn Phúc Khảo Điểm</span>
             </div>
             <AlertTriangle className="w-5 h-5 text-red-400 group-hover:translate-x-1 transition-transform" />
           </Link>

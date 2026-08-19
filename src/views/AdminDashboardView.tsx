@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
@@ -421,9 +422,9 @@ export const AdminDashboardView: React.FC = () => {
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-zinc-400 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
                   >
-                    ✕
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>

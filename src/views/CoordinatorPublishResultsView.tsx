@@ -23,6 +23,7 @@ import {
   Send,
   FileSpreadsheet,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
@@ -246,7 +247,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
     link.click();
     document.body.removeChild(link);
 
-    toast.success("✓ Đã xuất file CSV kết quả thành công!");
+    toast.success("Đã xuất file CSV kết quả thành công!");
   };
 
   // 6.2 Gửi email thông báo kết quả
@@ -266,7 +267,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
       // Simulate sending email notification batch to teams
       await new Promise((resolve) => setTimeout(resolve, 1500));
       toast.success(
-        `✓ Đã gửi email thông báo kết quả thành công tới ${
+        `Đã gửi email thông báo kết quả thành công tới ${
           emailRecipientType === "all" ? displayResults.length : "Top các"
         } đội thi!`
       );
@@ -556,7 +557,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                 onClick={() => setIsEmailModalOpen(false)}
                 className="text-[#8a9ba8] hover:text-white"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

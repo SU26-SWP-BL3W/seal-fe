@@ -511,7 +511,7 @@ export function MentorSubmissionsView() {
 
                           {parsed.technicalAdvice && (
                             <div className="p-2.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 text-[#2dd4bf] text-[11px] rounded">
-                              💡 Khuyên dùng: {parsed.technicalAdvice}
+                              Khuyên dùng: {parsed.technicalAdvice}
                             </div>
                           )}
                         </div>

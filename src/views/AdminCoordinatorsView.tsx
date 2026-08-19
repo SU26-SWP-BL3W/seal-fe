@@ -298,7 +298,7 @@ export function AdminCoordinatorsView() {
                   type="button"
                   className="font-mono text-xs bg-purple-950/20 border border-purple-500/40 text-purple-300 hover:bg-purple-950/40 px-3.5 py-2 rounded flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" /> 👁️ Giám Sát EC
+                  <ExternalLink className="w-3.5 h-3.5" /> Giám Sát EC
                 </button>
               </Link>
             )}

@@ -94,7 +94,7 @@ export const RevokeDraftConfirmModal: React.FC<RevokeDraftConfirmModalProps> = (
           {hasTeams ? (
             <div className="p-4 bg-red-950/30 border border-red-500/60 space-y-2.5 text-zinc-300">
               <div className="flex items-center gap-2 text-red-400 font-bold uppercase text-[11px]">
-                <span>⚠️ CẢNH BÁO RỦI RO: ĐÃ CÓ {teamCount} ĐỘI THI THAM GIA</span>
+                <span>CẢNH BÁO RỦI RO: ĐÃ CÓ {teamCount} ĐỘI THI THAM GIA</span>
               </div>
               <p className="text-[11px] leading-relaxed text-zinc-300">
                 Sự kiện này hiện đã có <strong className="text-red-400 font-bold">{teamCount} đội thi</strong> ghi danh trong hệ thống.
@@ -108,7 +108,7 @@ export const RevokeDraftConfirmModal: React.FC<RevokeDraftConfirmModalProps> = (
           ) : (
             <div className="p-4 bg-emerald-950/20 border border-emerald-500/40 space-y-2 text-zinc-300">
               <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase text-[11px]">
-                <span>✓ AN TOÀN: CHƯA CÓ ĐỘI THI NÀO ĐĂNG KÝ (0 ĐỘI)</span>
+                <span>AN TOÀN: CHƯA CÓ ĐỘI THI NÀO ĐĂNG KÝ (0 ĐỘI)</span>
               </div>
               <p className="text-[11px] leading-relaxed text-zinc-400">
                 Sự kiện chưa có thí sinh đăng ký. Bạn có thể thu hồi về bản nháp để tự do chỉnh sửa ngày giờ, vòng thi và các hạng mục.

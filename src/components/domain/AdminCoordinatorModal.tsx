@@ -492,7 +492,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
               <div className="p-3.5 bg-rose-950/40 border border-rose-500/50 rounded-lg flex items-start gap-2.5 text-rose-300 font-mono text-xs">
                 <UserX className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="block font-bold uppercase">⛔ CẢNH BÁO XUNG ĐỘT VAI TRÒ:</strong>
+                  <strong className="block font-bold uppercase">CẢNH BÁO XUNG ĐỘT VAI TRÒ:</strong>
                   Tài khoản <strong>"{matchedUser.fullName}"</strong> có vai trò Sinh viên (Thí sinh). Theo điều lệ cuộc thi, thí sinh không được phép kiêm nhiệm vai trò Ban tổ chức / Điều phối viên!
                 </div>
               </div>
@@ -502,7 +502,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
               <div className="p-3.5 bg-amber-950/40 border border-amber-500/50 rounded-lg flex items-start gap-2.5 text-amber-300 font-mono text-xs">
                 <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="block font-bold uppercase">ℹ️ ĐÃ LÀ ĐIỀU PHỐI VIÊN:</strong>
+                  <strong className="block font-bold uppercase">ĐÃ LÀ ĐIỀU PHỐI VIÊN:</strong>
                   Tài khoản <strong>"{matchedUser?.fullName || searchQuery}"</strong> đã được phân công phụ trách sự kiện này từ trước.
                 </div>
               </div>
@@ -512,7 +512,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
               <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/50 rounded-lg flex items-start gap-2.5 text-emerald-300 font-mono text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="block font-bold uppercase">✔ TÀI KHOẢN HỢP LỆ TRONG HỆ THỐNG:</strong>
+                  <strong className="block font-bold uppercase">TÀI KHOẢN HỢP LỆ TRONG HỆ THỐNG:</strong>
                   Tìm thấy cán bộ <strong>"{matchedUser.fullName}"</strong> ({matchedUser.email}). Sẵn sàng gán vai trò trực tiếp vào sự kiện này.
                 </div>
               </div>
@@ -523,7 +523,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
                 <div className="p-3.5 bg-purple-950/40 border border-purple-500/50 rounded-lg flex items-start gap-2.5 text-purple-300 font-mono text-xs">
                   <Mail className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="block font-bold uppercase">💡 EMAIL MỚI — MỜI QUA TÀI KHOẢN TẠM:</strong>
+                    <strong className="block font-bold uppercase">EMAIL MỚI — MỜI QUA TÀI KHOẢN TẠM:</strong>
                     Email <strong>"{searchQuery}"</strong> chưa có tài khoản trong hệ thống. Hệ thống sẽ tự động tạo <strong>Tài khoản tạm (IsTemporary)</strong> và gửi email kích hoạt + thư mời tham gia Ban tổ chức sự kiện.
                   </div>
                 </div>

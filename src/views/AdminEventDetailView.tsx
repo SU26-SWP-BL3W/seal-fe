@@ -561,9 +561,9 @@ export function AdminEventDetailView() {
                   className="w-full h-10 px-3 py-2 bg-[#141f23] border border-zinc-700 text-white rounded focus:border-red-500 outline-none"
                 >
                   <option value="all">— TẤT CẢ VAI TRÒ ({eventRoles.length}) —</option>
-                  <option value="judge">⚖️ Hội Đồng Giám Khảo ({judgesList.length})</option>
-                  <option value="mentor">💡 Ban Cố Vấn ({mentorsList.length})</option>
-                  <option value="coordinator">👑 Điều Phối Viên EC ({coordinatorsList.length})</option>
+                  <option value="judge">Hội Đồng Giám Khảo ({judgesList.length})</option>
+                  <option value="mentor">Ban Cố Vấn ({mentorsList.length})</option>
+                  <option value="coordinator">Điều Phối Viên EC ({coordinatorsList.length})</option>
                 </select>
               </div>
 

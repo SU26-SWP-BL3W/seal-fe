@@ -31,6 +31,7 @@ import {
   SlidersHorizontal,
   X,
   Sparkles,
+  Check,
 } from "lucide-react";
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
@@ -238,7 +239,7 @@ function SidebarFilter({
                   <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
                   <span>{opt.label}</span>
                 </div>
-                {isSelected && <span className="text-xs text-emerald-400 font-bold">✓</span>}
+                {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />}
               </button>
             );
           })}

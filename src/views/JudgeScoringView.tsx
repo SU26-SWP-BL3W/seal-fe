@@ -186,7 +186,7 @@ export function JudgeScoringView() {
         details: payloadDetails,
       });
       const okMsg = isFinalSubmit ? "Đã khóa và chốt điểm chính thức thành công!" : "Đã lưu nháp bảng điểm thành công.";
-      setSaveOk(`✓ ${okMsg}`);
+      setSaveOk(okMsg);
       toast.success(okMsg);
       if (autoAdvance && currentSubIndex < apiSubmissions.length - 1) {
         setTimeout(() => handleNextSubmission(), 600);
@@ -484,7 +484,7 @@ export function JudgeScoringView() {
           {/* Tổng Điểm Spotlight */}
           <div className="text-center py-2 bg-[#090e10] border border-zinc-800 rounded-lg space-y-0.5">
             <span className="font-mono text-[11px] text-amber-400 uppercase tracking-widest block font-bold">
-              ★ TỔNG ĐIỂM RBL CHUNG CUỘC:
+              TỔNG ĐIỂM CHUNG CUỘC:
             </span>
             <div className="font-mono text-4xl font-extrabold text-amber-300 flex items-baseline justify-center gap-1.5">
               <span>{calculatedTotalScore.toFixed(2)}</span>
