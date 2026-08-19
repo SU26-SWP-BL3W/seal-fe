@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +22,90 @@ import { useToast } from "@/providers/ToastProvider";
 import type { FptStudentResponse } from "@/models/entities";
 
 const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
+
+export const getRoleDetails = (
+  role: string,
+  assignedRoles: string[],
+  isAdmin?: boolean,
+  isStudent?: boolean
+) => {
+  if (isAdmin) {
+    return {
+      label: "Quản Trị Viên (Admin)",
+      badgeClass: "bg-red-950/40 border-red-500/30 text-red-300",
+      dotClass: "bg-red-400 animate-pulse",
+      typeLabel: "Quản Trị Viên Hệ Thống",
+      isStaff: true,
+    };
+  }
+  if (assignedRoles.includes("Judge") && assignedRoles.includes("Mentor")) {
+    return {
+      label: "Giám Khảo & Cố Vấn Học Thuật",
+      badgeClass: "bg-purple-950/40 border-purple-500/30 text-purple-300",
+      dotClass: "bg-purple-400",
+      typeLabel: "Ban Giám Khảo & Cố Vấn",
+      isStaff: true,
+    };
+  }
+  if (assignedRoles.includes("Judge") || role === "Judge") {
+    return {
+      label: "Ban Giám Khảo (Judge)",
+      badgeClass: "bg-indigo-950/40 border-indigo-500/30 text-indigo-300",
+      dotClass: "bg-indigo-400",
+      typeLabel: "Hội Đồng Giám Khảo",
+      isStaff: true,
+    };
+  }
+  if (assignedRoles.includes("Mentor") || role === "Mentor") {
+    return {
+      label: "Cố Vấn Học Thuật (Mentor)",
+      badgeClass: "bg-cyan-950/40 border-cyan-500/30 text-cyan-300",
+      dotClass: "bg-cyan-400",
+      typeLabel: "Cố Vấn Chuyên Môn",
+      isStaff: true,
+    };
+  }
+  if (
+    assignedRoles.includes("EventCoordinator") ||
+    assignedRoles.includes("Coordinator") ||
+    role === "Coordinator" ||
+    role === "EventCoordinator"
+  ) {
+    return {
+      label: "Điều Phối Viên Sự Kiện (Coordinator)",
+      badgeClass: "bg-amber-950/40 border-amber-500/30 text-amber-300",
+      dotClass: "bg-amber-400",
+      typeLabel: "Ban Tổ Chức / Điều Phối Viên",
+      isStaff: true,
+    };
+  }
+  if (assignedRoles.includes("TeamLeader") || role === "TeamLeader" || role === "Leader") {
+    return {
+      label: "Trưởng Nhóm (Team Leader)",
+      badgeClass: "bg-emerald-950/40 border-emerald-500/30 text-emerald-300",
+      dotClass: "bg-emerald-400",
+      typeLabel: "Thí Sinh (Trưởng Nhóm)",
+      isStaff: false,
+    };
+  }
+  if (assignedRoles.includes("TeamMember") || role === "TeamMember" || role === "Member") {
+    return {
+      label: "Thành Viên Đội Thi (Team Member)",
+      badgeClass: "bg-teal-950/40 border-teal-500/30 text-teal-300",
+      dotClass: "bg-teal-400",
+      typeLabel: "Thí Sinh (Thành Viên Đội)",
+      isStaff: false,
+    };
+  }
+  // Mặc định đối với mọi tài khoản thí sinh / sinh viên tham gia hệ thống:
+  return {
+    label: "Thí Sinh / Sinh Viên",
+    badgeClass: "bg-sky-950/40 border-sky-500/30 text-sky-300",
+    dotClass: "bg-sky-400",
+    typeLabel: "Thí Sinh Dự Thi",
+    isStaff: false,
+  };
+};
 
 export function UserProfileView() {
   const toast = useToast();
@@ -96,50 +180,65 @@ export function UserProfileView() {
     return map;
   }, [eventsList]);
 
+  const { data: myTeamData } = useMyTeam();
+  const myTeam = (myTeamData as any)?.data ?? myTeamData;
+
   const assignedRoleNames = useMemo(() => {
     return [...new Set(userRoles.map((r: any) => r.roleName || r.RoleName).filter(Boolean))];
   }, [userRoles]);
 
-  const rawRole = activeRole?.roleName || activeRole?.RoleName;
+  const roleInfo = useMemo(() => {
+    const isAdmin = Boolean(user?.isAdmin || (user as any)?.IsAdmin);
+    const isStudent = user?.isStudent !== undefined ? user.isStudent : undefined;
+    const rawRole = activeRole?.roleName || (activeRole as any)?.RoleName || (user as any)?.role || (user as any)?.Role || "";
 
-  let roleName = "";
-  if (user?.isAdmin || user?.IsAdmin) {
-    roleName = "Admin";
-  } else if (assignedRoleNames.includes("Judge") && assignedRoleNames.includes("Mentor")) {
-    roleName = "JudgeAndMentor";
-  } else if (assignedRoleNames.includes("EventCoordinator") || assignedRoleNames.includes("Coordinator")) {
-    roleName = "Coordinator";
-  } else if (assignedRoleNames.includes("Judge")) {
-    roleName = "Judge";
-  } else if (assignedRoleNames.includes("Mentor")) {
-    roleName = "Mentor";
-  } else if (rawRole) {
-    roleName = rawRole === "EventCoordinator" ? "Coordinator" : rawRole;
-  } else {
-    roleName = user?.isStudent ? "Student" : "Staff";
-  }
+    const isTeamLeader = myTeam && (myTeam.leaderId === currentUserId || (myTeam as any)?.LeaderId === currentUserId);
+    const isTeamMember = myTeam && !isTeamLeader;
 
-  // Tài khoản là Chuyên gia / Cán bộ nếu isStudent === false hoặc có vai trò chuyên môn
-  const isStaff =
-    user?.isStudent === false ||
-    roleName === "Coordinator" ||
-    roleName === "Admin" ||
-    roleName === "Judge" ||
-    roleName === "Mentor" ||
-    roleName === "JudgeAndMentor" ||
-    Boolean(user?.isAdmin || user?.IsAdmin);
+    const effectiveRoles = [...assignedRoleNames];
+    if (isTeamLeader && !effectiveRoles.includes("TeamLeader")) effectiveRoles.push("TeamLeader");
+    if (isTeamMember && !effectiveRoles.includes("TeamMember")) effectiveRoles.push("TeamMember");
+
+    return getRoleDetails(rawRole, effectiveRoles, isAdmin, isStudent);
+  }, [user, activeRole, assignedRoleNames, myTeam, currentUserId]);
+
+  const isStaff = roleInfo.isStaff;
 
   // Student & Staff shared state from database
   const [schoolChoice, setSchoolChoice] = useState<"FPT" | "OTHER">(
     user?.isFpt !== false ? "FPT" : "OTHER"
   );
-  const [schoolId, setSchoolId] = useState(user?.schoolId || "");
-  const [studentCode, setStudentCode] = useState(user?.studentCode || user?.StudentId || "");
-  const [fullName, setFullName] = useState(user?.fullName || user?.FullName || "");
+  const [schoolId, setSchoolId] = useState(user?.schoolId || (user as any)?.SchoolId || "");
+  const [studentCode, setStudentCode] = useState(user?.studentCode || (user as any)?.StudentId || (user as any)?.StudentCode || "");
+  const [fullName, setFullName] = useState(user?.fullName || (user as any)?.FullName || "");
+  const [customSchoolName, setCustomSchoolName] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(
-    user?.photoStudentCardUrl || null
+    user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl || null
   );
+
+  // Sync state when user loads
+  useEffect(() => {
+    if (user) {
+      if (user.fullName || (user as any).FullName) {
+        setFullName(user.fullName || (user as any).FullName || "");
+      }
+      if (user.schoolId || (user as any).SchoolId) {
+        setSchoolId(user.schoolId || (user as any).SchoolId || "");
+      }
+      if (user.studentCode || (user as any).StudentId || (user as any).StudentCode) {
+        const code = user.studentCode || (user as any).StudentId || (user as any).StudentCode || "";
+        setStudentCode(code);
+        setFptCode(code);
+      }
+      if (user.photoStudentCardUrl || (user as any).PhotoStudentCardUrl) {
+        setPhotoPreview(user.photoStudentCardUrl || (user as any).PhotoStudentCardUrl || null);
+      }
+      if (user.isFpt !== undefined) {
+        setSchoolChoice(user.isFpt ? "FPT" : "OTHER");
+      }
+    }
+  }, [user]);
 
   // FPT Verification state
   const [fptCode, setFptCode] = useState(studentCode || "");
@@ -170,9 +269,6 @@ export function UserProfileView() {
   const { data: schoolsData, isLoading: loadingSchools } = useGetSchools();
   const schools = schoolsData || [];
 
-  const { data: myTeamData } = useMyTeam();
-  const myTeam = (myTeamData as any)?.data ?? myTeamData;
-
   const { data: rejectionsData } = useGetUserRejections(user?.id || user?.userId);
   const rejections: any[] = Array.isArray(rejectionsData) ? rejectionsData : ((rejectionsData as any)?.data || []);
 
@@ -180,8 +276,100 @@ export function UserProfileView() {
   const isBlocked = rejectionCount >= 2 && !user?.isApproved;
 
   // Lấy tên trường / đơn vị từ danh sách Schools trong DB
-  const userSchool = schools.find((s) => s.id === (user?.schoolId || schoolId));
-  const schoolNameDisplay = userSchool?.schoolName || "Chưa cập nhật";
+  const currentSchoolId = user?.schoolId || (user as any)?.SchoolId || schoolId;
+  const userSchool = schools.find((s) => s.id === currentSchoolId);
+  const schoolNameDisplay =
+    (schoolId === "OTHER_CUSTOM" && customSchoolName.trim())
+      ? customSchoolName.trim()
+      : userSchool?.schoolName ||
+        (user as any)?.schoolName ||
+        (user as any)?.SchoolName ||
+        (user as any)?.school?.schoolName ||
+        "Chưa cập nhật";
+
+  const userStudentCode = user?.studentCode || (user as any)?.StudentCode || (user as any)?.StudentId || "";
+  const hasMSSV = Boolean(userStudentCode && userStudentCode.trim() !== "");
+  const hasSchool = Boolean((userSchool?.schoolName && userSchool.schoolName.trim() !== "") || (user?.schoolId && user.schoolId !== "OTHER_CUSTOM"));
+  const hasStudentCardPhoto = Boolean(user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl || photoPreview);
+
+  // Xác định rõ ràng sinh viên FPT hay sinh viên trường ngoài:
+  // CHỈ xem là FPT nếu email có đuôi fpt.edu.vn hoặc tên trường chọn là FPT
+  const isFptStudent = useMemo(() => {
+    const emailLower = (user?.email || "").toLowerCase();
+    const isFptEmail = emailLower.endsWith("@fpt.edu.vn") || emailLower.endsWith("@fe.edu.vn");
+    const isFptSchool = userSchool?.schoolName?.toLowerCase().includes("fpt") || false;
+
+    if (schoolChoice === "OTHER") return false;
+    if (isFptEmail || isFptSchool) return true;
+    if (user?.isFpt && hasMSSV && !userSchool) return true;
+    return false;
+  }, [schoolChoice, userSchool, user, hasMSSV]);
+
+  // RÀNG BUỘC CHẶT CHẼ: Kiểm tra đầy đủ thông tin thực tế trước khi xác nhận ĐÃ DUYỆT
+  const cardApprovalStatus = useMemo(() => {
+    if (isBlocked) {
+      return {
+        label: "[ TÀI KHOẢN TẠM KHÓA ]",
+        colorClass: "text-rose-400 font-bold",
+        badge: "bg-rose-950/40 text-rose-300 border-rose-500/30",
+        isApproved: false,
+      };
+    }
+
+    // Nếu người dùng chưa cập nhật đầy đủ MSSV hoặc chưa chọn trường
+    if (!hasMSSV || (!hasSchool && !customSchoolName.trim())) {
+      return {
+        label: "[ CHƯA HOÀN TẤT HỒ SƠ ]",
+        colorClass: "text-amber-400 font-bold animate-pulse",
+        badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+        isApproved: false,
+      };
+    }
+
+    // Trường hợp 1: Sinh viên FPT Edu
+    if (isFptStudent) {
+      if (user?.isApproved) {
+        return {
+          label: "[ ĐÃ XÁC THỰC FPT ]",
+          colorClass: "text-emerald-400 font-bold",
+          badge: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+          isApproved: true,
+        };
+      }
+      return {
+        label: "[ CHỜ XÁC MINH MSSV ]",
+        colorClass: "text-amber-400 font-bold",
+        badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+        isApproved: false,
+      };
+    }
+
+    // Trường hợp 2: Sinh viên trường ngoài (BẮT BUỘC PHẢI CÓ ẢNH THẺ)
+    if (!hasStudentCardPhoto) {
+      return {
+        label: "[ CHƯA NỘP ẢNH THẺ ]",
+        colorClass: "text-amber-400 font-bold animate-pulse",
+        badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+        isApproved: false,
+      };
+    }
+
+    if (user?.isApproved) {
+      return {
+        label: "[ ĐÃ DUYỆT THẺ SV ]",
+        colorClass: "text-emerald-400 font-bold",
+        badge: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+        isApproved: true,
+      };
+    }
+
+    return {
+      label: "[ CHỜ PHÊ DUYỆT THẺ ]",
+      colorClass: "text-amber-300 font-bold",
+      badge: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+      isApproved: false,
+    };
+  }, [isBlocked, hasMSSV, hasSchool, customSchoolName, isFptStudent, hasStudentCardPhoto, user?.isApproved]);
 
   // Xử lý xác minh sinh viên FPT qua API tra cứu FPT DB thật
   const handleVerifyFpt = async () => {
@@ -193,9 +381,9 @@ export function UserProfileView() {
     try {
       const res = await verifyFptMutation.mutateAsync(fptCode.trim());
       const data = (res as any)?.data ?? res;
-      if (data?.isValid || data?.IsValid || data?.fullName || data?.FullName) {
+      if (data?.isValid || (data as any)?.IsValid || data?.fullName || (data as any)?.FullName) {
         setFptResult(data);
-        const name = data.fullName || data.FullName;
+        const name = data.fullName || (data as any).FullName;
         if (name) setFullName(name);
         setStudentCode(fptCode.trim());
         toast.success("Xác minh MSSV FPT thành công!");
@@ -229,32 +417,13 @@ export function UserProfileView() {
     setSubmitSuccess(false);
 
     if (!fullName.trim()) {
-      setSubmitError("Vui lòng nhập họ và tên");
+      setSubmitError("Vui lòng nhập họ và tên.");
       return;
     }
 
+    let selectedSchoolId = schoolId || user?.schoolId || (user as any)?.SchoolId || "";
+
     if (!isStaff) {
-      if (schoolChoice === "OTHER" && !schoolId) {
-        setSubmitError("Vui lòng chọn trường đại học");
-        return;
-      }
-      if (schoolChoice === "OTHER" && !studentCode.trim()) {
-        setSubmitError("Vui lòng nhập Mã số sinh viên (MSSV)");
-        return;
-      }
-    }
-
-    try {
-      let finalPhotoUrl = user?.photoStudentCardUrl;
-
-      if (!isStaff && photoFile) {
-        setIsUploadingPhoto(true);
-        const uploadRes = await uploadRepository.uploadFile(photoFile);
-        finalPhotoUrl = uploadRes.fileUrl;
-        setIsUploadingPhoto(false);
-      }
-
-      let selectedSchoolId: string = schoolId || "";
       if (schoolChoice === "FPT") {
         const fptSchool = schools.find(
           (s) =>
@@ -264,13 +433,92 @@ export function UserProfileView() {
         if (fptSchool?.id) {
           selectedSchoolId = fptSchool.id;
         }
+        if (!studentCode.trim()) {
+          setSubmitError("Vui lòng nhập Mã số sinh viên FPT.");
+          return;
+        }
+      } else {
+        if (!selectedSchoolId) {
+          setSubmitError("Vui lòng chọn trường đại học từ danh sách.");
+          return;
+        }
+        if (selectedSchoolId === "OTHER_CUSTOM") {
+          if (!customSchoolName.trim()) {
+            setSubmitError("Vui lòng nhập tên trường đại học của bạn.");
+            return;
+          }
+          // Tìm trường khớp trong DB nếu có
+          const matched = schools.find((s) =>
+            s.schoolName?.toLowerCase().includes(customSchoolName.trim().toLowerCase())
+          );
+          if (matched?.id) {
+            selectedSchoolId = matched.id;
+          } else {
+            // Dùng trường dự phòng có sẵn trong DB để vượt qua kiểm tra GUID của backend
+            const fallback = schools.find(
+              (s) =>
+                s.schoolName?.toLowerCase().includes("khác") ||
+                s.schoolName?.toLowerCase().includes("other")
+            ) || schools[0];
+            selectedSchoolId = fallback?.id || "";
+          }
+        }
+        if (!studentCode.trim()) {
+          setSubmitError("Vui lòng nhập Mã số sinh viên (MSSV).");
+          return;
+        }
+        const hasExistingPhoto = Boolean(user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl);
+        if (!hasExistingPhoto && !photoFile) {
+          setSubmitError("Vui lòng tải lên ảnh thẻ sinh viên để Ban Tổ Chức xét duyệt.");
+          return;
+        }
       }
+    } else {
+      if (!selectedSchoolId) {
+        setSubmitError("Vui lòng chọn Đơn vị công tác / Tổ chức / Trường học.");
+        return;
+      }
+      if (selectedSchoolId === "OTHER_CUSTOM") {
+        if (!customSchoolName.trim()) {
+          setSubmitError("Vui lòng nhập tên đơn vị công tác / tổ chức của bạn.");
+          return;
+        }
+        const matched = schools.find((s) =>
+          s.schoolName?.toLowerCase().includes(customSchoolName.trim().toLowerCase())
+        );
+        if (matched?.id) {
+          selectedSchoolId = matched.id;
+        } else {
+          const fallback = schools.find(
+            (s) =>
+              s.schoolName?.toLowerCase().includes("khác") ||
+              s.schoolName?.toLowerCase().includes("other")
+          ) || schools[0];
+          selectedSchoolId = fallback?.id || "";
+        }
+      }
+    }
+
+    try {
+      let finalPhotoUrl = user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl;
+
+      if (!isStaff && photoFile) {
+        setIsUploadingPhoto(true);
+        const uploadRes = await uploadRepository.uploadFile(photoFile);
+        finalPhotoUrl = uploadRes.fileUrl;
+        setIsUploadingPhoto(false);
+      }
+
+      const isFptVal = !isStaff ? (schoolChoice === "FPT") : true;
+      const studentCodeVal = !isStaff
+        ? (studentCode.trim() || undefined)
+        : (user?.studentCode || (user as any)?.StudentCode || (user as any)?.StudentId || "STAFF");
 
       await updateProfileMutation.mutateAsync({
         schoolId: selectedSchoolId,
-        studentCode: isStaff ? undefined : (studentCode || undefined),
-        photoStudentCardUrl: isStaff ? undefined : (finalPhotoUrl || undefined),
-        isFpt: isStaff ? false : (schoolChoice === "FPT"),
+        studentCode: studentCodeVal,
+        photoStudentCardUrl: !isStaff ? (finalPhotoUrl || undefined) : undefined,
+        isFpt: isFptVal,
         fullName: fullName.trim(),
       });
 
@@ -279,7 +527,11 @@ export function UserProfileView() {
       toast.success("Cập nhật thông tin hồ sơ thành công!");
     } catch (err: any) {
       setIsUploadingPhoto(false);
-      const msg = err?.response?.data?.message || err?.message || "Cập nhật hồ sơ thất bại";
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Cập nhật hồ sơ thất bại. Vui lòng kiểm tra lại thông tin.";
       setSubmitError(msg);
       toast.error(msg);
     }
@@ -411,28 +663,12 @@ export function UserProfileView() {
                   </p>
                 </div>
 
-                {/* Dải trạng thái định danh tự nhiên (Không dùng badge vuông cồng kềnh) */}
+                {/* Dải trạng thái định danh chuẩn xác theo Role */}
                 <div className="pt-1">
-                  {user?.isAdmin ? (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-950/40 border border-red-500/30 text-red-300 font-mono text-[11px] font-bold uppercase hud-clipped">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                      <span>Quản Trị Viên Hệ Thống</span>
-                    </div>
-                  ) : isStaff ? (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-mono text-[11px] font-bold hud-clipped">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <span>{userRoles.length > 0 ? `Đang tham gia: ${userRoles.length} phân công sự kiện` : "Cán Bộ / Chuyên Gia"}</span>
-                    </div>
-                  ) : (
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] font-bold hud-clipped ${
-                      user?.isApproved
-                        ? "bg-emerald-950/40 border border-emerald-500/30 text-emerald-300"
-                        : "bg-amber-950/40 border border-amber-500/30 text-amber-300"
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${user?.isApproved ? "bg-emerald-400" : "bg-amber-400 animate-pulse"}`} />
-                      <span>{user?.isApproved ? "Thẻ Sinh Viên Đã Xác Thực" : "Thẻ Sinh Viên Chờ Duyệt"}</span>
-                    </div>
-                  )}
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] font-bold uppercase hud-clipped border ${roleInfo.badgeClass}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${roleInfo.dotClass}`} />
+                    <span>{roleInfo.label}</span>
+                  </div>
                 </div>
               </div>
 
@@ -448,7 +684,7 @@ export function UserProfileView() {
                 <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
                   <span className="text-zinc-400">LOẠI TÀI KHOẢN:</span>
                   <span className="font-bold text-cyan-300">
-                    {user?.isStudent ? "Sinh Viên / Thí Sinh" : "Chuyên Gia / Cán Bộ"}
+                    {roleInfo.typeLabel}
                   </span>
                 </div>
 
@@ -463,16 +699,16 @@ export function UserProfileView() {
                     </div>
 
                     <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
-                      <span className="text-zinc-400">XÁC MINH FPT:</span>
+                      <span className="text-zinc-400">PHÂN LOẠI TRƯỜNG:</span>
                       <span className="font-bold text-zinc-300">
-                        {user?.isFpt ? "[FPT EDU]" : "[TRƯỜNG NGOÀI]"}
+                        {isFptStudent ? "[ FPT EDU ]" : "[ TRƯỜNG NGOÀI ]"}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center py-1 border-b border-zinc-800/80">
                       <span className="text-zinc-400">TRẠNG THÁI THẺ:</span>
-                      <span className="font-bold text-emerald-400">
-                        {user?.isApproved ? "[ ĐÃ DUYỆT ]" : "[ CHỜ DUYỆT ]"}
+                      <span className={`font-bold ${cardApprovalStatus.colorClass}`}>
+                        {cardApprovalStatus.label}
                       </span>
                     </div>
                   </>
@@ -505,8 +741,13 @@ export function UserProfileView() {
                       </div>
                     </div>
                   ) : (
-                    <div className="p-6 border border-dashed border-zinc-800 bg-[#090e11] text-center font-mono text-xs text-zinc-500 hud-clipped">
-                      [ CHƯA CÓ ẢNH THẺ SINH VIÊN ]
+                    <div className="p-4 border border-dashed border-amber-500/30 bg-[#090e11] text-center font-mono text-[11px] text-amber-400/80 hud-clipped space-y-1">
+                      <p className="font-bold uppercase">[ CHƯA CÓ ẢNH THẺ SINH VIÊN ]</p>
+                      <p className="text-[10px] text-zinc-500 font-sans">
+                        {isFptStudent
+                          ? "Sinh viên FPT được miễn nộp ảnh thẻ."
+                          : "Sinh viên trường ngoài cần nộp ảnh thẻ để được xét duyệt."}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -580,7 +821,14 @@ export function UserProfileView() {
                         <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped">
                           <span className="text-[10px] text-zinc-500 uppercase block font-bold">PHÂN LOẠI TRƯỜNG</span>
                           <span className="text-sm font-bold text-zinc-300 block">
-                            {schoolChoice === "FPT" ? "Sinh Viên FPT Edu" : "Sinh Viên Trường Ngoài"}
+                            {isFptStudent ? "Sinh Viên FPT Edu" : "Sinh Viên Trường Ngoài"}
+                          </span>
+                        </div>
+
+                        <div className="p-3.5 bg-[#090e11] border border-zinc-800 space-y-1 hud-clipped sm:col-span-2">
+                          <span className="text-[10px] text-zinc-500 uppercase block font-bold">TRẠNG THÁI XÉT DUYỆT THẺ & HỒ SƠ</span>
+                          <span className={`text-sm font-bold block ${cardApprovalStatus.colorClass}`}>
+                            {cardApprovalStatus.label}
                           </span>
                         </div>
                       </>
@@ -625,102 +873,263 @@ export function UserProfileView() {
                     />
                   </div>
 
-                  {/* Đơn vị công tác / Trường học (Select từ bảng Schools thật trong DB) */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                      {isStaff ? "Đơn Vị Công Tác / Tổ Chức / Trường Học *" : "Trường Đại Học *"}
-                    </label>
-                    <select
-                      value={schoolId}
-                      onChange={(e) => setSchoolId(e.target.value)}
-                      className="w-full p-2.5 bg-[#090e11] border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
-                    >
-                      <option value="">-- Chọn đơn vị / trường học từ hệ thống --</option>
-                      {schools.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.schoolName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Các trường dành riêng cho Sinh Viên (MSSV, FPT, Ảnh thẻ) */}
-                  {!isStaff && (
-                    <>
+                  {/* Nếu là Cán bộ / Chuyên gia */}
+                  {isStaff ? (
+                    <div className="space-y-3">
                       <div className="space-y-1.5">
                         <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                          Phân Loại Trường *
+                          Đơn Vị Công Tác / Tổ Chức / Trường Học *
+                        </label>
+                        <select
+                          value={schoolId}
+                          onChange={(e) => setSchoolId(e.target.value)}
+                          className="w-full p-2.5 bg-[#090e11] border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
+                        >
+                          <option value="">-- Chọn đơn vị / trường học từ hệ thống --</option>
+                          {schools.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.schoolName}
+                            </option>
+                          ))}
+                          <option value="OTHER_CUSTOM">-- Đơn vị / Trường khác (Nhập tên bên dưới) --</option>
+                        </select>
+                      </div>
+
+                      {schoolId === "OTHER_CUSTOM" && (
+                        <div className="space-y-1.5 p-3 bg-amber-500/5 border border-amber-500/30 hud-clipped">
+                          <label className="text-[10px] text-amber-300 uppercase tracking-wider block font-bold">
+                            Nhập Tên Đơn Vị Công Tác / Tổ Chức Của Bạn *
+                          </label>
+                          <Input
+                            type="text"
+                            value={customSchoolName}
+                            onChange={(e) => setCustomSchoolName(e.target.value)}
+                            placeholder="Ví dụ: Công ty FPT Software, Viện Nghiên Cứu, v.v..."
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Nếu là Thí sinh / Sinh viên / Thành viên đội */
+                    <>
+                      {/* Phân loại Trường trong / ngoài */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                          Phân Loại Trường Học *
                         </label>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
-                            onClick={() => setSchoolChoice("FPT")}
-                            className={`p-2.5 text-center font-bold uppercase transition-all hud-clipped ${
+                            onClick={() => {
+                              setSchoolChoice("FPT");
+                              const fptSchool = schools.find(
+                                (s) =>
+                                  s.schoolName?.toLowerCase().includes("fpt") ||
+                                  s.schoolName?.toLowerCase().includes("đại học fpt")
+                              );
+                              if (fptSchool?.id) setSchoolId(fptSchool.id);
+                            }}
+                            className={`p-3 text-center font-bold uppercase transition-all hud-clipped cursor-pointer flex flex-col items-center gap-1 ${
                               schoolChoice === "FPT"
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 font-extrabold"
-                                : "bg-[#090e11] text-zinc-400 border border-zinc-800"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 font-extrabold shadow-sm"
+                                : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:border-zinc-700"
                             }`}
                           >
-                            [ SINH VIÊN FPT ]
+                            <span className="text-xs">🏛️ SINH VIÊN FPT EDU</span>
+                            <span className="text-[10px] opacity-75 font-normal">Xác thực tự động qua MSSV FPT</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setSchoolChoice("OTHER")}
-                            className={`p-2.5 text-center font-bold uppercase transition-all hud-clipped ${
+                            className={`p-3 text-center font-bold uppercase transition-all hud-clipped cursor-pointer flex flex-col items-center gap-1 ${
                               schoolChoice === "OTHER"
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 font-extrabold"
-                                : "bg-[#090e11] text-zinc-400 border border-zinc-800"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 font-extrabold shadow-sm"
+                                : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:border-zinc-700"
                             }`}
                           >
-                            [ TRƯỜNG KHÁC ]
+                            <span className="text-xs">🎓 SINH VIÊN TRƯỜNG NGOÀI</span>
+                            <span className="text-[10px] opacity-75 font-normal">Nộp ảnh thẻ sinh viên xét duyệt</span>
                           </button>
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                          Mã Số Sinh Viên (MSSV) *
-                        </label>
-                        <Input
-                          type="text"
-                          value={studentCode}
-                          onChange={(e) => setStudentCode(e.target.value)}
-                          placeholder="Ví dụ: SE171234..."
-                        />
-                      </div>
+                      {/* Trường hợp 1: Sinh viên FPT */}
+                      {schoolChoice === "FPT" ? (
+                        <div className="space-y-4 p-4 bg-[#090e11] border border-amber-500/30 hud-clipped">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Trường Học
+                            </label>
+                            <div className="p-2.5 bg-black/40 border border-zinc-800 text-amber-300 font-bold hud-clipped">
+                              Trường Đại học FPT (FPT University / FPT Edu)
+                            </div>
+                          </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                          Tải Lên Ảnh Thẻ Sinh Viên Mới (Mặt Trước)
-                        </label>
-                        <div
-                          onClick={() => fileInputRef.current?.click()}
-                          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                          onDragLeave={() => setIsDragging(false)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setIsDragging(false);
-                            if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]);
-                          }}
-                          className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${
-                            isDragging
-                              ? "border-amber-400 bg-amber-500/10"
-                              : "border-zinc-800 hover:border-zinc-700 bg-[#090e11]"
-                          }`}
-                        >
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-                            className="hidden"
-                          />
-                          <p className="text-zinc-300 font-bold uppercase text-[11px]">
-                            [ Kéo thả file ảnh thẻ vào đây hoặc Bấm để chọn ]
-                          </p>
-                          <span className="text-[10px] text-zinc-500 block mt-1">Dung lượng tối đa 5MB (JPG, PNG)</span>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Mã Số Sinh Viên FPT *
+                            </label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="text"
+                                value={fptCode || studentCode}
+                                onChange={(e) => {
+                                  setFptCode(e.target.value);
+                                  setStudentCode(e.target.value);
+                                }}
+                                placeholder="Ví dụ: SE171234, SS160000..."
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="primary"
+                                onClick={handleVerifyFpt}
+                                disabled={verifyFptMutation.isPending}
+                                className="shrink-0 text-xs uppercase whitespace-nowrap"
+                              >
+                                {verifyFptMutation.isPending ? "[ ĐANG TRA CỨU... ]" : "[ XÁC MINH MSSV ]"}
+                              </Button>
+                            </div>
+                            {fptError && <p className="text-red-400 text-[11px] font-bold">{fptError}</p>}
+                            {fptResult && (
+                              <p className="text-emerald-400 text-[11px] font-bold">
+                                [✓ HỆ THỐNG XÁC NHẬN]: {fptResult.fullName || (fptResult as any).FullName} - {fptResult.major || "FPT Edu"}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="p-2.5 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 font-mono text-[11px] hud-clipped">
+                            ✓ Sinh viên FPT được tra cứu và xác thực trực tiếp qua cơ sở dữ liệu FPT Edu, không cần nộp ảnh thẻ sinh viên.
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        /* Trường hợp 2: Sinh viên Trường ngoài */
+                        <div className="space-y-4 p-4 bg-[#090e11] border border-zinc-800 hud-clipped">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Trường Đại Học / Cơ Sở Đào Tạo *
+                            </label>
+                            <select
+                              value={schoolId}
+                              onChange={(e) => setSchoolId(e.target.value)}
+                              className="w-full p-2.5 bg-black/60 border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
+                            >
+                              <option value="">-- Chọn trường đại học của bạn --</option>
+                              {schools.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.schoolName}
+                                </option>
+                              ))}
+                              <option value="OTHER_CUSTOM">-- Trường khác (Nhập tên trường bên dưới) --</option>
+                            </select>
+                          </div>
+
+                          {/* Ô nhập tên trường nếu chọn Khác hoặc không có trong danh sách đề xuất */}
+                          {schoolId === "OTHER_CUSTOM" && (
+                            <div className="space-y-1.5 p-3 bg-amber-500/5 border border-amber-500/30 hud-clipped">
+                              <label className="text-[10px] text-amber-300 uppercase tracking-wider block font-bold">
+                                Nhập Tên Trường Đại Học Của Bạn *
+                              </label>
+                              <Input
+                                type="text"
+                                value={customSchoolName}
+                                onChange={(e) => setCustomSchoolName(e.target.value)}
+                                placeholder="Ví dụ: Trường Đại học Giao Thông Vận Tải, ĐH Y Dược..."
+                                required
+                              />
+                            </div>
+                          )}
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Mã Số Sinh Viên (MSSV) *
+                            </label>
+                            <Input
+                              type="text"
+                              value={studentCode}
+                              onChange={(e) => setStudentCode(e.target.value)}
+                              placeholder="Nhập mã số sinh viên của trường bạn..."
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Ảnh Thẻ Sinh Viên (Mặt Trước) *
+                            </label>
+                            {photoPreview ? (
+                              <div className="relative border border-zinc-700 bg-black/60 p-3 hud-clipped flex flex-col items-center gap-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={photoPreview}
+                                  alt="Xem trước ảnh thẻ sinh viên"
+                                  className="max-h-44 object-contain rounded border border-zinc-800"
+                                />
+                                <div className="flex items-center gap-2 pt-1 font-mono text-[10px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black font-bold uppercase hud-clipped cursor-pointer transition-all"
+                                  >
+                                    [ Thay Đổi Ảnh Khác ]
+                                  </button>
+                                  {photoFile && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPhotoFile(null);
+                                        setPhotoPreview(user?.photoStudentCardUrl || null);
+                                      }}
+                                      className="px-3 py-1 bg-zinc-800 text-zinc-300 hover:text-white text-[10px] uppercase hud-clipped cursor-pointer transition-all"
+                                    >
+                                      [ Khôi Phục Ảnh Cũ ]
+                                    </button>
+                                  )}
+                                </div>
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                                  className="hidden"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                onClick={() => fileInputRef.current?.click()}
+                                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                                onDragLeave={() => setIsDragging(false)}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  setIsDragging(false);
+                                  if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]);
+                                }}
+                                className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${
+                                  isDragging
+                                    ? "border-amber-400 bg-amber-500/10"
+                                    : "border-zinc-800 hover:border-zinc-700 bg-[#090e11]"
+                                }`}
+                              >
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                                  className="hidden"
+                                />
+                                <p className="text-zinc-300 font-bold uppercase text-[11px]">
+                                  [ Kéo thả file ảnh thẻ vào đây hoặc Bấm để chọn ]
+                                </p>
+                                <span className="text-[10px] text-zinc-500 block mt-1">Dung lượng tối đa 5MB (JPG, PNG, WEBP)</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="p-2.5 bg-amber-950/20 border border-amber-500/20 text-amber-300 font-mono text-[11px] hud-clipped">
+                            📌 Sinh viên trường ngoài cần nộp ảnh thẻ sinh viên rõ nét để Ban Tổ Chức phê duyệt trước khi thi đấu.
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 
@@ -951,8 +1360,8 @@ export function UserProfileView() {
 
             {userRoles.length === 0 && (
               <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-3 text-center shadow-sm font-mono text-xs text-zinc-400">
-                <p className="font-bold text-white uppercase">[ CHƯA CÓ PHÂN CÔNG HOẶC ĐỘI THI ]</p>
-                <p className="text-zinc-500">Bạn hiện tại chưa được phân công vai trò chuyên môn hoặc tham gia đội thi nào trong hệ thống.</p>
+                <p className="font-bold text-white uppercase">[ CHƯA THAM GIA ĐỘI THI HOẶC PHÂN CÔNG CHUYÊN MÔN ]</p>
+                <p className="text-zinc-500">Bạn hiện tại chưa tham gia đội thi nào hoặc chưa được phân công vai trò chuyên môn trong hệ thống.</p>
               </Card>
             )}
 

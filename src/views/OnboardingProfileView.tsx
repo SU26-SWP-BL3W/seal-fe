@@ -40,6 +40,7 @@ export function OnboardingProfileView() {
   const [fptResult, setFptResult] = useState<FptStudentResponse | null>(null);
   const [fptError, setFptError] = useState("");
   const [schoolId, setSchoolId] = useState("");
+  const [customSchoolName, setCustomSchoolName] = useState("");
   const [studentCode, setStudentCode] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -335,8 +336,14 @@ export function OnboardingProfileView() {
                 onClick={async () => {
                   setSubmitError("");
                   try {
+                    const fptSchool = schools.find(
+                      (s) =>
+                        s.schoolName?.toLowerCase().includes("fpt") ||
+                        s.schoolName?.toLowerCase().includes("đại học fpt")
+                    );
                     await submitProfile({
                       isFpt: true,
+                      schoolId: fptSchool?.id || "",
                       studentCode: fptResult.studentCode ?? fptCode,
                       fullName: fptResult.fullName ?? undefined,
                     } as any);
@@ -406,10 +413,25 @@ export function OnboardingProfileView() {
                   {schools.map((s) => (
                     <option key={s.id} value={s.id}>{s.schoolName}</option>
                   ))}
+                  <option value="OTHER_CUSTOM">-- Trường khác (Nhập tên trường bên dưới) --</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
               </div>
             </div>
+
+            {schoolId === "OTHER_CUSTOM" && (
+              <div className="flex flex-col gap-1.5 p-3 bg-[rgba(167,139,250,0.05)] border border-[var(--accent-coordinator)]/30">
+                <label className="text-xs font-mono tracking-widest text-[var(--accent-coordinator)] uppercase">
+                  Nhập tên trường đại học của bạn <span className="text-[var(--color-danger)]">*</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Ví dụ: Trường Đại học Giao Thông Vận Tải, ĐH Y Dược..."
+                  value={customSchoolName}
+                  onChange={(e) => setCustomSchoolName(e.target.value)}
+                />
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
@@ -467,17 +489,34 @@ export function OnboardingProfileView() {
 
             <Button
               variant="primary"
-              disabled={isSubmitting || !schoolId || !studentCode || !photoFile}
+              disabled={isSubmitting || !schoolId || (schoolId === "OTHER_CUSTOM" && !customSchoolName.trim()) || !studentCode || !photoFile}
               onClick={async () => {
                 setSubmitError("");
                 try {
+                  let selectedSchoolId = schoolId;
+                  if (schoolId === "OTHER_CUSTOM") {
+                    const matched = schools.find((s) =>
+                      s.schoolName?.toLowerCase().includes(customSchoolName.trim().toLowerCase())
+                    );
+                    if (matched?.id) {
+                      selectedSchoolId = matched.id;
+                    } else {
+                      const fallback = schools.find(
+                        (s) =>
+                          s.schoolName?.toLowerCase().includes("khác") ||
+                          s.schoolName?.toLowerCase().includes("other")
+                      ) || schools[0];
+                      selectedSchoolId = fallback?.id || "";
+                    }
+                  }
+
                   let photoCardUrl: string | undefined;
                   if (photoFile) {
                     setIsUploadingPhoto(true);
                     const uploaded = await uploadRepository.uploadFile(photoFile);
                     photoCardUrl = uploaded.fileUrl;
                   }
-                  await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl });
+                  await submitProfile({ isFpt: false, schoolId: selectedSchoolId, studentCode, photoStudentCardUrl: photoCardUrl });
                   toast.success("Đã nộp hồ sơ sinh viên thành công! Vui lòng chờ xét duyệt.");
                   setStep("pending");
                 } catch (err: any) {

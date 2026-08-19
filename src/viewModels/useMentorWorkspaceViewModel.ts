@@ -36,7 +36,7 @@ export function useMentorWorkspaceViewModel() {
   // Determine active eventId: priority searchParam > activeRole > mentorRoles[0]
   const resolvedEventId = useMemo(() => {
     if (queryEventId) return queryEventId;
-    if (activeRole?.eventId || (activeRole as any)?.EventId) return activeRole.eventId || (activeRole as any).EventId;
+    if (activeRole?.eventId || (activeRole as any)?.EventId) return activeRole?.eventId || (activeRole as any)?.EventId || "";
     const firstMentorEvent = mentorRoles[0]?.eventId || mentorRoles[0]?.EventId;
     return firstMentorEvent || "";
   }, [queryEventId, activeRole, mentorRoles]);

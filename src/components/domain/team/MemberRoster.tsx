@@ -11,6 +11,7 @@ interface Props {
   isLoading?: boolean;
   onTransfer: (userId: string, name: string) => void;
   onKick?: (userId: string, name: string) => void;
+  onOpenInvite?: () => void;
 }
 
 function initialsOf(name: string) {
@@ -94,16 +95,35 @@ function MemberRow({
   );
 }
 
-export function MemberRoster({ members, currentUserId, isLeader, isLoading = false, onTransfer, onKick }: Props) {
+export function MemberRoster({
+  members,
+  currentUserId,
+  isLeader,
+  isLoading = false,
+  onTransfer,
+  onKick,
+  onOpenInvite,
+}: Props) {
   const count = members.length;
   const isEnough = count >= MIN_MEMBERS && count <= MAX_MEMBERS;
 
   return (
     <Card className="p-0">
       <div className="flex flex-wrap items-center justify-between gap-[var(--space-sm)] border-b border-[var(--border-muted)] px-[var(--space-lg)] py-[var(--space-md)]">
-        <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[color:var(--text-primary)]">
-          Thành viên
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[color:var(--text-primary)]">
+            Thành viên
+          </h2>
+          {isLeader && onOpenInvite && count < MAX_MEMBERS && (
+            <button
+              type="button"
+              onClick={onOpenInvite}
+              className="px-2.5 py-1 bg-[var(--accent-team)]/15 border border-[var(--accent-team)]/40 hover:bg-[var(--accent-team)] hover:text-black text-[var(--accent-team)] text-[10px] font-bold uppercase hud-clipped transition-all cursor-pointer"
+            >
+              + Mời Thành Viên
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-[var(--space-sm)]">
           <div className="h-1.5 w-28 bg-[var(--bg-input)]" aria-hidden="true">
             <div

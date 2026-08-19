@@ -5,9 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { useVerifyEmail, useResendVerification } from "@/repositories/authRepository";
 import { Button, Card } from "@/components/ui";
 import { Link, useRouter } from "@/i18n/routing";
+import { useToast } from "@/providers/ToastProvider";
 import { CheckCircle2, XCircle, ArrowRight, Shield, RefreshCw } from "lucide-react";
 
 export function VerifyEmailView() {
+  const toast = useToast();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const router = useRouter();
@@ -144,8 +146,12 @@ export function VerifyEmailView() {
             disabled={!resendEmail.trim() || isResending}
             className="w-full justify-center"
             onClick={async () => {
-              try { await resendApi(resendEmail.trim()); alert("Đã gửi lại email xác thực."); }
-              catch { alert("Không gửi lại được."); }
+              try {
+                await resendApi(resendEmail.trim());
+                toast.success("Đã gửi lại email xác thực thành công! Vui lòng kiểm tra hộp thư.");
+              } catch (err: any) {
+                toast.error(err?.response?.data?.message || err?.message || "Không thể gửi lại email xác thực.");
+              }
             }}
           >
             {isResending ? "Đang gửi..." : "Gửi lại email xác thực"}

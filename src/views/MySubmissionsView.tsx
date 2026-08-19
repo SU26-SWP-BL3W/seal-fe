@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
+import { useToast } from "@/providers/ToastProvider";
+import { useQueryClient } from "@tanstack/react-query";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import {
   useMySubmissions,
@@ -35,13 +37,15 @@ import {
 } from "lucide-react";
 
 export function MySubmissionsView() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: teamResponse, isLoading: isLoadingTeam } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
 
   const teamId = team?.id || team?.Id || "";
   const isLeader = (team?.members || []).some(
-    (m: any) => m.userId === user?.id && m.roleName === "TeamLeader",
+    (m: any) => (m.userId === user?.id || m.userId === user?.userId) && (m.roleName === "TeamLeader" || m.roleName === "Leader"),
   );
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
@@ -67,12 +71,25 @@ export function MySubmissionsView() {
     setEditError("");
   };
 
+  const sanitizeUrl = (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSub) return;
     const subId = editingSub.id || editingSub.Id || "";
-    if (!editRepo.trim() || !editDemo.trim() || !editSlide.trim()) {
-      setEditError("Vui lòng điền đủ 3 đường dẫn bắt buộc: Repo, Demo và Slide.");
+    const repoFormatted = sanitizeUrl(editRepo);
+    const demoFormatted = sanitizeUrl(editDemo);
+    const slideFormatted = sanitizeUrl(editSlide);
+
+    if (!repoFormatted && !demoFormatted && !slideFormatted) {
+      setEditError("Vui lòng điền ít nhất một đường dẫn hợp lệ cho bài nộp.");
       return;
     }
 
@@ -80,28 +97,37 @@ export function MySubmissionsView() {
       await updateMutation.mutateAsync({
         id: subId,
         data: {
-          RepoUrl: editRepo.trim(),
-          DemoUrl: editDemo.trim(),
-          SlideUrl: editSlide.trim(),
-          SubmissionUrl: editRepo.trim(),
+          RepoUrl: repoFormatted,
+          DemoUrl: demoFormatted,
+          SlideUrl: slideFormatted,
+          SubmissionUrl: repoFormatted || demoFormatted || slideFormatted,
           Description: editDesc.trim(),
         },
       });
       setEditingSub(null);
+      toast.success("Cập nhật bài nộp thành công!");
+      queryClient.invalidateQueries({ queryKey: ["submitResults"] });
+      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
       refetch();
     } catch (err) {
-      setEditError(readApiError(err));
+      const msg = readApiError(err);
+      setEditError(msg);
+      toast.error(msg);
     }
   };
 
   const handleDelete = async (sub: SubmitResultListItem) => {
     const subId = sub.id || sub.Id || "";
-    if (!confirm("Bạn có chắc chắn muốn xóa bài nộp này không?")) return;
+    if (!window.confirm("Bạn có chắc chắn muốn xóa bài nộp này không?")) return;
     try {
       await deleteMutation.mutateAsync(subId);
+      toast.success("Đã xóa bài nộp thành công.");
+      queryClient.invalidateQueries({ queryKey: ["submitResults"] });
+      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
       refetch();
     } catch (err) {
-      alert("Không thể xóa bài nộp: " + readApiError(err));
+      const msg = readApiError(err);
+      toast.error("Không thể xóa bài nộp: " + msg);
     }
   };
 

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Button } from "./Button";
-import { Modal } from "./Modal";
+import { Modal, type ModalSize } from "./Modal";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -12,6 +12,7 @@ export interface ConfirmDialogProps {
   children?: ReactNode;
   confirmLabel: string;
   cancelLabel?: string;
+  size?: ModalSize;
   /** Hành động phá hủy/không hoàn tác thì tô đỏ nút xác nhận. */
   destructive?: boolean;
   pending?: boolean;
@@ -32,6 +33,7 @@ export function ConfirmDialog({
   children,
   confirmLabel,
   cancelLabel = "Hủy",
+  size = "md",
   destructive = false,
   pending = false,
   pendingLabel = "Đang xử lý...",
@@ -47,6 +49,7 @@ export function ConfirmDialog({
       title={title}
       eyebrow={eyebrow}
       description={description}
+      size={size}
       dismissable={!pending}
       footer={
         <>

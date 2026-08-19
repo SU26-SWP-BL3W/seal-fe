@@ -10,6 +10,7 @@ import { useCountdown } from "@/lib/useCountdown";
 import { useGetEventRolesByUser } from "@/repositories/events/eventRolesRepository";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
+import { AvailableTeamsList } from "@/components/domain/team";
 
 function formatVnd(value: number): string {
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
@@ -47,7 +48,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
   const eventId = propEventId || (params?.id as string) || "evt-01";
 
   const { user, activeRole } = useAuth();
-  const [activeTab, setActiveTab] = useState<"timeline" | "tracks" | "prizes" | "rules">("timeline");
+  const [activeTab, setActiveTab] = useState<"timeline" | "tracks" | "prizes" | "rules" | "teams">("timeline");
 
   const {
     event,
@@ -529,6 +530,17 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           >
             Thể Lệ &amp; Quy Định
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("teams")}
+            className={`flex-1 py-2.5 font-bold uppercase transition-all cursor-pointer text-center hud-clipped ${
+              activeTab === "teams"
+                ? "bg-cyan-950/70 text-cyan-300 font-extrabold border border-cyan-500/40"
+                : "text-zinc-400 hover:text-cyan-300"
+            }`}
+          >
+            👥 Đội Thi &amp; Tuyển Quân ({teamCount})
+          </button>
         </div>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -834,6 +846,42 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                 <p>Toàn bộ bài dự thi trong các Hạng mục đều được ẩn danh danh tính thí sinh và tên trường học để đảm bảo tính khách quan và công bằng tuyệt đối từ Hội đồng Giám khảo.</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ─────────────────────────────────────────────────────────────
+            TAB 5: DANH SÁCH ĐỘI THI & TÌM ĐỒNG ĐỘI / TUYỂN QUÂN
+           ───────────────────────────────────────────────────────────── */}
+        {activeTab === "teams" && (
+          <div className="bg-[#10171a] border border-zinc-800 p-6 md:p-8 space-y-6 hud-clipped">
+            {/* Tab Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800 font-mono">
+              <div>
+                <div className="text-xs text-cyan-400 uppercase tracking-widest font-bold">
+                  [ KHÔNG GIAN ĐỘI THI &amp; TÌM ĐỒNG ĐỘI ]
+                </div>
+                <h2 className="font-display text-xl sm:text-2xl font-bold uppercase text-white mt-1">
+                  Đội Thi Đang Tuyển Thành Viên
+                </h2>
+                <p className="mt-1 text-xs text-zinc-400 font-sans">
+                  Khám phá các đội thi đang tham gia sự kiện và liên hệ Đội trưởng qua email để đề nghị gia nhập đội.
+                </p>
+              </div>
+
+              {user && !isEventEnded && (roleName === "Guest" || roleName === "TeamLeader" || roleName === "TeamMember") && (
+                <Link href={`/my-team?eventId=${eventId}`}>
+                  <button className="px-4 py-2 bg-[#00d9ff] text-black hover:bg-white font-bold uppercase text-xs transition-all cursor-pointer hud-clipped shadow-sm">
+                    [ + QUẢN LÝ / TẠO ĐỘI CỦA BẠN ]
+                  </button>
+                </Link>
+              )}
+            </div>
+
+            {/* Teams List Component */}
+            <AvailableTeamsList
+              eventId={eventId}
+              eventName={eventName}
+            />
           </div>
         )}
       </div>

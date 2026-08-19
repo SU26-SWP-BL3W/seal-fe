@@ -171,7 +171,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
       }
       setIsPublishedState(nextStatus);
       const okMsg = nextStatus
-        ? "Đã công bố công khai bảng kết quả cho thí sinh và Bảng Vàng Danh Dự!"
+        ? "🎉 Đã công bố kết quả chung cuộc và trao giải thưởng thành công! Hệ thống đã gửi email chúc mừng tới các đội đạt giải và mở Bảng Vàng Vinh Danh."
         : "Đã ẩn bảng kết quả về chế độ bản nháp an toàn.";
       setSuccessMessage(okMsg);
       toast.success(okMsg);

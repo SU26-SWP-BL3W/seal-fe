@@ -24,6 +24,7 @@ import {
   Badge,
   ApiMissingDataBadge,
 } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -45,6 +46,7 @@ function pick(obj: unknown, ...keys: string[]): string {
 }
 
 export function AppealsView() {
+  const toast = useToast();
   const { user, activeRole } = useAuth();
   const [reason, setReason] = useState("");
   const [submitResultId, setSubmitResultId] = useState("");
@@ -80,11 +82,14 @@ export function AppealsView() {
 
     try {
       await createAppeal({ submitResultId, reason: reason.trim() });
+      toast.success("🎉 Đã gửi đơn phúc khảo thành công! Ban Tổ Chức sẽ tiếp nhận và phản hồi kết quả qua email và thông báo chuông.");
       setReason("");
       setSubmitResultId("");
       refetch();
     } catch (err) {
-      setFormError(readApiError(err));
+      const errMsg = readApiError(err);
+      setFormError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -93,11 +98,18 @@ export function AppealsView() {
     setRespondError("");
     try {
       await respondAppeal({ id: detailModal.id, appealId: detailModal.id, status, response: responseText.trim(), payload: { status, response: responseText.trim() } } as any);
+      if (status === AppealStatus.Approved) {
+        toast.success("✅ Đã phê duyệt đơn phúc khảo. Điểm số bài thi đã được cập nhật và gửi thông báo tới đội thi.");
+      } else {
+        toast.info("Đã từ chối đơn phúc khảo. Lý do phản hồi đã được gửi qua thông báo và email tới đội thi.");
+      }
       setDetailModal(null);
       setResponseText("");
       refetch();
     } catch (err) {
-      setRespondError(readApiError(err));
+      const errMsg = readApiError(err);
+      setRespondError(errMsg);
+      toast.error(errMsg);
     }
   };
 
