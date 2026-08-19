@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui";
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
+import { useAuth } from "@/providers/AuthProvider";
 import { SealShield } from "@/components/domain/SealShield";
 import { useCountdown } from "@/lib/useCountdown";
 import {
@@ -20,6 +21,25 @@ import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboard
 
 export function LandingPortalView() {
   const { latestEvent, featuredEvents } = useLandingPreviewViewModel();
+  const { user, activeRole } = useAuth();
+  const router = useRouter();
+
+  // Tự động chuyển hướng Cán bộ / BTC / Giám khảo / Cố vấn về thẳng Dashboard khi đã đăng nhập
+  useEffect(() => {
+    if (user) {
+      const rawRole = activeRole?.roleName || activeRole?.RoleName;
+      const userEmail = (user.email || user.Email || "").toLowerCase();
+      const isAdm = !!user.isAdmin || !!user.IsAdmin || userEmail.includes("admin");
+      const isCoord = rawRole === "Coordinator" || rawRole === "EventCoordinator" || userEmail.includes("ec.") || userEmail.includes("coordinator");
+      const isJudge = rawRole === "Judge" || userEmail.includes("judge");
+      const isMentor = rawRole === "Mentor" || userEmail.includes("mentor");
+
+      if (isAdm) router.replace("/admin/dashboard");
+      else if (isCoord) router.replace("/coordinator/dashboard");
+      else if (isJudge) router.replace("/judge/scoring");
+      else if (isMentor) router.replace("/mentor/tracks");
+    }
+  }, [user, activeRole, router]);
 
   return (
     <main className="hud-lattice flex flex-1 flex-col overflow-hidden">

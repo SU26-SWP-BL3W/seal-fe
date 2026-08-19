@@ -84,16 +84,25 @@ export function NavigationBar() {
     pathname.includes("/my-submissions") ||
     pathname.includes("/my-invitations");
 
+  const isAuthRoute =
+    pathname.includes("/login") ||
+    pathname.includes("/register") ||
+    pathname.includes("/verify-email") ||
+    pathname.includes("/forgot-password");
+
   const isCoordinatorRole = roleName === "Coordinator" || roleName === "EventCoordinator";
-  const isMentorRole = roleName === "Mentor";
-  const isJudgeRole = roleName === "Judge";
   const isCandidateRole = roleName === "TeamLeader" || roleName === "TeamMember";
 
-  const showCoordinatorSidebar = (isCoordinatorRoute && roleName !== "Admin") || (isCoordinatorRole && (pathname.includes("/coordinator") || pathname.includes("/appeals")));
+  const showAdminSidebar =
+    !isAuthRoute && (isAdminRoute || (roleName === "Admin" && isCoordinatorRoute));
+  const showCoordinatorSidebar =
+    !isAuthRoute &&
+    ((isCoordinatorRoute && roleName !== "Admin") ||
+      (isCoordinatorRole &&
+        (pathname.includes("/coordinator") || pathname.includes("/appeals"))));
   const showMentorSidebar = false;
   const showJudgeSidebar = false;
-  const showParticipantSidebar = isCandidateRoute && isCandidateRole;
-  const showAdminSidebar = isAdminRoute || (roleName === "Admin" && isCoordinatorRoute);
+  const showParticipantSidebar = !isAuthRoute && isCandidateRoute && isCandidateRole;
 
   // ─────────────────────────────────────────────────────────────
   // CHẾ ĐỘ 10: NAVBAR DỌC DÀNH RIÊNG CHO SYSTEM ADMIN (ADMIN WORKSPACE)
