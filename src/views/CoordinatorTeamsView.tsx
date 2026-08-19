@@ -8,6 +8,9 @@ import {
   useGetTeamsByEvent,
   useDisqualifyTeam,
   useGetTeamById,
+  useDeleteTeam,
+  useAddTeamMember,
+  useUpdateTeam,
 } from "@/repositories/teamsRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
@@ -40,6 +43,14 @@ export function CoordinatorTeamsView() {
   const [detailModal, setDetailModal] = useState<TeamEntity | null>(null);
   const [eventId, setEventId] = useState("");
   const [selectedTrackId, setSelectedTrackId] = useState<string>("ALL");
+  const [deleteModal, setDeleteModal] = useState<{ teamId: string; teamName: string } | null>(null);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [addMemberUserId, setAddMemberUserId] = useState("");
+  const [addMemberError, setAddMemberError] = useState("");
+  const [showEditTeam, setShowEditTeam] = useState(false);
+  const [editTeamName, setEditTeamName] = useState("");
+  const [editTeamDesc, setEditTeamDesc] = useState("");
+  const [editTeamError, setEditTeamError] = useState("");
 
   const { data: myEvents = [] } = useMyEvents();
   useEffect(() => {
@@ -70,6 +81,9 @@ export function CoordinatorTeamsView() {
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
   const { mutateAsync: disqualifyTeam, isPending: isDisqualifying } = useDisqualifyTeam();
+  const { mutateAsync: deleteTeam, isPending: isDeleting } = useDeleteTeam();
+  const { mutateAsync: addMember, isPending: isAddingMember } = useAddTeamMember();
+  const { mutateAsync: updateTeam, isPending: isUpdatingTeam } = useUpdateTeam();
 
   // TeamListItemModel (danh sách) không có field members — phải gọi riêng GET /Teams/{id}
   // để lấy roster thật khi mở modal chi tiết.
@@ -112,6 +126,53 @@ export function CoordinatorTeamsView() {
       refetchRegistered();
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || "Loại đội thất bại. Vui lòng thử lại.");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteModal) return;
+    try {
+      await deleteTeam(deleteModal.teamId);
+      setDeleteModal(null);
+      setDetailModal(null);
+      refetch();
+      refetchRegistered();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Xóa đội thi thất bại.");
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!detailModal || !addMemberUserId.trim()) return;
+    setAddMemberError("");
+    try {
+      await addMember({ teamId: pickId(detailModal), payload: { userId: addMemberUserId.trim() } });
+      setAddMemberUserId("");
+      setShowAddMember(false);
+    } catch (err: any) {
+      setAddMemberError(err?.response?.data?.message || err?.message || "Không thêm được thành viên.");
+    }
+  };
+
+  const openEditTeam = () => {
+    if (!detailModal) return;
+    setEditTeamName(detailModal.teamName || (detailModal as any).TeamName || "");
+    setEditTeamDesc((detailModal as any).description || (detailModal as any).Description || "");
+    setEditTeamError("");
+    setShowEditTeam(true);
+  };
+
+  const handleSaveEditTeam = async () => {
+    if (!detailModal || !editTeamName.trim()) return;
+    setEditTeamError("");
+    try {
+      await updateTeam({
+        id: pickId(detailModal),
+        payload: { name: editTeamName.trim(), description: editTeamDesc.trim() },
+      });
+      setShowEditTeam(false);
+    } catch (err: any) {
+      setEditTeamError(err?.response?.data?.message || err?.message || "Không cập nhật được thông tin đội.");
     }
   };
 
@@ -365,11 +426,95 @@ export function CoordinatorTeamsView() {
               </div>
             </div>
 
+            {/* Sửa thông tin đội (BTC — hoạt động cả khi đội đã khóa) */}
+            <div className="space-y-2 border-t border-[var(--border-muted)] pt-3 font-mono text-xs">
+              {showEditTeam ? (
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase text-[var(--text-muted)]">Tên đội:</label>
+                  <input
+                    type="text"
+                    value={editTeamName}
+                    onChange={(e) => setEditTeamName(e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)]"
+                  />
+                  <label className="text-[10px] uppercase text-[var(--text-muted)]">Mô tả:</label>
+                  <textarea
+                    rows={2}
+                    value={editTeamDesc}
+                    onChange={(e) => setEditTeamDesc(e.target.value)}
+                    className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)]"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      disabled={isUpdatingTeam || !editTeamName.trim()}
+                      onClick={handleSaveEditTeam}
+                      className="text-xs font-mono bg-[var(--accent-coordinator)] text-black font-bold"
+                    >
+                      {isUpdatingTeam ? "Đang lưu..." : "Lưu"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => { setShowEditTeam(false); setEditTeamError(""); }} className="text-xs font-mono">
+                      Hủy
+                    </Button>
+                  </div>
+                  {editTeamError && <p className="text-[var(--color-danger)]">{editTeamError}</p>}
+                </div>
+              ) : (
+                <Button variant="ghost" onClick={openEditTeam} className="text-xs font-mono border border-[var(--border-muted)]">
+                  Sửa Thông Tin Đội (BTC)
+                </Button>
+              )}
+            </div>
+
+            {/* Thêm thành viên trực tiếp (bỏ qua lời mời) */}
+            <div className="space-y-2 border-t border-[var(--border-muted)] pt-3 font-mono text-xs">
+              {showAddMember ? (
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase text-[var(--text-muted)]">User ID người dùng đã có tài khoản:</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="User ID..."
+                      value={addMemberUserId}
+                      onChange={(e) => setAddMemberUserId(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)]"
+                    />
+                    <Button
+                      disabled={isAddingMember || !addMemberUserId.trim()}
+                      onClick={handleAddMember}
+                      className="text-xs font-mono bg-[var(--accent-coordinator)] text-black font-bold"
+                    >
+                      {isAddingMember ? "Đang thêm..." : "Thêm"}
+                    </Button>
+                    <Button variant="ghost" onClick={() => { setShowAddMember(false); setAddMemberError(""); }} className="text-xs font-mono">
+                      Hủy
+                    </Button>
+                  </div>
+                  {addMemberError && <p className="text-[var(--color-danger)]">{addMemberError}</p>}
+                </div>
+              ) : (
+                <Button variant="ghost" onClick={() => setShowAddMember(true)} className="text-xs font-mono border border-[var(--border-muted)]">
+                  + Thêm Thành Viên Trực Tiếp
+                </Button>
+              )}
+            </div>
+
             {/* Action Buttons */}
             <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--border-muted)]">
-              <Button variant="ghost" onClick={() => setDetailModal(null)} className="font-mono text-xs">
-                Đóng
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => setDetailModal(null)} className="font-mono text-xs">
+                  Đóng
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setDeleteModal({
+                    teamId: detailModal.id || (detailModal as any).TeamId || "",
+                    teamName: detailModal.teamName || (detailModal as any).TeamName || "Đội thi",
+                  })}
+                  className="text-xs font-mono border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
+                >
+                  Xóa Đội
+                </Button>
+              </div>
 
               <div className="flex items-center gap-2">
                 <Button
@@ -477,6 +622,37 @@ export function CoordinatorTeamsView() {
                 className="flex-1 justify-center bg-[var(--color-danger)] text-white font-mono text-xs font-bold"
               >
                 {isDisqualifying ? "Đang gửi..." : "// XÁC NHẬN LOẠI"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
+          <Card className="w-full max-w-md p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)]/40 space-y-4">
+            <div className="flex items-center gap-3">
+              <XCircle className="w-5 h-5 text-[var(--color-danger)]" />
+              <h3 className="font-display text-base font-bold text-[var(--color-danger)] tracking-widest uppercase">
+                XÓA ĐỘI THI
+              </h3>
+            </div>
+            <p className="text-xs font-mono text-[var(--text-muted)]">
+              Đội <strong className="text-white">{deleteModal.teamName}</strong> sẽ bị xóa vĩnh viễn, không thể hoàn tác. Chỉ nên xóa đội chưa có bài nộp.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteModal(null)}
+                className="flex-1 justify-center font-mono text-xs"
+              >
+                Hủy
+              </Button>
+              <Button
+                disabled={isDeleting}
+                onClick={handleDelete}
+                className="flex-1 justify-center bg-[var(--color-danger)] text-white font-mono text-xs font-bold"
+              >
+                {isDeleting ? "Đang xóa..." : "// XÁC NHẬN XÓA"}
               </Button>
             </div>
           </Card>
