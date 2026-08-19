@@ -32,7 +32,7 @@ export function LandingMetricsStrip() {
     {
       id: "evaluation",
       label: "TIÊU CHÍ ĐÁNH GIÁ",
-      value: "100% RBL",
+      value: "100% Minh Bạch",
       subtext: "Chấm điểm mù & Minh bạch",
       toneVar: "var(--color-success)",
     },

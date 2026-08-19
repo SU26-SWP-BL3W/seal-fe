@@ -162,7 +162,7 @@ export function RegisterView() {
             />
             {errors.fullName && (
               <span className="text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {errors.fullName}
+                {errors.fullName}
               </span>
             )}
           </div>
@@ -184,7 +184,7 @@ export function RegisterView() {
             />
             {errors.email && (
               <span className="text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {errors.email}
+                {errors.email}
               </span>
             )}
           </div>
@@ -215,7 +215,7 @@ export function RegisterView() {
             </div>
             {errors.password && (
               <span className="text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {errors.password}
+                {errors.password}
               </span>
             )}
           </div>
@@ -247,14 +247,14 @@ export function RegisterView() {
             </div>
             {errors.confirmPassword && (
               <span className="text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {errors.confirmPassword}
+                {errors.confirmPassword}
               </span>
             )}
           </div>
 
           {errors.submit && (
             <div className="p-3 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/30 text-[var(--color-danger)] text-xs font-mono">
-              ⚠ {errors.submit}
+              {errors.submit}
             </div>
           )}
 

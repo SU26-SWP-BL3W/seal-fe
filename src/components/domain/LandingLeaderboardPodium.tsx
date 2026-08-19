@@ -77,7 +77,7 @@ function PodiumCard({
       {/* Champion ribbon — Gold only */}
       {isCenter && (
         <div className="absolute -top-px left-1/2 -translate-x-1/2 px-5 py-0.5 bg-[var(--accent-judge)] font-mono font-bold text-[9px] uppercase tracking-widest text-[var(--bg-base)] whitespace-nowrap">
-          ★ CHAMPION
+          CHAMPION
         </div>
       )}
 

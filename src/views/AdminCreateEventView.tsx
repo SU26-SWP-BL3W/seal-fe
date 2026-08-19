@@ -155,7 +155,7 @@ export const AdminCreateEventView: React.FC = () => {
 
           {errorMessage && (
             <div className="p-4 bg-rose-950/40 border border-rose-500/40 text-rose-300 font-mono text-xs rounded">
-              ⚠️ {errorMessage}
+              {errorMessage}
             </div>
           )}
 
@@ -302,7 +302,7 @@ export const AdminCreateEventView: React.FC = () => {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                        Tên Hạng Mục (Track) *
+                        Tên Hạng Mục *
                       </label>
                       <Input
                         type="text"

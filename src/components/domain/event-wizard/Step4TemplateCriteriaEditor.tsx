@@ -2,13 +2,15 @@
 
 import React, { useState } from "react";
 import { TemplateCriteriaFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
-import { AlertTriangle, Plus, X, Sliders, ArrowLeft, ArrowRight, CheckCircle2, Save, Layers, Lock, Edit3, ShieldCheck } from "lucide-react";
+import { templatesRepository, getStoredCustomTemplates, saveStoredCustomTemplates } from "@/repositories/templatesRepository";
+import { AlertTriangle, Plus, X, Sliders, ArrowLeft, ArrowRight, CheckCircle2, Save, Layers, Lock, Edit3, ShieldCheck, BookmarkPlus, Copy } from "lucide-react";
 
 interface Step4TemplateCriteriaEditorProps {
   tracks?: TrackFormState[];
   templates?: any[];
   criteriasByTrack?: Record<string, TemplateCriteriaFormState[]>;
   onUpdateTrackCriterias?: (trackId: string, list: TemplateCriteriaFormState[]) => void;
+  onUpdateTrack?: (id: string, field: keyof TrackFormState, value: any) => void;
   onApplyToAllTracks?: (list: TemplateCriteriaFormState[]) => void;
   templateName?: string;
   onUpdateTemplateName?: (name: string) => void;
@@ -29,6 +31,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
   templates = [],
   criteriasByTrack = {},
   onUpdateTrackCriterias,
+  onUpdateTrack,
   onApplyToAllTracks,
   templateName = "",
   onUpdateTemplateName,
@@ -55,13 +58,15 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
 
   const isInheritedTemplate = Boolean(selectedTemplate && activeTrack?.templateId !== "__custom__");
 
-  // Toggle state for saving custom rubric to template bank
-  const saveToBank = activeTrack ? (saveToBankToggleMap[activeTrack.id] ?? true) : true;
+  // Toggle state for saving custom rubric to template bank (DEFAULT: OFF = false)
+  const saveToBank = activeTrack ? (saveToBankToggleMap[activeTrack.id] ?? false) : false;
   const toggleSaveToBank = () => {
     if (activeTrack) {
       setSaveToBankToggleMap((prev) => ({ ...prev, [activeTrack.id]: !saveToBank }));
     }
   };
+
+  const [bankSaveSuccess, setBankSaveSuccess] = useState<string | null>(null);
 
   // Active track's criteria list
   const activeCriteriaList = isInheritedTemplate && selectedTemplate?.criterias?.length
@@ -79,6 +84,70 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
   const activeTotalWeight = activeCriteriaList.reduce((acc: number, c: any) => acc + (Number(c.weight) || 0), 0);
   const activeIsValidWeight100 = Math.abs(activeTotalWeight - 100) < 0.01;
   const missingWeight = 100 - activeTotalWeight;
+
+  const handleSaveTemplateToBankNow = async () => {
+    if (!activeIsValidWeight100) {
+      alert(`Tổng trọng số của Hạng mục phải bằng ĐÚNG 100%! (Hiện tại: ${activeTotalWeight}%).`);
+      return;
+    }
+    const tName = templateName?.trim() || `Bộ tiêu chí ${activeTrack?.trackName || "Custom"} 2026`;
+    const newTemplateObj = {
+      id: `tpl-${Date.now()}`,
+      templateName: tName,
+      description: `Bộ tiêu chí soạn thảo trực tiếp tại Wizard cho Hạng mục ${activeTrack?.trackName || ""}.`,
+      createdTime: new Date().toISOString(),
+      lastUpdatedTime: new Date().toISOString(),
+      criterias: activeCriteriaList.map((c: any, idx: number) => ({
+        criteriaId: c.criteriaId || `crit-${Date.now()}-${idx}`,
+        criterionName: c.criterionName || "Tiêu chí",
+        description: c.description || "",
+        weight: Number(c.weight) || 0,
+        maxScore: Number(c.maxScore) || 10,
+      })),
+    };
+
+    // Store in local storage with full component criterias so it shows in Kho Tiêu Chí
+    const stored = getStoredCustomTemplates();
+    saveStoredCustomTemplates([newTemplateObj, ...stored]);
+
+    try {
+      if (templatesRepository?.createTemplate) {
+        await templatesRepository.createTemplate({
+          templateName: tName,
+          description: newTemplateObj.description,
+        });
+      }
+    } catch {
+      // ignore
+    }
+
+    setBankSaveSuccess(`Đã lưu thành công bộ tiêu chí "${tName}" với ${activeCriteriaList.length} tiêu chí thành phần vào Kho!`);
+    setTimeout(() => setBankSaveSuccess(null), 4500);
+  };
+
+  // Clone System Template for THIS event only (protect original template in bank)
+  const handleCustomizeTemplateForEvent = () => {
+    if (!activeTrack || !selectedTemplate) return;
+    const clonedCriterias: TemplateCriteriaFormState[] = (selectedTemplate.criterias || []).map((c: any, idx: number) => ({
+      criteriaId: `crit-cloned-${Date.now()}-${idx}`,
+      criterionName: c.criterionName || c.CriterionName || c.name || "Tiêu chí",
+      description: c.description || c.Description || "",
+      weight: Number(c.weight || c.Weight || 20),
+      maxScore: Number(c.maxScore || c.MaxScore || 10),
+    }));
+
+    if (onUpdateTrackCriterias) {
+      onUpdateTrackCriterias(activeTrack.id, clonedCriterias);
+    }
+
+    // Switch track to custom mode via immutability callback
+    if (onUpdateTrack) {
+      onUpdateTrack(activeTrack.id, "templateId", "__custom__");
+    }
+
+    setBankSaveSuccess(`Đã sao chép bộ tiêu chí "${selectedTemplate.templateName}" vào sự kiện! Bạn có thể tự do chỉnh sửa tiêu chí cho riêng sự kiện này mà không làm ảnh hưởng đến bản gốc trong Kho.`);
+    setTimeout(() => setBankSaveSuccess(null), 4500);
+  };
 
   const handleUpdateActiveCriteria = (index: number, field: keyof TemplateCriteriaFormState, value: any) => {
     if (activeTrack && onUpdateTrackCriterias) {
@@ -125,7 +194,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
             Bước 4: Soạn Thảo Tiêu Chí Chấm Điểm
           </h3>
           <p className="text-xs font-mono text-[#8a9ba8] mt-1">
-            Hạng mục dùng **Mẫu Ngân Hàng** được hiển thị xem trước. Hạng mục **Tự Tạo** cho phép chỉnh sửa trọng số trực quan.
+            Chỉnh sửa các tiêu chí chấm điểm và điều chỉnh trọng số (tổng trọng số cần đạt đúng 100%).
           </p>
         </div>
       </div>
@@ -178,9 +247,18 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
                 {selectedTemplate?.templateName || selectedTemplate?.TemplateName}
               </div>
               <div className="text-[#8a9ba8] text-[11px]">
-                {selectedTemplate?.description || selectedTemplate?.Description || "Bộ tiêu chí chuẩn đã được thẩm định 100% trọng số."}
+                {selectedTemplate?.description || selectedTemplate?.Description || "Bộ tiêu chí mẫu của hệ thống."}
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleCustomizeTemplateForEvent}
+              className="px-4 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono text-xs font-bold uppercase flex items-center gap-2 cursor-pointer transition-colors shadow-md shrink-0"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>TÙY CHỈNH TIÊU CHÍ CHO SỰ KIỆN NÀY</span>
+            </button>
           </div>
 
           {/* Clean READ-ONLY Table View */}
@@ -358,11 +436,11 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
                 </div>
               </div>
 
-              {/* Card 2: TOGGLE CHECKBOX SAVE TO TEMPLATE BANK (CÔNG TẮC BẬT/TẮT LƯU KHO) */}
+              {/* Card 2: TOGGLE CHECKBOX SAVE TO TEMPLATE BANK */}
               <div className="p-6 border border-[#263339] bg-[#0a0e10] space-y-4 font-mono text-xs">
                 <div className="border-b border-[#263339] pb-2 font-bold text-[#8b5cf6] tracking-widest uppercase flex items-center gap-1.5">
                   <Save className="w-4 h-4" />
-                  CẤU HÌNH LƯU KHO TIÊU CHÍ (TEMPLATE BANK)
+                  CẤU HÌNH LƯU KHO TIÊU CHÍ
                 </div>
 
                 <label className="flex items-start gap-3 p-3 bg-[#13191c] border border-[#263339] hover:border-[#8b5cf6] cursor-pointer transition-colors">
@@ -374,12 +452,12 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
                   />
                   <div className="space-y-1 text-xs">
                     <div className="font-bold text-[#e1e7ec]">
-                      {saveToBank ? "✓ ĐỒNG Ý LƯU VÀO KHO TIÊU CHÍ" : "✕ KHÔNG LƯU VÀO KHO TIÊU CHÍ"}
+                      {saveToBank ? "ĐỒNG Ý LƯU VÀO KHO TIÊU CHÍ" : "KHÔNG LƯU VÀO KHO TIÊU CHÍ"}
                     </div>
                     <p className="text-[11px] text-[#8a9ba8] leading-relaxed">
                       {saveToBank
-                        ? "Bộ tiêu chí custom này sẽ được lưu thành bản mẫu chung để tái sử dụng cho các sự kiện sau."
-                        : "Bộ tiêu chí custom này chỉ áp dụng riêng cho sự kiện hiện tại, không lưu vào kho hệ thống."}
+                        ? "Bộ tiêu chí này sẽ được lưu thành bản mẫu chung để tái sử dụng cho các sự kiện sau."
+                        : "Bộ tiêu chí này chỉ áp dụng riêng cho sự kiện hiện tại, không lưu vào kho hệ thống."}
                     </p>
                   </div>
                 </label>
@@ -402,6 +480,27 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
                     }`}
                   />
                 </div>
+
+                {/* Instant Save to Bank Button */}
+                {saveToBank && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      disabled={!activeIsValidWeight100}
+                      onClick={handleSaveTemplateToBankNow}
+                      className="w-full py-2.5 px-3 bg-[#8b5cf6]/20 border border-[#8b5cf6]/60 hover:bg-[#8b5cf6]/30 text-[#c084fc] font-mono text-xs font-bold uppercase flex items-center justify-center gap-2 cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <BookmarkPlus className="w-4 h-4 text-[#c084fc]" />
+                      <span>LƯU BỘ TIÊU CHÍ NÀY VÀO KHO NGAY</span>
+                    </button>
+                  </div>
+                )}
+
+                {bankSaveSuccess && (
+                  <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[11px] font-bold text-center">
+                    {bankSaveSuccess}
+                  </div>
+                )}
               </div>
 
             </div>
