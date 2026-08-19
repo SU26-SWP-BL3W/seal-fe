@@ -69,6 +69,65 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
+  // 5. Kết quả chấm điểm bài thi được công bố
+  if (
+    tLower.includes("kết quả chấm") ||
+    tLower.includes("công bố điểm") ||
+    tLower.includes("điểm thi") ||
+    mLower.includes("kết quả chấm điểm") ||
+    mLower.includes("công bố điểm")
+  ) {
+    return {
+      title: "📊 Kết quả chấm điểm đã được công bố!",
+      message: rawMessage || "Ban Giám Khảo đã công bố bảng điểm và nhận xét cho bài thi của đội bạn. Hãy vào xem chi tiết.",
+      badgeText: "ĐIỂM THI",
+      badgeClass: "bg-purple-950/40 text-purple-300 border-purple-500/30",
+    };
+  }
+
+  // 6. Phúc khảo được duyệt / Chấp nhận
+  if (
+    tLower.includes("chấp nhận phúc khảo") ||
+    tLower.includes("phúc khảo thành công") ||
+    mLower.includes("chấp nhận đơn phúc khảo") ||
+    mLower.includes("cập nhật điểm phúc khảo")
+  ) {
+    return {
+      title: "✅ Kết quả phúc khảo: Đã chấp nhận & cập nhật điểm",
+      message: rawMessage || "Ban Tổ Chức đã chấp nhận đơn phúc khảo của đội bạn và cập nhật lại điểm số chính thức.",
+      badgeText: "PHÚC KHẢO",
+      badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+    };
+  }
+
+  // 7. Phúc khảo bị từ chối
+  if (
+    tLower.includes("từ chối phúc khảo") ||
+    mLower.includes("từ chối đơn phúc khảo") ||
+    mLower.includes("giữ nguyên kết quả")
+  ) {
+    return {
+      title: "❌ Kết quả phúc khảo: Giữ nguyên điểm số",
+      message: rawMessage || "Ban Tổ Chức đã xem xét và giữ nguyên kết quả chấm điểm ban đầu kèm giải trình chi tiết.",
+      badgeText: "TỪ CHỐI",
+      badgeClass: "bg-rose-950/40 text-rose-300 border-rose-500/30",
+    };
+  }
+
+  // 8. Đã gửi đơn phúc khảo
+  if (
+    tLower.includes("đơn phúc khảo") ||
+    mLower.includes("gửi đơn phúc khảo") ||
+    mLower.includes("tiếp nhận phúc khảo")
+  ) {
+    return {
+      title: "⚖️ Đơn phúc khảo điểm thi đã được tiếp nhận",
+      message: rawMessage || "Đơn phúc khảo của bạn đã được chuyển tới Ban Tổ Chức để xem xét.",
+      badgeText: "PHÚC KHẢO",
+      badgeClass: "bg-amber-950/40 text-amber-300 border-amber-500/30",
+    };
+  }
+
   // 5. Thành viên mới tham gia / đồng ý vào đội
   if (
     tLower.includes("thành viên đã tham gia") ||
