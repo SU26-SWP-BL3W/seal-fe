@@ -727,141 +727,228 @@ export function UserProfileView() {
                     />
                   </div>
 
-                  {/* Đơn vị công tác / Trường học (Select từ bảng Schools thật trong DB) */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                      {isStaff ? "Đơn Vị Công Tác / Tổ Chức / Trường Học *" : "Trường Đại Học *"}
-                    </label>
-                    <select
-                      value={schoolId}
-                      onChange={(e) => setSchoolId(e.target.value)}
-                      className="w-full p-2.5 bg-[#090e11] border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
-                    >
-                      <option value="">-- Chọn đơn vị / trường học từ hệ thống --</option>
-                      {schools.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.schoolName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Các trường dành riêng cho Sinh Viên (MSSV, FPT, Ảnh thẻ) */}
-                  {!isStaff && (
+                  {/* Nếu là Cán bộ / Chuyên gia */}
+                  {isStaff ? (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                        Đơn Vị Công Tác / Tổ Chức / Trường Học *
+                      </label>
+                      <select
+                        value={schoolId}
+                        onChange={(e) => setSchoolId(e.target.value)}
+                        className="w-full p-2.5 bg-[#090e11] border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
+                      >
+                        <option value="">-- Chọn đơn vị / trường học từ hệ thống --</option>
+                        {schools.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.schoolName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    /* Nếu là Thí sinh / Sinh viên / Thành viên đội */
                     <>
+                      {/* Phân loại Trường trong / ngoài */}
                       <div className="space-y-1.5">
                         <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                          Phân Loại Trường *
+                          Phân Loại Trường Học *
                         </label>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
-                            onClick={() => setSchoolChoice("FPT")}
-                            className={`p-2.5 text-center font-bold uppercase transition-all hud-clipped ${
+                            onClick={() => {
+                              setSchoolChoice("FPT");
+                              const fptSchool = schools.find(
+                                (s) =>
+                                  s.schoolName?.toLowerCase().includes("fpt") ||
+                                  s.schoolName?.toLowerCase().includes("đại học fpt")
+                              );
+                              if (fptSchool?.id) setSchoolId(fptSchool.id);
+                            }}
+                            className={`p-3 text-center font-bold uppercase transition-all hud-clipped cursor-pointer flex flex-col items-center gap-1 ${
                               schoolChoice === "FPT"
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 font-extrabold"
-                                : "bg-[#090e11] text-zinc-400 border border-zinc-800"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 font-extrabold shadow-sm"
+                                : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:border-zinc-700"
                             }`}
                           >
-                            [ SINH VIÊN FPT ]
+                            <span className="text-xs">🏛️ SINH VIÊN FPT EDU</span>
+                            <span className="text-[10px] opacity-75 font-normal">Xác thực tự động qua MSSV FPT</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setSchoolChoice("OTHER")}
-                            className={`p-2.5 text-center font-bold uppercase transition-all hud-clipped ${
+                            className={`p-3 text-center font-bold uppercase transition-all hud-clipped cursor-pointer flex flex-col items-center gap-1 ${
                               schoolChoice === "OTHER"
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/50 font-extrabold"
-                                : "bg-[#090e11] text-zinc-400 border border-zinc-800"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 font-extrabold shadow-sm"
+                                : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:border-zinc-700"
                             }`}
                           >
-                            [ TRƯỜNG KHÁC ]
+                            <span className="text-xs">🎓 SINH VIÊN TRƯỜNG NGOÀI</span>
+                            <span className="text-[10px] opacity-75 font-normal">Nộp ảnh thẻ sinh viên xét duyệt</span>
                           </button>
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                          Mã Số Sinh Viên (MSSV) *
-                        </label>
-                        <Input
-                          type="text"
-                          value={studentCode}
-                          onChange={(e) => setStudentCode(e.target.value)}
-                          placeholder="Ví dụ: SE171234..."
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
-                          Ảnh Thẻ Sinh Viên (Mặt Trước) {schoolChoice === "OTHER" ? "*" : ""}
-                        </label>
-                        {photoPreview ? (
-                          <div className="relative border border-zinc-700 bg-black/60 p-3 hud-clipped flex flex-col items-center gap-2">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={photoPreview}
-                              alt="Xem trước ảnh thẻ sinh viên"
-                              className="max-h-44 object-contain rounded border border-zinc-800"
-                            />
-                            <div className="flex items-center gap-2 pt-1 font-mono text-[10px]">
-                              <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black font-bold uppercase hud-clipped cursor-pointer transition-all"
-                              >
-                                [ Thay Đổi Ảnh Khác ]
-                              </button>
-                              {photoFile && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPhotoFile(null);
-                                    setPhotoPreview(user?.photoStudentCardUrl || null);
-                                  }}
-                                  className="px-3 py-1 bg-zinc-800 text-zinc-300 hover:text-white text-[10px] uppercase hud-clipped cursor-pointer transition-all"
-                                >
-                                  [ Khôi Phục Ảnh Cũ ]
-                                </button>
-                              )}
+                      {/* Trường hợp 1: Sinh viên FPT */}
+                      {schoolChoice === "FPT" ? (
+                        <div className="space-y-4 p-4 bg-[#090e11] border border-amber-500/30 hud-clipped">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Trường Học
+                            </label>
+                            <div className="p-2.5 bg-black/40 border border-zinc-800 text-amber-300 font-bold hud-clipped">
+                              Trường Đại học FPT (FPT University / FPT Edu)
                             </div>
-                            <input
-                              ref={fileInputRef}
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-                              className="hidden"
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Mã Số Sinh Viên FPT *
+                            </label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="text"
+                                value={fptCode || studentCode}
+                                onChange={(e) => {
+                                  setFptCode(e.target.value);
+                                  setStudentCode(e.target.value);
+                                }}
+                                placeholder="Ví dụ: SE171234, SS160000..."
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="primary"
+                                onClick={handleVerifyFpt}
+                                disabled={verifyFptMutation.isPending}
+                                className="shrink-0 text-xs uppercase whitespace-nowrap"
+                              >
+                                {verifyFptMutation.isPending ? "[ ĐANG TRA CỨU... ]" : "[ XÁC MINH MSSV ]"}
+                              </Button>
+                            </div>
+                            {fptError && <p className="text-red-400 text-[11px] font-bold">{fptError}</p>}
+                            {fptResult && (
+                              <p className="text-emerald-400 text-[11px] font-bold">
+                                [✓ HỆ THỐNG XÁC NHẬN]: {fptResult.fullName || (fptResult as any).FullName} - {fptResult.major || "FPT Edu"}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="p-2.5 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 font-mono text-[11px] hud-clipped">
+                            ✓ Sinh viên FPT được tra cứu và xác thực trực tiếp qua cơ sở dữ liệu FPT Edu, không cần nộp ảnh thẻ sinh viên.
+                          </div>
+                        </div>
+                      ) : (
+                        /* Trường hợp 2: Sinh viên Trường ngoài */
+                        <div className="space-y-4 p-4 bg-[#090e11] border border-zinc-800 hud-clipped">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Chọn Trường Đại Học (Ngoài FPT) *
+                            </label>
+                            <select
+                              value={schoolId}
+                              onChange={(e) => setSchoolId(e.target.value)}
+                              className="w-full p-2.5 bg-black/60 border border-zinc-800 text-zinc-200 font-mono text-xs hud-clipped focus:outline-none focus:border-amber-500"
+                            >
+                              <option value="">-- Chọn trường đại học của bạn --</option>
+                              {schools.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.schoolName}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Mã Số Sinh Viên (MSSV) *
+                            </label>
+                            <Input
+                              type="text"
+                              value={studentCode}
+                              onChange={(e) => setStudentCode(e.target.value)}
+                              placeholder="Nhập mã số sinh viên của trường bạn..."
                             />
                           </div>
-                        ) : (
-                          <div
-                            onClick={() => fileInputRef.current?.click()}
-                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                            onDragLeave={() => setIsDragging(false)}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              setIsDragging(false);
-                              if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]);
-                            }}
-                            className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${
-                              isDragging
-                                ? "border-amber-400 bg-amber-500/10"
-                                : "border-zinc-800 hover:border-zinc-700 bg-[#090e11]"
-                            }`}
-                          >
-                            <input
-                              ref={fileInputRef}
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-                              className="hidden"
-                            />
-                            <p className="text-zinc-300 font-bold uppercase text-[11px]">
-                              [ Kéo thả file ảnh thẻ vào đây hoặc Bấm để chọn ]
-                            </p>
-                            <span className="text-[10px] text-zinc-500 block mt-1">Dung lượng tối đa 5MB (JPG, PNG, WEBP)</span>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] text-zinc-400 uppercase tracking-wider block font-bold">
+                              Ảnh Thẻ Sinh Viên (Mặt Trước) *
+                            </label>
+                            {photoPreview ? (
+                              <div className="relative border border-zinc-700 bg-black/60 p-3 hud-clipped flex flex-col items-center gap-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={photoPreview}
+                                  alt="Xem trước ảnh thẻ sinh viên"
+                                  className="max-h-44 object-contain rounded border border-zinc-800"
+                                />
+                                <div className="flex items-center gap-2 pt-1 font-mono text-[10px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black font-bold uppercase hud-clipped cursor-pointer transition-all"
+                                  >
+                                    [ Thay Đổi Ảnh Khác ]
+                                  </button>
+                                  {photoFile && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPhotoFile(null);
+                                        setPhotoPreview(user?.photoStudentCardUrl || null);
+                                      }}
+                                      className="px-3 py-1 bg-zinc-800 text-zinc-300 hover:text-white text-[10px] uppercase hud-clipped cursor-pointer transition-all"
+                                    >
+                                      [ Khôi Phục Ảnh Cũ ]
+                                    </button>
+                                  )}
+                                </div>
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                                  className="hidden"
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                onClick={() => fileInputRef.current?.click()}
+                                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                                onDragLeave={() => setIsDragging(false)}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  setIsDragging(false);
+                                  if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]);
+                                }}
+                                className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${
+                                  isDragging
+                                    ? "border-amber-400 bg-amber-500/10"
+                                    : "border-zinc-800 hover:border-zinc-700 bg-[#090e11]"
+                                }`}
+                              >
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                                  className="hidden"
+                                />
+                                <p className="text-zinc-300 font-bold uppercase text-[11px]">
+                                  [ Kéo thả file ảnh thẻ vào đây hoặc Bấm để chọn ]
+                                </p>
+                                <span className="text-[10px] text-zinc-500 block mt-1">Dung lượng tối đa 5MB (JPG, PNG, WEBP)</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+
+                          <div className="p-2.5 bg-amber-950/20 border border-amber-500/20 text-amber-300 font-mono text-[11px] hud-clipped">
+                            📌 Sinh viên trường ngoài cần nộp ảnh thẻ sinh viên rõ nét để Ban Tổ Chức phê duyệt trước khi thi đấu.
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 
