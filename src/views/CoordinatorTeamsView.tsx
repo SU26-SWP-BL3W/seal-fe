@@ -142,34 +142,8 @@ export function CoordinatorTeamsView() {
               onClick={() => { refetch(); refetchRegistered(); }}
               className="flex items-center gap-2 text-xs font-mono"
             >
-              <option value="">
-                {!eventId
-                  ? "— Chọn Sự Kiện Để Lọc Hạng Mục —"
-                  : tracksList.length === 0
-                    ? "— Sự Kiện Chưa Có Hạng Mục —"
-                    : `— Tất Cả Hạng Mục (${tracksList.length}) —`}
-              </option>
-              {tracksList.map((tr: any) => {
-                const trId = tr.id || tr.Id || tr.trackId || tr.TrackId;
-                const trName = tr.trackName || tr.TrackName || "Hạng mục";
-                return (
-                  <option key={trId} value={trId}>
-                    {trName}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 sm:col-span-4">
-            <Search className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
-            <Input
-              type="text"
-              placeholder="Tìm kiếm theo tên đội, hạng mục..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs"
-            />
+              LÀM MỚI
+            </Button>
           </div>
         </div>
       </div>
