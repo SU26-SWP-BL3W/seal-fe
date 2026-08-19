@@ -17,7 +17,59 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
   const tLower = (rawTitle || "").toLowerCase();
   const mLower = (rawMessage || "").toLowerCase();
 
-  // 1. Thành viên mới tham gia / đồng ý vào đội
+  // 1. Ban Tổ Chức phê duyệt đội thi
+  if (
+    tLower.includes("phê duyệt") ||
+    tLower.includes("được duyệt") ||
+    tLower.includes("approved") ||
+    mLower.includes("được phê duyệt") ||
+    mLower.includes("chính thức tham gia")
+  ) {
+    return {
+      title: "🏆 Ban Tổ Chức đã phê duyệt đội thi!",
+      message: rawMessage || "Chúc mừng! Đội thi của bạn đã được Ban Tổ Chức phê duyệt chính thức tham gia giải đấu. Cổng nộp bài thi đã được mở.",
+      badgeText: "ĐÃ DUYỆT ĐỘI",
+      badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+    };
+  }
+
+  // 2. Ban Tổ Chức từ chối / trả hồ sơ đội thi
+  if (
+    tLower.includes("từ chối đơn") ||
+    tLower.includes("trả hồ sơ") ||
+    mLower.includes("lý do từ chối") ||
+    mLower.includes("không được duyệt") ||
+    mLower.includes("bị từ chối")
+  ) {
+    return {
+      title: "⚠️ Ban Tổ Chức từ chối / trả hồ sơ đội",
+      message: rawMessage || "Hồ sơ ghi danh của đội chưa đạt yêu cầu. Vui lòng vào trang Đội thi để xem lý do chi tiết từ BTC.",
+      badgeText: "TRẢ HỒ SƠ",
+      badgeClass: "bg-rose-950/40 text-rose-300 border-rose-500/30",
+    };
+  }
+
+  // 3. Đã gửi hồ sơ ghi danh tới BTC
+  if (tLower.includes("ghi danh") || mLower.includes("chờ ban tổ chức") || mLower.includes("chờ btc")) {
+    return {
+      title: "📋 Đã gửi hồ sơ ghi danh tới Ban Tổ Chức",
+      message: rawMessage || "Hồ sơ đội đã được gửi thành công. Ban Tổ Chức đang tiến hành thẩm định sĩ số và thẻ sinh viên.",
+      badgeText: "ĐANG THẨM ĐỊNH",
+      badgeClass: "bg-sky-950/40 text-sky-300 border-sky-500/30",
+    };
+  }
+
+  // 4. Biên nhận nộp bài thi
+  if (tLower.includes("nộp bài") || tLower.includes("submission") || mLower.includes("đã nộp bài") || mLower.includes("biên nhận")) {
+    return {
+      title: "📤 Biên nhận nộp bài thi thành công",
+      message: rawMessage || "Hệ thống đã ghi nhận bài thi của đội bạn và gửi email biên nhận tới các thành viên.",
+      badgeText: "BÀI THI",
+      badgeClass: "bg-cyan-950/40 text-cyan-300 border-cyan-500/30",
+    };
+  }
+
+  // 5. Thành viên mới tham gia / đồng ý vào đội
   if (
     tLower.includes("thành viên đã tham gia") ||
     tLower.includes("đã tham gia") ||
@@ -33,7 +85,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
-  // 2. Lời mời bị từ chối / không tham gia
+  // 6. Lời mời bị từ chối / không tham gia
   if (
     tLower.includes("từ chối") ||
     tLower.includes("declined") ||
@@ -49,7 +101,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
-  // 3. Bạn đã đồng ý gia nhập đội / Vào đội thành công
+  // 7. Bạn đã đồng ý gia nhập đội / Vào đội thành công
   if (
     tLower.includes("gia nhập thành công") ||
     tLower.includes("bạn đã vào đội") ||
@@ -63,7 +115,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
-  // 4. Lời mời mới vào đội
+  // 8. Lời mời mới vào đội
   if (tLower.includes("lời mời") || mLower.includes("mời bạn tham gia")) {
     return {
       title: rawTitle || "📩 Lời mời tham gia đội thi",
@@ -73,7 +125,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
-  // 5. Yêu cầu xin gia nhập đội
+  // 9. Yêu cầu xin gia nhập đội
   if (tLower.includes("yêu cầu") || mLower.includes("xin gia nhập") || mLower.includes("yêu cầu tham gia")) {
     return {
       title: "🙋 Yêu cầu xin gia nhập đội thi",
