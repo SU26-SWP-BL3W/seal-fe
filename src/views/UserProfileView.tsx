@@ -52,7 +52,7 @@ export const getRoleDetails = (
       label: "Ban Giám Khảo (Judge)",
       badgeClass: "bg-indigo-950/40 border-indigo-500/30 text-indigo-300",
       dotClass: "bg-indigo-400",
-      typeLabel: "Giám Khảo Chuyên Môn",
+      typeLabel: "Hội Đồng Giám Khảo",
       isStaff: true,
     };
   }
@@ -61,7 +61,7 @@ export const getRoleDetails = (
       label: "Cố Vấn Học Thuật (Mentor)",
       badgeClass: "bg-cyan-950/40 border-cyan-500/30 text-cyan-300",
       dotClass: "bg-cyan-400",
-      typeLabel: "Cố Vấn Dự Án",
+      typeLabel: "Cố Vấn Chuyên Môn",
       isStaff: true,
     };
   }
@@ -79,39 +79,31 @@ export const getRoleDetails = (
       isStaff: true,
     };
   }
-  if (assignedRoles.includes("TeamLeader") || role === "TeamLeader") {
+  if (assignedRoles.includes("TeamLeader") || role === "TeamLeader" || role === "Leader") {
     return {
       label: "Trưởng Nhóm (Team Leader)",
       badgeClass: "bg-emerald-950/40 border-emerald-500/30 text-emerald-300",
       dotClass: "bg-emerald-400",
-      typeLabel: "Trưởng Nhóm Thi Đấu",
+      typeLabel: "Thí Sinh (Trưởng Nhóm)",
       isStaff: false,
     };
   }
-  if (assignedRoles.includes("TeamMember") || role === "TeamMember") {
+  if (assignedRoles.includes("TeamMember") || role === "TeamMember" || role === "Member") {
     return {
       label: "Thành Viên Đội Thi (Team Member)",
       badgeClass: "bg-teal-950/40 border-teal-500/30 text-teal-300",
       dotClass: "bg-teal-400",
-      typeLabel: "Thí Sinh Tham Gia",
+      typeLabel: "Thí Sinh (Thành Viên Đội)",
       isStaff: false,
     };
   }
-  if (isStudent || role === "Student") {
-    return {
-      label: "Thí Sinh / Sinh Viên (Student)",
-      badgeClass: "bg-sky-950/40 border-sky-500/30 text-sky-300",
-      dotClass: "bg-sky-400",
-      typeLabel: "Sinh Viên / Thí Sinh",
-      isStaff: false,
-    };
-  }
+  // Mặc định đối với mọi tài khoản thí sinh / sinh viên tham gia hệ thống:
   return {
-    label: role ? `Vai Trò: ${role}` : "Thành Viên Hệ Thống",
-    badgeClass: "bg-zinc-800 border-zinc-700 text-zinc-300",
-    dotClass: "bg-zinc-400",
-    typeLabel: role || "Chuyên Gia / Cán Bộ",
-    isStaff: true,
+    label: "Thí Sinh / Sinh Viên",
+    badgeClass: "bg-sky-950/40 border-sky-500/30 text-sky-300",
+    dotClass: "bg-sky-400",
+    typeLabel: "Thí Sinh Dự Thi",
+    isStaff: false,
   };
 };
 
@@ -1100,8 +1092,8 @@ export function UserProfileView() {
 
             {userRoles.length === 0 && (
               <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-3 text-center shadow-sm font-mono text-xs text-zinc-400">
-                <p className="font-bold text-white uppercase">[ CHƯA CÓ PHÂN CÔNG HOẶC ĐỘI THI ]</p>
-                <p className="text-zinc-500">Bạn hiện tại chưa được phân công vai trò chuyên môn hoặc tham gia đội thi nào trong hệ thống.</p>
+                <p className="font-bold text-white uppercase">[ CHƯA THAM GIA ĐỘI THI HOẶC PHÂN CÔNG CHUYÊN MÔN ]</p>
+                <p className="text-zinc-500">Bạn hiện tại chưa tham gia đội thi nào hoặc chưa được phân công vai trò chuyên môn trong hệ thống.</p>
               </Card>
             )}
 
