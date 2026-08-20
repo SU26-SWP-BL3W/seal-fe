@@ -7,10 +7,11 @@ import { useChangePassword } from "@/repositories/authRepository";
 import { Button, Input, Field } from "@/components/ui";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { useToast } from "@/providers/ToastProvider";
+import { resolveStaffLandingPath } from "@/lib/eventRoles";
 
 export function ForceChangePasswordView() {
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, activeRole, allEventRoles } = useAuth();
   const { mutateAsync: changePassword, isPending } = useChangePassword();
 
   const [oldPassword, setOldPassword] = useState("");
@@ -52,7 +53,19 @@ export function ForceChangePasswordView() {
         } catch {
           // ignore
         }
-        window.location.href = user?.isAdmin ? "/admin/dashboard" : "/events";
+        const landing = user?.isAdmin
+          ? "/admin/dashboard"
+          : resolveStaffLandingPath(allEventRoles) ||
+            (activeRole?.roleName === "Judge"
+              ? "/judge/events"
+              : activeRole?.roleName === "Mentor"
+              ? "/mentor"
+              : activeRole?.roleName === "EventCoordinator" || activeRole?.roleName === "Coordinator"
+              ? "/coordinator/dashboard"
+              : activeRole?.roleName === "TeamLeader" || activeRole?.roleName === "TeamMember"
+              ? "/my-team"
+              : "/events");
+        window.location.href = landing;
       }
     } catch (err: any) {
       const msg =

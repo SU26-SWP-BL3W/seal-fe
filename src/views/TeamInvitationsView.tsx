@@ -153,6 +153,25 @@ export function TeamInvitationsView() {
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
         queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+
+        let targetRedirectUrl = "/events";
+        if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+          targetRedirectUrl = "/my-team";
+        } else if (inv.role === "Judge") {
+          targetRedirectUrl = "/judge/events";
+        } else if (inv.role === "Mentor") {
+          targetRedirectUrl = "/mentor";
+        } else if (inv.role === "Coordinator" || inv.role === "EventCoordinator") {
+          targetRedirectUrl = inv.eventId || inv.targetId
+            ? `/coordinator/dashboard?eventId=${inv.eventId || inv.targetId}`
+            : "/coordinator/dashboard";
+        } else if (inv.eventId || inv.targetId) {
+          targetRedirectUrl = `/events/${inv.eventId || inv.targetId}`;
+        }
+
+        setTimeout(() => {
+          window.location.href = targetRedirectUrl;
+        }, 1200);
       } else {
         toast.info(`Bạn đã từ chối lời mời tham gia "${targetName}".`);
         pushSystemNotification({

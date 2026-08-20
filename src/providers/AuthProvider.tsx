@@ -237,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (detectedRole === "Judge") {
       targetPath = primaryRole?.eventId ? `/judge/events?eventId=${primaryRole.eventId}` : "/judge/events";
     } else if (detectedRole === "Mentor") {
-      targetPath = primaryRole?.eventId ? `/events/${primaryRole.eventId}` : "/events";
+      targetPath = primaryRole?.eventId ? `/mentor?eventId=${primaryRole.eventId}` : "/mentor";
     } else if (detectedRole === "TeamLeader" || detectedRole === "TeamMember") {
       targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
@@ -352,7 +352,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (detectedRole === "Judge") {
       targetPath = primaryRole?.eventId ? `/judge/events?eventId=${primaryRole.eventId}` : "/judge/events";
     } else if (detectedRole === "Mentor") {
-      targetPath = primaryRole?.eventId ? `/events/${primaryRole.eventId}` : "/events";
+      targetPath = primaryRole?.eventId ? `/mentor?eventId=${primaryRole.eventId}` : "/mentor";
     } else if (detectedRole === "TeamLeader" || detectedRole === "TeamMember") {
       targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
