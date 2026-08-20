@@ -135,7 +135,7 @@ export function NavigationBar() {
                 <SealShield className="h-6 w-6 text-[var(--color-danger)]" />
                 <span>ADMIN PANEL</span>
               </Link>
-              <NotificationBell align="left" />
+              <NotificationBell align="sidebar" />
             </div>
             <Link
               href="/"
@@ -275,7 +275,7 @@ export function NavigationBar() {
                 <SealShield className="h-6 w-6 text-[#a855f7]" />
                 <span>COORD PANEL</span>
               </Link>
-              <NotificationBell align="left" />
+              <NotificationBell align="sidebar" />
             </div>
             <Link
               href="/coordinator/dashboard"
@@ -669,7 +669,7 @@ export function NavigationBar() {
                 <SealShield className="h-6 w-6 text-[var(--accent-judge)]" />
                 <span>JUDGE PANEL</span>
               </Link>
-              <NotificationBell align="left" />
+              <NotificationBell align="sidebar" />
             </div>
             <Link
               href="/"
@@ -814,7 +814,7 @@ export function NavigationBar() {
                 <SealShield className="h-6 w-6 text-[var(--accent-primary)]" />
                 <span>SEAL WORKSPACE</span>
               </Link>
-              <NotificationBell align="left" />
+              <NotificationBell align="sidebar" />
             </div>
             <Link
               href="/"

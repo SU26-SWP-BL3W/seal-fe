@@ -307,13 +307,21 @@ function TrackSubmissionCard({
 
         {/* Card Footer Actions */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[var(--border-muted)]/60">
-          <div className="font-mono text-xs text-[var(--text-muted)]">
+          <div className="font-mono text-xs text-[var(--text-muted)] flex items-center gap-3">
             {formError ? (
               <span role="alert" className="text-[color:var(--color-danger)]">{formError}</span>
             ) : isSaved ? (
-              <span className="text-[var(--color-success)] font-semibold">
-                Đã lưu bài nộp cho hạng mục {track.trackName}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[var(--color-success)] font-semibold flex items-center gap-1">
+                  ✓ Đã lưu bài nộp cho hạng mục {track.trackName}
+                </span>
+                <Link
+                  href="/my-submissions"
+                  className="text-[var(--accent-team)] hover:underline font-bold text-[11px] ml-2 flex items-center gap-0.5"
+                >
+                  [ Xem danh sách bài nộp → ]
+                </Link>
+              </div>
             ) : (
               <span>Vui lòng kiểm tra kỹ các đường link trước khi xác nhận.</span>
             )}
@@ -322,7 +330,7 @@ function TrackSubmissionCard({
           <button
             type="submit"
             disabled={!allRequiredDone || isSubmitting}
-            className={`hud-clipped px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-wider transition-all focus:outline-none ${
+            className={`hud-clipped px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-wider transition-all focus:outline-none cursor-pointer ${
               isSaved
                 ? "bg-transparent border border-[var(--accent-team)] text-[var(--accent-team)] hover:bg-[var(--accent-team)]/10"
                 : allRequiredDone
@@ -486,10 +494,20 @@ export function NewSubmissionView() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <Link href={`/events/${(team as any)?.eventId || (team as any)?.EventId || ""}/leaderboard`}>
+              <button className="hud-clipped px-4 py-2.5 border border-[var(--accent-judge)]/40 bg-[var(--accent-judge)]/10 text-[var(--accent-judge)] font-mono text-xs font-bold tracking-wider uppercase hover:bg-[var(--accent-judge)]/20 transition-colors">
+                🏆 BẢNG XẾP HẠNG
+              </button>
+            </Link>
+            <Link href="/my-team">
+              <button className="hud-clipped px-4 py-2.5 border border-[var(--accent-team)]/40 bg-[var(--accent-team)]/10 text-[var(--accent-team)] font-mono text-xs font-bold tracking-wider uppercase hover:bg-[var(--accent-team)]/20 transition-colors">
+                👥 ĐỘI THI
+              </button>
+            </Link>
             <Link href="/my-submissions">
-              <button className="hud-clipped px-5 py-2.5 border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs tracking-wider uppercase hover:border-[var(--accent-team)] hover:text-[var(--accent-team)] transition-colors">
-                XEM QUẢN LÝ BÀI NỘP
+              <button className="hud-clipped px-5 py-2.5 border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs font-bold tracking-wider uppercase hover:border-[var(--accent-team)] hover:text-[var(--accent-team)] transition-colors">
+                📄 QUẢN LÝ BÀI NỘP
               </button>
             </Link>
           </div>

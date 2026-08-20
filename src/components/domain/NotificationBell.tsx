@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Check, X, ExternalLink, RefreshCw, Bell, UserPlus, UserCheck, UserX, AlertCircle } from "lucide-react";
 
 interface NotificationBellProps {
-  align?: "left" | "right";
+  align?: "left" | "right" | "sidebar";
 }
 
 function formatNotificationContent(rawTitle: string, rawMessage: string, type?: string) {
@@ -433,9 +433,13 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
 
       {isOpen && (
         <div
-          className={`absolute ${
-            align === "left" ? "left-0 sm:left-0" : "right-0 sm:right-0"
-          } mt-2 w-84 sm:w-[26rem] md:w-[28rem] rounded border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-2xl z-50 overflow-hidden font-mono text-xs animate-in fade-in zoom-in-95 duration-100`}
+          className={`${
+            align === "sidebar"
+              ? "fixed left-4 right-4 top-16 md:left-[16.5rem] md:top-3 md:right-auto md:w-[28rem] z-[99999]"
+              : align === "left"
+              ? "absolute left-0 mt-2 w-84 sm:w-[26rem] md:w-[28rem] z-[9999]"
+              : "absolute right-0 mt-2 w-84 sm:w-[26rem] md:w-[28rem] z-[9999]"
+          } rounded border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden font-mono text-xs animate-in fade-in zoom-in-95 duration-100`}
         >
           {/* Header */}
           <div className="p-3.5 border-b border-[var(--border-muted)] flex items-center justify-between bg-[var(--bg-input)]/60">

@@ -30,6 +30,35 @@ function StatusBadge({ sub }: { sub: SubmissionItem }) {
 }
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
+function parseExistingSub(sub: SubmissionItem) {
+  let repo = sub.submissionUrl || "";
+  let demo = "";
+  let slide = "";
+  let notes = "";
+
+  try {
+    const parsed = JSON.parse(sub.description);
+    if (parsed?.links && Array.isArray(parsed.links)) {
+      for (const l of parsed.links) {
+        if (l.type === "github" || l.type?.includes("repo")) repo = l.url || repo;
+        if (l.type === "deployed_url" || l.type?.includes("demo")) demo = l.url || demo;
+        if (l.type === "slides" || l.type?.includes("slide")) slide = l.url || slide;
+      }
+    }
+    notes = parsed?.notes || "";
+  } catch {
+    const lines = (sub.description || "").split("\n");
+    for (const line of lines) {
+      if (line.toLowerCase().startsWith("repo:")) repo = line.substring(5).trim();
+      else if (line.toLowerCase().startsWith("demo:")) demo = line.substring(5).trim();
+      else if (line.toLowerCase().startsWith("slide:")) slide = line.substring(6).trim();
+      else notes += (notes ? "\n" : "") + line;
+    }
+  }
+
+  return { repo, demo, slide, notes };
+}
+
 function EditModal({
   sub,
   onClose,
@@ -37,48 +66,30 @@ function EditModal({
 }: {
   sub: SubmissionItem;
   onClose: () => void;
-  onSave: (id: string, url: string, desc: string) => void;
+  onSave: (id: string, payload: { repoUrl: string; demoUrl: string; slideUrl: string; submissionUrl: string; description: string }) => void;
 }) {
-  const [editUrl, setEditUrl] = useState(sub.submissionUrl);
-  const [editDesc, setEditDesc] = useState(sub.description || "");
-  const deliverables: DeliverableItem[] = [];
-
-  // Nếu track có cấu hình deliverables → parse JSON links, ngược lại edit đơn giản
-  const hasDeliverables = deliverables.length > 0;
-  let parsedLinks: Record<string, string> = {};
-  if (hasDeliverables) {
-    try {
-      const parsed = JSON.parse(sub.description);
-      if (parsed?.links) {
-        parsedLinks = Object.fromEntries(
-          parsed.links.map((l: { type: string; url: string }) => [l.type, l.url])
-        );
-      }
-    } catch {
-      // description là plain text
-    }
-  }
-
-  const [linkValues, setLinkValues] = useState<Record<string, string>>(parsedLinks);
-  const [notes, setNotes] = useState(() => {
-    try { return JSON.parse(sub.description)?.notes ?? ""; } catch { return ""; }
-  });
+  const initial = parseExistingSub(sub);
+  const [repoUrl, setRepoUrl] = useState(initial.repo);
+  const [demoUrl, setDemoUrl] = useState(initial.demo);
+  const [slideUrl, setSlideUrl] = useState(initial.slide);
+  const [notes, setNotes] = useState(initial.notes);
 
   const handleSave = () => {
-    if (hasDeliverables) {
-      // Rebuild JSON description
-      const links = deliverables.map(d => ({
-        type: d.type,
-        label: d.label,
-        url: (linkValues[d.type] ?? "").trim(),
-        required: d.required,
-      }));
-      const primaryDlv = deliverables.find(d => d.required);
-      const primaryUrl = primaryDlv ? (linkValues[primaryDlv.type] ?? editUrl) : editUrl;
-      onSave(sub.id, primaryUrl, JSON.stringify({ links, notes }));
-    } else {
-      onSave(sub.id, editUrl, editDesc);
-    }
+    const primaryUrl = repoUrl.trim() || demoUrl.trim() || slideUrl.trim();
+    const allLinks = [
+      { type: "github", label: "GitHub / GitLab repo", url: repoUrl.trim(), required: true },
+      { type: "deployed_url", label: "Live demo", url: demoUrl.trim(), required: true },
+      { type: "slides", label: "Slides", url: slideUrl.trim(), required: true },
+    ];
+    const descJson = JSON.stringify({ links: allLinks, notes: notes.trim() });
+    
+    onSave(sub.id, {
+      repoUrl: repoUrl.trim(),
+      demoUrl: demoUrl.trim(),
+      slideUrl: slideUrl.trim(),
+      submissionUrl: primaryUrl,
+      description: descJson,
+    });
   };
 
   return (
@@ -98,12 +109,12 @@ function EditModal({
               {"// CHỈNH SỬA BÀI NỘP"}
             </div>
             <div className="font-mono text-sm font-bold text-[var(--text-primary)] mt-0.5">
-              {sub.roundName} · {sub.trackName}
+              {sub.roundName || "Vòng thi"} · {sub.trackName || "Hạng mục"}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="font-mono text-[var(--text-muted)] hover:text-white transition-colors text-lg leading-none focus:outline-none"
+            className="font-mono text-[var(--text-muted)] hover:text-white transition-colors text-lg leading-none focus:outline-none cursor-pointer"
           >
             ✕
           </button>
@@ -111,113 +122,57 @@ function EditModal({
 
         {/* Body */}
         <div className="p-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
-          {hasDeliverables ? (
-            <>
-              {/* Required */}
-              {deliverables.filter(d => d.required).length > 0 && (
-                <div>
-                  <div className="font-mono text-[9px] text-[var(--color-danger)] tracking-widest uppercase mb-2">
-                    BẮT BUỘC
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {deliverables.filter(d => d.required).map(d => {
-                      const val = linkValues[d.type] ?? "";
-                      const valid = val.startsWith("http");
-                      return (
-                        <div key={d.id}>
-                          <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-                            {d.label}{" "}
-                            <span className="text-[var(--color-danger)]">*</span>
-                          </label>
-                          <input
-                            type="url"
-                            value={val}
-                            placeholder={d.placeholder}
-                            onChange={e => setLinkValues(prev => ({ ...prev, [d.type]: e.target.value }))}
-                            className={`w-full px-3 py-2 bg-[var(--bg-input)] border font-mono text-sm focus:outline-none transition-all placeholder:text-[var(--text-muted)]/35 ${
-                              valid
-                                ? "border-[var(--color-success)]/50 focus:border-[var(--color-success)]"
-                                : val
-                                ? "border-[var(--color-danger)]/50"
-                                : "border-[var(--border-muted)] focus:border-[var(--accent-team)]"
-                            } text-[var(--text-primary)]`}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+          <div>
+            <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
+              GitHub / GitLab Repository URL <span className="text-[var(--color-danger)]">*</span>
+            </label>
+            <input
+              type="url"
+              value={repoUrl}
+              placeholder="https://github.com/your-org/your-repo"
+              onChange={(e) => setRepoUrl(e.target.value)}
+              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)]"
+            />
+          </div>
 
-              {/* Optional */}
-              {deliverables.filter(d => !d.required).length > 0 && (
-                <div>
-                  <div className="font-mono text-[9px] text-[var(--text-muted)] tracking-widest uppercase mb-2">
-                    TUỲ CHỌN
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {deliverables.filter(d => !d.required).map(d => {
-                      const val = linkValues[d.type] ?? "";
-                      return (
-                        <div key={d.id}>
-                          <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-                            {d.label}
-                          </label>
-                          <input
-                            type="url"
-                            value={val}
-                            placeholder={d.placeholder}
-                            onChange={e => setLinkValues(prev => ({ ...prev, [d.type]: e.target.value }))}
-                            className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all placeholder:text-[var(--text-muted)]/35 text-[var(--text-primary)]"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+          <div>
+            <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
+              Live Demo / Website URL <span className="text-[var(--color-danger)]">*</span>
+            </label>
+            <input
+              type="url"
+              value={demoUrl}
+              placeholder="https://your-demo.vercel.app"
+              onChange={(e) => setDemoUrl(e.target.value)}
+              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)]"
+            />
+          </div>
 
-              {/* Notes */}
-              <div>
-                <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-                  Ghi Chú
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  rows={2}
-                  placeholder="Mô tả thêm về bài nộp..."
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all placeholder:text-[var(--text-muted)]/35 text-[var(--text-primary)] resize-none"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Simple edit */}
-              <div>
-                <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-                  URL Bài Nộp <span className="text-[var(--color-danger)]">*</span>
-                </label>
-                <input
-                  type="url"
-                  value={editUrl}
-                  onChange={e => setEditUrl(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)]"
-                />
-              </div>
-              <div>
-                <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-                  Mô Tả
-                </label>
-                <textarea
-                  value={editDesc}
-                  onChange={e => setEditDesc(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)] resize-none"
-                />
-              </div>
-            </>
-          )}
+          <div>
+            <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
+              Slides Thuyết Trình URL <span className="text-[var(--color-danger)]">*</span>
+            </label>
+            <input
+              type="url"
+              value={slideUrl}
+              placeholder="https://docs.google.com/presentation/d/..."
+              onChange={(e) => setSlideUrl(e.target.value)}
+              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)]"
+            />
+          </div>
+
+          <div>
+            <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
+              Ghi Chú &amp; Hướng Dẫn Chấm
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Ghi chú thêm thông tin tài khoản demo, hướng dẫn chạy dự án..."
+              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)] resize-none"
+            />
+          </div>
         </div>
 
         {/* Footer */}
@@ -225,13 +180,13 @@ function EditModal({
           <button
             id="save-edit-btn"
             onClick={handleSave}
-            className="flex-1 hud-clipped px-4 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase transition-all hover:bg-white focus:outline-none"
+            className="flex-1 hud-clipped px-4 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase transition-all hover:bg-white focus:outline-none cursor-pointer"
           >
             LƯU THAY ĐỔI
           </button>
           <button
             onClick={onClose}
-            className="hud-clipped px-4 py-2.5 border border-[var(--border-muted)] text-[var(--text-muted)] font-mono text-xs tracking-wider uppercase hover:border-[var(--accent-primary)] hover:text-white transition-colors focus:outline-none"
+            className="hud-clipped px-4 py-2.5 border border-[var(--border-muted)] text-[var(--text-muted)] font-mono text-xs tracking-wider uppercase hover:border-[var(--accent-primary)] hover:text-white transition-colors focus:outline-none cursor-pointer"
           >
             HỦY
           </button>
@@ -306,12 +261,21 @@ export function MySubmissionsView() {
 
   const visibleSubs = submissions;
 
-  const handleSave = async (id: string, url: string, desc: string) => {
+  const handleSave = async (
+    id: string,
+    payload: { repoUrl: string; demoUrl: string; slideUrl: string; submissionUrl: string; description: string }
+  ) => {
     setActionError("");
     try {
       await updateSub.mutateAsync({
         id,
-        data: { RepoUrl: url, SubmissionUrl: url, Description: desc },
+        data: {
+          RepoUrl: payload.repoUrl,
+          DemoUrl: payload.demoUrl,
+          SlideUrl: payload.slideUrl,
+          SubmissionUrl: payload.submissionUrl,
+          Description: payload.description,
+        },
       });
       setEditingSub(null);
     } catch (err) {
