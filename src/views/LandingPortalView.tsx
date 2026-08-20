@@ -2,16 +2,15 @@
 
 /**
  * Hallmark · page: landing · genre: technical · macro: Narrative Workflow
- * theme: SEAL tokens (mint / obsidian) · fonts: Chakra Petch + IBM Plex Sans
- * pre-emit critique: P5 H5 E4 S4 R5 V5
+ * Visual break from HUD: no SealShield/hexagon hero, typography-led arena.
+ * Logic: auth-aware CTAs, registration window, capacity, live countdown.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Badge, Button } from "@/components/ui";
 import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { resolveStaffLandingPath } from "@/lib/eventRoles";
-import { SealShield } from "@/components/domain/SealShield";
 import { useCountdown } from "@/lib/useCountdown";
 import {
   STATUS_LABEL,
@@ -26,12 +25,74 @@ import { LandingWorkflowSteps } from "@/components/domain/LandingWorkflowSteps";
 import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
 import { formatShortId } from "@/lib/formatId";
 
+function isRegistrationOpen(event: EventCardData, now = Date.now()): boolean {
+  const start = new Date(event.registrationStartDate || event.startDate).getTime();
+  const end = new Date(event.registrationEndDate || event.endDate).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end)) return event.status === "registration_open";
+  return now >= start && now <= end;
+}
+
+function getHeroCtas(args: {
+  user: any;
+  latestEvent: EventCardData | null;
+  regOpen: boolean;
+}) {
+  const { user, latestEvent, regOpen } = args;
+  const approved = Boolean(user?.isApproved ?? user?.IsApproved);
+  const isStaffEmail = (() => {
+    const email = (user?.email || user?.Email || "").toLowerCase();
+    return (
+      email.includes("judge") ||
+      email.includes("mentor") ||
+      email.includes("ec.") ||
+      email.includes("admin")
+    );
+  })();
+
+  if (!user) {
+    return {
+      primary: { href: "/register", label: "Tạo tài khoản thi" },
+      secondary: {
+        href: latestEvent ? `/events/${latestEvent.id}` : "/events",
+        label: latestEvent ? "Xem sự kiện đang mở" : "Khám phá sự kiện",
+      },
+      note: regOpen
+        ? "Cổng đăng ký đang mở — tạo tài khoản để lập đội."
+        : "Xem thể lệ trước, đăng ký khi cổng mở.",
+    };
+  }
+
+  if (!approved && !isStaffEmail) {
+    return {
+      primary: { href: "/onboarding/profile", label: "Hoàn thiện hồ sơ sinh viên" },
+      secondary: {
+        href: latestEvent ? `/events/${latestEvent.id}` : "/events",
+        label: "Xem sự kiện (chỉ đọc)",
+      },
+      note: "Hồ sơ chưa duyệt — bạn xem được sự kiện nhưng chưa tạo đội / nộp bài.",
+    };
+  }
+
+  if (latestEvent && regOpen) {
+    return {
+      primary: { href: `/events/${latestEvent.id}`, label: "Vào sự kiện & lập đội" },
+      secondary: { href: "/my-team", label: "Quản lý đội của tôi" },
+      note: `Tiếp tục với ${latestEvent.eventName}.`,
+    };
+  }
+
+  return {
+    primary: { href: "/events", label: "Khám phá sự kiện" },
+    secondary: { href: "/my-team", label: "Đội thi của tôi" },
+    note: "Chọn sự kiện phù hợp để bắt đầu.",
+  };
+}
+
 export function LandingPortalView() {
-  const { latestEvent, featuredEvents } = useLandingPreviewViewModel();
+  const { latestEvent, featuredEvents, totalRealCount } = useLandingPreviewViewModel();
   const { user, activeRole, allEventRoles } = useAuth();
   const router = useRouter();
 
-  // Tự động chuyển hướng Cán bộ / BTC / Giám khảo / Cố vấn về đúng workspace khi đã đăng nhập
   useEffect(() => {
     if (!user) return;
 
@@ -65,59 +126,173 @@ export function LandingPortalView() {
     else if (isMentor) router.replace("/events");
   }, [user, activeRole, allEventRoles, router]);
 
-  return (
-    <main className="landing-root flex flex-1 flex-col overflow-x-clip">
-      {/* 1 · Hero — brand-first, one composition */}
-      <section className="landing-hero relative isolate flex min-h-[100svh] flex-col justify-end border-b border-[var(--border-muted)] pb-16 pt-28 sm:pb-20 sm:pt-32">
-        <div aria-hidden className="landing-hero-atmosphere pointer-events-none absolute inset-0 -z-10" />
-        <SealShield
-          aria-hidden
-          className="landing-hero-mark pointer-events-none absolute inset-y-0 right-[-8%] -z-10 my-auto h-[min(92vh,720px)] w-[min(92vh,720px)] text-[var(--accent-primary)] opacity-[0.09] sm:right-[-4%]"
-        />
+  const regOpen = useMemo(
+    () => (latestEvent ? isRegistrationOpen(latestEvent) : false),
+    [latestEvent],
+  );
+  const ctas = getHeroCtas({ user, latestEvent, regOpen });
+  const needsProfile =
+    Boolean(user) &&
+    !(user?.isApproved ?? (user as { IsApproved?: boolean })?.IsApproved) &&
+    !(user?.isAdmin || user?.IsAdmin);
 
-        <div className="landing-hero-copy mx-auto w-full max-w-[var(--container-max)] px-4 sm:px-6">
-          <p className="font-display text-[clamp(4.5rem,18vw,11rem)] font-semibold leading-[0.85] tracking-tight text-[var(--text-primary)]">
-            SEAL
-          </p>
-          <h1 className="mt-6 max-w-xl font-display text-2xl font-semibold leading-snug text-[var(--text-primary)] sm:text-3xl md:text-4xl">
-            Nơi ý tưởng công nghệ bứt phá giới hạn
-          </h1>
-          <p className="mt-4 max-w-md text-base leading-relaxed text-[var(--text-muted)] sm:text-lg">
-            Hackathon cho sinh viên toàn quốc — sản phẩm thật, mentor đồng hành, chấm điểm minh bạch.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center gap-3">
-            <Link href="/events">
-              <Button className="min-w-[168px]">Khám phá sự kiện</Button>
-            </Link>
-            <Link href="/register">
-              <Button variant="secondary" className="min-w-[168px]">
-                Đăng ký tham gia
-              </Button>
-            </Link>
+  return (
+    <main className="landing-root flex flex-1 flex-col overflow-x-clip bg-[var(--bg-base)]">
+      {/* Hero: typography + live event logic — no hexagon/HUD chrome */}
+      <section className="relative isolate border-b border-[var(--border-muted)]">
+        <div aria-hidden className="landing-hero-atmosphere pointer-events-none absolute inset-0 -z-10" />
+
+        <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-12 px-4 pb-16 pt-24 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-end lg:gap-16 lg:pb-20 lg:pt-28">
+          <div className="landing-hero-copy min-w-0">
+            <p className="font-display text-sm font-semibold tracking-[0.18em] text-[var(--accent-primary)]">
+              SEAL HACKATHON
+            </p>
+            <h1 className="mt-4 font-display text-[clamp(2.75rem,8vw,5.5rem)] font-semibold leading-[0.95] text-[var(--text-primary)]">
+              Đấu trường
+              <br />
+              <span className="text-[var(--accent-primary)]">ý tưởng thật</span>
+            </h1>
+            <p className="mt-6 max-w-md text-base leading-relaxed text-[var(--text-muted)] sm:text-lg">
+              Lập đội, nộp sản phẩm, nhận mentor và được chấm theo rubric công khai — trên một hệ
+              thống.
+            </p>
+
+            <p className="mt-6 text-sm text-[var(--text-muted)]">{ctas.note}</p>
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href={ctas.primary.href}>
+                <Button className="min-w-[180px]">{ctas.primary.label}</Button>
+              </Link>
+              <Link href={ctas.secondary.href}>
+                <Button variant="secondary" className="min-w-[180px]">
+                  {ctas.secondary.label}
+                </Button>
+              </Link>
+            </div>
+
+            {needsProfile && (
+              <div className="mt-8 border-l-2 border-[var(--color-warning)] pl-4">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  Hồ sơ sinh viên chưa được duyệt
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Hoàn thiện MSSV / thẻ SV để mở quyền tạo đội và nộp bài.{" "}
+                  <Link href="/onboarding/profile" className="text-[var(--accent-primary)] underline">
+                    Cập nhật ngay
+                  </Link>
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Live panel — real event logic in the first viewport */}
+          <div className="min-w-0 border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 sm:p-8">
+            {latestEvent ? (
+              <HeroLivePanel event={latestEvent} regOpen={regOpen} />
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm font-medium text-[var(--text-muted)]">Sự kiện công khai</p>
+                <p className="font-display text-2xl font-semibold text-[var(--text-primary)]">
+                  {totalRealCount === 0
+                    ? "Chưa có sự kiện mở trên hệ thống"
+                    : "Đang tải sự kiện…"}
+                </p>
+                <Link href="/events">
+                  <Button variant="secondary">Đi tới danh sách sự kiện</Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* 2 · Live metrics — honest API numbers only, no card wall */}
       <LandingMetricsStrip />
 
-      {/* 3 · Live event spotlight */}
       {latestEvent && <LatestEventSpotlight event={latestEvent} />}
 
-      {/* 4 · Other events as index list (not card collage) */}
       {featuredEvents.length > 0 && (
         <FeaturedIndex events={featuredEvents} showAllHref="/events" />
       )}
 
-      {/* 5 · Narrative workflow */}
       <LandingWorkflowSteps />
-
-      {/* 6 · Proof */}
       <LandingLeaderboardPodium />
-
-      {/* 7 · FAQ */}
       <LandingFaqSection />
     </main>
+  );
+}
+
+function HeroLivePanel({ event, regOpen }: { event: EventCardData; regOpen: boolean }) {
+  const countdownTarget = event.status === "ongoing" ? event.endDate : event.registrationEndDate;
+  const countdown = useCountdown(event.status === "ended" ? null : countdownTarget);
+  const slotsLeft = Math.max(0, event.maxTeams - event.teamCount);
+  const fillPercent = Math.min(100, Math.round((event.teamCount / Math.max(event.maxTeams, 1)) * 100));
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
+        <Badge tone={regOpen ? "success" : "neutral"}>
+          {regOpen ? "Cổng đăng ký mở" : "Ngoài cửa sổ đăng ký"}
+        </Badge>
+      </div>
+
+      <p className="mt-4 text-xs text-[var(--text-muted)]">
+        {event.season} {event.year} · {formatShortId(event.id)}
+      </p>
+      <h2 className="mt-2 font-display text-2xl font-semibold leading-tight text-[var(--text-primary)] sm:text-3xl">
+        {event.eventName}
+      </h2>
+      <p className="mt-2 line-clamp-2 text-sm text-[var(--text-muted)]">{event.tagline}</p>
+
+      {!countdown.isPast && (
+        <div className="mt-8 border-t border-[var(--border-muted)] pt-6" suppressHydrationWarning>
+          <p className="text-xs font-medium text-[var(--text-muted)]">
+            {event.status === "ongoing" ? "Hạn nộp còn" : "Đóng cổng đăng ký sau"}
+          </p>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {[
+              { value: countdown.days, label: "ngày" },
+              { value: countdown.hours, label: "giờ" },
+              { value: countdown.minutes, label: "phút" },
+              { value: countdown.seconds, label: "giây" },
+            ].map((u) => (
+              <div key={u.label} suppressHydrationWarning>
+                <span
+                  className={`font-display text-2xl font-semibold tabular-nums ${
+                    countdown.isUrgent ? "text-[var(--color-danger)]" : "text-[var(--text-primary)]"
+                  }`}
+                  suppressHydrationWarning
+                >
+                  {String(u.value).padStart(2, "0")}
+                </span>
+                <span className="mt-0.5 block text-[10px] text-[var(--text-muted)]">{u.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6 space-y-2">
+        <div className="flex justify-between text-xs text-[var(--text-muted)]">
+          <span>Sức chứa đội</span>
+          <span className="tabular-nums text-[var(--text-primary)]">
+            {event.teamCount}/{event.maxTeams} · còn {slotsLeft}
+          </span>
+        </div>
+        <div className="h-1 bg-[var(--bg-input)]">
+          <div
+            className="h-1 bg-[var(--accent-primary)] transition-[width] duration-500"
+            style={{ width: `${fillPercent}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-auto pt-8">
+        <Link href={`/events/${event.id}`} className="block">
+          <Button className="w-full">{regOpen ? "Đăng ký sự kiện này" : "Xem chi tiết sự kiện"}</Button>
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -126,11 +301,12 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
   const countdown = useCountdown(event.status === "ended" ? null : countdownTarget);
   const countdownLabel =
     event.status === "ongoing" ? "Hạn nộp bài còn lại" : "Hạn đăng ký còn lại";
-  const fillPercent = Math.min(100, Math.round((event.teamCount / event.maxTeams) * 100));
+  const fillPercent = Math.min(100, Math.round((event.teamCount / Math.max(event.maxTeams, 1)) * 100));
   const remainingSlots = Math.max(0, event.maxTeams - event.teamCount);
+  const regOpen = isRegistrationOpen(event);
 
   return (
-    <section className="px-4 py-20 sm:px-6 md:py-28">
+    <section id="spotlight" className="px-4 py-20 sm:px-6 md:py-28">
       <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-16">
         <div className="min-w-0">
           <p className="landing-section-kicker text-sm font-medium text-[var(--accent-primary)]">
@@ -138,10 +314,12 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
+            <Badge tone={regOpen ? "success" : "warning"}>
+              {regOpen ? "Đang nhận đội" : "Ngoài kỳ đăng ký"}
+            </Badge>
             <span className="text-sm text-[var(--text-muted)]">
               {event.season} {event.year}
             </span>
-            <span className="text-xs text-[var(--text-muted)]">· {formatShortId(event.id)}</span>
           </div>
 
           <h2 className="mt-5 font-display text-3xl font-semibold leading-tight text-[var(--text-primary)] sm:text-4xl md:text-5xl">
@@ -158,7 +336,7 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
                 return (
                   <li key={track} className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
                     <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      className="h-1.5 w-1.5 shrink-0"
                       style={{ backgroundColor: meta.accent }}
                     />
                     {track}
@@ -200,7 +378,7 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
 
           <div className="mt-10 flex flex-wrap gap-3">
             <Link href={`/events/${event.id}`}>
-              <Button>Xem chi tiết & đăng ký</Button>
+              <Button>{regOpen ? "Đăng ký ngay" : "Xem chi tiết"}</Button>
             </Link>
             <Link href="/events">
               <Button variant="secondary">Tất cả sự kiện</Button>
@@ -212,10 +390,7 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
           <aside className="flex flex-col justify-between border-t border-[var(--border-muted)] pt-8 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-0">
             <div>
               <p className="text-sm font-medium text-[var(--text-muted)]">{countdownLabel}</p>
-              <div
-                className="mt-6 grid grid-cols-4 gap-3"
-                suppressHydrationWarning
-              >
+              <div className="mt-6 grid grid-cols-4 gap-3" suppressHydrationWarning>
                 {[
                   { value: countdown.days, label: "ngày" },
                   { value: countdown.hours, label: "giờ" },
@@ -237,11 +412,6 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
                   </div>
                 ))}
               </div>
-              {countdown.isUrgent && (
-                <p className="mt-4 text-sm font-medium text-[var(--color-danger)]">
-                  Sắp đóng cổng — nộp bài ngay
-                </p>
-              )}
             </div>
 
             {event.rounds && event.rounds.length > 0 && (
@@ -326,9 +496,7 @@ function FeaturedIndex({
                   </p>
                   <p className="mt-1 line-clamp-1 text-sm text-[var(--text-muted)]">{ev.tagline}</p>
                 </div>
-                <span className="text-sm text-[var(--text-muted)]">
-                  {STATUS_LABEL[ev.status]}
-                </span>
+                <span className="text-sm text-[var(--text-muted)]">{STATUS_LABEL[ev.status]}</span>
                 <span className="text-sm tabular-nums text-[var(--text-muted)] sm:text-right">
                   {ev.season} {ev.year}
                 </span>

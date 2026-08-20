@@ -99,17 +99,12 @@
 /* Landing — SEAL Arena · Narrative Workflow */
 .landing-hero-atmosphere {
   background:
-    radial-gradient(
-      ellipse 70% 55% at 85% 35%,
-      color-mix(in srgb, var(--accent-primary) 16%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse 45% 40% at 15% 85%,
-      color-mix(in srgb, var(--accent-team) 10%, transparent),
-      transparent 55%
-    ),
-    linear-gradient(180deg, var(--bg-base) 0%, var(--bg-panel) 100%);
+    linear-gradient(
+      105deg,
+      var(--bg-base) 0%,
+      var(--bg-base) 48%,
+      color-mix(in srgb, var(--accent-primary) 12%, var(--bg-panel)) 100%
+    );
 }
 
 @keyframes landing-rise {
