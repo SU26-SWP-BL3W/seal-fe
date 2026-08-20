@@ -33,13 +33,26 @@ export function useMentorWorkspaceViewModel() {
     );
   }, [myEventRoles]);
 
-  // Determine active eventId: priority searchParam > activeRole > mentorRoles[0]
+  // Determine active eventId: trackId in URL > searchParam eventId > mentor role event > activeRole
   const resolvedEventId = useMemo(() => {
+    if (queryTrackId) {
+      const mentorForTrack = mentorRoles.find((r: any) => {
+        const rTrack = (r.trackId || r.TrackId || "").replace(/-/g, "").toLowerCase();
+        const qTrack = queryTrackId.replace(/-/g, "").toLowerCase();
+        return rTrack && qTrack && rTrack === qTrack;
+      });
+      if (mentorForTrack?.eventId || mentorForTrack?.EventId) {
+        return mentorForTrack.eventId || mentorForTrack.EventId || "";
+      }
+    }
     if (queryEventId) return queryEventId;
-    if (activeRole?.eventId || (activeRole as any)?.EventId) return activeRole?.eventId || (activeRole as any)?.EventId || "";
     const firstMentorEvent = mentorRoles[0]?.eventId || mentorRoles[0]?.EventId;
-    return firstMentorEvent || "";
-  }, [queryEventId, activeRole, mentorRoles]);
+    if (firstMentorEvent) return firstMentorEvent;
+    if (activeRole?.eventId || (activeRole as any)?.EventId) {
+      return activeRole?.eventId || (activeRole as any)?.EventId || "";
+    }
+    return "";
+  }, [queryEventId, queryTrackId, activeRole, mentorRoles]);
 
   // 2. Fetch all tracks for current event
   const { data: tracksData, isLoading: isLoadingTracks, refetch: refetchTracks } = useGetTracksByEvent(
