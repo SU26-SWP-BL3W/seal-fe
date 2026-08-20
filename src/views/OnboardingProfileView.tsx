@@ -32,7 +32,7 @@ type Step = "choose" | "fpt" | "nonFpt" | "pending";
 
 export function OnboardingProfileView() {
   const toast = useToast();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("choose");
@@ -347,6 +347,7 @@ export function OnboardingProfileView() {
                       studentCode: fptResult.studentCode ?? fptCode,
                       fullName: fptResult.fullName ?? undefined,
                     } as any);
+                    await refreshUser();
                     toast.success("Đã gửi hồ sơ sinh viên FPT thành công!");
                     setStep("pending");
                   } catch (err: any) {
@@ -517,6 +518,7 @@ export function OnboardingProfileView() {
                     photoCardUrl = uploaded.fileUrl;
                   }
                   await submitProfile({ isFpt: false, schoolId: selectedSchoolId, studentCode, photoStudentCardUrl: photoCardUrl });
+                  await refreshUser();
                   toast.success("Đã nộp hồ sơ sinh viên thành công! Vui lòng chờ xét duyệt.");
                   setStep("pending");
                 } catch (err: any) {

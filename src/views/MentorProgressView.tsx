@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetTeamScoreBreakdown } from "@/repositories/scoresRepository";
-import { Button, Card, Badge, Input } from "@/components/ui";
-import { Search, Shield, RefreshCw, BarChart2, CheckCircle2 } from "lucide-react";
+import { Button, Card, Input } from "@/components/ui";
+import { Search, Shield, RefreshCw, BarChart2 } from "lucide-react";
 
 export function MentorProgressView() {
   const { user } = useAuth();
@@ -56,6 +56,9 @@ export function MentorProgressView() {
           />
           <Button type="submit" variant="ghost" className="text-xs flex items-center gap-1">
             <Search className="w-3.5 h-3.5" /> Tra cứu
+          </Button>
+          <Button type="button" onClick={() => refetch()} variant="ghost" className="text-xs flex items-center gap-1">
+            <RefreshCw className="w-3.5 h-3.5" /> Làm mới
           </Button>
         </form>
       </div>

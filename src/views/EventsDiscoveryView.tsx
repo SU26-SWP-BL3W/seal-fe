@@ -302,8 +302,6 @@ export function EventsDiscoveryView() {
     sort, setSort,
   } = useEventsDiscoveryViewModel();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const handleClear = () => {
     setStatusFilter("all");
     setTrackFilter(null);

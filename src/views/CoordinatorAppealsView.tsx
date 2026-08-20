@@ -45,11 +45,17 @@ export const CoordinatorAppealsView: React.FC = () => {
     return Array.from(map.values());
   }, [tracks]);
 
-  // Hàng đợi xử lý = chỉ đơn còn CHỜ XỬ LÝ (Pending).
-  const displayAppeals = React.useMemo(
-    () => appeals.filter((a) => a.status === AppealStatus.Pending),
-    [appeals],
-  );
+  const [statusFilter, setStatusFilter] = useState<"PENDING" | "APPROVED" | "REJECTED" | "ALL">("PENDING");
+
+  const pendingCount = appeals.filter((a) => a.status === AppealStatus.Pending).length;
+
+  const displayAppeals = React.useMemo(() => {
+    if (statusFilter === "ALL") return appeals;
+    if (statusFilter === "PENDING") return appeals.filter((a) => a.status === AppealStatus.Pending);
+    if (statusFilter === "APPROVED") return appeals.filter((a) => a.status === AppealStatus.Approved);
+    if (statusFilter === "REJECTED") return appeals.filter((a) => a.status === AppealStatus.Rejected);
+    return appeals;
+  }, [appeals, statusFilter]);
 
   const [selectedAppealId, setSelectedAppealId] = useState<string | null>(null);
   const [assignedJudgeId, setAssignedJudgeId] = useState("");
@@ -147,6 +153,54 @@ export const CoordinatorAppealsView: React.FC = () => {
           </p>
         </div>
 
+        {/* Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#263339] pb-3">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("PENDING")}
+            className={`px-3.5 py-1.5 font-mono text-xs font-bold uppercase transition-colors cursor-pointer ${
+              statusFilter === "PENDING"
+                ? "bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/50"
+                : "text-[#8a9ba8] hover:text-white border border-transparent"
+            }`}
+          >
+            Chờ Xử Lý ({pendingCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("APPROVED")}
+            className={`px-3.5 py-1.5 font-mono text-xs font-bold uppercase transition-colors cursor-pointer ${
+              statusFilter === "APPROVED"
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/50"
+                : "text-[#8a9ba8] hover:text-white border border-transparent"
+            }`}
+          >
+            Đã Duyệt
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("REJECTED")}
+            className={`px-3.5 py-1.5 font-mono text-xs font-bold uppercase transition-colors cursor-pointer ${
+              statusFilter === "REJECTED"
+                ? "bg-red-500/20 text-red-300 border border-red-500/50"
+                : "text-[#8a9ba8] hover:text-white border border-transparent"
+            }`}
+          >
+            Đã Từ Chối
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("ALL")}
+            className={`px-3.5 py-1.5 font-mono text-xs font-bold uppercase transition-colors cursor-pointer ${
+              statusFilter === "ALL"
+                ? "bg-[#8b5cf6]/20 text-[#8b5cf6] border border-[#8b5cf6]/50"
+                : "text-[#8a9ba8] hover:text-white border border-transparent"
+            }`}
+          >
+            Tất Cả ({appeals.length})
+          </button>
+        </div>
+
         {/* Global Feedback Banners */}
         {errorMessage && (
           <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs flex items-center gap-3">
@@ -187,7 +241,7 @@ export const CoordinatorAppealsView: React.FC = () => {
                 ) : displayAppeals.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-8 text-center text-[#8a9ba8]">
-                      Không có đơn phúc khảo nào đang chờ xử lý.
+                      Không có đơn phúc khảo nào trong mục này.
                     </td>
                   </tr>
                 ) : (
@@ -202,34 +256,50 @@ export const CoordinatorAppealsView: React.FC = () => {
                         <td className="p-4 text-[#8a9ba8] truncate max-w-xs" title={apl.reason}>{apl.reason}</td>
                         <td className="p-4 text-[#8a9ba8]">{new Date(apl.createdTime).toLocaleString("vi-VN")}</td>
                         <td className="p-4">
-                          <span className="text-[#f59e0b] font-semibold text-[10px]">
-                            [ CHỜ XỬ LÝ ]
-                          </span>
+                          {apl.status === AppealStatus.Pending ? (
+                            <span className="text-[#f59e0b] font-semibold text-[10px]">
+                              [ CHỜ XỬ LÝ ]
+                            </span>
+                          ) : apl.status === AppealStatus.Approved ? (
+                            <span className="text-emerald-400 font-semibold text-[10px]">
+                              [ ĐÃ DUYỆT ]
+                            </span>
+                          ) : (
+                            <span className="text-red-400 font-semibold text-[10px]">
+                              [ ĐÃ TỪ CHỐI ]
+                            </span>
+                          )}
                         </td>
 
-                        {/* Action Buttons (DUYỆT / TỪ CHỐI) */}
+                        {/* Action Buttons */}
                         <td className="p-4 text-right pr-6">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              disabled={isSubmitting}
-                              onClick={() => setSelectedAppealId(apl.id)}
-                              className="px-3.5 py-1.5 bg-[#8b5cf6] text-white hover:bg-purple-600 font-mono text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                              <span>DUYỆT</span>
-                            </button>
+                          {apl.status === AppealStatus.Pending ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => setSelectedAppealId(apl.id)}
+                                className="px-3.5 py-1.5 bg-[#8b5cf6] text-white hover:bg-purple-600 font-mono text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                <span>DUYỆT</span>
+                              </button>
 
-                            <button
-                              type="button"
-                              disabled={isSubmitting}
-                              onClick={() => setRejectingAppealId(apl.id)}
-                              className="px-3.5 py-1.5 border border-[#ef4444] text-[#ef4444] hover:bg-red-500/10 font-mono text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                              <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                              <span>TỪ CHỐI</span>
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => setRejectingAppealId(apl.id)}
+                                className="px-3.5 py-1.5 border border-[#ef4444] text-[#ef4444] hover:bg-red-500/10 font-mono text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                                <span>TỪ CHỐI</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-[#8a9ba8] italic">
+                              {apl.response || "Đã xử lý"}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useMySubmissions } from "@/repositories/submitResultsRepository";
@@ -47,9 +48,12 @@ function pick(obj: unknown, ...keys: string[]): string {
 
 export function AppealsView() {
   const toast = useToast();
+  const searchParams = useSearchParams();
+  const subIdFromUrl = searchParams.get("subId") || searchParams.get("submitResultId") || "";
+
   const { user, activeRole } = useAuth();
   const [reason, setReason] = useState("");
-  const [submitResultId, setSubmitResultId] = useState("");
+  const [submitResultId, setSubmitResultId] = useState(subIdFromUrl);
   const [formError, setFormError] = useState("");
 
   const [detailModal, setDetailModal] = useState<Appeal | null>(null);
@@ -64,7 +68,13 @@ export function AppealsView() {
   // Team members: đơn phúc khảo của đội mình. EC: toàn bộ đơn trong sự kiện (gộp mọi vòng thi).
   const { data: myTeam } = useMyTeam(eventIdFromRole || undefined);
   const teamId = pick(myTeam, "id", "Id", "TeamId");
-  const { data: mySubmissions = [] } = useMySubmissions();
+  const { data: mySubmissions = [] } = useMySubmissions(teamId || undefined);
+
+  useEffect(() => {
+    if (subIdFromUrl && !submitResultId) {
+      setSubmitResultId(subIdFromUrl);
+    }
+  }, [subIdFromUrl, submitResultId]);
 
   const teamAppeals = useGetAppealsByTeam(!isEC ? teamId || undefined : undefined);
   const eventAppeals = useGetAppealsByEvent(isEC ? eventIdFromRole || undefined : undefined);
@@ -166,11 +176,13 @@ export function AppealsView() {
                       className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--color-warning)]"
                     >
                       <option value="">-- Chọn bài nộp --</option>
-                      {mySubmissions.map((s) => {
+                      {mySubmissions.map((s: any) => {
                         const id = pick(s, "id", "Id");
+                        const trackName = s.trackName || s.TrackName || "";
+                        const displayCode = pick(s, "displayCode", "DisplayCode") || id.slice(0, 8).toUpperCase();
                         return (
                           <option key={id} value={id}>
-                            {pick(s, "displayCode", "DisplayCode") || id}
+                            {trackName ? `[${trackName}] ` : ""}{displayCode}
                           </option>
                         );
                       })}

@@ -59,7 +59,7 @@ function getRoundStatus(r: any) {
 export const CoordinatorDashboardView: React.FC = () => {
   const { data: eventsList = [], isLoading, refetch } = useMyEvents();
   const { data: pendingTeams = [] } = useGetPendingTeams();
-  const { data: pendingUsersData } = useGetUsers({ isApproved: false });
+  const { data: _pendingUsersData } = useGetUsers({ isApproved: false });
   const appealsList: { status?: number | string; Status?: string }[] = [];
 
   // Deduplicated assigned events list

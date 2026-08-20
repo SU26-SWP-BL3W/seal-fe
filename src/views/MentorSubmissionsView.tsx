@@ -12,7 +12,6 @@ import {
   Copy,
   Check,
   Target,
-  ExternalLink,
   MessageSquare,
   Plus,
   Trash2,
@@ -31,7 +30,7 @@ export function MentorSubmissionsView() {
     submissions,
     teamNameById,
     isLoading,
-    eventId,
+    eventId: _eventId,
   } = useMentorWorkspaceViewModel();
 
   const currentTrackId = trackIdParam || selectedTrackId || (myTracks[0]?.id || myTracks[0]?.Id || "");

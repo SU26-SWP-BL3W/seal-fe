@@ -7,7 +7,6 @@ import { useGetSubmitResultsByTrack } from "@/repositories/submitResultsReposito
 import { useGetTemplate } from "@/repositories/templatesRepository";
 import { useSaveScore, useGetScoresByEventRole } from "@/repositories/scoresRepository";
 import { useMyAssignedJudgeTracks } from "@/viewModels/useMyAssignedJudgeTracks";
-import { useGetMyEventRoles } from "@/repositories/eventRolesRepository";
 import { useEvents, useEventRounds } from "@/repositories/eventsRepository";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
@@ -43,9 +42,6 @@ export function JudgeScoringView() {
     const ev = (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data) || [];
     return Array.isArray(ev) ? ev : [];
   }, [rawEvents]);
-
-  // Lấy toàn bộ danh sách vai trò của người dùng để xác định các Track làm Mentor
-  const { data: myEventRoles = [] } = useGetMyEventRoles(userId || undefined);
 
   // Danh sách Track được phân công làm Giám Khảo
   const { assignedTracks, isLoading: loadingTracks } = useMyAssignedJudgeTracks();
@@ -120,7 +116,7 @@ export function JudgeScoringView() {
     return assignedTracks.filter((t) => normalizeId(t.eventId) === currentEventNorm);
   }, [assignedTracks, eventId]);
 
-  const { data: rawSubmissions = [], isLoading: loadingSubmissions } =
+  const { data: rawSubmissions = [], isLoading: _loadingSubmissions } =
     useGetSubmitResultsByTrack(activeTrackId, eventId);
   const apiSubmissions = useMemo(() => {
     return Array.isArray(rawSubmissions) ? rawSubmissions : [];
