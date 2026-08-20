@@ -182,7 +182,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
 
   return (
     <>
-    <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
+      <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
         {/* Breadcrumb */}
         <nav className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-muted)] pb-4">
           <div className="flex min-w-0 items-center gap-2 text-sm text-[var(--text-muted)]">
@@ -839,9 +839,8 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
             />
           </div>
         )}
-    </PageShell>
+      </PageShell>
 
-      {/* Modal Chỉnh Sửa Toàn Diện Sự Kiện & Lộ Trình Cho Admin / Coordinator */}
       {isComprehensiveEditOpen && (
         <ComprehensiveEventEditModal
           event={{
