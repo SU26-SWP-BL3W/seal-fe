@@ -217,6 +217,11 @@ export function UserProfileView() {
     user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl || null
   );
 
+  // FPT Verification state
+  const [fptCode, setFptCode] = useState(studentCode || "");
+  const [fptResult, setFptResult] = useState<FptStudentResponse | null>(null);
+  const [fptError, setFptError] = useState("");
+
   // Sync state when user loads
   useEffect(() => {
     if (user) {
@@ -239,11 +244,6 @@ export function UserProfileView() {
       }
     }
   }, [user]);
-
-  // FPT Verification state
-  const [fptCode, setFptCode] = useState(studentCode || "");
-  const [fptResult, setFptResult] = useState<FptStudentResponse | null>(null);
-  const [fptError, setFptError] = useState("");
 
   const [isDragging, setIsDragging] = useState(false);
   const [submitError, setSubmitError] = useState("");
