@@ -18,9 +18,11 @@ import {
 } from "@/repositories/teamsRepository";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
+import { Card, ConfirmDialog, SkeletonRows, Button, Badge } from "@/components/ui";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useToast } from "@/providers/ToastProvider";
-import { AlertTriangle, Check, X, Mail, Sparkles, User, RefreshCw } from "lucide-react";
+import { AlertTriangle, Check, X, Mail } from "lucide-react";
 import {
   AvailableTeamsList,
   buildRequirements,
@@ -153,7 +155,7 @@ export function MyTeamView() {
 
     try {
       await respondInvitation({ invitationId: invId, isAccepted: true });
-      toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}".`);
+      toast.success(`Bạn đã gia nhập đội "${targetName}".`);
       queryClient.invalidateQueries({ queryKey: ["my-team"] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
       queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
@@ -192,19 +194,17 @@ export function MyTeamView() {
 
   if (isLoading) {
     return (
-      <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)]">
-        <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-[var(--space-lg)]">
-          <SkeletonRows rows={1} />
-          <div className="grid grid-cols-1 gap-[var(--space-lg)] lg:grid-cols-3">
-            <Card className="lg:col-span-2">
-              <SkeletonRows rows={4} />
-            </Card>
-            <Card>
-              <SkeletonRows rows={3} />
-            </Card>
-          </div>
+      <PageShell>
+        <SkeletonRows rows={1} />
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <SkeletonRows rows={4} />
+          </Card>
+          <Card>
+            <SkeletonRows rows={3} />
+          </Card>
         </div>
-      </main>
+      </PageShell>
     );
   }
 
@@ -224,187 +224,174 @@ export function MyTeamView() {
         : "/admin/dashboard";
 
       const workspaceTitle = isJudge
-        ? "BÀN CHẤM ĐIỂM GIÁM KHẢO"
+        ? "Bàn chấm điểm giám khảo"
         : isMentor
-        ? "BÀN CỐ VẤN CHUYÊN MÔN"
+        ? "Bàn cố vấn chuyên môn"
         : isEC
-        ? "BÀN ĐIỀU PHỐI BAN TỔ CHỨC"
-        : "BẢNG ĐIỀU HÀNH ADMIN";
+        ? "Bàn điều phối ban tổ chức"
+        : "Bảng điều hành admin";
 
       return (
-        <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-12 flex items-center justify-center font-mono">
-          <Card className="max-w-xl w-full p-8 bg-[#10171a] border border-amber-500/40 hud-clipped space-y-6 text-center shadow-lg">
+        <PageShell className="flex min-h-[calc(100dvh-4rem)] items-center justify-center">
+          <Card className="max-w-xl w-full space-y-6 p-8 text-center">
             <div className="space-y-2">
-              <span className="px-3 py-1 bg-amber-500/15 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase hud-clipped inline-block">
-                [ CHÍNH SÁCH BẢO VỆ TÍNH LIÊM CHÍNH CUỘC THI ]
-              </span>
-              <h2 className="font-display text-xl font-bold text-white uppercase tracking-wide">
-                Không Thể Tham Gia Hoặc Tạo Đội Thi
+              <Badge tone="warning">Chính sách bảo vệ tính liêm chính</Badge>
+              <h2 className="font-display text-xl font-semibold text-[var(--text-primary)]">
+                Không thể tham gia hoặc tạo đội thi
               </h2>
             </div>
 
-            <p className="text-xs text-zinc-300 font-sans leading-relaxed">
-              Tài khoản của bạn đang giữ vai trò <strong>{isJudge ? "Giám Khảo (Judge)" : isMentor ? "Cố Vấn (Mentor)" : isEC ? "Ban Tổ Chức (Coordinator)" : "Quản Trị Viên"}</strong> trong hệ thống.
-              Theo quy chế chống xung đột lợi ích (Conflict of Interest), Chuyên gia chuyên môn và Ban tổ chức không được phép đăng ký hoặc tham gia đội thi của thí sinh.
+            <p className="text-sm leading-relaxed text-[var(--text-muted)]">
+              Tài khoản của bạn đang giữ vai trò{" "}
+              <strong>
+                {isJudge ? "Giám khảo" : isMentor ? "Cố vấn" : isEC ? "Ban tổ chức" : "Quản trị viên"}
+              </strong>{" "}
+              trong hệ thống. Theo quy chế chống xung đột lợi ích, chuyên gia và ban tổ chức không được phép tham gia đội thi của thí sinh.
             </p>
 
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
               <Link href={redirectUrl}>
-                <button className="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-white text-black font-bold uppercase text-xs hud-clipped transition-all cursor-pointer shadow-sm">
-                  [ VÀO {workspaceTitle} &gt; ]
-                </button>
+                <Button accent="coordinator">Vào {workspaceTitle}</Button>
               </Link>
               <Link href="/events">
-                <button className="w-full sm:w-auto px-4 py-2.5 bg-[#141f23] border border-zinc-700 hover:border-zinc-500 text-zinc-300 font-bold uppercase text-xs hud-clipped transition-all cursor-pointer">
-                  [ KHÁM PHÁ SỰ KIỆN ]
-                </button>
+                <Button variant="ghost">Khám phá sự kiện</Button>
               </Link>
             </div>
           </Card>
-        </main>
+        </PageShell>
       );
     }
 
     return (
-      <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-8">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 font-mono">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
-            <div>
-              <div className="text-[10px] uppercase tracking-widest text-zinc-400">
-                [ KHÔNG GIAN ĐỘI THI ]
-              </div>
-              <h1 className="mt-1 font-display text-2xl sm:text-3xl font-bold uppercase text-white">
-                Gia Nhập Hoặc Tạo Đội Thi Mới
-              </h1>
-            </div>
-
-            <div className="flex items-center gap-2 bg-zinc-900/90 p-1 border border-zinc-800 rounded hud-clipped">
+      <PageShell className="max-w-4xl">
+        <PageHeader
+          title="Gia nhập hoặc tạo đội thi"
+          description="Tạo đội mới, tìm đội đang tuyển thành viên, hoặc phản hồi lời mời."
+          actions={
+            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-1">
               {pendingMyInvitations.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setNoTeamTab("invitations")}
-                  className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                     noTeamTab === "invitations"
-                      ? "bg-cyan-400 text-black shadow-sm font-extrabold"
-                      : "text-cyan-300 hover:text-white"
+                      ? "bg-[var(--accent-team)] text-[var(--bg-base)]"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                   }`}
                 >
-                  <Mail className="size-3.5" /> Lời Mời Nhận Được ({pendingMyInvitations.length})
+                  <Mail className="mr-1 inline size-3.5" />
+                  Lời mời ({pendingMyInvitations.length})
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setNoTeamTab("create")}
-                className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer ${
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   noTeamTab === "create"
-                    ? "bg-[var(--accent-team)] text-black shadow-sm font-extrabold"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-[var(--accent-team)] text-[var(--bg-base)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                ⚡ Tạo Đội Mới
+                Tạo đội mới
               </button>
               <button
                 type="button"
                 onClick={() => setNoTeamTab("find")}
-                className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer ${
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   noTeamTab === "find"
-                    ? "bg-cyan-400 text-black shadow-sm font-extrabold"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-[var(--accent-team)] text-[var(--bg-base)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                🔍 Tìm & Gia Nhập Đội
+                Tìm đội
+              </button>
+            </div>
+          }
+        />
+
+        {noTeamTab === "invitations" && pendingMyInvitations.length > 0 ? (
+          <div className="space-y-4">
+            <Card className="space-y-4 p-5">
+              <div className="flex flex-col justify-between gap-2 border-b border-[var(--border-muted)] pb-3 sm:flex-row sm:items-center">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  Bạn có {pendingMyInvitations.length} lời mời gia nhập đội đang chờ
+                </p>
+                <span className="text-xs text-[var(--text-muted)]">Do đội trưởng gửi</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {pendingMyInvitations.map((inv: any) => {
+                  const invId = inv.invitationId || inv.InvitationId || inv.id || inv.Id;
+                  const targetName = inv.targetName || inv.TargetName || "Đội thi";
+                  const inviter = inv.inviterName || inv.InviterName || "Đội trưởng";
+
+                  return (
+                    <div
+                      key={invId}
+                      className="flex flex-col justify-between gap-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)]/50 p-5 md:flex-row md:items-center"
+                    >
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge tone="info">Lời mời vào đội</Badge>
+                          <h3 className="truncate font-display text-lg font-semibold text-[var(--text-primary)]">
+                            {targetName}
+                          </h3>
+                        </div>
+                        <p className="text-sm leading-relaxed text-[var(--text-muted)]">
+                          Đội trưởng <strong>{inviter}</strong> đã mời bạn tham gia đội thi này.
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button
+                          accent="team"
+                          disabled={isRespondingInv}
+                          onClick={() => handleAcceptInv(inv)}
+                          className="text-xs"
+                        >
+                          <Check className="size-4" /> Đồng ý
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          disabled={isRespondingInv}
+                          onClick={() => handleDeclineInv(inv)}
+                          className="text-xs text-[var(--color-danger)]"
+                        >
+                          <X className="size-4" /> Từ chối
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+              <span>Hoặc bạn muốn tự tạo đội riêng?</span>
+              <button
+                type="button"
+                onClick={() => setNoTeamTab("create")}
+                className="font-medium text-[var(--accent-team)] hover:underline"
+              >
+                Chuyển sang tạo đội mới
               </button>
             </div>
           </div>
-
-          {noTeamTab === "invitations" && pendingMyInvitations.length > 0 ? (
-            <div className="space-y-4">
-              <div className="p-5 bg-gradient-to-r from-cyan-950/60 to-[#101e24] border-2 border-cyan-400 hud-clipped shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-500/30 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex size-3 rounded-full bg-cyan-400 animate-pulse" />
-                    <span className="font-mono text-xs font-bold text-cyan-300 uppercase tracking-wider">
-                      [ BẠN CÓ {pendingMyInvitations.length} LỜI MỜI GIA NHẬP ĐỘI THI ĐANG CHỜ ]
-                    </span>
-                  </div>
-                  <span className="font-mono text-[10px] text-zinc-400">
-                    Do Đội trưởng gửi lời mời chính thức
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {pendingMyInvitations.map((inv: any) => {
-                    const invId = inv.invitationId || inv.InvitationId || inv.id || inv.Id;
-                    const targetName = inv.targetName || inv.TargetName || "Đội thi";
-                    const inviter = inv.inviterName || inv.InviterName || "Đội trưởng";
-
-                    return (
-                      <div
-                        key={invId}
-                        className="p-5 bg-black/60 border border-cyan-500/40 hud-clipped flex flex-col md:flex-row md:items-center justify-between gap-5"
-                      >
-                        <div className="space-y-2 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold uppercase rounded">
-                              LỜI MỜI VÀO ĐỘI
-                            </span>
-                            <h3 className="font-display text-xl font-bold text-white uppercase truncate">
-                              {targetName}
-                            </h3>
-                          </div>
-                          <p className="font-sans text-xs text-zinc-300 leading-relaxed">
-                            Đội trưởng <strong>{inviter}</strong> đã gửi lời mời bạn tham gia đội thi này. Nhấn <strong>[ Đồng ý vào đội ]</strong> để chính thức gia nhập đội và mở không gian làm việc của đội ngay lập tức!
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
-                          <button
-                            disabled={isRespondingInv}
-                            onClick={() => handleAcceptInv(inv)}
-                            className="px-5 py-2.5 bg-emerald-500 hover:bg-white text-black font-bold uppercase hud-clipped transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-1.5 text-xs"
-                          >
-                            <Check className="size-4" /> [ ✓ ĐỒNG Ý VÀO ĐỘI ]
-                          </button>
-                          <button
-                            disabled={isRespondingInv}
-                            onClick={() => handleDeclineInv(inv)}
-                            className="px-4 py-2.5 bg-rose-950/40 hover:bg-rose-900 text-rose-300 border border-rose-500/40 font-bold uppercase hud-clipped transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 text-xs"
-                          >
-                            <X className="size-4" /> [ ✕ TỪ CHỐI ]
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pt-2 font-mono text-xs text-zinc-400">
-                <span>Hoặc bạn muốn tự tạo đội riêng của mình?</span>
-                <button
-                  onClick={() => setNoTeamTab("create")}
-                  className="text-cyan-400 hover:underline cursor-pointer font-bold"
-                >
-                  Chuyển sang Khởi tạo đội mới &gt;
-                </button>
-              </div>
-            </div>
-          ) : noTeamTab === "create" ? (
-            <CreateTeamForm defaultEventId={targetEventId} />
-          ) : (
-            <div className="space-y-4">
-              <div className="p-4 bg-cyan-950/20 border border-cyan-500/30 rounded text-xs text-zinc-300 font-sans leading-relaxed">
-                💡 <strong>Dành cho thí sinh chưa có nhóm:</strong> Danh sách bên dưới hiển thị các đội thi trong sự kiện đang tuyển thêm thành viên. Bạn có thể nhấn <strong>Gửi Email Đề Nghị Gia Nhập</strong> để gửi thông tin ứng tuyển trực tiếp tới Đội trưởng.
-              </div>
-              <AvailableTeamsList
-                eventId={targetEventId}
-                eventName="Sự kiện SEAL"
-                onSwitchToCreate={() => setNoTeamTab("create")}
-              />
-            </div>
-          )}
-        </div>
-      </main>
+        ) : noTeamTab === "create" ? (
+          <CreateTeamForm defaultEventId={targetEventId} />
+        ) : (
+          <div className="space-y-4">
+            <Card className="border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5 p-4 text-sm leading-relaxed text-[var(--text-muted)]">
+              Danh sách bên dưới hiển thị các đội đang tuyển thêm thành viên. Bạn có thể gửi email đề nghị gia nhập trực tiếp tới đội trưởng.
+            </Card>
+            <AvailableTeamsList
+              eventId={targetEventId}
+              eventName="Sự kiện SEAL"
+              onSwitchToCreate={() => setNoTeamTab("create")}
+            />
+          </div>
+        )}
+      </PageShell>
     );
   }
 
@@ -437,8 +424,8 @@ export function MyTeamView() {
   };
 
   return (
-    <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)]">
-      <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-[var(--space-lg)]">
+    <PageShell>
+      <div className="flex flex-col gap-6">
         <TeamHeader
           team={team}
           isLeader={isLeader}
@@ -462,35 +449,35 @@ export function MyTeamView() {
         />
 
         {team.status === "PendingApproval" && (
-          <Card className="border-sky-500/40 bg-sky-950/20 p-4 hud-clipped space-y-2">
-            <div className="flex items-center gap-2 text-sky-400 font-mono font-bold text-xs uppercase tracking-wider">
-              <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-              <span>Hồ sơ đã gửi tới Ban Tổ Chức — Đang chờ thẩm định</span>
+          <Card className="space-y-2 border-sky-500/40 bg-sky-950/20 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-sky-400">
+              <span className="h-2 w-2 rounded-full bg-sky-400 animate-pulse" />
+              <span>Hồ sơ đã gửi tới Ban tổ chức — đang chờ thẩm định</span>
             </div>
-            <p className="font-sans text-xs text-sky-200/90 leading-relaxed">
-              Hệ thống đã gửi email xác nhận ghi danh. Ban Tổ Chức sẽ kiểm tra tính hợp lệ của đội (sĩ số 3–5 người, thẻ sinh viên các thành viên) và gửi kết quả duyệt qua thông báo & email trong thời gian sớm nhất.
+            <p className="text-sm leading-relaxed text-sky-200/90">
+              Hệ thống đã gửi email xác nhận ghi danh. Ban tổ chức sẽ kiểm tra tính hợp lệ của đội và gửi kết quả duyệt qua thông báo và email.
             </p>
           </Card>
         )}
 
         {(team.lastRejectReason || team.status === "Rejected") && (
-          <Card className="border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 p-5 hud-clipped space-y-3">
-            <div className="flex items-center gap-2 text-[var(--color-danger)] font-mono font-bold text-xs uppercase tracking-wider">
-              <AlertTriangle className="w-4 h-4 text-[var(--color-danger)]" />
-              <span>Lý do Ban Tổ Chức từ chối / trả hồ sơ</span>
+          <Card className="space-y-3 border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 p-5">
+            <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-danger)]">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Lý do Ban tổ chức từ chối / trả hồ sơ</span>
             </div>
-            <div className="p-3.5 bg-black/50 border border-red-500/30 font-mono text-xs text-red-200 leading-relaxed rounded">
+            <div className="rounded-lg border border-red-500/30 bg-black/50 p-3.5 text-sm leading-relaxed text-red-200">
               {team.lastRejectReason || "Hồ sơ đội chưa đáp ứng đầy đủ thể lệ của giải đấu. Vui lòng kiểm tra lại thông tin các thành viên."}
             </div>
-            <p className="font-sans text-[11px] text-zinc-400">
-              💡 Vui lòng hoàn thiện lại đội hình hoặc cập nhật hồ sơ thành viên theo lý do trên, sau đó nhấn nút <strong>[ Ghi danh với BTC ]</strong> để gửi lại hồ sơ xét duyệt.
+            <p className="text-xs text-[var(--text-muted)]">
+              Hoàn thiện lại đội hình hoặc cập nhật hồ sơ thành viên, sau đó nhấn <strong>Ghi danh với BTC</strong> để gửi lại hồ sơ.
             </p>
           </Card>
         )}
 
         {showRequirementBanner && (
           <Card className="border-[var(--color-warning)]/40 bg-[var(--color-warning)]/5">
-            <h2 className="mb-[var(--space-sm)] font-mono text-xs font-bold uppercase tracking-wider text-[color:var(--color-warning)]">
+            <h2 className="mb-3 text-sm font-semibold text-[var(--color-warning)]">
               Chưa đủ điều kiện ghi danh
             </h2>
             <RegistrationChecklist requirements={requirements} />
@@ -642,38 +629,36 @@ export function MyTeamView() {
       {showEditDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
           <Card className="w-full max-w-md space-y-4 p-6">
-            <h3 className="font-display text-base font-bold uppercase text-[color:var(--accent-team)]">
-              Sửa Thông Tin Đội
+            <h3 className="font-display text-base font-semibold text-[var(--text-primary)]">
+              Sửa thông tin đội
             </h3>
-            <div className="space-y-3 font-mono text-xs">
+            <div className="space-y-3 text-sm">
               <div className="space-y-1">
-                <label className="text-[10px] uppercase text-[color:var(--text-muted)]">Tên đội</label>
+                <label className="text-[var(--text-muted)]">Tên đội</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 text-[color:var(--text-primary)]"
+                  className="w-full rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] uppercase text-[color:var(--text-muted)]">Mô tả</label>
+                <label className="text-[var(--text-muted)]">Mô tả</label>
                 <textarea
                   rows={3}
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 text-[color:var(--text-primary)]"
+                  className="w-full rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 text-[var(--text-primary)]"
                 />
               </div>
-              {dialogError && <p className="text-[color:var(--color-danger)]">{dialogError}</p>}
+              {dialogError && <p className="text-[var(--color-danger)]">{dialogError}</p>}
             </div>
             <div className="flex justify-end gap-2 border-t border-[var(--border-muted)] pt-3">
-              <button
-                onClick={closeDialogs}
-                className="px-3 py-1.5 font-mono text-xs text-[color:var(--text-muted)] hover:text-white"
-              >
+              <Button variant="ghost" onClick={closeDialogs}>
                 Hủy
-              </button>
-              <button
+              </Button>
+              <Button
+                accent="team"
                 onClick={() =>
                   runAction(
                     () => updateTeam({ id: team.id, payload: { name: editName.trim(), description: editDescription.trim() } }),
@@ -681,10 +666,9 @@ export function MyTeamView() {
                   )
                 }
                 disabled={isUpdatingTeam || !editName.trim()}
-                className="bg-[color:var(--accent-team)] px-4 py-1.5 font-mono text-xs font-bold text-black hover:brightness-110 disabled:opacity-50"
               >
-                {isUpdatingTeam ? "Đang lưu..." : "Lưu Thay Đổi"}
-              </button>
+                {isUpdatingTeam ? "Đang lưu..." : "Lưu thay đổi"}
+              </Button>
             </div>
           </Card>
         </div>
@@ -707,6 +691,6 @@ export function MyTeamView() {
           }}
         />
       )}
-    </main>
+    </PageShell>
   );
 }
