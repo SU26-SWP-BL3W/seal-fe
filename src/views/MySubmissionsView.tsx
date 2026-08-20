@@ -3,16 +3,12 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
-import { useToast } from "@/providers/ToastProvider";
-import { useQueryClient } from "@tanstack/react-query";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import {
   useMySubmissions,
   useDeleteSubmission,
   useUpdateSubmission,
-  useMentorFeedbacks,
   readApiError,
-  parseMentorFeedbackComment,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
 import {
@@ -25,7 +21,6 @@ import {
   Edit,
   Trash2,
   Scale,
-  MessageSquare,
   ChevronDown,
   ChevronUp,
   AlertTriangle,
@@ -33,23 +28,18 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  X,
 } from "lucide-react";
 
 export function MySubmissionsView() {
-  const toast = useToast();
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: teamResponse, isLoading: isLoadingTeam } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
 
   const teamId = team?.id || team?.Id || "";
-  const isLeader = (team?.members || []).some(
-    (m: any) => (m.userId === user?.id || m.userId === user?.userId) && (m.roleName === "TeamLeader" || m.roleName === "Leader"),
-  );
+  const isLeader = team?.leaderId === user?.id || team?.LeaderId === user?.id;
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
-  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
+  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions();
 
   // Edit Modal State
   const [editingSub, setEditingSub] = useState<SubmitResultListItem | null>(null);
@@ -71,25 +61,12 @@ export function MySubmissionsView() {
     setEditError("");
   };
 
-  const sanitizeUrl = (url: string) => {
-    const trimmed = url.trim();
-    if (!trimmed) return "";
-    if (!/^https?:\/\//i.test(trimmed)) {
-      return `https://${trimmed}`;
-    }
-    return trimmed;
-  };
-
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSub) return;
     const subId = editingSub.id || editingSub.Id || "";
-    const repoFormatted = sanitizeUrl(editRepo);
-    const demoFormatted = sanitizeUrl(editDemo);
-    const slideFormatted = sanitizeUrl(editSlide);
-
-    if (!repoFormatted && !demoFormatted && !slideFormatted) {
-      setEditError("Vui lòng điền ít nhất một đường dẫn hợp lệ cho bài nộp.");
+    if (!editRepo.trim() || !editDemo.trim() || !editSlide.trim()) {
+      setEditError("Vui lòng điền đủ 3 đường dẫn bắt buộc: Repo, Demo và Slide.");
       return;
     }
 
@@ -97,66 +74,57 @@ export function MySubmissionsView() {
       await updateMutation.mutateAsync({
         id: subId,
         data: {
-          RepoUrl: repoFormatted,
-          DemoUrl: demoFormatted,
-          SlideUrl: slideFormatted,
-          SubmissionUrl: repoFormatted || demoFormatted || slideFormatted,
+          RepoUrl: editRepo.trim(),
+          DemoUrl: editDemo.trim(),
+          SlideUrl: editSlide.trim(),
+          SubmissionUrl: editRepo.trim(),
           Description: editDesc.trim(),
         },
       });
       setEditingSub(null);
-      toast.success("Cập nhật bài nộp thành công!");
-      queryClient.invalidateQueries({ queryKey: ["submitResults"] });
-      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
       refetch();
     } catch (err) {
-      const msg = readApiError(err);
-      setEditError(msg);
-      toast.error(msg);
+      setEditError(readApiError(err));
     }
   };
 
   const handleDelete = async (sub: SubmitResultListItem) => {
     const subId = sub.id || sub.Id || "";
-    if (!window.confirm("Bạn có chắc chắn muốn xóa bài nộp này không?")) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa bài nộp này không?")) return;
     try {
       await deleteMutation.mutateAsync(subId);
-      toast.success("Đã xóa bài nộp thành công.");
-      queryClient.invalidateQueries({ queryKey: ["submitResults"] });
-      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
       refetch();
     } catch (err) {
-      const msg = readApiError(err);
-      toast.error("Không thể xóa bài nộp: " + msg);
+      alert("Không thể xóa bài nộp: " + readApiError(err));
     }
   };
 
   if (!user) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#080f11] border border-[#00d9ff] p-8 text-center glow-box space-y-4">
-          <div className="corner-accent-tl" />
-          <div className="corner-accent-tr" />
-          <div className="corner-accent-bl" />
-          <div className="corner-accent-br" />
-          <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
-          <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Vui lòng đăng nhập để xem danh sách bài nộp của đội.
-          </p>
-          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <Link href="/login" className="w-full">
-              <button className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors">
-                Đến Trang Đăng Nhập
-              </button>
-            </Link>
+          <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-[#080f11] border border-[#00d9ff] p-8 text-center glow-box space-y-4">
+              <div className="corner-accent-tl" />
+              <div className="corner-accent-tr" />
+              <div className="corner-accent-bl" />
+              <div className="corner-accent-br" />
+              <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
+              <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
+                Vui lòng đăng nhập để xem danh sách bài nộp của đội.
+              </p>
+              <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
+                <Link href="/login" className="w-full">
+                  <button className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors">
+                    Đến Trang Đăng Nhập
+                  </button>
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        );
+      }
 
-  return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#00d9ff] selection:text-[#003641]">
+      return (
+        <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#00d9ff] selection:text-[#003641]">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header Panel (Stitch T5) */}
             <div className="bg-[#1a2123] relative p-6 border-t-2 border-[#00d9ff] shadow-[inset_0_0_20px_rgba(0,217,255,0.05)] border border-white/5 glow-box">
@@ -184,7 +152,7 @@ export function MySubmissionsView() {
 
                   <Link href="/submissions/new">
                     <button className="bg-[#00d9ff] text-[#080f11] font-display text-sm font-bold px-5 py-2 rounded-[12px] rounded-br-none hover:bg-white transition-all flex items-center gap-1.5 uppercase shadow-[0_0_15px_rgba(0,217,255,0.3)]">
-                      <Plus className="w-4 h-4" /> Nộp bài mới
+                      <Plus className="w-4 h-4" /> Nộp bài mới &gt;
                     </button>
                   </Link>
                 </div>
@@ -243,7 +211,7 @@ export function MySubmissionsView() {
                     <tbody className="divide-y divide-[#3c494d]/40">
                       {submissions.map((sub, idx) => {
                         const id = sub.id || sub.Id || `sub-${idx}`;
-                        const isEliminated = (sub as any).isTeamDisqualified || (sub as any).IsTeamDisqualified;
+                        const isEliminated = (sub as any).isEliminated || (sub as any).IsEliminated;
                         const isActive = sub.isActive ?? sub.IsActive ?? true;
 
                         return (
@@ -256,7 +224,7 @@ export function MySubmissionsView() {
                               <div className="flex flex-wrap items-center gap-2">
                                 {(sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl) && (
                                   <a
-                                    href={(sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl) || undefined}
+                                    href={sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0e1417] border border-[#00d9ff]/30 text-[#00d9ff] hover:border-[#00d9ff] text-[11px]"
@@ -267,7 +235,7 @@ export function MySubmissionsView() {
                                 )}
                                 {(sub.demoUrl || sub.DemoUrl) && (
                                   <a
-                                    href={(sub.demoUrl || sub.DemoUrl) || undefined}
+                                    href={sub.demoUrl || sub.DemoUrl || undefined}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0e1417] border border-[#f87171]/30 text-[#f87171] hover:border-[#f87171] text-[11px]"
@@ -278,7 +246,7 @@ export function MySubmissionsView() {
                                 )}
                                 {(sub.slideUrl || sub.SlideUrl) && (
                                   <a
-                                    href={(sub.slideUrl || sub.SlideUrl) || undefined}
+                                    href={sub.slideUrl || sub.SlideUrl || undefined}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0e1417] border border-[#fb923c]/30 text-[#fb923c] hover:border-[#fb923c] text-[11px]"
@@ -297,7 +265,7 @@ export function MySubmissionsView() {
                             <td className="py-4 px-4 whitespace-nowrap">
                               {isEliminated ? (
                                 <span className="px-2 py-0.5 border border-[#ffb4ab]/30 bg-[#ffb4ab]/10 text-[#ffb4ab] text-[10px] font-bold uppercase">
-                                  BỊ LOẠI
+                                  ✗ BỊ LOẠI
                                 </span>
                               ) : !isActive ? (
                                 <span className="px-2 py-0.5 border border-[#859398]/30 bg-[#859398]/10 text-[#859398] text-[10px] font-bold uppercase">
@@ -305,7 +273,7 @@ export function MySubmissionsView() {
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 border border-[#34d399]/30 bg-[#34d399]/10 text-[#34d399] text-[10px] font-bold uppercase">
-                                  ĐÃ NỘP
+                                  ✓ ĐÃ NỘP
                                 </span>
                               )}
                             </td>
@@ -355,21 +323,6 @@ export function MySubmissionsView() {
               )}
             </div>
 
-            {/* Mentor Feedbacks Section for Team */}
-            {submissions.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="font-display text-lg font-bold text-[#34d399] uppercase tracking-wider flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
-                  GÓP Ý &amp; ĐÁNH GIÁ CHUYÊN MÔN TỪ CỐ VẤN (MENTOR FEEDBACK)
-                </h2>
-                <div className="grid grid-cols-1 gap-4">
-                  {submissions.map((sub, idx) => (
-                    <TeamSubmissionFeedbackDrawer key={sub.id || sub.Id || idx} submitResultId={sub.id || sub.Id || ""} />
-                  ))}
-                </div>
-              </div>
-            )}
-
           </div>
 
           {/* Edit Submission Modal */}
@@ -385,8 +338,8 @@ export function MySubmissionsView() {
                   <h3 className="font-display text-lg font-bold text-[#00d9ff] uppercase">
                     CHỈNH SỬA BÀI NỘP
                   </h3>
-                  <button onClick={() => setEditingSub(null)} className="text-[#859398] hover:text-white font-mono cursor-pointer">
-                    <X className="w-4 h-4" />
+                  <button onClick={() => setEditingSub(null)} className="text-[#859398] hover:text-white font-mono">
+                    ✕
                   </button>
                 </div>
 
@@ -456,55 +409,6 @@ export function MySubmissionsView() {
                   </div>
                 </form>
               </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    function TeamSubmissionFeedbackDrawer({ submitResultId }: { submitResultId: string }) {
-      const { data: feedbacks = [] } = useMentorFeedbacks(submitResultId);
-      const [isOpen, setIsOpen] = useState(false);
-
-      if (feedbacks.length === 0) return null;
-
-      return (
-        <div className="bg-[#1a2123] border border-[#34d399]/30 p-4 glow-box font-mono text-xs">
-          <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center justify-between w-full text-[#34d399] hover:text-white transition-colors"
-          >
-            <span className="flex items-center gap-2 font-bold uppercase">
-              <MessageSquare className="w-4 h-4" />
-              Nhận Xét Chuyên Môn Cố Vấn ({feedbacks.length} Lời Khuyên)
-            </span>
-            <span className="flex items-center gap-1 text-[11px] text-[#859398]">
-              {isOpen ? "Thu gọn ▲" : "Xem chi tiết ▼"}
-            </span>
-          </button>
-
-          {isOpen && (
-            <div className="mt-3 pt-3 border-t border-[#3c494d]/50 space-y-3">
-              {feedbacks.map((fb) => {
-                const parsed = parseMentorFeedbackComment(fb.comment);
-                return (
-                  <div key={fb.id} className="p-3 bg-[#0e1417] border border-[#34d399]/20 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#34d399] font-bold">Mentor: {fb.mentorName || "Cố vấn"}</span>
-                      {parsed.suggestedScore !== undefined && (
-                        <span className="text-[#fbbf24] font-bold">Điểm gợi ý: {parsed.suggestedScore}/100</span>
-                      )}
-                    </div>
-                    <p className="font-sans text-white text-xs leading-relaxed">"{parsed.text}"</p>
-                    {parsed.technicalAdvice && (
-                      <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
-                        Lời khuyên kỹ thuật: {parsed.technicalAdvice}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           )}
         </div>
