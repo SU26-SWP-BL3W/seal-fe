@@ -46,35 +46,38 @@ export function MentorTeamsView() {
             <div className="font-mono text-xs text-zinc-400 flex flex-wrap items-center gap-2">
               {eventId ? (
                 <Link href={`/events/${eventId}`} className="text-zinc-400 hover:text-white font-bold transition-colors">
-                  [ &lt; CHI TIẾT SỰ KIỆN ]
+                  [ &lt; Chi tiết sự kiện ]
                 </Link>
               ) : null}
               <span className="text-zinc-600">/</span>
-              <Link href="/mentor/tracks" className="text-teal-400 hover:underline font-bold">
-                [ CÁC HẠNG MỤC CỐ VẤN ]
+              <Link
+                href={eventId ? `/mentor/tracks?eventId=${eventId}` : "/mentor/tracks"}
+                className="text-teal-400 hover:underline font-bold"
+              >
+                [ Hạng mục cố vấn ]
               </Link>
               <span className="text-zinc-600">/</span>
               <span className="text-white font-bold">{currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}</span>
             </div>
-            <h1 className="font-display text-xl md:text-2xl text-white font-extrabold tracking-wider uppercase">
-              DANH SÁCH ĐỘI THI ĐƯỢC HỖ TRỢ
+            <h1 className="font-display text-xl md:text-2xl text-white font-extrabold tracking-wider">
+              Danh sách đội thi được hỗ trợ
             </h1>
           </div>
 
           <div className="flex items-center gap-3 font-mono text-xs">
             <div className="text-teal-300 bg-teal-950/50 px-3 py-1.5 border border-teal-500/40 hud-clipped font-bold">
-              [ TRẠNG THÁI: ĐANG ĐỒNG HÀNH ]
+              [ Đang đồng hành ]
             </div>
-            <Button variant="ghost" accent="mentor" onClick={() => refetchAll()} className="text-xs uppercase font-mono font-bold">
-              [ LÀM MỚI ]
+            <Button variant="ghost" accent="mentor" onClick={() => refetchAll()} className="text-xs font-mono font-bold">
+              [ Làm mới ]
             </Button>
           </div>
         </header>
 
-        {/* ── TẦNG 2: TRACK SELECTOR ── */}
+        {/* Track selector — chỉ hạng mục Mentor được phân công */}
         {myTracks.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 font-mono text-xs bg-[#10171a] p-3 border border-zinc-800 hud-clipped">
-            <span className="text-zinc-400 uppercase font-bold">[ CHỌN HẠNG MỤC: ]</span>
+            <span className="text-zinc-400 font-bold">Chọn hạng mục:</span>
             <div className="flex flex-wrap items-center gap-2">
               {myTracks.map((t) => {
                 const tid = (t.id || t.Id) as string;
@@ -84,13 +87,13 @@ export function MentorTeamsView() {
                     key={tid}
                     type="button"
                     onClick={() => handleTrackChange(tid)}
-                    className={`px-3 py-1.5 font-mono text-xs font-bold uppercase transition-all cursor-pointer hud-clipped ${
+                    className={`px-3 py-1.5 font-mono text-xs font-bold transition-all cursor-pointer hud-clipped ${
                       isSelected
                         ? "bg-teal-500 text-black font-extrabold shadow-sm"
                         : "bg-[#141f23] text-zinc-400 border border-zinc-700 hover:text-white hover:border-teal-500/40"
                     }`}
                   >
-                    [ {t.trackName || t.TrackName} ]
+                    {t.trackName || t.TrackName}
                   </button>
                 );
               })}
@@ -98,32 +101,29 @@ export function MentorTeamsView() {
           </div>
         )}
 
-        {/* ── TẦNG 3: BẢNG DANH SÁCH ĐỘI THI ── */}
         <div className="flex-1 bg-[#10171a] border border-zinc-800 hud-clipped flex flex-col overflow-hidden shadow-md">
-          {/* Header Bảng */}
           <div className="h-10 bg-teal-950/40 border-b border-teal-500/20 flex items-center px-4 justify-between font-mono text-xs">
-            <span className="text-teal-300 font-bold tracking-wider">[ DANH SÁCH ĐỘI THI TRONG HẠNG MỤC ]</span>
-            <span className="text-zinc-400 text-[11px]">{teamsInTrack.length} ĐỘI THI GHI DANH</span>
+            <span className="text-teal-300 font-bold tracking-wider">Danh sách đội thi trong hạng mục</span>
+            <span className="text-zinc-400 text-[11px]">{teamsInTrack.length} đội ghi danh</span>
           </div>
 
-          {/* Nội dung bảng */}
           <div className="flex-1 overflow-x-auto p-4">
             {isLoading ? (
               <div className="flex justify-center py-20 font-mono text-xs text-teal-400 animate-pulse">
-                [ ĐANG TẢI DỮ LIỆU ĐỘI THI... ]
+                Đang tải dữ liệu đội thi...
               </div>
             ) : teamsInTrack.length === 0 ? (
               <div className="text-center py-16 font-mono text-xs text-zinc-400">
-                [ Chưa có đội thi nào ghi danh thuộc Hạng mục này ]
+                Chưa có đội thi nào ghi danh thuộc hạng mục này
               </div>
             ) : (
               <table className="w-full text-left font-mono text-xs border-collapse">
-                <thead className="text-[11px] text-zinc-400 uppercase border-b border-zinc-800 bg-[#090e11]">
+                <thead className="text-[11px] text-zinc-400 border-b border-zinc-800 bg-[#090e11]">
                   <tr>
-                    <th className="py-3 px-4 font-bold">TÊN ĐỘI THI</th>
-                    <th className="py-3 px-4 font-bold">TRẠNG THÁI</th>
-                    <th className="py-3 px-4 font-bold text-right">TIẾN ĐỘ BÀI NỘP</th>
-                    <th className="py-3 px-4 font-bold text-center">TÁC VỤ CỐ VẤN</th>
+                    <th className="py-3 px-4 font-bold">Tên đội thi</th>
+                    <th className="py-3 px-4 font-bold">Trạng thái</th>
+                    <th className="py-3 px-4 font-bold text-right">Tiến độ bài nộp</th>
+                    <th className="py-3 px-4 font-bold text-center">Tác vụ cố vấn</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/60">
