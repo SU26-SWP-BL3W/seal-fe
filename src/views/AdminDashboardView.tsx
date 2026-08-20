@@ -670,7 +670,7 @@ export const AdminDashboardView: React.FC = () => {
                             <Button
                               variant="ghost"
                               onClick={() => setEditingEvent(ev)}
-                              className="text-xs font-mono border border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15 px-2.5 py-1 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
+                              className="text-xs font-mono border border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15 px-2.5 py-1 h-7 font-bold cursor-pointer inline-flex items-center gap-1 shrink-0"
                               title="Chỉnh sửa toàn diện thông tin sự kiện & các vòng thi"
                             >
                               <Edit className="w-3.5 h-3.5" /> Sửa
@@ -679,13 +679,13 @@ export const AdminDashboardView: React.FC = () => {
                             <Button
                               variant="ghost"
                               onClick={() => setSelectedEvent(ev)}
-                              className="text-xs font-mono border border-[var(--accent-coordinator)]/60 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/15 px-2.5 py-1 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
+                              className="text-xs font-mono border border-[var(--accent-coordinator)]/60 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/15 px-2.5 py-1 h-7 font-bold cursor-pointer inline-flex items-center gap-1 shrink-0"
                               title="Quản lý & phân công Event Coordinator (EC)"
                             >
                               <UserCheck className="w-3.5 h-3.5" /> Quản lý EC
                             </Button>
 
-                            <Link href={`/events/${id}`}>
+                            <Link href={`/events/${id}`} className="shrink-0 inline-flex">
                               <Button
                                 variant="ghost"
                                 className="text-xs font-mono border border-[var(--border-muted)] text-[var(--text-muted)] hover:text-white hover:border-[var(--accent-primary)] px-2 py-1 h-7 w-7 flex items-center justify-center cursor-pointer"
