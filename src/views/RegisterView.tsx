@@ -146,7 +146,7 @@ export function RegisterView() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <Link href="/login">
+            <Link href={`/login?email=${encodeURIComponent(email)}`}>
               <Button variant="primary" className="w-full justify-center flex items-center gap-2 font-bold py-3">
                 <ArrowRight className="w-4 h-4" />
                 ĐĂNG NHẬP NGAY

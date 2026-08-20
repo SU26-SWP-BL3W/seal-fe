@@ -16,7 +16,8 @@ export function LoginView() {
   const toast = useToast();
   const searchParams = useSearchParams();
   const isVerifiedNotice = searchParams.get("verified") === "true";
-  const [email, setEmail] = useState("");
+  const initialEmail = searchParams.get("email") || "";
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
