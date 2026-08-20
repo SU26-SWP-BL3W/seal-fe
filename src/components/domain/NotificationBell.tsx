@@ -4,7 +4,12 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
-import { useMyNotifications, useMarkNotificationRead } from "@/repositories/notificationsRepository";
+import {
+  useMyNotifications,
+  useMarkNotificationRead,
+  pushSystemNotification,
+  type SystemNotification,
+} from "@/repositories/shared/notificationsRepository";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, X, ExternalLink, RefreshCw, Bell, UserPlus, UserCheck, UserX, AlertCircle } from "lucide-react";
@@ -360,12 +365,29 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
       if (isAccepted) {
         if (invType === "TEAM" || invType === "TEAM_MEMBER") {
           toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
-        } else if (inv.role === "Judge") {
-          toast.success(`🎉 Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
-        } else if (inv.role === "Mentor") {
-          toast.success(`🎉 Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
+          pushSystemNotification({
+            title: "Gia nhập đội thi thành công",
+            message: `Bạn đã chính thức gia nhập đội "${targetName}". Chúc bạn và đồng đội đạt thành tích xuất sắc!`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Thành viên mới gia nhập đội",
+            message: `Một thành viên đã đồng ý lời mời và chính thức gia nhập đội "${targetName}".`,
+            type: "success",
+          });
         } else {
-          toast.success(`🎉 Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
+          const roleTitle = formatRoleLabel(inv.role);
+          toast.success(`🎉 Bạn đã nhận vai trò ${roleTitle} sự kiện "${targetName}".`);
+          pushSystemNotification({
+            title: "Đã nhận vai trò sự kiện",
+            message: `Bạn đã chính thức đảm nhận vai trò ${roleTitle} trong sự kiện "${targetName}".`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Nhân sự đã nhận vai trò",
+            message: `Nhân sự đã đồng ý nhận vai trò ${roleTitle} sự kiện "${targetName}".`,
+            type: "success",
+          });
         }
         queryClient.invalidateQueries({ queryKey: ["my-team"] });
         queryClient.invalidateQueries({ queryKey: ["myTeam"] });
@@ -375,6 +397,16 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       } else {
         toast.info(`Bạn đã từ chối lời mời tham gia "${targetName}".`);
+        pushSystemNotification({
+          title: "Đã từ chối lời mời",
+          message: `Bạn đã từ chối lời mời tham gia "${targetName}".`,
+          type: "warning",
+        });
+        pushSystemNotification({
+          title: "Lời mời tham gia bị từ chối",
+          message: `Ứng viên đã từ chối lời mời tham gia "${targetName}".`,
+          type: "danger",
+        });
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
         queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
       }

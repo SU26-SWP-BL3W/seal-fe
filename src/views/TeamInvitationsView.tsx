@@ -9,6 +9,7 @@ import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation, useDeclineEventRoleInvitationPublic } from "@/repositories/eventRolesRepository";
 import { useRegister } from "@/repositories/authRepository";
 import { useEvents } from "@/repositories/eventsRepository";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
@@ -97,12 +98,52 @@ export function TeamInvitationsView() {
       if (isAccepted) {
         if (invType === "TEAM" || invType === "TEAM_MEMBER") {
           toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+          pushSystemNotification({
+            title: "Gia nhập đội thi thành công",
+            message: `Bạn đã chính thức gia nhập đội "${targetName}". Chúc bạn và đồng đội đạt thành tích xuất sắc!`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Thành viên mới gia nhập đội",
+            message: `Một thành viên đã đồng ý lời mời và chính thức gia nhập đội "${targetName}".`,
+            type: "success",
+          });
         } else if (inv.role === "Judge") {
           toast.success(`🎉 Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
+          pushSystemNotification({
+            title: "Đã nhận vai trò Giám khảo",
+            message: `Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Nhân sự đã nhận vai trò",
+            message: `Nhân sự đã đồng ý nhận vai trò Giám khảo sự kiện "${targetName}".`,
+            type: "success",
+          });
         } else if (inv.role === "Mentor") {
           toast.success(`🎉 Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
+          pushSystemNotification({
+            title: "Đã nhận vai trò Cố vấn",
+            message: `Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Nhân sự đã nhận vai trò",
+            message: `Nhân sự đã đồng ý nhận vai trò Cố vấn sự kiện "${targetName}".`,
+            type: "success",
+          });
         } else {
           toast.success(`🎉 Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
+          pushSystemNotification({
+            title: "Đã nhận vai trò Điều Phối Viên",
+            message: `Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Nhân sự đã nhận vai trò",
+            message: `Nhân sự đã đồng ý nhận vai trò Điều Phối Viên sự kiện "${targetName}".`,
+            type: "success",
+          });
         }
         await refreshRoles();
         queryClient.invalidateQueries({ queryKey: ["my-team"] });
@@ -113,6 +154,16 @@ export function TeamInvitationsView() {
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       } else {
         toast.info(`Bạn đã từ chối lời mời tham gia "${targetName}".`);
+        pushSystemNotification({
+          title: "Đã từ chối lời mời",
+          message: `Bạn đã từ chối lời mời tham gia "${targetName}".`,
+          type: "warning",
+        });
+        pushSystemNotification({
+          title: "Lời mời tham gia bị từ chối",
+          message: `Ứng viên đã từ chối lời mời tham gia "${targetName}".`,
+          type: "danger",
+        });
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
         queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
       }
@@ -148,6 +199,16 @@ export function TeamInvitationsView() {
       await declinePublic(queryInvitationId);
       setPublicDeclineSuccess(true);
       toast.success("Bạn đã từ chối lời mời tham gia sự kiện.");
+      pushSystemNotification({
+        title: "Đã từ chối lời mời sự kiện",
+        message: `Bạn đã từ chối lời mời tham gia sự kiện "${queryEventName || 'Sự kiện'}".`,
+        type: "warning",
+      });
+      pushSystemNotification({
+        title: "Lời mời tham gia bị từ chối",
+        message: `Ứng viên đã từ chối lời mời tham gia sự kiện "${queryEventName || 'Sự kiện'}" qua liên kết công khai.`,
+        type: "danger",
+      });
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Từ chối lời mời thất bại hoặc lời mời đã hết hạn.";
       toast.error(msg);

@@ -10,6 +10,8 @@ export interface SystemNotification {
   createdAt: string;
   isRead: boolean;
   linkUrl?: string;
+  recipientEmail?: string;
+  senderEmail?: string;
 }
 
 const LOCAL_NOTIF_KEY = "seal_local_system_notifications";
