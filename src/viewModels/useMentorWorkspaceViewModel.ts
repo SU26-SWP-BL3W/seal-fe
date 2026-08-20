@@ -2,34 +2,18 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQueries } from "@tanstack/react-query";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetTracksByEvent, type TrackWithStaffModel } from "@/repositories/tracksRepository";
-import {
-  useGetMyEventRoles,
-  useGetEventRolesByEvent,
-  EventRoleType,
-} from "@/repositories/events/eventRolesRepository";
+import { useGetMyEventRoles } from "@/repositories/events/eventRolesRepository";
 import {
   useGetSubmitResultsByTrack,
   useMentorFeedbacks,
   useCreateMentorFeedback,
   useDeleteMentorFeedback,
-  fetchSubmitResultsByTrack,
-  type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
 import { useGetTeamsByEvent, useGetTeamById, type TeamListItem } from "@/repositories/teamsRepository";
 
 const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
-
-export interface MentorTrackStats {
-  totalTeams: number;
-  submissionCount: number;
-  teamsWithSubmission: number;
-  /** % đội đã có bài nộp trong hạng mục (0–100). */
-  progressPct: number;
-  mentorNames: string[];
-}
 
 export function useMentorWorkspaceViewModel() {
   const searchParams = useSearchParams();
@@ -39,6 +23,7 @@ export function useMentorWorkspaceViewModel() {
   const { user, activeRole } = useAuth();
   const userId = user?.userId || user?.UserID || user?.id || (user as any)?.Id || "";
 
+  // 1. Fetch user's event roles from DB to get all assigned mentor tracks
   const { data: myEventRoles = [] } = useGetMyEventRoles(userId || undefined);
 
   const mentorRoles = useMemo(() => {
@@ -47,32 +32,24 @@ export function useMentorWorkspaceViewModel() {
     );
   }, [myEventRoles]);
 
-  // Determine active eventId: trackId in URL > searchParam eventId > mentor role event > activeRole
+  // Determine active eventId: priority searchParam > activeRole > mentorRoles[0]
   const resolvedEventId = useMemo(() => {
-    if (queryTrackId) {
-      const mentorForTrack = mentorRoles.find((r: any) => {
-        const rTrack = normalizeId(r.trackId || r.TrackId);
-        const qTrack = normalizeId(queryTrackId);
-        return rTrack && qTrack && rTrack === qTrack;
-      });
-      if (mentorForTrack?.eventId || mentorForTrack?.EventId) {
-        return mentorForTrack.eventId || mentorForTrack.EventId || "";
-      }
-    }
     if (queryEventId) return queryEventId;
+    if (activeRole?.eventId || (activeRole as any)?.EventId) return activeRole?.eventId || (activeRole as any)?.EventId || "";
     const firstMentorEvent = mentorRoles[0]?.eventId || mentorRoles[0]?.EventId;
-    if (firstMentorEvent) return firstMentorEvent;
-    if (activeRole?.eventId || (activeRole as any)?.EventId) {
-      return activeRole?.eventId || (activeRole as any)?.EventId || "";
-    }
-    return "";
-  }, [queryEventId, queryTrackId, activeRole, mentorRoles]);
+    return firstMentorEvent || "";
+  }, [queryEventId, activeRole, mentorRoles]);
 
+  // 2. Fetch all tracks for current event
   const { data: tracksData, isLoading: isLoadingTracks, refetch: refetchTracks } = useGetTracksByEvent(
     resolvedEventId || undefined
   );
-  const allTracks: TrackWithStaffModel[] = Array.isArray(tracksData) ? tracksData : [];
+  const allTracks: TrackWithStaffModel[] = useMemo(
+    () => (Array.isArray(tracksData) ? tracksData : []),
+    [tracksData]
+  );
 
+  // Filter tracks assigned to current mentor (cả qua EventRoles DB và qua Staff mapping)
   const myTracks = useMemo(() => {
     if (!userId) return allTracks;
     const currentEventNorm = normalizeId(resolvedEventId);
@@ -96,85 +73,30 @@ export function useMentorWorkspaceViewModel() {
     });
   }, [allTracks, userId, mentorRoles, resolvedEventId]);
 
+  // Selected Track ID state
   const [selectedTrackId, setSelectedTrackId] = useState<string>("");
   const activeTrackId =
     queryTrackId ||
     selectedTrackId ||
     myTracks[0]?.id ||
     myTracks[0]?.Id ||
+    allTracks[0]?.id ||
+    allTracks[0]?.Id ||
     "";
 
+  // 3. Fetch Teams for current event
   const { data: teamsData = [], isLoading: isLoadingTeams, refetch: refetchTeams } = useGetTeamsByEvent(
     resolvedEventId || undefined
   );
 
+  // 4. Fetch Submissions for active track
   const {
     data: submissions = [],
     isLoading: isLoadingSubs,
     refetch: refetchSubmissions,
   } = useGetSubmitResultsByTrack(activeTrackId || undefined, resolvedEventId || undefined);
 
-  // EventRoles Mentor của event — nguồn đúng để liệt kê cố vấn theo track (không lẫn Judge).
-  const { data: eventRolesPage, isLoading: isLoadingEventRoles } = useGetEventRolesByEvent(
-    resolvedEventId || undefined,
-    { pageSize: 200, roleName: EventRoleType.Mentor }
-  );
-  const eventMentorRoles = useMemo(() => {
-    const raw =
-      (eventRolesPage as any)?.data ??
-      (eventRolesPage as any)?.items ??
-      eventRolesPage ??
-      [];
-    const list = Array.isArray(raw) ? raw : [];
-    return list.filter((r: any) => {
-      const rn = r.roleName || r.RoleName;
-      return rn === "Mentor" || rn === EventRoleType.Mentor || rn === "2";
-    });
-  }, [eventRolesPage]);
-
-  const mentorNamesByTrack = useMemo(() => {
-    const map = new Map<string, string[]>();
-    eventMentorRoles.forEach((r: any) => {
-      const tid = normalizeId(r.trackId || r.TrackId);
-      if (!tid) return;
-      const name =
-        r.user?.fullName ||
-        r.user?.FullName ||
-        r.User?.fullName ||
-        r.User?.FullName ||
-        r.fullName ||
-        r.FullName ||
-        "";
-      if (!name) return;
-      const existing = map.get(tid) || [];
-      if (!existing.includes(name)) existing.push(name);
-      map.set(tid, existing);
-    });
-    return map;
-  }, [eventMentorRoles]);
-
-  // Submissions theo từng track Mentor — dùng cho thống kê card + tiến độ thật.
-  const myTrackIds = useMemo(
-    () => myTracks.map((t) => (t.id || t.Id || "") as string).filter(Boolean),
-    [myTracks]
-  );
-
-  const submissionQueries = useQueries({
-    queries: myTrackIds.map((trackId) => ({
-      queryKey: ["mentor-submit-results-by-track", trackId, resolvedEventId],
-      queryFn: () => fetchSubmitResultsByTrack(trackId, resolvedEventId || undefined),
-      enabled: !!trackId && !!resolvedEventId,
-    })),
-  });
-
-  const submissionsByTrack = useMemo(() => {
-    const map = new Map<string, SubmitResultListItem[]>();
-    myTrackIds.forEach((trackId, idx) => {
-      map.set(trackId, submissionQueries[idx]?.data ?? []);
-    });
-    return map;
-  }, [myTrackIds, submissionQueries]);
-
+  // Map of teamId -> teamName
   const teamNameById = useMemo(() => {
     const map = new Map<string, string>();
     teamsData.forEach((t: TeamListItem) => {
@@ -184,6 +106,7 @@ export function useMentorWorkspaceViewModel() {
     return map;
   }, [teamsData]);
 
+  // Map of teamId -> TeamListItem
   const teamById = useMemo(() => {
     const map = new Map<string, TeamListItem>();
     teamsData.forEach((t: TeamListItem) => {
@@ -193,62 +116,29 @@ export function useMentorWorkspaceViewModel() {
     return map;
   }, [teamsData]);
 
+  // Teams in the active track
   const teamsInTrack = useMemo(() => {
-    if (!activeTrackId) return [];
+    if (!activeTrackId) return teamsData;
     const targetNorm = normalizeId(activeTrackId);
     return teamsData.filter((t) => normalizeId(t.trackId || t.TrackId) === targetNorm);
   }, [teamsData, activeTrackId]);
 
+  // Combined track stats for M1
   const trackStatsMap = useMemo(() => {
-    const map = new Map<string, MentorTrackStats>();
-
-    myTracks.forEach((t) => {
-      const tid = (t.id || t.Id || "") as string;
+    const map = new Map<string, { totalTeams: number; submissionCount: number }>();
+    allTracks.forEach((t) => {
+      const tid = (t.id || t.Id) as string;
       if (!tid) return;
       const tidNorm = normalizeId(tid);
       const teams = teamsData.filter((tm) => normalizeId(tm.trackId || tm.TrackId) === tidNorm);
-      const trackSubs = submissionsByTrack.get(tid) ?? [];
-      const teamIdsWithSub = new Set(
-        trackSubs
-          .map((s) => normalizeId(s.teamId || (s as any).TeamId))
-          .filter(Boolean)
-      );
-      const teamsWithSubmission = teams.filter((tm) =>
-        teamIdsWithSub.has(normalizeId(tm.id || tm.Id))
-      ).length;
-      const totalTeams = teams.length;
-      const progressPct =
-        totalTeams > 0 ? Math.round((teamsWithSubmission / totalTeams) * 100) : 0;
-
-      const fromRoles = mentorNamesByTrack.get(tidNorm) || [];
-      const fallbackMentors = (t.mentors || t.Mentors || [])
-        .map((m: any) => m.fullName || m.FullName || "")
-        .filter(Boolean);
-      // Ưu tiên EventRole Mentor; nếu API chưa có tên thì mới fallback staff mapping.
-      const mentorNames = fromRoles.length > 0 ? fromRoles : fallbackMentors;
-
-      map.set(tid, {
-        totalTeams,
-        submissionCount: trackSubs.length,
-        teamsWithSubmission,
-        progressPct,
-        mentorNames,
-      });
+      map.set(tid, { totalTeams: teams.length, submissionCount: 0 });
     });
-
     return map;
-  }, [myTracks, teamsData, submissionsByTrack, mentorNamesByTrack]);
+  }, [allTracks, teamsData]);
 
-  // Chỉ đếm đội / bài thuộc các hạng mục Mentor được phân công.
-  const totalTeamsCount = useMemo(() => {
-    return [...trackStatsMap.values()].reduce((sum, s) => sum + s.totalTeams, 0);
-  }, [trackStatsMap]);
-
-  const totalSubmissionsCount = useMemo(() => {
-    return [...trackStatsMap.values()].reduce((sum, s) => sum + s.submissionCount, 0);
-  }, [trackStatsMap]);
-
-  const isLoadingSubmissionsByTrack = submissionQueries.some((q) => q.isLoading);
+  // Overall counts for top HUD in M1
+  const totalTeamsCount = teamsData.length;
+  const totalSubmissionsCount = submissions.length;
 
   return {
     eventId: resolvedEventId,
@@ -265,12 +155,7 @@ export function useMentorWorkspaceViewModel() {
     totalTeamsCount,
     totalSubmissionsCount,
     trackStatsMap,
-    isLoading:
-      isLoadingTracks ||
-      isLoadingTeams ||
-      isLoadingSubs ||
-      isLoadingEventRoles ||
-      isLoadingSubmissionsByTrack,
+    isLoading: isLoadingTracks || isLoadingTeams || isLoadingSubs,
     refetchAll: () => {
       refetchTracks();
       refetchTeams();

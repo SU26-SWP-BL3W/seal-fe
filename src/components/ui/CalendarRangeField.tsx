@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Calendar as CalendarIcon, Clock, AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface ReferenceRange {
   start?: string;
@@ -104,7 +104,7 @@ export const CalendarRangeField: React.FC<CalendarRangeFieldProps> = ({
   }
 
   // Quick action presets
-  const applyAddDays = (days: number) => {
+  const _applyAddDays = (days: number) => {
     if (!startValue) return;
     const s = new Date(startValue);
     if (isNaN(s.getTime())) return;
@@ -114,7 +114,7 @@ export const CalendarRangeField: React.FC<CalendarRangeFieldProps> = ({
     onEndChange(`${dateStr}T${timeStr}`);
   };
 
-  const matchReference = () => {
+  const _matchReference = () => {
     if (referenceRange?.start) onStartChange(toDateTimeLocal(referenceRange.start, "08:00"));
     if (referenceRange?.end) onEndChange(toDateTimeLocal(referenceRange.end, "17:00"));
   };

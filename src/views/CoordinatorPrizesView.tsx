@@ -5,8 +5,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useGetPrizesByEvent, useCreatePrize, saveStoredPrizesForEvent } from "@/repositories/results/prizesRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save, GripVertical, ArrowUp, ArrowDown, Filter } from "lucide-react";
-
-import apiClient from "@/models/apiClient";
 import { useMyEvents } from "@/repositories/eventsRepository";
 
 export interface PrizeItemState {
@@ -336,7 +334,7 @@ export const CoordinatorPrizesView: React.FC = () => {
                   {prizes
                     .map((p, originalIdx) => ({ p, originalIdx }))
                     .filter(({ p }) => filterTrack === "ALL" || p.trackName === filterTrack)
-                    .map(({ p, originalIdx }, displayIdx) => (
+                    .map(({ p, originalIdx }, _displayIdx) => (
                       <tr
                         key={p.id}
                         draggable

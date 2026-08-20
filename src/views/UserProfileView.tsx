@@ -17,7 +17,7 @@ import { useGetEventRolesByUser } from "@/repositories/events/eventRolesReposito
 import { useEvents } from "@/repositories/eventsRepository";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { uploadRepository } from "@/repositories/uploadRepository";
-import { Button, Input, Card, Badge } from "@/components/ui";
+import { Button, Input, Card } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 import type { FptStudentResponse } from "@/models/entities";
 
@@ -99,17 +99,17 @@ export const getRoleDetails = (
   }
   // Mặc định đối với mọi tài khoản thí sinh / sinh viên tham gia hệ thống:
   return {
-    label: "Thí Sinh / Sinh Viên",
+    label: isStudent ? "Thí Sinh / Sinh Viên" : "Người Dùng Hệ Thống",
     badgeClass: "bg-sky-950/40 border-sky-500/30 text-sky-300",
     dotClass: "bg-sky-400",
-    typeLabel: "Thí Sinh Dự Thi",
+    typeLabel: isStudent ? "Thí Sinh Dự Thi" : "Thành Viên Tự Do",
     isStaff: false,
   };
 };
 
 export function UserProfileView() {
   const toast = useToast();
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
   const currentUserId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
@@ -266,7 +266,7 @@ export function UserProfileView() {
   const requestUnblockMutation = useRequestUnblock();
   const changePasswordMutation = useChangePassword();
 
-  const { data: schoolsData, isLoading: loadingSchools } = useGetSchools();
+  const { data: schoolsData } = useGetSchools();
   const schools = schoolsData || [];
 
   const { data: rejectionsData } = useGetUserRejections(user?.id || user?.userId);
@@ -524,6 +524,7 @@ export function UserProfileView() {
 
       setSubmitSuccess(true);
       setIsEditing(false);
+      await refreshUser();
       toast.success("Cập nhật thông tin hồ sơ thành công!");
     } catch (err: any) {
       setIsUploadingPhoto(false);

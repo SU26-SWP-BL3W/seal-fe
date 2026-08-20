@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Card, Field, Input, SkeletonRows } from "@/components/ui";
+import { Button, Card, Field, Input, SkeletonRows } from "@/components/ui";
 import { AlertTriangle, Clock, ShieldAlert, X } from "lucide-react";
 import { MAX_MEMBERS } from "./teamStatus";
 import type { InvitationView } from "./types";

@@ -3,7 +3,7 @@
 > **Phiên bản:** 2.0 (chi tiết theo từng màn hình)  
 > **Ngày:** 2026-08-20  
 > **Phạm vi:** 47 routes · 46 views · 40 domain components  
-> **Hướng thiết kế:** **Refined Dark** — dark theme sạch, content-first; bỏ aesthetic HUD/cyberpunk
+> **Hướng thiết kế:** **Command Deck** (proposal FE) — góc vát / vuông, gaming-technical; tinh chỉnh hierarchy & logic, **không** đổi sang SaaS `rounded-*`
 
 ---
 
@@ -47,7 +47,7 @@
 |---|---------|-------|-----|
 | R1 | Page title | `font-mono uppercase` | `font-display/IBM Plex semibold`, sentence case |
 | R2 | Section label | `SYSTEM METRICS // ...` | "Thống kê tổng quan" |
-| R3 | Card/panel | `hud-clipped` + glow | `rounded-lg border border-muted bg-panel` |
+| R3 | Card/panel | `hud-clipped` + glow mọi nơi | `hud-clipped` + border phẳng; glow chỉ 1 vùng primary |
 | R4 | Màu | hex inline | `var(--*)` từ `tokens.css` |
 | R5 | Role badge | `[EC]`, `[05]` | Icon + "Ban tổ chức" |
 | R6 | ID hiển thị | UUID đầy đủ | `formatShortId()` + copy |

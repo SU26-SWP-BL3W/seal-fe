@@ -23,6 +23,8 @@ const TONE_VALUE: Record<Tone, string> = {
   coordinator: "var(--accent-coordinator)",
 };
 
+// Badge phẳng, nền bán trong suốt + viền 1px cùng màu — KHÔNG bo tròn pill,
+// đúng "Geometric Discipline" của proposal (góc vuông thay vì rounded-full).
 export function Badge({
   tone = "neutral",
   className = "",
@@ -32,7 +34,7 @@ export function Badge({
   return (
     <span
       style={{ "--badge-tone": TONE_VALUE[tone], ...style } as CSSProperties}
-      className={`inline-flex items-center gap-1 rounded-md border border-[var(--badge-tone)]/30 bg-[var(--badge-tone)]/10 px-2 py-0.5 text-xs font-medium text-[color:var(--badge-tone)] ${className}`}
+      className={`inline-flex items-center gap-[var(--space-xs)] border border-[var(--badge-tone)]/30 bg-[var(--badge-tone)]/10 px-[var(--space-sm)] py-[2px] font-mono text-[length:var(--fs-caption-sm)] font-bold uppercase tracking-wider text-[color:var(--badge-tone)] ${className}`}
       {...props}
     />
   );

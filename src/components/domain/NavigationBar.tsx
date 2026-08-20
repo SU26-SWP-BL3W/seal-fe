@@ -1,12 +1,11 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { Link } from "@/i18n/routing";
 import { SealShield } from "./SealShield";
 import { NotificationBell } from "./NotificationBell";
-import { hasEventPermission, hasEventRolePermission, hasTrackRolePermission } from "@/lib/permissions";
-import { resolveMentorContext, resolveJudgeContext, filterRolesByName } from "@/lib/eventRoles";
+import { hasEventPermission } from "@/lib/permissions";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import {
   Globe,
@@ -41,10 +40,7 @@ import {
 
 export function NavigationBar() {
   const pathname = usePathname() || "";
-  const searchParams = useSearchParams();
-  const queryEventId = searchParams.get("eventId") || "";
-  const queryTrackId = searchParams.get("trackId") || "";
-  const { user, activeRole, allEventRoles, logout } = useAuth();
+  const { user, activeRole, logout } = useAuth();
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
   const userEmail = (user?.email || user?.Email || "").toLowerCase();
   
@@ -73,7 +69,7 @@ export function NavigationBar() {
     ? (pathname.split("/events/")[1]?.split("/")[0] || "")
     : "";
   const roleEventId = activeRole?.eventId || activeRole?.EventId || "";
-  const currentEventId = queryEventId || urlEventId || roleEventId;
+  const currentEventId = urlEventId || roleEventId;
   const { data: currentEvent } = useEventDetail(currentEventId);
   const currentEventName =
     currentEvent?.eventName || currentEvent?.EventName || currentEvent?.name || "";
@@ -115,6 +111,7 @@ export function NavigationBar() {
     !isAuthRoute &&
     roleName !== "Admin" &&
     roleName !== "Coordinator" &&
+    roleName !== "Mentor" &&
     !isAdminRoute &&
     !isCoordinatorRoute &&
     !isMentorRoute &&
@@ -475,30 +472,8 @@ export function NavigationBar() {
   // CHẾ ĐỘ 1B: NAVBAR DỌC DÀNH RIÊNG CHO MENTOR CỐ VẤN
   // ─────────────────────────────────────────────────────────────
   if (showMentorSidebar) {
-    const mentorRolesOnly = filterRolesByName(allEventRoles, "Mentor");
-    const mentorContext = resolveMentorContext(mentorRolesOnly, {
-      eventId: currentEventId,
-      trackId: queryTrackId,
-    });
-    const activeViewEventId = mentorContext?.eventId || currentEventId;
-    const isAuthorizedMentor = Boolean(
-      mentorContext ||
-      mentorRolesOnly.length > 0 ||
-      (queryTrackId && hasTrackRolePermission(user, mentorRolesOnly, queryTrackId, "Mentor")) ||
-      (currentEventId && hasEventRolePermission(user, mentorRolesOnly, currentEventId, "Mentor")),
-    );
-    const mentorTrackLabel = mentorContext?.trackName || "";
-    const mentorAssignmentLine = mentorTrackLabel
-      ? `Hạng mục: ${mentorTrackLabel}`
-      : "Đã được phân công (mời / gắn)";
-    const mentorQuery = (() => {
-      const params = new URLSearchParams();
-      if (activeViewEventId) params.set("eventId", activeViewEventId);
-      const trackForQuery = mentorContext?.trackId || queryTrackId;
-      if (trackForQuery) params.set("trackId", trackForQuery);
-      const qs = params.toString();
-      return qs ? `?${qs}` : "";
-    })();
+    const activeViewEventId = currentEventId;
+    const isAuthorizedMentor = hasEventPermission(user, activeRole, activeViewEventId);
 
     return (
       <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[#2dd4bf]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
@@ -533,7 +508,7 @@ export function NavigationBar() {
               {user?.FullName || "Cố Vấn Chuyên Môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedMentor ? mentorAssignmentLine : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedMentor ? "Phân công: AI & Machine Learning" : "Quyền hạn: Read-Only (Chỉ Xem)"}
             </span>
           </div>
 
@@ -546,7 +521,7 @@ export function NavigationBar() {
             {isAuthorizedMentor ? (
               <>
                 <Link
-                  href={`/mentor/tracks${mentorQuery}`}
+                  href="/mentor/tracks"
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname === "/mentor/tracks" || pathname === "/mentor"
                       ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
@@ -557,7 +532,7 @@ export function NavigationBar() {
                 </Link>
 
                 <Link
-                  href={`/mentor/teams${mentorQuery}`}
+                  href="/mentor/teams"
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/mentor/teams")
                       ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
@@ -568,7 +543,7 @@ export function NavigationBar() {
                 </Link>
 
                 <Link
-                  href={`/mentor/submissions${mentorQuery}`}
+                  href="/mentor/submissions"
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/mentor/submissions")
                       ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
@@ -626,6 +601,7 @@ export function NavigationBar() {
             </span>
           </div>
 
+
           <button
             type="button"
             onClick={logout}
@@ -642,22 +618,8 @@ export function NavigationBar() {
   // CHẾ ĐỘ 1C: NAVBAR DỌC DÀNH RIÊNG CHO GIÁM KHẢO (JUDGE)
   // ─────────────────────────────────────────────────────────────
   if (showJudgeSidebar) {
-    const judgeRolesOnly = filterRolesByName(allEventRoles, "Judge");
-    const judgeContext = resolveJudgeContext(judgeRolesOnly, {
-      eventId: currentEventId,
-      trackId: queryTrackId,
-    });
-    const activeViewEventId = judgeContext?.eventId || currentEventId;
-    const isAuthorizedJudge = Boolean(
-      judgeContext ||
-      judgeRolesOnly.length > 0 ||
-      (queryTrackId && hasTrackRolePermission(user, judgeRolesOnly, queryTrackId, "Judge")) ||
-      (currentEventId && hasEventRolePermission(user, judgeRolesOnly, currentEventId, "Judge")),
-    );
-    const judgeTrackLabel = judgeContext?.trackName || "";
-    const judgeAssignmentLine = judgeTrackLabel
-      ? `Hạng mục: ${judgeTrackLabel}`
-      : "Đã được phân công (mời / gắn)";
+    const activeViewEventId = currentEventId;
+    const isAuthorizedJudge = hasEventPermission(user, activeRole, activeViewEventId);
 
     return (
       <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--accent-judge)]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
@@ -686,13 +648,13 @@ export function NavigationBar() {
             <span className={`font-mono text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${
               isAuthorizedJudge ? "text-[var(--accent-judge)]" : "text-[var(--color-warning)]"
             }`}>
-              <Scale className="w-3.5 h-3.5" /> {isAuthorizedJudge ? "GIÁM KHẢO" : "CHƯA PHÂN CÔNG GIÁM KHẢO"}
+              <Scale className="w-3.5 h-3.5" /> {isAuthorizedJudge ? "GIÁM KHẢO CHẤM ĐIỂM" : "CHƯA PHÂN CÔNG GIÁM KHẢO"}
             </span>
             <span className="font-display text-xs font-bold text-[var(--text-primary)] truncate">
               {user?.FullName || "Giám Khảo Chuyên Môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedJudge ? judgeAssignmentLine : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedJudge ? "Hội đồng Chấm điểm RBL" : "Quyền hạn: Read-Only (Chỉ Xem)"}
             </span>
           </div>
 
@@ -784,6 +746,7 @@ export function NavigationBar() {
               {isAuthorizedJudge ? "Judge" : "User (Chưa Phân Công Giám Khảo)"}
             </span>
           </div>
+
 
           <button
             type="button"
@@ -956,22 +919,24 @@ export function NavigationBar() {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // CHẾ ĐỘ 2: NAVBAR NGANG — trang public / workspace ngoài sidebar
+  // CHẾ ĐỘ 2: NAVBAR NGANG (HORIZONTAL TOPBAR) - MỌI VAI TRÒ Ở TRANG NGOÀI
   // ─────────────────────────────────────────────────────────────
   return (
-    <nav className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center justify-between border-b border-[var(--border-muted)] bg-[var(--bg-panel)]/95 px-4 backdrop-blur-sm sm:px-6">
+    <nav className="w-full h-16 border-b border-[var(--border-muted)] bg-[var(--bg-panel)] flex items-center justify-between px-6 shrink-0 z-30 shadow-sm">
+      
+      {/* Left: Brand & Main Navigation Links */}
       <div className="flex items-center gap-6 md:gap-8">
-        <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold text-[var(--text-primary)] hover:opacity-90">
-          <SealShield className="h-5 w-5 text-[var(--accent-primary)]" />
+        <Link href="/" className="font-display font-bold text-lg text-[var(--accent-primary)] tracking-widest uppercase hover:opacity-80 flex items-center gap-2">
+          <SealShield className="h-6 w-6 text-[var(--accent-primary)]" />
           <span>SEAL</span>
         </Link>
 
-        <div className="hidden items-center gap-5 md:flex">
+        <div className="hidden md:flex gap-5 items-center font-mono text-xs">
           <Link
             href="/"
-            className={`text-sm font-medium transition-colors ${
+            className={`transition-colors uppercase font-bold ${
               pathname === "/" || pathname.endsWith("/vi") || pathname.endsWith("/en")
-                ? "text-[var(--accent-primary)]"
+                ? "text-[var(--accent-primary)] font-bold"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
@@ -980,71 +945,68 @@ export function NavigationBar() {
 
           <Link
             href="/events"
-            className={`text-sm font-medium transition-colors ${
+            className={`transition-colors uppercase font-bold ${
               pathname.includes("/events")
-                ? "text-[var(--accent-primary)]"
+                ? "text-[var(--accent-primary)] font-bold"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
-            Khám phá sự kiện
+            Khám phá Sự kiện
           </Link>
 
+          {/* Single Workspace Access Link for System Admin only */}
           {user && (user.isAdmin || user.IsAdmin || roleName === "Admin") && (
             <Link
               href="/admin/dashboard"
-              className="rounded-md border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-2.5 py-1 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15"
+              className="text-[var(--color-danger)] font-bold hover:underline bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 px-3 py-1 hud-clipped text-xs uppercase"
             >
-              Quản trị
+              [ BẢNG ĐIỀU HÀNH ADMIN ]
             </Link>
           )}
         </div>
       </div>
-
-      <div className="flex items-center gap-3">
+      
+      {/* Right: Notification & Role Switcher */}
+      <div className="flex items-center gap-4">
         <NotificationBell align="right" />
 
+
         {user ? (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-3 font-mono text-xs">
             {user.isStudent && !user.isApproved && roleName !== "Coordinator" && roleName !== "Admin" && roleName !== "Judge" && roleName !== "Mentor" && (
               <Link
                 href="/profile"
-                className="hidden rounded-md border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 px-2 py-1 text-xs font-medium text-[var(--color-warning)] sm:inline-block"
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[var(--color-warning)]/10 text-[var(--color-warning)] border border-[var(--color-warning)]/40 font-bold hover:bg-[var(--color-warning)] hover:text-black transition-all hud-clipped uppercase"
+                title="Hồ sơ chưa duyệt — Cập nhật thẻ sinh viên"
               >
-                Chưa duyệt hồ sơ
+                [ CHƯA DUYỆT THẺ SV &gt; ]
               </Link>
             )}
 
             <Link
               href="/profile"
-              className="rounded-md border border-[var(--border-muted)] px-2.5 py-1.5 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-input)]"
+              className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] font-bold border border-[var(--border-muted)] px-2.5 py-1 bg-[var(--bg-input)] hud-clipped uppercase"
             >
-              Hồ sơ
+              [ HỒ SƠ CÁ NHÂN ]
             </Link>
 
             <button
-              type="button"
               onClick={logout}
-              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--color-danger)]"
+              className="text-[var(--color-danger)] hover:underline border border-[var(--color-danger)]/30 px-2.5 py-1 hud-clipped cursor-pointer uppercase font-bold"
             >
-              Đăng xuất
+              [ ĐĂNG XUẤT ]
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 font-mono text-xs">
             <Link href="/login">
-              <button
-                type="button"
-                className="rounded-lg border border-[var(--border-muted)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-input)]"
-              >
-                Đăng nhập
+              <button className="hud-clipped px-3.5 py-1.5 border border-[var(--accent-primary)]/40 text-[var(--accent-primary)] font-bold uppercase tracking-wider hover:bg-[var(--accent-primary)]/10 transition-all cursor-pointer">
+                ĐĂNG NHẬP
               </button>
             </Link>
             <Link href="/register">
-              <button
-                type="button"
-                className="rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-sm font-medium text-[var(--bg-base)] hover:brightness-110"
-              >
-                Đăng ký
+              <button className="hud-clipped px-3.5 py-1.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold uppercase tracking-wider hover:bg-white transition-all shadow-sm cursor-pointer">
+                ĐĂNG KÝ
               </button>
             </Link>
           </div>

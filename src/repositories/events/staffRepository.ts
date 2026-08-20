@@ -72,7 +72,7 @@ export function useGetAllEventsCoordinators(events: any[]) {
               .filter((x: any) => Boolean(x.email || x.name));
 
             map[evId] = ecs;
-          } catch (e) {
+          } catch {
             map[evId] = [];
           }
         })
