@@ -341,15 +341,10 @@ export function TeamInvitationsView() {
               <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
               <span>Bạn đã từ chối lời mời tham gia sự kiện thành công. Bạn có thể đóng trang này.</span>
             </div>
-          ) : showQuickRegister ? (
+          ) : (
             <form onSubmit={handleQuickActivate} className="text-left space-y-4 pt-2 border-t border-[var(--border-muted)]">
-              <div className="space-y-1">
-                <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">
-                  ⚡ KÍCH HOẠT NHANH TÀI KHOẢN TẠM THỜI
-                </span>
-                <p className="text-[11px] text-zinc-400 font-sans">
-                  Hệ thống tự động cấp tài khoản cho email được mời. Hãy điền tên và tạo mật khẩu của bạn:
-                </p>
+              <div className="p-3 bg-cyan-950/30 border border-cyan-500/30 rounded text-[11px] text-cyan-300 font-sans leading-relaxed">
+                💡 <strong>Tài khoản đã được cấp sẵn:</strong> Ban tổ chức đã tạo tài khoản cho email của bạn. Nhấn nút bên dưới để đăng nhập, đổi mật khẩu chính thức và nhận vai trò trong sự kiện ngay!
               </div>
 
               <div>
@@ -382,77 +377,49 @@ export function TeamInvitationsView() {
 
               <div>
                 <label className="text-[10px] text-zinc-400 uppercase block mb-1">
-                  Mật khẩu khởi tạo <span className="text-red-400">*</span>
+                  Mật khẩu khởi tạo / Mật khẩu tạm <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  minLength={8}
+                  minLength={6}
                   value={quickPassword}
                   onChange={(e) => setQuickPassword(e.target.value)}
                   className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
                 />
-                <span className="text-[9px] text-zinc-500 mt-1 block">Mật khẩu mặc định: Seal@2026! (Bạn có thể đổi tùy ý)</span>
+                <span className="text-[9px] text-zinc-500 mt-1 block">Mật khẩu mặc định: Seal@2026! (Bạn sẽ được đổi mật khẩu riêng ngay sau đó)</span>
               </div>
 
-              <div className="flex flex-col gap-2 pt-2">
+              <div className="flex flex-col gap-3 pt-2">
                 <Button
                   type="submit"
                   variant="primary"
                   accent="primary"
                   disabled={isQuickSubmitting}
-                  className="w-full font-bold text-xs py-2.5 flex items-center justify-center gap-2"
+                  className="w-full font-bold text-xs py-3 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]"
                 >
                   <Sparkles className="size-4" />
-                  <span>{isQuickSubmitting ? "ĐANG KÍCH HOẠT..." : "KÍCH HOẠT TÀI KHOẢN & VÀO SỰ KIỆN"}</span>
+                  <span>{isQuickSubmitting ? "ĐANG ĐĂNG NHẬP & KÍCH HOẠT..." : "⚡ ĐĂNG NHẬP, ĐỔI MẬT KHẨU & VÀO SỰ KIỆN"}</span>
                 </Button>
-                <button
-                  type="button"
-                  onClick={() => setShowQuickRegister(false)}
-                  className="text-xs text-zinc-400 hover:text-white py-1 transition-colors text-center cursor-pointer"
-                >
-                  ← Quay lại các tùy chọn đăng nhập
-                </button>
+
+                <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
+                  <Link href={loginUrl} className="text-zinc-400 hover:text-cyan-300 transition-colors">
+                    🔐 Đã có mật khẩu riêng? Đăng nhập →
+                  </Link>
+
+                  {queryInvitationId && (
+                    <button
+                      type="button"
+                      onClick={handlePublicDecline}
+                      disabled={isDecliningPublic}
+                      className="text-red-400 hover:text-red-300 hover:underline transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Từ chối lời mời
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
-          ) : (
-            <div className="flex flex-col gap-3 pt-2">
-              <Link href={loginUrl}>
-                <Button variant="primary" accent="primary" className="w-full font-bold text-xs py-3 flex items-center justify-center gap-2">
-                  <LogIn className="size-4" />
-                  <span>ĐÃ CÓ TÀI KHOẢN? ĐĂNG NHẬP NGAY</span>
-                </Button>
-              </Link>
-
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowQuickRegister(true)}
-                className="w-full text-xs py-2.5 font-bold border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 flex items-center justify-center gap-2"
-              >
-                <Sparkles className="size-4 text-cyan-400" />
-                <span>CHƯA CÓ TÀI KHOẢN? CẤP & KÍCH HOẠT NHANH</span>
-              </Button>
-
-              <Link href={registerUrl}>
-                <Button variant="ghost" className="w-full text-xs py-2 flex items-center justify-center gap-2 text-zinc-400 hover:text-white">
-                  <UserPlus className="size-3.5" />
-                  <span>Hoặc đăng ký tài khoản mới đầy đủ</span>
-                </Button>
-              </Link>
-
-              {queryInvitationId && (
-                <button
-                  type="button"
-                  onClick={handlePublicDecline}
-                  disabled={isDecliningPublic}
-                  className="mt-2 text-xs text-red-400 hover:text-red-300 hover:underline transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <XCircle className="size-3.5" />
-                  <span>Từ chối lời mời này ngay (Không cần đăng nhập)</span>
-                </button>
-              )}
-            </div>
           )}
 
           <div className="pt-2 border-t border-[var(--border-muted)] text-[11px] text-zinc-300 flex items-center justify-center gap-1.5">
