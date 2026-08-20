@@ -14,7 +14,10 @@ import {
 } from "@/repositories/teamsRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { Button, Card, Badge } from "@/components/ui";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Button, Card, Badge, Field, Input } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 import {
   Users,
@@ -191,48 +194,36 @@ export function CoordinatorTeamsView() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] hud-lattice px-6 py-8">
-      {/* Header */}
-      <div className="max-w-5xl mx-auto mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#263339] pb-6">
-          <div>
-            <div className="flex items-center gap-2 font-mono text-xs text-[#a855f7] font-bold uppercase tracking-wider mb-1">
-              <Shield className="w-4 h-4 text-[#a855f7]" />
-              <span>QUẢN LÝ ĐỘI THI BAN TỔ CHỨC</span>
-            </div>
-            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
-              DANH SÁCH ĐỘI THI VÀ PHÊ DUYỆT ĐĂNG KÝ
-            </h1>
-            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
-              Xem danh sách các đội thi đăng ký tham gia sự kiện, kiểm tra thông tin thành viên và duyệt phê duyệt hoặc từ chối đăng ký.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="px-3 py-1.5 bg-[rgba(245,158,11,0.1)] border border-[var(--color-warning)]/30 font-mono text-xs text-[var(--color-warning)]">
-              CHỜ DUYỆT: {pendingTeams.length} ĐỘI
-            </div>
+    <PageShell className="max-w-5xl">
+      <PageHeader
+        title="Quản lý đội thi"
+        description="Xem danh sách đội đăng ký, kiểm tra thành viên và phê duyệt hoặc từ chối đăng ký."
+        actions={
+          <div className="flex items-center gap-2">
+            {pendingTeams.length > 0 && (
+              <Badge tone="warning">Chờ duyệt: {pendingTeams.length}</Badge>
+            )}
             <Button
               variant="ghost"
               onClick={() => { refetch(); refetchRegistered(); }}
-              className="flex items-center gap-2 text-xs font-mono"
+              className="text-xs"
             >
-              LÀM MỚI
+              <RefreshCw className="size-3.5" /> Làm mới
             </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="max-w-5xl mx-auto mb-6 flex flex-wrap items-center gap-4">
+      <div className="mb-6 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-[#8a9ba8]">Sự kiện:</span>
+          <span className="text-xs text-[var(--text-muted)]">Sự kiện</span>
           <select
             value={eventId}
             onChange={(e) => {
               setEventId(e.target.value);
               setSelectedTrackId("ALL");
             }}
-            className="px-4 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped font-bold focus:outline-none"
+            className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-4 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-coordinator)] focus:outline-none"
           >
             {myEvents.map((ev: any) => {
               const id = pickId(ev);
@@ -246,15 +237,14 @@ export function CoordinatorTeamsView() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-[#8a9ba8] flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5 text-[#8b5cf6]" /> Hạng mục thi:
-          </span>
+          <Filter className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+          <span className="text-xs text-[var(--text-muted)]">Hạng mục</span>
           <select
             value={selectedTrackId}
             onChange={(e) => setSelectedTrackId(e.target.value)}
-            className="px-4 py-2 bg-[var(--bg-input)] border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs hud-clipped font-bold focus:outline-none cursor-pointer"
+            className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-4 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-coordinator)] focus:outline-none"
           >
-            <option value="ALL">-- Tất cả Hạng mục thi --</option>
+            <option value="ALL">Tất cả hạng mục</option>
             {tracks.map((tr: any) => {
               const trId = tr.id || tr.Id || tr.trackId || tr.TrackId || "";
               const trName = tr.trackName || tr.TrackName || "Hạng mục";
@@ -268,21 +258,22 @@ export function CoordinatorTeamsView() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-5xl mx-auto">
+      <section className="mb-10 space-y-4">
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+          Chờ duyệt {pendingTeams.length > 0 && `(${pendingTeams.length})`}
+        </h2>
         {isLoading ? (
           <div className="flex justify-center py-20">
             <RefreshCw className="w-8 h-8 animate-spin text-[var(--accent-coordinator)]" />
           </div>
         ) : pendingTeams.length === 0 ? (
-          <Card className="w-full p-16 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)] text-center">
-            <CheckCircle2 className="w-12 h-12 text-[var(--color-success)] mx-auto mb-4 opacity-50" />
-            <p className="font-mono text-sm text-[var(--text-muted)] tracking-widest uppercase">
-              Không có đội thi nào đang chờ duyệt đăng ký
-            </p>
-          </Card>
+          <EmptyState
+            icon={CheckCircle2}
+            title="Không có đội chờ duyệt"
+            description="Tất cả đơn đăng ký đã được xử lý."
+          />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {pendingTeams.map((team: any) => {
               const teamId = team.id || team.TeamId || "";
               const teamName = team.teamName || team.TeamName || "Đội thi";
@@ -290,76 +281,56 @@ export function CoordinatorTeamsView() {
               return (
                 <Card
                   key={teamId}
-                  className="w-full p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)] hover:border-[var(--accent-coordinator)]/30 transition-all duration-200"
+                  className="border-[var(--color-warning)]/30 bg-[var(--color-warning)]/5 p-5 transition-colors hover:border-[var(--color-warning)]/50"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <Users className="w-5 h-5 text-[var(--accent-team)]" />
-                        <h3 className="font-mono text-base font-bold text-[var(--text-primary)]">
-                          {teamName}
-                        </h3>
-                        <Badge tone="warning">PENDING APPROVAL</Badge>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Users className="h-5 w-5 text-[var(--accent-team)]" />
+                        <h3 className="text-base font-semibold text-[var(--text-primary)]">{teamName}</h3>
+                        <Badge tone="warning">Chờ duyệt</Badge>
                       </div>
-
-                      <p className="text-xs text-[var(--text-muted)] font-mono mt-1">
-                        Mô tả: {team.description || "Chưa có mô tả chi tiết."}
-                      </p>
-                      <p className="text-[10px] text-[var(--text-muted)] font-mono mt-2 italic">
-                        Bấm &quot;Soi chi tiết đội thi&quot; để xem danh sách thành viên và trạng thái hồ sơ.
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {team.description || "Chưa có mô tả chi tiết."}
                       </p>
                     </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        onClick={() => setDetailModal(team)}
-                        className="text-xs font-mono text-[var(--accent-primary)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-primary)]/10"
-                      >
-                        <Eye className="w-4 h-4" /> SOI CHI TIẾT ĐỘI THI
-                      </Button>
-                    </div>
+                    <Button variant="ghost" onClick={() => setDetailModal(team)} className="shrink-0 text-xs">
+                      <Eye className="h-4 w-4" /> Chi tiết
+                    </Button>
                   </div>
                 </Card>
               );
             })}
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="max-w-5xl mx-auto mt-10 space-y-4">
-        <h2 className="font-display text-sm font-bold text-[var(--accent-coordinator)] tracking-widest uppercase">
-          Đội đã duyệt — loại khỏi cuộc thi
-        </h2>
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Đội đã duyệt</h2>
         {registeredTeams.length === 0 ? (
-          <p className="font-mono text-xs text-[var(--text-muted)]">Chưa có đội Registered trong sự kiện này.</p>
+          <p className="text-sm text-[var(--text-muted)]">Chưa có đội đã duyệt trong sự kiện này.</p>
         ) : (
           registeredTeams.map((team: any) => {
             const teamId = pickId(team);
             const teamName = team.name || team.Name || team.teamName || team.TeamName || "Đội thi";
             return (
-              <Card
-                key={teamId}
-                className="w-full p-4 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)] flex items-center justify-between gap-4"
-              >
+              <Card key={teamId} className="flex items-center justify-between gap-4 p-4">
                 <div>
-                  <h3 className="font-mono text-sm font-bold text-[var(--text-primary)]">{teamName}</h3>
-                  <p className="font-mono text-[10px] text-[var(--text-muted)]">
-                    {team.description || team.Description || ""}
-                  </p>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">{teamName}</h3>
+                  <p className="text-xs text-[var(--text-muted)]">{team.description || team.Description || ""}</p>
                 </div>
                 <Button
+                  variant="ghost"
                   onClick={() => setDisqualifyModal({ teamId, teamName })}
-                  className="flex items-center gap-1.5 text-xs bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/40 text-[var(--color-danger)] font-mono"
+                  className="text-xs text-[var(--color-danger)]"
                 >
-                  <Ban className="w-3.5 h-3.5" /> LOẠI ĐỘI
+                  <Ban className="h-3.5 w-3.5" /> Loại đội
                 </Button>
               </Card>
             );
           })
         )}
-      </div>
+      </section>
 
       {/* Full Team Registration Inspection Detail Modal */}
       {detailModal && (
@@ -691,6 +662,6 @@ export function CoordinatorTeamsView() {
           </Card>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
