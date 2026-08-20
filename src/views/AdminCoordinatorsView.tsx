@@ -338,8 +338,16 @@ export function AdminCoordinatorsView() {
           fullName: customFullName.trim() || emailToUse.split("@")[0],
           roleName: "EventCoordinator",
           status: "Pending",
+          notes: "Cấp tài khoản tạm / Chờ kích hoạt qua email",
         });
-        setActionSuccess(`Đã gửi thư mời và gán quyền Điều Phối Viên cho ${emailToUse} thành công!`);
+        
+        pushSystemNotification({
+          title: "Gửi thư mời & Cấp tài khoản tạm",
+          message: `Đã gửi thư mời kèm liên kết kích hoạt cấp tài khoản tạm cho ${emailToUse} làm Điều Phối Viên sự kiện "${selectedEvent?.eventName || selectedEvent?.EventName || 'Sự kiện'}".`,
+          type: "info",
+        });
+
+        setActionSuccess(`Đã gửi thư mời và liên kết kích hoạt cấp tài khoản tạm cho ${emailToUse} thành công!`);
         handleClearSelection();
         await refetchRoles();
         loadHistory();

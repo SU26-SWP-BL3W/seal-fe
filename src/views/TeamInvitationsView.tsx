@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation, useDeclineEventRoleInvitationPublic } from "@/repositories/eventRolesRepository";
+import { useRegister } from "@/repositories/authRepository";
 import { useEvents } from "@/repositories/eventsRepository";
 import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
@@ -29,13 +30,19 @@ export function TeamInvitationsView() {
   const toast = useToast();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { user, refreshRoles } = useAuth();
+  const { user, refreshRoles, loginWithCredentials } = useAuth();
 
   const queryInvitationId = searchParams.get("invitationId") || searchParams.get("id") || "";
   const queryAction = searchParams.get("action") || "";
   const queryRole = searchParams.get("role") || "";
   const queryEventName = searchParams.get("eventName") || searchParams.get("event") || "";
   const queryEmail = searchParams.get("email") || "";
+
+  const [showQuickRegister, setShowQuickRegister] = useState(false);
+  const [quickFullName, setQuickFullName] = useState("");
+  const [quickPassword, setQuickPassword] = useState("Seal@2026!");
+  const [isQuickSubmitting, setIsQuickSubmitting] = useState(false);
+  const { mutateAsync: registerApi } = useRegister();
 
   const { data, isLoading, isError, refetch, isFetching } = useMyInvitations(Boolean(user));
   const { data: rawEvents = [] } = useEvents();
@@ -147,6 +154,55 @@ export function TeamInvitationsView() {
     }
   };
 
+  const handleQuickActivate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetEmail = (queryEmail || "").trim();
+    if (!targetEmail) {
+      toast.error("Vui lòng nhập email nhận lời mời.");
+      return;
+    }
+    if (!quickFullName.trim()) {
+      toast.error("Vui lòng nhập họ và tên của bạn.");
+      return;
+    }
+    if (!quickPassword || quickPassword.length < 8) {
+      toast.error("Mật khẩu phải có ít nhất 8 ký tự.");
+      return;
+    }
+
+    setIsQuickSubmitting(true);
+    try {
+      try {
+        await registerApi({
+          email: targetEmail,
+          password: quickPassword,
+          fullName: quickFullName.trim(),
+        });
+      } catch (regErr: any) {
+        console.warn("Register note:", regErr?.message);
+      }
+
+      await loginWithCredentials(targetEmail, quickPassword);
+      toast.success("Đã kích hoạt tài khoản thành công! Đang xử lý nhận vai trò...");
+
+      if (queryInvitationId) {
+        try {
+          await respondEventRole({ invitationId: queryInvitationId, isAccepted: true });
+          toast.success("🎉 Đã nhận vai trò sự kiện thành công!");
+        } catch {}
+      }
+
+      await refreshRoles();
+      queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "Kích hoạt tài khoản thất bại. Vui lòng kiểm tra lại mật khẩu.";
+      toast.error(msg);
+    } finally {
+      setIsQuickSubmitting(false);
+    }
+  };
+
   // Guard: Not Logged In Notice
   if (!user) {
     const currentParams = searchParams.toString();
@@ -166,7 +222,7 @@ export function TeamInvitationsView() {
               [ XÁC THỰC TÀI KHOẢN & PHẢN HỒI LỜI MỜI ]
             </span>
             <h2 className="font-display text-2xl font-bold uppercase text-white">
-              Đăng Nhập Để Phản Hồi Lời Mời
+              Xác Nhận Nhận Vai Trò Sự Kiện
             </h2>
 
             {queryRole || queryEventName ? (
@@ -177,10 +233,15 @@ export function TeamInvitationsView() {
                 <div className="text-zinc-300">
                   Vai trò: <strong className="text-cyan-300">{formatRoleLabel(queryRole)}</strong>
                 </div>
+                {queryEmail && (
+                  <div className="text-zinc-300">
+                    Email mời: <strong className="text-amber-300">{queryEmail}</strong>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-xs text-zinc-300 font-sans leading-relaxed">
-                Bạn nhận được thư mời tham gia sự kiện / đội thi trên hệ thống SEAL. Vui lòng đăng nhập để hệ thống tự động gán quyền và hiển thị lời mời của bạn.
+                Bạn nhận được thư mời tham gia sự kiện / đội thi trên hệ thống SEAL. Vui lòng đăng nhập hoặc kích hoạt tài khoản để hệ thống tự động gán quyền.
               </p>
             )}
           </div>
@@ -190,19 +251,99 @@ export function TeamInvitationsView() {
               <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
               <span>Bạn đã từ chối lời mời tham gia sự kiện thành công. Bạn có thể đóng trang này.</span>
             </div>
+          ) : showQuickRegister ? (
+            <form onSubmit={handleQuickActivate} className="text-left space-y-4 pt-2 border-t border-[var(--border-muted)]">
+              <div className="space-y-1">
+                <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">
+                  ⚡ KÍCH HOẠT NHANH TÀI KHOẢN TẠM THỜI
+                </span>
+                <p className="text-[11px] text-zinc-400 font-sans">
+                  Hệ thống tự động cấp tài khoản cho email được mời. Hãy điền tên và tạo mật khẩu của bạn:
+                </p>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase block mb-1">Email nhận lời mời</label>
+                <input
+                  type="email"
+                  value={queryEmail}
+                  readOnly={!!queryEmail}
+                  className="w-full px-3 py-2 bg-black/50 border border-zinc-700 text-xs text-zinc-300 font-mono focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
+                  Họ và tên của bạn <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Nguyễn Văn A"
+                  value={quickFullName}
+                  onChange={(e) => setQuickFullName(e.target.value)}
+                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
+                  Mật khẩu khởi tạo <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={8}
+                  value={quickPassword}
+                  onChange={(e) => setQuickPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                />
+                <span className="text-[9px] text-zinc-500 mt-1 block">Mật khẩu mặc định: Seal@2026! (Bạn có thể đổi tùy ý)</span>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  accent="primary"
+                  disabled={isQuickSubmitting}
+                  className="w-full font-bold text-xs py-2.5 flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="size-4" />
+                  <span>{isQuickSubmitting ? "ĐANG KÍCH HOẠT..." : "KÍCH HOẠT TÀI KHOẢN & VÀO SỰ KIỆN"}</span>
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickRegister(false)}
+                  className="text-xs text-zinc-400 hover:text-white py-1 transition-colors text-center cursor-pointer"
+                >
+                  ← Quay lại các tùy chọn đăng nhập
+                </button>
+              </div>
+            </form>
           ) : (
             <div className="flex flex-col gap-3 pt-2">
               <Link href={loginUrl}>
                 <Button variant="primary" accent="primary" className="w-full font-bold text-xs py-3 flex items-center justify-center gap-2">
                   <LogIn className="size-4" />
-                  <span>ĐĂNG NHẬP ĐỂ ĐỒNG Ý NHẬN VAI TRÒ</span>
+                  <span>ĐÃ CÓ TÀI KHOẢN? ĐĂNG NHẬP NGAY</span>
                 </Button>
               </Link>
 
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowQuickRegister(true)}
+                className="w-full text-xs py-2.5 font-bold border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 flex items-center justify-center gap-2"
+              >
+                <Sparkles className="size-4 text-cyan-400" />
+                <span>CHƯA CÓ TÀI KHOẢN? CẤP & KÍCH HOẠT NHANH</span>
+              </Button>
+
               <Link href={registerUrl}>
-                <Button variant="secondary" className="w-full text-xs py-2.5 flex items-center justify-center gap-2">
-                  <UserPlus className="size-4" />
-                  <span>CHƯA CÓ TÀI KHOẢN? ĐĂNG KÝ NGAY</span>
+                <Button variant="ghost" className="w-full text-xs py-2 flex items-center justify-center gap-2 text-zinc-400 hover:text-white">
+                  <UserPlus className="size-3.5" />
+                  <span>Hoặc đăng ký tài khoản mới đầy đủ</span>
                 </Button>
               </Link>
 

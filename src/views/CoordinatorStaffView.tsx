@@ -171,9 +171,17 @@ export const CoordinatorStaffView: React.FC = () => {
           trackId: judgeTrackId,
           trackName: chosenTrack?.trackName || chosenTrack?.TrackName,
           status: "Pending",
+          notes: "Cấp tài khoản tạm / Chờ kích hoạt qua email",
         });
+
+        pushSystemNotification({
+          title: "Gửi thư mời & Cấp tài khoản tạm Giám khảo",
+          message: `Đã gửi thư mời kèm liên kết kích hoạt cấp tài khoản tạm cho ${judgeEmail.trim()} làm Giám khảo Hạng mục "${chosenTrack?.trackName || chosenTrack?.TrackName || 'Hạng mục'}" sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}".`,
+          type: "info",
+        });
+
         setJudgeMessage({
-          text: res.message || `Đã gửi email mời Giám khảo (${judgeEmail}) thành công!`,
+          text: res.message || `Đã gửi email mời & cấp tài khoản tạm cho Giám khảo (${judgeEmail}) thành công!`,
           isError: false,
         });
         setJudgeEmail("");
@@ -236,9 +244,17 @@ export const CoordinatorStaffView: React.FC = () => {
           trackId: mentorTrackId,
           trackName: chosenTrack?.trackName || chosenTrack?.TrackName,
           status: "Pending",
+          notes: "Cấp tài khoản tạm / Chờ kích hoạt qua email",
         });
+
+        pushSystemNotification({
+          title: "Gửi thư mời & Cấp tài khoản tạm Cố vấn",
+          message: `Đã gửi thư mời kèm liên kết kích hoạt cấp tài khoản tạm cho ${mentorEmail.trim()} làm Cố vấn Hạng mục "${chosenTrack?.trackName || chosenTrack?.TrackName || 'Hạng mục'}" sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}".`,
+          type: "info",
+        });
+
         setMentorMessage({
-          text: res.message || `Đã gửi email mời Cố vấn (${mentorEmail}) thành công!`,
+          text: res.message || `Đã gửi email mời & cấp tài khoản tạm cho Cố vấn (${mentorEmail}) thành công!`,
           isError: false,
         });
         setMentorEmail("");
