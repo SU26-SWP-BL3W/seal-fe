@@ -23,6 +23,7 @@ import {
   Info,
   RefreshCw,
   UserPlus,
+  Sparkles,
   ExternalLink,
 } from "lucide-react";
 
@@ -567,8 +568,8 @@ export function AdminCoordinatorsView() {
                     onChange={(e) => setCustomFullName(e.target.value)}
                     disabled={isSubmitting}
                   />
-                  <span className="block text-xs text-[var(--accent-primary)]">
-                    Hệ thống sẽ gửi thư mời kích hoạt tài khoản EC qua email này.
+                  <span className="block text-xs text-cyan-400 font-mono">
+                    ⚡ Tài khoản chưa có trong hệ thống: Sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt qua email này.
                   </span>
                 </div>
               )}
@@ -582,11 +583,15 @@ export function AdminCoordinatorsView() {
               >
                 {isSubmitting ? (
                   <>
-                    <RefreshCw className="h-4 w-4 animate-spin" /> Đang phân công...
+                    <RefreshCw className="h-4 w-4 animate-spin" /> Đang xử lý...
+                  </>
+                ) : matchedUser ? (
+                  <>
+                    <UserCheck className="h-4 w-4" /> Xác nhận phân công EC
                   </>
                 ) : (
                   <>
-                    <UserCheck className="h-4 w-4" /> Xác nhận phân công EC
+                    <Sparkles className="h-4 w-4" /> ⚡ Gửi Mời &amp; Cấp TK Tạm EC
                   </>
                 )}
               </Button>

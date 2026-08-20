@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { staffRepository, useGetEventRoles } from "@/repositories/staffRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar } from "lucide-react";
+import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Sparkles } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
 import { RoleInvitationHistoryCard } from "@/components/domain/role-invitations/RoleInvitationHistoryCard";
 import {
@@ -90,12 +90,11 @@ export const CoordinatorStaffView: React.FC = () => {
       const res = await staffRepository.inviteCoordinator({
         eventId: selectedEventId,
         email: coordinatorEmail.trim(),
-        fullName: coordinatorFullName.trim() || undefined,
+        fullName: coordinatorFullName.trim(),
       });
-
       setIsSubmittingCoordinator(false);
 
-      if (res.success) {
+      if (res && res.success !== false) {
         invitationHistoryService.addInvitation({
           eventId: selectedEventId,
           eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
@@ -103,9 +102,17 @@ export const CoordinatorStaffView: React.FC = () => {
           fullName: coordinatorFullName.trim() || coordinatorEmail.trim().split("@")[0],
           roleName: "EventCoordinator",
           status: "Pending",
+          notes: "Cấp tài khoản tạm / Chờ kích hoạt qua email",
         });
+
+        pushSystemNotification({
+          title: "Gửi thư mời & Cấp tài khoản tạm Điều Phối Viên",
+          message: `Đã gửi thư mời kèm liên kết kích hoạt cấp tài khoản tạm cho ${coordinatorEmail.trim()} làm Điều Phối Viên sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}".`,
+          type: "info",
+        });
+
         setCoordinatorMessage({
-          text: res.message || `Đã gửi email mời Điều phối viên (${coordinatorEmail}) thành công!`,
+          text: res.message || `Đã gửi email mời & cấp tài khoản tạm cho Điều phối viên (${coordinatorEmail}) thành công!`,
           isError: false,
         });
         setCoordinatorEmail("");
@@ -114,13 +121,13 @@ export const CoordinatorStaffView: React.FC = () => {
         loadHistory();
       } else {
         setCoordinatorMessage({
-          text: res.message || "Gửi lời mời Điều phối viên thất bại.",
+          text: res?.message || "Gửi lời mời Điều phối viên thất bại.",
           isError: true,
         });
       }
     } catch (err: any) {
       setIsSubmittingCoordinator(false);
-      const msg = err.response?.data?.message || err.message || "Gửi lời mời thất bại. Bạn phải là Event Coordinator của sự kiện này.";
+      const msg = err.response?.data?.message || err.response?.data?.detail || err.message || "Gửi lời mời thất bại. Bạn phải là Event Coordinator của sự kiện này.";
       setCoordinatorMessage({
         text: msg,
         isError: true,
@@ -161,7 +168,7 @@ export const CoordinatorStaffView: React.FC = () => {
         trackId: judgeTrackId,
       });
 
-      if (res.success) {
+      if (res && res.success !== false) {
         invitationHistoryService.addInvitation({
           eventId: selectedEventId,
           eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
@@ -189,11 +196,12 @@ export const CoordinatorStaffView: React.FC = () => {
         await refetchRoles();
         loadHistory();
       } else {
-        setJudgeMessage({ text: res.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
+        setJudgeMessage({ text: res?.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
       }
     } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || "Gửi lời mời thất bại, vui lòng thử lại.";
       setJudgeMessage({
-        text: err?.response?.data?.message || err?.message || "Gửi lời mời thất bại, vui lòng thử lại.",
+        text: msg,
         isError: true,
       });
     } finally {
@@ -234,7 +242,7 @@ export const CoordinatorStaffView: React.FC = () => {
         trackId: mentorTrackId,
       });
 
-      if (res.success) {
+      if (res && res.success !== false) {
         invitationHistoryService.addInvitation({
           eventId: selectedEventId,
           eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
@@ -262,11 +270,12 @@ export const CoordinatorStaffView: React.FC = () => {
         await refetchRoles();
         loadHistory();
       } else {
-        setMentorMessage({ text: res.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
+        setMentorMessage({ text: res?.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
       }
     } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || "Gửi lời mời thất bại, vui lòng thử lại.";
       setMentorMessage({
-        text: err?.response?.data?.message || err?.message || "Gửi lời mời thất bại, vui lòng thử lại.",
+        text: msg,
         isError: true,
       });
     } finally {
@@ -477,9 +486,9 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-coordinator)]"
                   />
                   {coordinatorEmail.trim() && !checkEmailInSystem(coordinatorEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>Email chưa có tài khoản: Hệ thống sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt.</span>
                     </p>
                   )}
                 </div>
@@ -503,7 +512,13 @@ export const CoordinatorStaffView: React.FC = () => {
                   className="w-full py-2.5 bg-[var(--accent-coordinator)] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{isSubmittingCoordinator ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Điều Phối Viên"}</span>
+                  <span>
+                    {isSubmittingCoordinator
+                      ? "Đang Gửi Lời Mời..."
+                      : !checkEmailInSystem(coordinatorEmail) && coordinatorEmail.trim()
+                      ? "⚡ GỬI MỜI & CẤP TK TẠM ĐIỀU PHỐI VIÊN"
+                      : "GỬI LỜI MỜI ĐIỀU PHỐI VIÊN"}
+                  </span>
                 </button>
               </form>
             </div>
@@ -540,9 +555,9 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
                   />
                   {judgeEmail.trim() && !checkEmailInSystem(judgeEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>Email chưa có tài khoản: Hệ thống sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt.</span>
                     </p>
                   )}
                 </div>
@@ -599,7 +614,13 @@ export const CoordinatorStaffView: React.FC = () => {
                   className="w-full py-2.5 bg-[var(--accent-judge)] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{isSubmittingJudge ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Giám Khảo"}</span>
+                  <span>
+                    {isSubmittingJudge
+                      ? "Đang Gửi Lời Mời..."
+                      : !checkEmailInSystem(judgeEmail) && judgeEmail.trim()
+                      ? "⚡ GỬI MỜI & CẤP TK TẠM GIÁM KHẢO"
+                      : "GỬI LỜI MỜI GIÁM KHẢO"}
+                  </span>
                 </button>
               </form>
             </div>
@@ -637,9 +658,9 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[#2dd4bf]"
                   />
                   {mentorEmail.trim() && !checkEmailInSystem(mentorEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>Email chưa có tài khoản: Hệ thống sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt.</span>
                     </p>
                   )}
                 </div>
@@ -696,7 +717,13 @@ export const CoordinatorStaffView: React.FC = () => {
                   className="w-full py-2.5 bg-[#2dd4bf] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{isSubmittingMentor ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Cố Vấn"}</span>
+                  <span>
+                    {isSubmittingMentor
+                      ? "Đang Gửi Lời Mời..."
+                      : !checkEmailInSystem(mentorEmail) && mentorEmail.trim()
+                      ? "⚡ GỬI MỜI & CẤP TK TẠM CỐ VẤN"
+                      : "GỬI LỜI MỜI CỐ VẤN"}
+                  </span>
                 </button>
               </form>
             </div>
