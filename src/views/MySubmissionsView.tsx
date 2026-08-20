@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMyTeam } from "@/repositories/teamsRepository";
+import { useMyTeam, useMyTeamSubmissions } from "@/repositories/teamsRepository";
 import {
   useMySubmissions,
   useDeleteSubmission,
@@ -43,8 +43,11 @@ export function MySubmissionsView() {
   );
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
-  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
-  const isLoading = isLoadingTeam || isLoadingSubs;
+  const { data: directTeamSubs = [] } = useMyTeamSubmissions();
+  const { data: submissionsByTeamId = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
+  const submissions: SubmitResultListItem[] =
+    submissionsByTeamId.length > 0 ? submissionsByTeamId : (directTeamSubs as any[]);
+  const isLoading = isLoadingTeam || (isLoadingSubs && submissions.length === 0);
 
   // Edit Modal State
   const [editingSub, setEditingSub] = useState<SubmitResultListItem | null>(null);
