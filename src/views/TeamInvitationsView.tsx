@@ -6,10 +6,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useSearchParams } from "next/navigation";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
-import {
-  useRespondEventRoleInvitation,
-  useDeclineEventRoleInvitationPublic,
-} from "@/repositories/eventRolesRepository";
+import { useRespondEventRoleInvitation, useDeclineEventRoleInvitationPublic } from "@/repositories/eventRolesRepository";
+import { useEvents } from "@/repositories/eventsRepository";
 import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,6 +38,7 @@ export function TeamInvitationsView() {
   const queryEmail = searchParams.get("email") || "";
 
   const { data, isLoading, isError, refetch, isFetching } = useMyInvitations(Boolean(user));
+  const { data: rawEvents = [] } = useEvents();
   const invitations = data?.invitations ?? [];
 
   const { mutateAsync: respondTeam, isPending: isRespondingTeam } = useAcceptOrDeclineInvitation();
@@ -369,6 +368,29 @@ export function TeamInvitationsView() {
                     const role = inv.role || "";
                     const isTeam = inv.type === "TEAM";
 
+                    // Find matching event
+                    const matchedEvent = (rawEvents || []).find((ev: any) => {
+                      const evId = ev.id || ev.Id || ev.eventId || ev.EventId;
+                      const evName = ev.name || ev.eventName || ev.EventName || "";
+                      if ((inv as any).eventId && ((inv as any).eventId === evId || (inv as any).EventId === evId)) return true;
+                      if (inv.targetName && evName.trim().toLowerCase() === inv.targetName.trim().toLowerCase()) return true;
+                      return false;
+                    });
+                    const eventId = (inv as any).eventId || (inv as any).EventId || (inv as any).targetId || (inv as any).TargetId || matchedEvent?.id || (matchedEvent as any)?.Id;
+
+                    let destinationUrl = "/events";
+                    if (role === "Coordinator" || role === "EventCoordinator") {
+                      destinationUrl = eventId ? `/coordinator/events/${eventId}` : "/coordinator/dashboard";
+                    } else if (role === "Judge") {
+                      destinationUrl = eventId ? `/judge/scoring?eventId=${eventId}` : "/judge/events";
+                    } else if (role === "Mentor") {
+                      destinationUrl = eventId ? `/mentor/teams?eventId=${eventId}` : "/mentor/teams";
+                    } else if (isTeam) {
+                      destinationUrl = eventId ? `/events/${eventId}` : "/my-team";
+                    } else if (eventId) {
+                      destinationUrl = `/events/${eventId}`;
+                    }
+
                     return (
                       <li key={inv.invitationId}>
                         <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--bg-panel)]/60 py-3">
@@ -382,19 +404,9 @@ export function TeamInvitationsView() {
                               {isAccepted ? "Đã chấp nhận" : "Đã từ chối"}
                             </Badge>
                             {isAccepted && (
-                              <Link
-                                href={
-                                  isTeam
-                                    ? "/my-team"
-                                    : role === "Judge"
-                                    ? "/judge/events"
-                                    : role === "Mentor"
-                                    ? "/mentor/teams"
-                                    : "/coordinator/dashboard"
-                                }
-                              >
+                              <Link href={destinationUrl}>
                                 <Button variant="secondary" className="text-[11px] py-1 px-2.5 h-7">
-                                  <span>Truy cập</span>
+                                  <span>Truy cập sự kiện</span>
                                   <ArrowRight className="size-3" />
                                 </Button>
                               </Link>
