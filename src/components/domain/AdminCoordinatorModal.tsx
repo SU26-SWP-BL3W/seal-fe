@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { useGetEventRoles, staffRepository } from "@/repositories/staffRepository";
+import { useAuth } from "@/providers/AuthProvider";
 import type { User, EventRole } from "@/models/entities";
 
 interface AdminCoordinatorModalProps {
@@ -33,6 +34,14 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
   onSuccess,
   allUsers,
 }) => {
+  const { user: currentUser, refreshRoles } = useAuth();
+  const currentUserId =
+    currentUser?.id ||
+    (currentUser as any)?.userId ||
+    (currentUser as any)?.UserId ||
+    "";
+  const currentUserEmail = (currentUser?.email || (currentUser as any)?.Email || "").toLowerCase();
+
   const eventId = event?.id || event?.Id || event?.eventId || event?.EventId || "";
   const eventName = event?.eventName || event?.EventName || "Sự kiện cuộc thi";
 
@@ -134,7 +143,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
   };
 
   // Xử lý gỡ vai trò EC
-  const handleRemoveCoordinator = async (roleId: string, name: string) => {
+  const handleRemoveCoordinator = async (roleId: string, name: string, targetUserId?: string) => {
     const ok = window.confirm(`Bạn có chắc chắn muốn thu hồi quyền Điều phối viên của "${name}" khỏi sự kiện này không?`);
     if (!ok) return;
 
@@ -145,6 +154,9 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
       setActionSuccess(`Đã thu hồi quyền Điều phối viên của ${name} thành công!`);
       await refetchRoles();
       onSuccess();
+      if (targetUserId && targetUserId === currentUserId) {
+        await refreshRoles();
+      }
       setTimeout(() => setActionSuccess(null), 3000);
     } catch (err: any) {
       setActionError(err?.response?.data?.message || err?.message || "Gỡ vai trò thất bại.");
@@ -173,6 +185,19 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
     if (isAlreadyEc) {
       setActionError("Người này đã là Điều phối viên phụ trách sự kiện này rồi!");
       return;
+    }
+
+    if (emailToUse === currentUserEmail) {
+      setActionError("Bạn không thể tự mời hoặc tự gán chính mình làm Điều phối viên.");
+      return;
+    }
+
+    if (matchedUser) {
+      const realUserId = matchedUser.id || (matchedUser as any).Id || matchedUser.userId || (matchedUser as any).UserId;
+      if (realUserId === currentUserId) {
+        setActionError("Bạn không thể tự mời hoặc tự gán chính mình làm Điều phối viên.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -336,6 +361,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {currentCoordinators.map((c: any) => {
                 const roleId = c.id || c.Id || c.eventRoleId || c.EventRoleId;
+                const coordUserId = c.userId || c.UserId || c.user?.id || c.user?.userId || c.User?.Id;
                 const email = c.user?.email || c.User?.Email || c.email || c.Email || "coordinator@seal.edu.vn";
                 const fullName = c.user?.fullName || c.User?.FullName || c.fullName || email.split("@")[0];
                 const isRemoving = removingRoleId === roleId;
@@ -359,7 +385,7 @@ export const AdminCoordinatorModal: React.FC<AdminCoordinatorModalProps> = ({
                     <button
                       type="button"
                       disabled={isRemoving}
-                      onClick={() => handleRemoveCoordinator(roleId, fullName)}
+                      onClick={() => handleRemoveCoordinator(roleId, fullName, coordUserId)}
                       className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/30 rounded transition-all cursor-pointer shrink-0"
                       title="Thu hồi quyền EC này khỏi sự kiện"
                     >

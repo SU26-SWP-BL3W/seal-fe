@@ -100,8 +100,22 @@ export function NavigationBar() {
     ((isCoordinatorRoute && roleName !== "Admin") ||
       (isCoordinatorRole &&
         (pathname.includes("/coordinator") || pathname.includes("/appeals"))));
-  const showMentorSidebar = false;
-  const showJudgeSidebar = false;
+  const showMentorSidebar =
+    !isAuthRoute &&
+    roleName !== "Admin" &&
+    roleName !== "Coordinator" &&
+    !isAdminRoute &&
+    !isCoordinatorRoute &&
+    isMentorRoute;
+  const showJudgeSidebar =
+    !isAuthRoute &&
+    roleName !== "Admin" &&
+    roleName !== "Coordinator" &&
+    roleName !== "Mentor" &&
+    !isAdminRoute &&
+    !isCoordinatorRoute &&
+    !isMentorRoute &&
+    isJudgeRoute;
   const showParticipantSidebar = !isAuthRoute && isCandidateRoute && isCandidateRole;
 
   // ─────────────────────────────────────────────────────────────

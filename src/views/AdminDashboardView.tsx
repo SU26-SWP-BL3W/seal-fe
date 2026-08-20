@@ -21,6 +21,7 @@ import {
   Layers,
   Sparkles,
   ChevronRight,
+  ChevronLeft,
   CheckCircle2,
   AlertTriangle,
   SlidersHorizontal,
@@ -100,11 +101,13 @@ export const AdminDashboardView: React.FC = () => {
 
   const ecCount = availableCoordinators.length;
 
-  // Filters & State
+  // Filters, Pagination & State
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "has_ec" | "no_ec">("all");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   // Modals state
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
@@ -147,6 +150,25 @@ export const AdminDashboardView: React.FC = () => {
       return matchesSearch && matchesStatus;
     });
   }, [displayEvents, searchTerm, statusFilter, ecMap]);
+
+  // Pagination computations
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedEvents = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredEvents.slice(start, start + PAGE_SIZE);
+  }, [filteredEvents, safePage, PAGE_SIZE]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (filter: "all" | "has_ec" | "no_ec") => {
+    setStatusFilter(filter);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
@@ -416,12 +438,12 @@ export const AdminDashboardView: React.FC = () => {
                   type="text"
                   placeholder="Tìm kiếm sự kiện, mùa giải, năm hoặc EC..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-9 text-xs font-mono bg-[var(--bg-base)] border-[var(--border-muted)] focus:border-[var(--color-danger)]"
                 />
                 {searchTerm && (
                   <button
-                    onClick={() => setSearchTerm("")}
+                    onClick={() => handleSearchChange("")}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-zinc-400 hover:text-white cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -435,7 +457,7 @@ export const AdminDashboardView: React.FC = () => {
                 {/* Status filter pill group */}
                 <div className="flex items-center p-1 bg-[var(--bg-base)] border border-[var(--border-muted)] rounded font-mono text-xs">
                   <button
-                    onClick={() => setStatusFilter("all")}
+                    onClick={() => handleStatusFilterChange("all")}
                     className={`px-3 py-1 rounded transition-colors cursor-pointer ${
                       statusFilter === "all"
                         ? "bg-[var(--color-danger)] text-white font-bold"
@@ -445,7 +467,7 @@ export const AdminDashboardView: React.FC = () => {
                     Tất Cả ({displayEvents.length})
                   </button>
                   <button
-                    onClick={() => setStatusFilter("has_ec")}
+                    onClick={() => handleStatusFilterChange("has_ec")}
                     className={`px-3 py-1 rounded transition-colors cursor-pointer ${
                       statusFilter === "has_ec"
                         ? "bg-[var(--accent-coordinator)] text-white font-bold"
@@ -455,7 +477,7 @@ export const AdminDashboardView: React.FC = () => {
                     Đã Gán EC
                   </button>
                   <button
-                    onClick={() => setStatusFilter("no_ec")}
+                    onClick={() => handleStatusFilterChange("no_ec")}
                     className={`px-3 py-1 rounded transition-colors cursor-pointer ${
                       statusFilter === "no_ec"
                         ? "bg-amber-600 text-white font-bold"
@@ -522,8 +544,9 @@ export const AdminDashboardView: React.FC = () => {
                 onClick={() => {
                   setSearchTerm("");
                   setStatusFilter("all");
+                  setCurrentPage(1);
                 }}
-                className="font-mono text-xs border border-[var(--border-muted)] text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
+                className="font-mono text-xs border border-[var(--border-muted)] text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 cursor-pointer"
               >
                 Xóa Bộ Lọc
               </Button>
@@ -532,7 +555,7 @@ export const AdminDashboardView: React.FC = () => {
             
             /* Table View Mode */
             <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-panel)] hud-clipped">
-              <table className="w-full table-fixed min-w-[1060px] text-left border-collapse">
+              <table className="w-full table-fixed min-w-[1060px] text-left border-collapse font-sans">
                 <thead className="bg-[var(--bg-base)] border-b border-[var(--border-muted)]">
                   <tr>
                     <th className="w-[23%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
@@ -556,7 +579,7 @@ export const AdminDashboardView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-muted)]/50">
-                  {filteredEvents.map((ev: any, index: number) => {
+                  {paginatedEvents.map((ev: any, index: number) => {
                     const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-admin-${index}`;
                     const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
                     const season = ev.season || ev.Season || "Mùa Hè";
@@ -643,11 +666,11 @@ export const AdminDashboardView: React.FC = () => {
 
                         {/* Actions */}
                         <td className="px-4 py-3.5 align-middle text-right">
-                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
                             <Button
                               variant="ghost"
                               onClick={() => setEditingEvent(ev)}
-                              className="text-xs font-mono border border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1 shrink-0"
+                              className="text-xs font-mono border border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15 px-2.5 py-1 h-7 font-bold cursor-pointer inline-flex items-center gap-1 shrink-0"
                               title="Chỉnh sửa toàn diện thông tin sự kiện & các vòng thi"
                             >
                               <Edit className="w-3.5 h-3.5" /> Sửa
@@ -656,7 +679,7 @@ export const AdminDashboardView: React.FC = () => {
                             <Button
                               variant="ghost"
                               onClick={() => setSelectedEvent(ev)}
-                              className="text-xs font-mono border border-purple-500/60 text-purple-300 hover:bg-purple-500/15 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1 shrink-0"
+                              className="text-xs font-mono border border-purple-500/60 text-purple-300 hover:bg-purple-500/15 px-2.5 py-1 h-7 font-bold cursor-pointer inline-flex items-center gap-1 shrink-0"
                               title="Quản lý & phân công Event Coordinator (EC)"
                             >
                               <UserCheck className="w-3.5 h-3.5" /> Quản lý EC
@@ -665,7 +688,7 @@ export const AdminDashboardView: React.FC = () => {
                             <Link href={`/events/${id}`} className="shrink-0 inline-flex">
                               <Button
                                 variant="ghost"
-                                className="text-xs font-mono border border-[var(--border-muted)] text-[var(--text-muted)] hover:text-white hover:border-[var(--accent-primary)] px-2 py-0.5 h-7 w-7 flex items-center justify-center cursor-pointer"
+                                className="text-xs font-mono border border-[var(--border-muted)] text-[var(--text-muted)] hover:text-white hover:border-[var(--accent-primary)] px-2 py-1 h-7 w-7 flex items-center justify-center cursor-pointer"
                                 title="Xem trang thể lệ & thông tin công khai"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -685,7 +708,7 @@ export const AdminDashboardView: React.FC = () => {
 
             /* Grid Cards View Mode */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredEvents.map((ev: any, index: number) => {
+              {paginatedEvents.map((ev: any, index: number) => {
                 const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-grid-${index}`;
                 const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
                 const season = ev.season || ev.Season || "Mùa Hè";
@@ -787,6 +810,85 @@ export const AdminDashboardView: React.FC = () => {
               })}
             </div>
 
+          )}
+
+          {/* Pagination Deck */}
+          {filteredEvents.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[var(--border-muted)]/60 font-mono text-xs">
+              <div className="text-zinc-400">
+                Hiển thị{" "}
+                <span className="text-[var(--text-primary)] font-bold">
+                  {(safePage - 1) * PAGE_SIZE + 1}
+                </span>
+                {" - "}
+                <span className="text-[var(--text-primary)] font-bold">
+                  {Math.min(safePage * PAGE_SIZE, filteredEvents.length)}
+                </span>
+                {" / "}
+                <span className="text-[var(--color-danger)] font-bold">
+                  {filteredEvents.length}
+                </span>{" "}
+                sự kiện (Tối đa {PAGE_SIZE}/trang)
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    className="h-8 px-2.5 text-xs font-mono border border-[var(--border-muted)] text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 cursor-pointer flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Trước</span>
+                  </Button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    // Smart ellipsis pagination
+                    if (
+                      totalPages > 7 &&
+                      p !== 1 &&
+                      p !== totalPages &&
+                      Math.abs(p - safePage) > 1
+                    ) {
+                      if (p === 2 || p === totalPages - 1) {
+                        return (
+                          <span key={p} className="px-1 text-zinc-600 select-none">
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    }
+
+                    const isActive = p === safePage;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        className={`h-8 w-8 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
+                          isActive
+                            ? "bg-[var(--color-danger)] text-white shadow-md shadow-[var(--color-danger)]/30 border border-[var(--color-danger)]"
+                            : "bg-[var(--bg-base)] text-zinc-400 hover:text-white hover:border-zinc-500 border border-[var(--border-muted)]"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    className="h-8 px-2.5 text-xs font-mono border border-[var(--border-muted)] text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 cursor-pointer flex items-center gap-1"
+                  >
+                    <span>Sau</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
 
         </Card>
