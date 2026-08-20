@@ -1,7 +1,10 @@
 "use client";
 
-/* Hallmark · pre-emit critique: P4 H5 E4 S4 R5 V4
-   Redesign: narrative spotlight rhythm · SEAL Refined Dark tokens · no HUD */
+/**
+ * Hallmark · page: landing · genre: technical · macro: Narrative Workflow
+ * theme: SEAL tokens (mint / obsidian) · fonts: Chakra Petch + IBM Plex Sans
+ * pre-emit critique: P5 H5 E4 S4 R5 V5
+ */
 
 import { useState, useEffect } from "react";
 import { Badge, Button } from "@/components/ui";
@@ -11,7 +14,6 @@ import { SealShield } from "@/components/domain/SealShield";
 import { useCountdown } from "@/lib/useCountdown";
 import {
   STATUS_LABEL,
-  STATUS_DOT_VAR,
   STATUS_TONE,
   TRACK_META,
   DEFAULT_TRACK_META,
@@ -28,7 +30,6 @@ export function LandingPortalView() {
   const { user, activeRole } = useAuth();
   const router = useRouter();
 
-  // Tự động chuyển hướng Cán bộ / BTC / Giám khảo / Cố vấn về thẳng Dashboard khi đã đăng nhập
   useEffect(() => {
     if (user) {
       const rawRole = activeRole?.roleName || activeRole?.RoleName;
@@ -50,64 +51,56 @@ export function LandingPortalView() {
   }, [user, activeRole, router]);
 
   return (
-    <main className="flex flex-1 flex-col overflow-x-clip">
-      {/* ── Hero: brand + one headline + support + CTAs ── */}
-      <section className="relative isolate min-h-[min(88vh,780px)] border-b border-[var(--border-muted)]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10"
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 60% at 70% 20%, color-mix(in srgb, var(--accent-primary) 14%, transparent), transparent 55%), radial-gradient(ellipse 50% 40% at 10% 80%, color-mix(in srgb, var(--accent-team) 8%, transparent), transparent 50%)",
-          }}
-        />
+    <main className="landing-root flex flex-1 flex-col overflow-x-clip">
+      {/* 1 · Hero — brand-first, one composition */}
+      <section className="landing-hero relative isolate flex min-h-[100svh] flex-col justify-end border-b border-[var(--border-muted)] pb-16 pt-28 sm:pb-20 sm:pt-32">
+        <div aria-hidden className="landing-hero-atmosphere pointer-events-none absolute inset-0 -z-10" />
         <SealShield
           aria-hidden
-          className="landing-hero-shield pointer-events-none absolute -right-16 top-1/2 -z-10 h-[min(70vw,420px)] w-[min(70vw,420px)] -translate-y-1/2 text-[var(--accent-primary)] opacity-[0.07]"
+          className="landing-hero-mark pointer-events-none absolute inset-y-0 right-[-8%] -z-10 my-auto h-[min(92vh,720px)] w-[min(92vh,720px)] text-[var(--accent-primary)] opacity-[0.09] sm:right-[-4%]"
         />
 
-        <div className="mx-auto flex min-h-[min(88vh,780px)] w-full max-w-[var(--container-max)] flex-col justify-center px-4 py-16 sm:px-6 md:py-20">
-          <div className="landing-hero-copy max-w-2xl">
-            <p className="mb-4 font-display text-sm font-semibold tracking-wide text-[var(--accent-primary)] sm:text-base">
-              SEAL
-            </p>
-            <h1 className="font-display text-4xl font-semibold leading-[1.1] text-[var(--text-primary)] sm:text-5xl md:text-6xl">
-              Nơi ý tưởng công nghệ bứt phá giới hạn
-            </h1>
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-[var(--text-muted)] sm:text-lg">
-              Đấu trường hackathon dành cho sinh viên toàn quốc — xây dựng sản phẩm thực tế, nhận tư
-              vấn từ mentor và đánh giá minh bạch theo tiêu chí chuẩn.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/events">
-                <Button className="min-w-[160px]">Khám phá sự kiện</Button>
-              </Link>
-              <Link href="/register">
-                <Button variant="secondary" className="min-w-[160px]">
-                  Đăng ký tham gia
-                </Button>
-              </Link>
-            </div>
+        <div className="landing-hero-copy mx-auto w-full max-w-[var(--container-max)] px-4 sm:px-6">
+          <p className="font-display text-[clamp(4.5rem,18vw,11rem)] font-semibold leading-[0.85] tracking-tight text-[var(--text-primary)]">
+            SEAL
+          </p>
+          <h1 className="mt-6 max-w-xl font-display text-2xl font-semibold leading-snug text-[var(--text-primary)] sm:text-3xl md:text-4xl">
+            Nơi ý tưởng công nghệ bứt phá giới hạn
+          </h1>
+          <p className="mt-4 max-w-md text-base leading-relaxed text-[var(--text-muted)] sm:text-lg">
+            Hackathon cho sinh viên toàn quốc — sản phẩm thật, mentor đồng hành, chấm điểm minh bạch.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center gap-3">
+            <Link href="/events">
+              <Button className="min-w-[168px]">Khám phá sự kiện</Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="secondary" className="min-w-[168px]">
+                Đăng ký tham gia
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
 
+      {/* 2 · Live metrics — honest API numbers only, no card wall */}
       <LandingMetricsStrip />
 
+      {/* 3 · Live event spotlight */}
       {latestEvent && <LatestEventSpotlight event={latestEvent} />}
 
+      {/* 4 · Other events as index list (not card collage) */}
       {featuredEvents.length > 0 && (
-        <PreviewSection
-          title="Sự kiện nổi bật khác"
-          events={featuredEvents}
-          showAllHref="/events"
-        />
+        <FeaturedIndex events={featuredEvents} showAllHref="/events" />
       )}
 
+      {/* 5 · Narrative workflow */}
       <LandingWorkflowSteps />
 
+      {/* 6 · Proof */}
       <LandingLeaderboardPodium />
 
+      {/* 7 · FAQ */}
       <LandingFaqSection />
     </main>
   );
@@ -122,180 +115,149 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
   const remainingSlots = Math.max(0, event.maxTeams - event.teamCount);
 
   return (
-    <section className="border-t border-[var(--border-muted)] px-4 py-14 sm:px-6 md:py-20">
-      <div className="mx-auto w-full max-w-[var(--container-max)]">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-[var(--accent-primary)]">Sự kiện tiêu điểm</p>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Mùa giải {event.season} {event.year}
-            </p>
+    <section className="px-4 py-20 sm:px-6 md:py-28">
+      <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-16">
+        <div className="min-w-0">
+          <p className="landing-section-kicker text-sm font-medium text-[var(--accent-primary)]">
+            Sự kiện tiêu điểm
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
+            <span className="text-sm text-[var(--text-muted)]">
+              {event.season} {event.year}
+            </span>
+            <span className="text-xs text-[var(--text-muted)]">· {formatShortId(event.id)}</span>
           </div>
-          <span className="text-xs text-[var(--text-muted)]">Mã: {formatShortId(event.id)}</span>
+
+          <h2 className="mt-5 font-display text-3xl font-semibold leading-tight text-[var(--text-primary)] sm:text-4xl md:text-5xl">
+            {event.eventName}
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-[var(--text-muted)] sm:text-lg">
+            {event.tagline}
+          </p>
+
+          {event.tracks.length > 0 && (
+            <ul className="mt-8 flex flex-wrap gap-x-4 gap-y-2">
+              {event.tracks.map((track) => {
+                const meta = TRACK_META[track] || DEFAULT_TRACK_META;
+                return (
+                  <li key={track} className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: meta.accent }}
+                    />
+                    {track}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <div className="mt-10 space-y-3 border-t border-[var(--border-muted)] pt-8">
+            <div className="flex items-baseline justify-between gap-4 text-sm">
+              <span className="text-[var(--text-muted)]">Đội đã đăng ký</span>
+              <span className="font-display text-lg font-semibold tabular-nums text-[var(--text-primary)]">
+                {event.teamCount}
+                <span className="text-[var(--text-muted)]"> / {event.maxTeams}</span>
+              </span>
+            </div>
+            <div className="h-px w-full bg-[var(--border-muted)]">
+              <div
+                className="h-px bg-[var(--accent-primary)] transition-[width] duration-500"
+                style={{ width: `${fillPercent}%` }}
+              />
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">Còn {remainingSlots} suất</p>
+          </div>
+
+          {event.prizes.length > 0 && (
+            <div className="mt-8">
+              <p className="text-sm font-medium text-[var(--text-muted)]">Giải thưởng</p>
+              <ul className="mt-2 space-y-1">
+                {event.prizes.map((p) => (
+                  <li key={p.id} className="font-display text-base text-[var(--accent-judge)] sm:text-lg">
+                    {p.prizeName}: {p.value}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link href={`/events/${event.id}`}>
+              <Button>Xem chi tiết & đăng ký</Button>
+            </Link>
+            <Link href="/events">
+              <Button variant="secondary">Tất cả sự kiện</Button>
+            </Link>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 md:p-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
-              {event.status === "ongoing" && (
-                <span className="inline-flex items-center gap-2 rounded-md border border-[var(--accent-judge)]/35 bg-[var(--accent-judge)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--accent-judge)]">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent-judge)]" />
-                  Đang chấm bài
-                </span>
-              )}
-            </div>
-
+        {!countdown.isPast && (
+          <aside className="flex flex-col justify-between border-t border-[var(--border-muted)] pt-8 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-0">
             <div>
-              <h2 className="font-display text-2xl font-semibold leading-tight text-[var(--text-primary)] sm:text-3xl md:text-4xl">
-                {event.eventName}
-              </h2>
-              <p className="mt-2 max-w-2xl text-base leading-relaxed text-[var(--text-muted)]">
-                {event.tagline}
-              </p>
-            </div>
-
-            {event.tracks.length > 0 && (
-              <div>
-                <p className="mb-2 text-sm font-medium text-[var(--text-muted)]">Hạng mục</p>
-                <div className="flex flex-wrap gap-2">
-                  {event.tracks.map((track) => {
-                    const meta = TRACK_META[track] || DEFAULT_TRACK_META;
-                    return (
-                      <span
-                        key={track}
-                        className="inline-flex items-center gap-2 rounded-md border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-1.5 text-xs text-[var(--text-primary)]"
-                      >
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: meta.accent }}
-                        />
-                        {track}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)]/60 p-4">
-                <div className="mb-2 flex items-center justify-between gap-2 text-sm">
-                  <span className="text-[var(--text-muted)]">Đội đã đăng ký</span>
-                  <span className="font-semibold tabular-nums text-[var(--accent-team)]">
-                    {event.teamCount}/{event.maxTeams} ({fillPercent}%)
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-[var(--bg-base)]">
-                  <div
-                    className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-500"
-                    style={{ width: `${fillPercent}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-xs text-[var(--text-muted)]">
-                  Còn {remainingSlots} suất
-                </p>
-              </div>
-
-              {event.prizes.length > 0 && (
-                <div className="rounded-lg border border-[var(--accent-judge)]/30 bg-[var(--accent-judge)]/8 p-4">
-                  <p className="mb-1 text-xs font-medium text-[var(--accent-judge)]">Giải thưởng</p>
-                  <ul className="space-y-0.5">
-                    {event.prizes.map((p) => (
-                      <li key={p.id} className="text-sm font-semibold text-[var(--accent-judge)]">
-                        {p.prizeName}: {p.value}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-3 pt-1">
-              <Link href={`/events/${event.id}`}>
-                <Button>Xem chi tiết & đăng ký</Button>
-              </Link>
-              <Link href="/events">
-                <Button variant="secondary">Tất cả sự kiện</Button>
-              </Link>
-            </div>
-          </div>
-
-          {!countdown.isPast && (
-            <aside className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-base)]/80 p-5">
-              <div className="mb-3 flex items-center gap-2 text-xs font-medium text-[var(--text-muted)]">
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    countdown.isUrgent
-                      ? "animate-ping bg-[var(--color-danger)]"
-                      : "bg-[var(--accent-primary)]"
-                  }`}
-                />
-                {countdownLabel}
-              </div>
-
-              <div className="grid grid-cols-4 gap-2" suppressHydrationWarning>
+              <p className="text-sm font-medium text-[var(--text-muted)]">{countdownLabel}</p>
+              <div
+                className="mt-6 grid grid-cols-4 gap-3"
+                suppressHydrationWarning
+              >
                 {[
                   { value: countdown.days, label: "ngày" },
                   { value: countdown.hours, label: "giờ" },
                   { value: countdown.minutes, label: "phút" },
                   { value: countdown.seconds, label: "giây" },
                 ].map((u) => (
-                  <div
-                    key={u.label}
-                    className="rounded-md bg-[var(--bg-panel)] px-1 py-2 text-center"
-                    suppressHydrationWarning
-                  >
+                  <div key={u.label} className="min-w-0" suppressHydrationWarning>
                     <span
-                      className={`block font-display text-xl font-semibold tabular-nums sm:text-2xl ${
+                      className={`block font-display text-3xl font-semibold tabular-nums sm:text-4xl ${
                         countdown.isUrgent
                           ? "text-[var(--color-danger)]"
-                          : "text-[var(--accent-primary)]"
+                          : "text-[var(--text-primary)]"
                       }`}
                       suppressHydrationWarning
                     >
                       {String(u.value).padStart(2, "0")}
                     </span>
-                    <span className="text-[10px] text-[var(--text-muted)]">{u.label}</span>
+                    <span className="mt-1 block text-xs text-[var(--text-muted)]">{u.label}</span>
                   </div>
                 ))}
               </div>
-
-              {event.rounds && event.rounds.length > 0 && (
-                <div className="mt-4 border-t border-[var(--border-muted)] pt-3">
-                  <p className="mb-2 text-xs font-medium text-[var(--text-muted)]">Lịch vòng thi</p>
-                  <ol className="space-y-2">
-                    {event.rounds.map((r) => {
-                      const isPast = new Date(r.startDate) < new Date();
-                      return (
-                        <li key={r.id} className="flex items-center justify-between gap-2 text-sm">
-                          <span
-                            className={
-                              isPast
-                                ? "text-[var(--text-muted)] line-through"
-                                : "text-[var(--text-primary)]"
-                            }
-                          >
-                            {r.roundName}
-                          </span>
-                          <span className="shrink-0 text-xs text-[var(--text-muted)]">
-                            {formatShortDate(r.startDate)}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                </div>
-              )}
-
               {countdown.isUrgent && (
-                <p className="mt-3 rounded-md border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-2 py-1.5 text-center text-xs font-medium text-[var(--color-danger)]">
+                <p className="mt-4 text-sm font-medium text-[var(--color-danger)]">
                   Sắp đóng cổng — nộp bài ngay
                 </p>
               )}
-            </aside>
-          )}
-        </div>
+            </div>
+
+            {event.rounds && event.rounds.length > 0 && (
+              <ol className="mt-12 space-y-0 border-t border-[var(--border-muted)] pt-8">
+                <li className="mb-4 text-sm font-medium text-[var(--text-muted)]">Lịch vòng thi</li>
+                {event.rounds.map((r) => {
+                  const isPast = new Date(r.startDate) < new Date();
+                  return (
+                    <li
+                      key={r.id}
+                      className="flex items-baseline justify-between gap-4 border-b border-[var(--border-muted)] py-3 text-sm last:border-b-0"
+                    >
+                      <span
+                        className={
+                          isPast
+                            ? "text-[var(--text-muted)] line-through"
+                            : "text-[var(--text-primary)]"
+                        }
+                      >
+                        {r.roundName}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-[var(--text-muted)]">
+                        {formatShortDate(r.startDate)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </aside>
+        )}
       </div>
     </section>
   );
@@ -309,110 +271,58 @@ function formatShortDate(iso: string): string {
   });
 }
 
-function PreviewSection({
-  title,
+function FeaturedIndex({
   events,
   showAllHref,
 }: {
-  title: string;
   events: EventCardData[];
-  showAllHref?: string;
+  showAllHref: string;
 }) {
-  const featuredEvent = events[0];
-  const sideEvents = events.slice(1, 3);
-
   return (
-    <section className="border-t border-[var(--border-muted)] px-4 py-14 sm:px-6 md:py-16">
-      <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-display text-2xl font-semibold text-[var(--text-primary)] md:text-3xl">
-            {title}
-          </h2>
-          {showAllHref && (
-            <Link
-              href={showAllHref}
-              className="text-sm font-medium text-[var(--accent-primary)] hover:underline"
-            >
-              Xem tất cả sự kiện →
-            </Link>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          {featuredEvent && (
-            <Link
-              href={`/events/${featuredEvent.id}`}
-              className="group flex min-w-0 flex-col justify-between rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 transition-colors hover:border-[var(--accent-primary)]/50"
-              style={{ borderTop: `3px solid ${STATUS_DOT_VAR[featuredEvent.status]}` }}
-            >
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Badge tone={STATUS_TONE[featuredEvent.status]}>
-                    {STATUS_LABEL[featuredEvent.status]}
-                  </Badge>
-                  <span className="text-xs text-[var(--text-muted)]">
-                    {featuredEvent.season} {featuredEvent.year}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-display text-xl font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-primary)] sm:text-2xl">
-                    {featuredEvent.eventName}
-                  </h3>
-                  <p className="mt-2 line-clamp-3 text-sm text-[var(--text-muted)]">
-                    {featuredEvent.tagline}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-6 flex items-center justify-between border-t border-[var(--border-muted)] pt-4 text-sm text-[var(--text-muted)]">
-                <span>{featuredEvent.teamCount} đội đã đăng ký</span>
-                {featuredEvent.prizes.length > 0 && (
-                  <span className="font-medium text-[var(--accent-judge)]">
-                    {featuredEvent.prizes[0].prizeName}: {featuredEvent.prizes[0].value}
-                  </span>
-                )}
-              </div>
-            </Link>
-          )}
-
-          <div className="flex flex-col gap-4">
-            {sideEvents.map((ev) => (
-              <PreviewCard key={ev.id} event={ev} />
-            ))}
+    <section className="border-y border-[var(--border-muted)] bg-[var(--bg-panel)]/35 px-4 py-20 sm:px-6 md:py-24">
+      <div className="mx-auto w-full max-w-[var(--container-max)]">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="landing-section-kicker text-sm font-medium text-[var(--accent-primary)]">
+              Danh mục
+            </p>
+            <h2 className="mt-2 font-display text-3xl font-semibold text-[var(--text-primary)] md:text-4xl">
+              Sự kiện khác
+            </h2>
           </div>
+          <Link
+            href={showAllHref}
+            className="text-sm font-medium text-[var(--accent-primary)] underline-offset-4 hover:underline"
+          >
+            Xem tất cả →
+          </Link>
         </div>
+
+        <ul className="mt-12 divide-y divide-[var(--border-muted)] border-t border-[var(--border-muted)]">
+          {events.slice(0, 5).map((ev) => (
+            <li key={ev.id}>
+              <Link
+                href={`/events/${ev.id}`}
+                className="group grid grid-cols-1 gap-2 py-5 transition-colors sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-baseline sm:gap-8"
+              >
+                <div className="min-w-0">
+                  <p className="font-display text-lg font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)] sm:text-xl">
+                    {ev.eventName}
+                  </p>
+                  <p className="mt-1 line-clamp-1 text-sm text-[var(--text-muted)]">{ev.tagline}</p>
+                </div>
+                <span className="text-sm text-[var(--text-muted)]">
+                  {STATUS_LABEL[ev.status]}
+                </span>
+                <span className="text-sm tabular-nums text-[var(--text-muted)] sm:text-right">
+                  {ev.season} {ev.year}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
-  );
-}
-
-function PreviewCard({ event }: { event: EventCardData }) {
-  return (
-    <Link
-      href={`/events/${event.id}`}
-      className="group flex min-w-0 flex-col justify-between rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-4 transition-colors hover:border-[var(--accent-primary)]/40"
-      style={{ borderTop: `3px solid ${STATUS_DOT_VAR[event.status]}` }}
-    >
-      <div>
-        <div className="flex items-center justify-between gap-2">
-          <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
-          <span className="text-[10px] text-[var(--text-muted)]">
-            {event.season} {event.year}
-          </span>
-        </div>
-        <h3 className="mt-2 font-display text-base font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent-primary)]">
-          {event.eventName}
-        </h3>
-        <p className="mt-1 line-clamp-2 text-xs text-[var(--text-muted)]">{event.tagline}</p>
-      </div>
-      <div className="mt-3 flex items-center justify-between border-t border-[var(--border-muted)] pt-2.5 text-xs text-[var(--text-muted)]">
-        <span>{event.teamCount} đội thi</span>
-        {event.prizes.length > 0 && (
-          <span className="font-medium text-[var(--accent-judge)]">
-            {event.prizes[0].prizeName}: {event.prizes[0].value}
-          </span>
-        )}
-      </div>
-    </Link>
   );
 }
 
@@ -439,36 +349,34 @@ function LandingFaqSection() {
   ];
 
   return (
-    <section className="mb-12 border-t border-[var(--border-muted)] px-4 py-14 sm:px-6 md:py-16">
-      <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-10">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-2xl font-semibold text-[var(--text-primary)] md:text-3xl">
+    <section className="mb-16 px-4 py-20 sm:px-6 md:py-28">
+      <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-12 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] lg:gap-20">
+        <div>
+          <p className="landing-section-kicker text-sm font-medium text-[var(--accent-primary)]">
+            Hỗ trợ
+          </p>
+          <h2 className="mt-2 font-display text-3xl font-semibold text-[var(--text-primary)] md:text-4xl">
             Câu hỏi thường gặp
           </h2>
         </div>
 
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
+        <div className="divide-y divide-[var(--border-muted)] border-t border-[var(--border-muted)]">
           {FAQS.map((faq, idx) => {
             const isOpen = openIdx === idx;
             const panelId = `landing-faq-panel-${idx}`;
             const buttonId = `landing-faq-button-${idx}`;
             return (
-              <div
-                key={idx}
-                className={`overflow-hidden rounded-lg border bg-[var(--bg-panel)] transition-colors ${
-                  isOpen ? "border-[var(--accent-primary)]/50" : "border-[var(--border-muted)]"
-                }`}
-              >
+              <div key={idx}>
                 <button
                   type="button"
                   id={buttonId}
                   aria-expanded={isOpen}
                   aria-controls={panelId}
                   onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  className="flex w-full items-center justify-between gap-3 p-4 text-left text-sm font-medium text-[var(--text-primary)] hover:text-[var(--accent-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)]"
+                  className="flex w-full items-start justify-between gap-4 py-5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)]"
                 >
-                  <span>{faq.q}</span>
-                  <span aria-hidden className="shrink-0 text-[var(--text-muted)]">
+                  <span className="text-base font-medium text-[var(--text-primary)]">{faq.q}</span>
+                  <span aria-hidden className="mt-0.5 shrink-0 text-[var(--text-muted)]">
                     {isOpen ? "−" : "+"}
                   </span>
                 </button>
@@ -477,7 +385,7 @@ function LandingFaqSection() {
                   role="region"
                   aria-labelledby={buttonId}
                   hidden={!isOpen}
-                  className="border-t border-[var(--border-muted)] px-4 pb-4 pt-3 text-sm leading-relaxed text-[var(--text-muted)]"
+                  className="pb-5 text-sm leading-relaxed text-[var(--text-muted)]"
                 >
                   {faq.a}
                 </div>

@@ -96,11 +96,26 @@
   }
 }
 
-/* Landing portal — restrained motion (Refined Dark) */
+/* Landing — SEAL Arena · Narrative Workflow */
+.landing-hero-atmosphere {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 85% 35%,
+      color-mix(in srgb, var(--accent-primary) 16%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 45% 40% at 15% 85%,
+      color-mix(in srgb, var(--accent-team) 10%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(180deg, var(--bg-base) 0%, var(--bg-panel) 100%);
+}
+
 @keyframes landing-rise {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -108,27 +123,31 @@
   }
 }
 
-@keyframes landing-float {
+@keyframes landing-mark-drift {
   0%,
   100% {
-    transform: translateY(-50%) rotate(0deg);
+    transform: translateY(0) rotate(-2deg);
   }
   50% {
-    transform: translateY(calc(-50% - 12px)) rotate(2deg);
+    transform: translateY(-14px) rotate(1deg);
   }
 }
 
 .landing-hero-copy {
-  animation: landing-rise 0.7s ease-out both;
+  animation: landing-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.landing-hero-shield {
-  animation: landing-float 12s ease-in-out infinite;
+.landing-hero-mark {
+  animation: landing-mark-drift 14s ease-in-out infinite;
+}
+
+.landing-section-kicker {
+  letter-spacing: 0.02em;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .landing-hero-copy,
-  .landing-hero-shield {
+  .landing-hero-mark {
     animation: none;
   }
 }

@@ -1,53 +1,46 @@
 "use client";
 
 import { useEvents } from "@/repositories/eventsRepository";
-import { StatCard } from "@/components/ui/StatCard";
 
+/** Thin honest metrics row — API data only, no StatCard wall. */
 export function LandingMetricsStrip() {
   const { data: events = [] } = useEvents();
 
   const totalEvents = events.length;
   const totalPrizeCount = events.reduce((sum, e) => {
     const ev = e as { prizes?: unknown[]; Prizes?: unknown[] };
-    return sum + (Array.isArray(ev.prizes) ? ev.prizes.length : Array.isArray(ev.Prizes) ? ev.Prizes.length : 0);
+    return (
+      sum +
+      (Array.isArray(ev.prizes)
+        ? ev.prizes.length
+        : Array.isArray(ev.Prizes)
+          ? ev.Prizes.length
+          : 0)
+    );
   }, 0);
 
   const items = [
     totalEvents > 0
-      ? {
-          label: "Sự kiện",
-          value: totalEvents,
-          subtext: "Đang và sắp diễn ra",
-          accent: "var(--accent-primary)",
-        }
+      ? { label: "Sự kiện trên hệ thống", value: String(totalEvents) }
       : null,
     totalPrizeCount > 0
-      ? {
-          label: "Giải thưởng",
-          value: totalPrizeCount,
-          subtext: "Đã cấu hình trên hệ thống",
-          accent: "var(--color-warning)",
-        }
+      ? { label: "Giải thưởng đã cấu hình", value: String(totalPrizeCount) }
       : null,
-  ].filter(Boolean) as { label: string; value: number; subtext: string; accent: string }[];
+  ].filter(Boolean) as { label: string; value: string }[];
 
   if (items.length === 0) return null;
 
   return (
-    <section className="border-y border-[var(--border-muted)] bg-[var(--bg-panel)]/40 py-10">
-      <div className="mx-auto w-full max-w-[var(--container-max)] px-4 sm:px-6">
-        <h2 className="mb-4 text-sm font-medium text-[var(--text-muted)]">Thống kê tổng quan</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {items.map((item) => (
-            <StatCard
-              key={item.label}
-              label={item.label}
-              value={item.value}
-              subtext={item.subtext}
-              accent={item.accent}
-            />
-          ))}
-        </div>
+    <section className="border-b border-[var(--border-muted)]">
+      <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-wrap items-stretch divide-x divide-[var(--border-muted)] px-4 sm:px-6">
+        {items.map((item) => (
+          <div key={item.label} className="flex min-w-[140px] flex-1 flex-col gap-1 px-0 py-8 first:pr-8 last:pl-8 sm:px-8 sm:first:pl-0 sm:last:pr-0">
+            <span className="font-display text-3xl font-semibold tabular-nums text-[var(--text-primary)] sm:text-4xl">
+              {item.value}
+            </span>
+            <span className="text-sm text-[var(--text-muted)]">{item.label}</span>
+          </div>
+        ))}
       </div>
     </section>
   );
