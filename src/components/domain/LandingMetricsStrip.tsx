@@ -2,95 +2,49 @@
 
 import { useEvents } from "@/repositories/eventsRepository";
 
+/**
+ * Thin live strip — API data only.
+ * Not the old 4-card "SYSTEM METRICS" wall with fake "100% Minh Bạch".
+ */
 export function LandingMetricsStrip() {
   const { data: events = [] } = useEvents();
 
   const totalEvents = events.length;
-  // Prize.Value ở BE là text tự do (VD: "10.000.000 VNĐ"), không phải số nên không cộng
-  // tổng tiền chính xác được — đếm số giải thưởng đã cấu hình thay vì bịa 1 con số tiền.
-  const totalPrizeCount = events.reduce(
-    (sum: number, e: any) => sum + (Array.isArray(e.prizes) ? e.prizes.length : Array.isArray(e.Prizes) ? e.Prizes.length : 0),
-    0,
-  );
-  const formattedPrize = totalPrizeCount > 0 ? `${totalPrizeCount} Giải thưởng` : "Chưa công bố";
+  const totalPrizeCount = events.reduce((sum: number, e: any) => {
+    const prizes = e.prizes ?? e.Prizes;
+    return sum + (Array.isArray(prizes) ? prizes.length : 0);
+  }, 0);
+  const openCount = events.filter((e: any) => {
+    const s = (e.status || e.Status || "").toString().toLowerCase();
+    return s.includes("registration") || s.includes("ongoing") || s === "open";
+  }).length;
 
-  const metrics = [
-    {
-      id: "events",
-      label: "TỔNG SỰ KIỆN",
-      value: totalEvents > 0 ? `${totalEvents} Sự kiện` : "0 Sự kiện",
-      subtext: "Đang & chuẩn bị diễn ra",
-      toneVar: "var(--accent-primary)",
-    },
-    {
-      id: "prizes",
-      label: "TỔNG GIẢI THƯỞNG",
-      value: formattedPrize,
-      subtext: "Quỹ thưởng chính thức từ BTC",
-      toneVar: "var(--color-warning)",
-    },
-    {
-      id: "evaluation",
-      label: "TIÊU CHÍ ĐÁNH GIÁ",
-      value: "100% RBL",
-      subtext: "Chấm điểm mù & Minh bạch",
-      toneVar: "var(--color-success)",
-    },
-    {
-      id: "platform",
-      label: "NỀN TẢNG",
-      value: "SEAL System",
-      subtext: "Tự động phân công & Hiệu chuẩn",
-      toneVar: "var(--accent-coordinator)",
-    },
-  ];
+  const cells = [
+    { label: "Sự kiện", value: String(totalEvents) },
+    openCount > 0 ? { label: "Đang mở / diễn ra", value: String(openCount) } : null,
+    totalPrizeCount > 0
+      ? { label: "Giải đã cấu hình", value: String(totalPrizeCount) }
+      : { label: "Giải đã cấu hình", value: "—" },
+  ].filter(Boolean) as { label: string; value: string }[];
 
   return (
-    <section className="w-full border-y border-[var(--border-muted)] bg-[var(--bg-panel)]/50 py-8 px-[var(--space-xl)] shadow-md">
-      <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-5">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
-          <div className="flex items-center gap-2.5">
-            <span className="hud-live-dot h-2.5 w-2.5 rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-primary)]" aria-hidden="true" />
-            <span className="font-mono text-xs font-bold uppercase text-[var(--accent-primary)] tracking-widest">
-              SYSTEM METRICS // THỐNG KÊ TỔNG QUAN
-            </span>
-          </div>
-          <span className="font-mono text-[11px] text-[var(--text-muted)] hidden sm:inline-block">
-            CẬP NHẬT THỜI GIAN THỰC TỪ BACKEND
+    <section className="border-b border-[var(--border-muted)] bg-[var(--bg-panel)]">
+      <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col sm:flex-row">
+        <div className="flex items-center gap-2 border-b border-[var(--border-muted)] px-4 py-3 sm:w-48 sm:shrink-0 sm:border-b-0 sm:border-r sm:px-6">
+          <span className="hud-live-dot h-2 w-2 rounded-full bg-[var(--accent-primary)]" />
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-primary)]">
+            Live feed
           </span>
         </div>
-
-        {/* 4 Cards Grid Layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {metrics.map((metric) => (
-            <div
-              key={metric.id}
-              className="hud-clipped group relative flex flex-col justify-between border border-[var(--border-muted)] bg-[var(--bg-panel)] p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--accent-primary)]/50 shadow-sm"
-              style={{ borderLeft: `3px solid ${metric.toneVar}` }}
-            >
-              {/* Card Header Label */}
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-xs font-semibold text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors">
-                  {metric.label}
-                </span>
-                <span className="font-mono text-[10px] font-bold text-[var(--text-muted)] border border-[var(--border-muted)] bg-[var(--bg-input)] px-1.5 py-0.5">
-                  #{metric.id.toUpperCase()}
-                </span>
-              </div>
-
-              {/* Big Value */}
-              <div
-                className="font-mono text-3xl font-extrabold tracking-tight my-1"
-                style={{ color: metric.toneVar }}
-              >
-                {metric.value}
-              </div>
-
-              {/* Subtext */}
-              <div className="font-sans text-xs text-[var(--text-muted)] mt-1 border-t border-[var(--border-muted)]/50 pt-2">
-                {metric.subtext}
-              </div>
+        <div className="grid flex-1 grid-cols-1 divide-y divide-[var(--border-muted)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {cells.map((c) => (
+            <div key={c.label} className="flex items-baseline justify-between gap-3 px-4 py-4 sm:flex-col sm:items-start sm:justify-center sm:px-6">
+              <span className="font-display text-2xl font-bold tabular-nums text-[var(--text-primary)] sm:text-3xl">
+                {c.value}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                {c.label}
+              </span>
             </div>
           ))}
         </div>

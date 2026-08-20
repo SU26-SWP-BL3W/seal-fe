@@ -11,6 +11,7 @@ import {
 
 import { usePublicEvents } from "@/repositories/eventsRepository";
 import { useAuth } from "@/providers/AuthProvider";
+import { getAssignedEventIdsFromRoles } from "@/lib/eventRoles";
 
 export type { EventDisplayStatus, EventCardData };
 
@@ -23,23 +24,35 @@ export interface TrackSummary {
 }
 
 export function useEventsDiscoveryViewModel() {
-  const { activeRole } = useAuth();
+  const { activeRole, allEventRoles } = useAuth();
   const myEventIds = useMemo(() => {
+    const fromRoles = getAssignedEventIdsFromRoles(allEventRoles);
     const ids = [
+      ...fromRoles,
       ...(activeRole?.assignedEventIds ?? activeRole?.AssignedEventIds ?? []),
       activeRole?.eventId || activeRole?.EventId || "",
     ].filter(Boolean);
     return [...new Set(ids)];
-  }, [activeRole]);
+  }, [activeRole, allEventRoles]);
   const { data: realPublicEvents = [] } = usePublicEvents();
   const [now] = useState(() => Date.now());
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<EventStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<EventStatusFilter>(() => {
+    if (typeof window === "undefined") return "all";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("filter") === "mine" || params.get("status") === "my_event" ? "my_event" : "all";
+  });
   const [sort, setSort] = useState<EventSortOption>("relevant");
   const [trackFilter, setTrackFilterState] = useState<string | null>(null);
 
   useEffect(() => {
-    const readFromUrl = () => setTrackFilterState(new URLSearchParams(window.location.search).get("track"));
+    const readFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      setTrackFilterState(params.get("track"));
+      if (params.get("filter") === "mine" || params.get("status") === "my_event") {
+        setStatusFilter("my_event");
+      }
+    };
     readFromUrl();
     window.addEventListener("popstate", readFromUrl);
     return () => window.removeEventListener("popstate", readFromUrl);
@@ -70,7 +83,7 @@ export function useEventsDiscoveryViewModel() {
         eventName: eName,
         season: eSeason,
         year: eYear,
-        tagline: ev.tagline || ev.Tagline || ev.description || ev.Description || "Sự kiện cuộc thi RBL trên hệ thống SEAL",
+        tagline: ev.tagline || ev.Tagline || ev.description || ev.Description || "Sự kiện cuộc thi Hackathon trên hệ thống SEAL",
         description: ev.description || ev.Description || "",
         startDate: eStart,
         endDate: eEnd,
@@ -86,6 +99,16 @@ export function useEventsDiscoveryViewModel() {
               quantity: Number(p.quantity ?? p.Quantity ?? 1),
             }))
           : [],
+        // Parse totalPrizeVnd từ string "10.000.000 VN�" / "10,000,000" hoặc số thuần.
+        totalPrizeVnd: (() => {
+          const raw = ev.totalPrizeVnd ?? ev.TotalPrizeVnd;
+          if (typeof raw === "number") return raw;
+          if (typeof raw === "string") {
+            const digits = raw.replace(/[^\d]/g, "");
+            return digits ? Number(digits) : 0;
+          }
+          return 0;
+        })(),
         tracks: extractTrackNames(ev),
         rounds: Array.isArray(ev.rounds || ev.Rounds) ? (ev.rounds || ev.Rounds) : [],
         status: "upcoming",
@@ -134,8 +157,13 @@ export function useEventsDiscoveryViewModel() {
         break;
       case "relevant":
       default:
-        // Ưu tiên: đang diễn ra > đang mở đăng ký > sắp diễn ra > đã kết thúc.
-        sorted.sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]);
+        // Ưu tiên cao nhất: Đang mở đăng ký (0) > Đang diễn ra (1) > Sắp diễn ra (2) > Đã kết thúc (3).
+        sorted.sort((a, b) => {
+          const pA = STATUS_PRIORITY[a.status] ?? 99;
+          const pB = STATUS_PRIORITY[b.status] ?? 99;
+          if (pA !== pB) return pA - pB;
+          return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+        });
     }
     return sorted;
   }, [allEvents, search, statusFilter, sort, trackFilter, myEventIds]);
@@ -161,6 +189,7 @@ export function useEventsDiscoveryViewModel() {
     events: filteredEvents,
     totalCount: allEvents.length,
     topTracks,
+    myEventIds,
     search,
     setSearch,
     statusFilter,

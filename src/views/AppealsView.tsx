@@ -6,7 +6,7 @@ import { useMyTeam } from "@/repositories/teamsRepository";
 import { useMySubmissions } from "@/repositories/submitResultsRepository";
 import {
   useGetAppealsByTeam,
-  useGetAssignedAppeals,
+  useGetAppealsByEvent,
   useCreateAppeal,
   useRespondAppeal,
   readApiError,
@@ -24,6 +24,7 @@ import {
   Badge,
   ApiMissingDataBadge,
 } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -45,6 +46,7 @@ function pick(obj: unknown, ...keys: string[]): string {
 }
 
 export function AppealsView() {
+  const toast = useToast();
   const { user, activeRole } = useAuth();
   const [reason, setReason] = useState("");
   const [submitResultId, setSubmitResultId] = useState("");
@@ -57,19 +59,18 @@ export function AppealsView() {
   const roleName = pick(activeRole, "roleName", "RoleName");
   const isLeader = roleName === "TeamLeader";
   const isEC = roleName === "EventCoordinator" || roleName === "Coordinator" || Boolean(user?.isAdmin || user?.IsAdmin);
-  const eventRoleId = pick(activeRole, "eventRoleId", "EventRoleId", "id", "Id");
   const eventIdFromRole = pick(activeRole, "eventId", "EventId");
 
-  // Team members: đơn phúc khảo của đội mình. EC/staff: đơn được phân công xử lý.
+  // Team members: đơn phúc khảo của đội mình. EC: toàn bộ đơn trong sự kiện (gộp mọi vòng thi).
   const { data: myTeam } = useMyTeam(eventIdFromRole || undefined);
   const teamId = pick(myTeam, "id", "Id", "TeamId");
   const { data: mySubmissions = [] } = useMySubmissions();
 
   const teamAppeals = useGetAppealsByTeam(!isEC ? teamId || undefined : undefined);
-  const assignedAppeals = useGetAssignedAppeals(isEC ? eventRoleId || undefined : undefined);
+  const eventAppeals = useGetAppealsByEvent(isEC ? eventIdFromRole || undefined : undefined);
 
-  const { data: appealsRaw, isLoading, refetch } = isEC ? assignedAppeals : teamAppeals;
-  const appeals: Appeal[] = appealsRaw ?? [];
+  const { data: appealsRaw, isLoading, refetch } = isEC ? eventAppeals : teamAppeals;
+  const appeals: Appeal[] = Array.isArray(appealsRaw) ? appealsRaw : ((appealsRaw as any)?.data ?? []);
 
   const { mutateAsync: createAppeal, isPending: isSubmitting } = useCreateAppeal();
   const { mutateAsync: respondAppeal, isPending: isResponding } = useRespondAppeal();
@@ -81,11 +82,14 @@ export function AppealsView() {
 
     try {
       await createAppeal({ submitResultId, reason: reason.trim() });
+      toast.success("🎉 Đã gửi đơn phúc khảo thành công! Ban Tổ Chức sẽ tiếp nhận và phản hồi kết quả qua email và thông báo chuông.");
       setReason("");
       setSubmitResultId("");
       refetch();
     } catch (err) {
-      setFormError(readApiError(err));
+      const errMsg = readApiError(err);
+      setFormError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -93,12 +97,19 @@ export function AppealsView() {
     if (!detailModal || !responseText.trim()) return;
     setRespondError("");
     try {
-      await respondAppeal({ appealId: detailModal.id, status, response: responseText.trim() });
+      await respondAppeal({ id: detailModal.id, appealId: detailModal.id, status, response: responseText.trim(), payload: { status, response: responseText.trim() } } as any);
+      if (status === AppealStatus.Approved) {
+        toast.success("✅ Đã phê duyệt đơn phúc khảo. Điểm số bài thi đã được cập nhật và gửi thông báo tới đội thi.");
+      } else {
+        toast.info("Đã từ chối đơn phúc khảo. Lý do phản hồi đã được gửi qua thông báo và email tới đội thi.");
+      }
       setDetailModal(null);
       setResponseText("");
       refetch();
     } catch (err) {
-      setRespondError(readApiError(err));
+      const errMsg = readApiError(err);
+      setRespondError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -108,22 +119,23 @@ export function AppealsView() {
 
   return (
     <div className="p-[var(--space-xl)] max-w-[var(--container-max)] mx-auto hud-lattice min-h-[calc(100vh-4rem)]">
-      <div className="flex items-center justify-between mb-8 border-b border-[var(--border-muted)] pb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[rgba(245,158,11,0.1)] border border-[var(--color-warning)]/30 flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6 text-[var(--color-warning)]" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-[var(--border-muted)] pb-6">
+        <div>
+          <div className="flex items-center gap-2 font-mono text-xs text-[#f59e0b] font-bold uppercase tracking-wider mb-1">
+            <AlertTriangle className="w-4 h-4 text-[#f59e0b]" />
+            <span>TRUNG TÂM PHÚC KHẢO VÀ PHẢN HỒI</span>
           </div>
-          <div>
-            <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--color-warning)]">
-              Trung Tâm Phúc Khảo
-            </h1>
-            <p className="text-xs font-mono text-[var(--text-muted)]">
-              // {isEC ? "ĐƠN ĐƯỢC PHÂN CÔNG XỬ LÝ" : "ĐƠN CỦA ĐỘI BẠN"}
-            </p>
-          </div>
+          <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+            QUẢN LÝ ĐƠN PHÚC KHẢO BÀI NỘP
+          </h1>
+          <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+            {isEC
+              ? "Tiếp nhận, kiểm tra và phản hồi các yêu cầu phúc khảo kết quả chấm điểm từ các đội thi."
+              : "Tạo và theo dõi tiến độ xử lý đơn phúc khảo kết quả chấm điểm của đội thi trong các vòng đấu."}
+          </p>
         </div>
 
-        <Button variant="ghost" onClick={() => refetch()} className="text-xs font-mono">
+        <Button variant="ghost" onClick={() => refetch()} className="text-xs font-mono shrink-0">
           <RefreshCw className="w-3.5 h-3.5" /> Làm mới
         </Button>
       </div>
@@ -200,7 +212,7 @@ export function AppealsView() {
               ) : (
                 <div className="p-4 border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 text-[var(--color-warning)] font-mono text-xs space-y-2">
                   <div className="font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    🔒 BẠN KHÔNG CÓ QUYỀN GỬI ĐƠN
+                    BẠN KHÔNG CÓ QUYỀN GỬI ĐƠN
                   </div>
                   <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
                     Quyền tạo và gửi đơn khiếu nại điểm số thuộc về <strong>Trưởng nhóm</strong>. Bạn đang xem ở chế độ chỉ đọc.

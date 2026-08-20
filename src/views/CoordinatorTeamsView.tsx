@@ -7,8 +7,10 @@ import {
   useRejectTeamRegistration,
   useGetTeamsByEvent,
   useDisqualifyTeam,
+  useGetTeamById,
 } from "@/repositories/teamsRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
+import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Button, Card, Badge } from "@/components/ui";
 import {
   Users,
@@ -22,6 +24,7 @@ import {
   Building2,
   FileText,
   Ban,
+  Filter,
 } from "lucide-react";
 import type { TeamEntity } from "@/models/entities";
 
@@ -36,29 +39,51 @@ export function CoordinatorTeamsView() {
   const [disqualifyReason, setDisqualifyReason] = useState("");
   const [detailModal, setDetailModal] = useState<TeamEntity | null>(null);
   const [eventId, setEventId] = useState("");
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("ALL");
 
   const { data: myEvents = [] } = useMyEvents();
   useEffect(() => {
     if (!eventId && myEvents.length) setEventId(pickId(myEvents[0]));
   }, [myEvents, eventId]);
 
+  const { data: tracks = [] } = useGetTracksByEvent(eventId);
+
   const { data: rawPendingTeams, isLoading, refetch } = useGetPendingTeams();
-  const pendingTeams: TeamEntity[] = Array.isArray(rawPendingTeams)
+  const pendingTeamsRaw: TeamEntity[] = Array.isArray(rawPendingTeams)
     ? rawPendingTeams
     : (rawPendingTeams as any)?.data ?? [];
 
-  const { data: registeredTeams = [], refetch: refetchRegistered } = useGetTeamsByEvent(eventId, "Registered");
+  const { data: registeredTeamsRaw = [], refetch: refetchRegistered } = useGetTeamsByEvent(eventId, "Registered");
+
+  // Filter pending and registered teams by selectedTrackId
+  const pendingTeams = pendingTeamsRaw.filter((t: any) => {
+    if (!selectedTrackId || selectedTrackId === "ALL") return true;
+    const tTrackId = t.trackId || t.TrackId || t.trackName || t.TrackName || "";
+    return tTrackId === selectedTrackId;
+  });
+
+  const registeredTeams = (Array.isArray(registeredTeamsRaw) ? registeredTeamsRaw : []).filter((t: any) => {
+    if (!selectedTrackId || selectedTrackId === "ALL") return true;
+    const tTrackId = t.trackId || t.TrackId || t.trackName || t.TrackName || "";
+    return tTrackId === selectedTrackId;
+  });
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
   const { mutateAsync: disqualifyTeam, isPending: isDisqualifying } = useDisqualifyTeam();
+
+  // TeamListItemModel (danh sách) không có field members — phải gọi riêng GET /Teams/{id}
+  // để lấy roster thật khi mở modal chi tiết.
+  const detailTeamId = detailModal ? pickId(detailModal) : undefined;
+  const { data: teamDetail } = useGetTeamById(detailTeamId);
+  const detailMembers = teamDetail?.members ?? [];
 
   const handleApprove = async (teamId: string) => {
     try {
       await approveTeam(teamId);
       setDetailModal(null);
       refetch();
-    } catch {
-      alert("Đã duyệt đội thi thành công! Đội thi đã ở trạng thái REGISTERED.");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Duyệt đội thi thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -68,13 +93,12 @@ export function CoordinatorTeamsView() {
 
     try {
       await rejectTeam({ teamId: rejectModal.teamId, reason: rejectReason.trim() });
-      refetch();
-    } catch {
-      alert("Đã từ chối đăng ký đội thi.");
-    } finally {
       setRejectModal(null);
       setDetailModal(null);
       setRejectReason("");
+      refetch();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Từ chối đăng ký thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -83,12 +107,11 @@ export function CoordinatorTeamsView() {
     if (!disqualifyReason.trim()) return;
     try {
       await disqualifyTeam({ teamId: disqualifyModal.teamId, reason: disqualifyReason.trim() });
-      refetchRegistered();
-    } catch {
-      alert("Đã loại đội khỏi cuộc thi.");
-    } finally {
       setDisqualifyModal(null);
       setDisqualifyReason("");
+      refetchRegistered();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Loại đội thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -96,52 +119,78 @@ export function CoordinatorTeamsView() {
     <div className="min-h-screen bg-[var(--bg-base)] hud-lattice px-6 py-8">
       {/* Header */}
       <div className="max-w-5xl mx-auto mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[rgba(167,139,250,0.1)] border border-[var(--accent-coordinator)]/30 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-[var(--accent-coordinator)]" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#263339] pb-6">
+          <div>
+            <div className="flex items-center gap-2 font-mono text-xs text-[#a855f7] font-bold uppercase tracking-wider mb-1">
+              <Shield className="w-4 h-4 text-[#a855f7]" />
+              <span>QUẢN LÝ ĐỘI THI BAN TỔ CHỨC</span>
             </div>
-            <div>
-              <h1 className="font-display text-xl font-bold text-[var(--accent-coordinator)] tracking-widest uppercase">
-                DUYỆT ĐĂNG KÝ ĐỘI THI
-              </h1>
-              <p className="text-xs font-mono text-[var(--text-muted)]">
-                // COORDINATOR TEAM REGISTRATION INSPECTION & APPROVAL
-              </p>
-            </div>
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              DANH SÁCH ĐỘI THI VÀ PHÊ DUYỆT ĐĂNG KÝ
+            </h1>
+            <p className="text-xs font-sans text-[#8a9ba8] mt-1.5 leading-relaxed max-w-3xl">
+              Xem danh sách các đội thi đăng ký tham gia sự kiện, kiểm tra thông tin thành viên và duyệt phê duyệt hoặc từ chối đăng ký.
+            </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="px-3 py-1.5 bg-[rgba(245,158,11,0.1)] border border-[var(--color-warning)]/30 font-mono text-xs text-[var(--color-warning)]">
-              PENDING: {pendingTeams.length} ĐỘI
+              CHỜ DUYỆT: {pendingTeams.length} ĐỘI
             </div>
             <Button
               variant="ghost"
               onClick={() => { refetch(); refetchRegistered(); }}
               className="flex items-center gap-2 text-xs font-mono"
             >
-              <RefreshCw className="w-3 h-3" />
-              Làm mới
+              LÀM MỚI
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto mb-6">
-        <select
-          value={eventId}
-          onChange={(e) => setEventId(e.target.value)}
-          className="px-4 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped"
-        >
-          {myEvents.map((ev: any) => {
-            const id = pickId(ev);
-            return (
-              <option key={id} value={id}>
-                {ev.eventName || ev.EventName || id}
-              </option>
-            );
-          })}
-        </select>
+      <div className="max-w-5xl mx-auto mb-6 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-[#8a9ba8]">Sự kiện:</span>
+          <select
+            value={eventId}
+            onChange={(e) => {
+              setEventId(e.target.value);
+              setSelectedTrackId("ALL");
+            }}
+            className="px-4 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped font-bold focus:outline-none"
+          >
+            {myEvents.map((ev: any) => {
+              const id = pickId(ev);
+              return (
+                <option key={id} value={id}>
+                  {ev.eventName || ev.EventName || id}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-[#8a9ba8] flex items-center gap-1">
+            <Filter className="w-3.5 h-3.5 text-[#8b5cf6]" /> Hạng mục thi:
+          </span>
+          <select
+            value={selectedTrackId}
+            onChange={(e) => setSelectedTrackId(e.target.value)}
+            className="px-4 py-2 bg-[var(--bg-input)] border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs hud-clipped font-bold focus:outline-none cursor-pointer"
+          >
+            <option value="ALL">-- Tất cả Hạng mục thi --</option>
+            {tracks.map((tr: any) => {
+              const trId = tr.id || tr.Id || tr.trackId || tr.TrackId || "";
+              const trName = tr.trackName || tr.TrackName || "Hạng mục";
+              return (
+                <option key={trId} value={trId}>
+                  {trName}
+                </option>
+              );
+            })}
+          </select>
+        </div>
       </div>
 
       {/* Content */}
@@ -162,7 +211,6 @@ export function CoordinatorTeamsView() {
             {pendingTeams.map((team: any) => {
               const teamId = team.id || team.TeamId || "";
               const teamName = team.teamName || team.TeamName || "Đội thi";
-              const members = team.members ?? [];
 
               return (
                 <Card
@@ -180,26 +228,11 @@ export function CoordinatorTeamsView() {
                       </div>
 
                       <p className="text-xs text-[var(--text-muted)] font-mono mt-1">
-                        Sĩ số: <strong className="text-[var(--text-primary)]">{members.length} thành viên</strong> · Mô tả: {team.description || "Dự án phát triển giải pháp công nghệ SEAL Hackathon"}
+                        Mô tả: {team.description || "Chưa có mô tả chi tiết."}
                       </p>
-
-                      {/* Roster preview */}
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {members.map((m: any, idx: number) => (
-                          <div
-                            key={m.userId || idx}
-                            className="px-2.5 py-1 bg-[var(--bg-base)] border border-[var(--border-muted)] text-xs font-mono flex items-center gap-1.5"
-                          >
-                            {m.roleName === "TeamLeader" && (
-                              <Crown className="w-3 h-3 text-[var(--accent-team)]" />
-                            )}
-                            <span>{m.fullName}</span>
-                            <Badge tone={m.isApproved ? "success" : "danger"} className="text-[9px] px-1">
-                              {m.isApproved ? "PROFILE OK" : "CHƯA DUYỆT THẺ"}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-[10px] text-[var(--text-muted)] font-mono mt-2 italic">
+                        Bấm &quot;Soi chi tiết đội thi&quot; để xem danh sách thành viên và trạng thái hồ sơ.
+                      </p>
                     </div>
 
                     {/* Actions */}
@@ -265,7 +298,7 @@ export function CoordinatorTeamsView() {
           >
             <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
               <div>
-                <span className="font-mono text-[10px] text-[var(--accent-coordinator)] uppercase font-bold tracking-widest">// TEAM REGISTRATION INSPECTION MODAL</span>
+                <span className="font-mono text-[10px] text-[var(--accent-coordinator)] uppercase font-bold tracking-widest">THÔNG TIN CHI TIẾT ĐỘI THI</span>
                 <h3 className="font-display text-xl font-bold text-[var(--text-primary)] uppercase tracking-widest mt-1">
                   ĐỘI THI: {detailModal.teamName || detailModal.TeamName}
                 </h3>
@@ -293,7 +326,7 @@ export function CoordinatorTeamsView() {
               <div>
                 <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold block mb-1">Mô tả dự án & định hướng kỹ thuật:</span>
                 <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-muted)]">
-                  {detailModal.description || "Đội thi đăng ký tham gia thi đấu giải pháp công nghệ SEAL Hackathon 2026."}
+                  {detailModal.description || "Chưa có mô tả chi tiết cho đội thi này."}
                 </div>
               </div>
 
@@ -302,15 +335,15 @@ export function CoordinatorTeamsView() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-[var(--text-primary)] uppercase font-bold flex items-center gap-2">
                     <Users className="w-4 h-4 text-[var(--accent-team)]" />
-                    Danh sách thành viên ({detailModal.members?.length || 0} / 5 người):
+                    Danh sách thành viên ({detailMembers.length} / 5 người):
                   </span>
-                  <span className="text-[10px] text-[var(--color-success)] font-bold">
-                    ✓ Sĩ số hợp lệ (3 - 5 người)
+                  <span className={`text-[10px] font-bold ${detailMembers.length >= 3 && detailMembers.length <= 5 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}`}>
+                    {detailMembers.length >= 3 && detailMembers.length <= 5 ? "Sĩ số hợp lệ (3 - 5 người)" : "Sĩ số không hợp lệ"}
                   </span>
                 </div>
 
                 <div className="space-y-2">
-                  {detailModal.members?.map((m: any, idx: number) => (
+                  {detailMembers.map((m: any, idx: number) => (
                     <div
                       key={m.userId || idx}
                       className="p-3 bg-[var(--bg-base)] border border-[var(--border-muted)] flex items-center justify-between hud-clipped"
@@ -324,7 +357,7 @@ export function CoordinatorTeamsView() {
                         <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Email: {m.email} · MSSV: {m.studentCode || "N/A"}</p>
                       </div>
                       <Badge tone={m.isApproved ? "success" : "danger"}>
-                        {m.isApproved ? "✓ HỒ SƠ THẺ SV OK" : "✗ CHƯA DUYỆT THẺ"}
+                        {m.isApproved ? "HỒ SƠ THẺ SV OK" : "CHƯA DUYỆT THẺ"}
                       </Badge>
                     </div>
                   ))}
@@ -346,7 +379,7 @@ export function CoordinatorTeamsView() {
                   })}
                   className="flex items-center gap-1.5 px-4 py-2 text-xs bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white font-mono"
                 >
-                  <XCircle className="w-4 h-4" /> ✗ TỪ CHỐI ĐĂNG KÝ
+                  <XCircle className="w-4 h-4" /> TỪ CHỐI ĐĂNG KÝ
                 </Button>
                 <Button
                   disabled={isApproving}

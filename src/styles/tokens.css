@@ -6,11 +6,11 @@
    ============================================================ */
 
 :root {
-  /* ---------- Color: Base surfaces ---------- */
-  /* Nền navy sẫm kết hợp dải gradient đa màu sống động */
-  --bg-base:  #0a0f1d;        /* Deep Space Navy */
-  --bg-panel: #111a2e;        /* Panel bề mặt tương phản sắc nét */
-  --bg-input: #17243e;        /* Input field vừa vặn */
+  /* ---------- Color: Base surfaces — OBSIDIAN DARK ---------- */
+  /* Chuẩn hóa Obsidian Dark: #090e11 & #0f171c */
+  --bg-base:  #090e11;        /* Obsidian Dark Base */
+  --bg-panel: #0f171c;        /* Obsidian Panel Surface */
+  --bg-input: #141f23;       /* Obsidian Input */
 
   /* ---------- Color: Brand accents (Phối đa sắc Mint Teal + Cyber Violet) ---------- */
   --accent-primary:   #2dd4bf;  /* Electric Mint tươi mát */
@@ -20,7 +20,7 @@
   --accent-team:        #38bdf8;  /* Sky Blue sinh động cho Team */
   --accent-mentor:      #34d399;  /* Mint Emerald cho Mentor */
   --accent-judge:       #fbbf24;  /* Amber Gold rực rỡ cho Giám khảo & Vinh danh */
-  --accent-coordinator: #c084fc;  /* Electric Purple cho BTC */
+  --accent-coordinator: #c084fc;  /* Electric Purple dịu mắt cho EC */
 
   /* ---------- Color: Semantic feedback ---------- */
   --color-success: #10b981;   /* Vibrant Emerald */
@@ -31,8 +31,8 @@
   --text-primary: #f1f5f9;    /* Clean Off-white */
   --text-muted:   #94a3b8;    /* Slate Gray rõ ràng */
 
-  /* ---------- Color: Borders ---------- */
-  --border-muted: #24344d;    /* Viền sắc nét phân khối */
+  /* ---------- Color: Borders — zinc-800 ---------- */
+  --border-muted: #27272a;    /* zinc-800 divider */
 
   /* ---------- Typography ---------- */
   --font-display-face: "Chakra Petch", var(--font-chakra-petch), sans-serif;
@@ -48,10 +48,11 @@
   --space-sm: 10px;
   --space-md: 16px;
   --space-lg: 24px;
-  --space-xl: 48px;
+  --space-xl: 36px;  /* FE cu: 36px, FE moi: 48px -> fix ve 36px */
 
-  /* ---------- Shape ---------- */
-  --clip-size: 8px;
+  /* ---------- Shape — Geometric Discipline (proposal Command Deck) ---------- */
+  --clip-size: 12px;  /* góc vát chuẩn — panel/CTA dùng .hud-clipped */
+  --radius-none: 0;   /* input/table: vuông; cấm thay clip bằng rounded-lg */
 
   /* ---------- Layout ---------- */
   --container-max: 1280px;
@@ -91,5 +92,53 @@
 @media (prefers-reduced-motion: reduce) {
   .scanline-overlay {
     display: none !important;
+  }
+}
+
+/* Landing redesign — arena stage (distinct from old centered HUD) */
+.landing-arena-slash {
+  background:
+    linear-gradient(
+      118deg,
+      var(--bg-base) 0%,
+      var(--bg-base) 46%,
+      color-mix(in srgb, var(--accent-primary) 10%, var(--bg-panel)) 72%,
+      var(--bg-base) 100%
+    );
+}
+
+.landing-arena-mark {
+  animation: landing-mark-drift 18s ease-in-out infinite;
+}
+
+.landing-command-console {
+  animation: landing-panel-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+@keyframes landing-mark-drift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-18px) rotate(2deg);
+  }
+}
+
+@keyframes landing-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-arena-mark,
+  .landing-command-console {
+    animation: none;
   }
 }

@@ -53,12 +53,12 @@ export const Step1EventBasicInfo: React.FC<Step1EventBasicInfoProps> = ({
               TÊN SỰ KIỆN HACKATHON
             </span>
             <h2 className="font-sans font-bold text-2xl text-[#e1e7ec] uppercase">
-              {eventData.eventName || "SEAL Hackathon 2026"}
+              {eventData.eventName || "Chưa thiết lập tên sự kiện"}
             </h2>
           </div>
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 bg-[#182024] border border-[#263339] font-mono text-xs font-bold text-[#e1e7ec]">
-              {eventData.season || "Mùa Hè"} {eventData.year || 2026}
+              {eventData.season ? `${eventData.season} ` : ""}{eventData.year || ""}
             </span>
             <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono text-xs font-bold">
               BẢN NHÁP (DRAFT)
@@ -98,17 +98,17 @@ export const Step1EventBasicInfo: React.FC<Step1EventBasicInfoProps> = ({
               Quy Mô Đội &amp; Số Lượng Thành Viên
             </span>
             <p className="font-bold text-[#8b5cf6] text-sm pt-0.5">
-              {eventData.maxTeams || 50} Đội thi
+              {eventData.maxTeams ? `${eventData.maxTeams} Đội thi` : "Chưa thiết lập quy mô"}
             </p>
             <p className="text-[11px] font-bold text-[#e1e7ec]">
-              Mỗi đội: {eventData.minTeamSize ?? 3} - {eventData.maxTeamSize ?? 5} thành viên
+              {eventData.minTeamSize && eventData.maxTeamSize ? `Mỗi đội: ${eventData.minTeamSize} - ${eventData.maxTeamSize} thành viên` : "Chưa cấu hình số thành viên"}
             </p>
           </div>
 
           <div className="md:col-span-3 p-3 bg-[#13191c] border border-[#263339] space-y-1">
             <span className="text-[10px] text-[#8a9ba8] uppercase font-bold">Mô Tả &amp; Thể Lệ Sự Kiện</span>
             <p className="text-[#8a9ba8] leading-relaxed">
-              {eventData.description || "Dự án thi đấu lập trình và phát triển sản phẩm công nghệ SEAL Hackathon 2026."}
+              {eventData.description || "Chưa có mô tả thể lệ cho sự kiện này."}
             </p>
           </div>
         </div>
@@ -125,7 +125,7 @@ export const Step1EventBasicInfo: React.FC<Step1EventBasicInfoProps> = ({
           disabled={isSubmitting}
           className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono font-bold text-xs uppercase flex items-center gap-2 cursor-pointer transition-colors"
         >
-          <span>TIẾP TỤC CẤU HÌNH VÒNG THI (BƯỚC 2 &gt;)</span>
+          <span>TIẾP TỤC CẤU HÌNH VÒNG THI (BƯỚC 2)</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

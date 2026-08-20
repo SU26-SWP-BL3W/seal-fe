@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import type { PagedResult } from "@/models/types";
-import type { SubmitResultListItem } from "@/repositories/scoring/submitResultsRepository";
 
 // Field/route đối chiếu trực tiếp TeamsController.cs + Features/Teams/**/Models.
 // 19 endpoint — controller lớn nhất trong dự án.
@@ -23,8 +22,7 @@ export interface CreateTeamPayload {
   description: string;
   eventId: string;
   trackId: string;
-  /** Thường = chính người gọi API (tự tạo đội thì tự làm leader) — vẫn phải gửi tường minh. */
-  leaderId: string;
+  leaderId?: string;
 }
 
 export interface TeamCreated {
@@ -46,6 +44,7 @@ export function useCreateTeam() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -91,6 +90,8 @@ export function useDeleteTeam() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -130,14 +131,22 @@ export function useGetTeamById(id: string | undefined) {
 }
 
 export interface TeamListItem {
-  id: string;
-  eventId: string;
+  id?: string;
+  Id?: string;
+  eventId?: string;
+  EventId?: string;
   trackId?: string | null;
-  name: string;
-  description: string;
-  status: TeamStatusValue;
-  isActive: boolean;
-  createdTime: string;
+  TrackId?: string | null;
+  name?: string;
+  Name?: string;
+  description?: string;
+  Description?: string;
+  status?: TeamStatusValue | string | number;
+  Status?: TeamStatusValue | string | number;
+  isActive?: boolean;
+  IsActive?: boolean;
+  createdTime?: string;
+  CreatedTime?: string;
 }
 
 export interface GetTeamsParams {
@@ -149,16 +158,6 @@ export interface GetTeamsParams {
   myTeamsOnly?: boolean;
   eventId?: string;
   status?: TeamStatusValue;
-}
-
-export function useGetTeams(params: GetTeamsParams = {}) {
-  return useQuery({
-    queryKey: ["teams", params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<TeamListItem>>("/Teams", { params });
-      return data;
-    },
-  });
 }
 
 // ─── Thành viên ─────────────────────────────────────────────────────────────
@@ -214,6 +213,8 @@ export function useLeaveTeam() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 }
@@ -269,12 +270,17 @@ export interface TeamMemberInvited {
 export function useInviteTeamMember() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ teamId, payload }: { teamId: string; payload: InviteTeamMemberPayload }) => {
+    mutationFn: async (args: any) => {
+      const teamId = args.teamId || args.TeamId;
+      const payload = args.payload || { email: args.email, notes: args.notes };
       const { data } = await apiClient.post<TeamMemberInvited>(`/Teams/${teamId}/invitations`, payload);
       return data;
     },
-    onSuccess: (_data, { teamId }) => {
+    onSuccess: (_data, args: any) => {
+      const teamId = args.teamId || args.TeamId;
       queryClient.invalidateQueries({ queryKey: ["teamInvitations", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -320,6 +326,7 @@ export function useRespondTeamInvitation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myTeamInvitation"] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -329,14 +336,19 @@ export function useRespondTeamInvitation() {
 export function useTransferTeamLeader() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ teamId, newLeaderUserId }: { teamId: string; newLeaderUserId: string }) => {
+    mutationFn: async (args: any) => {
+      const teamId = args.teamId || args.TeamId;
+      const newLeaderUserId = args.newLeaderUserId || args.targetUserId;
       const { data } = await apiClient.post<boolean>(`/Teams/${teamId}/transfer-leader`, {
         newLeaderUserId,
       });
       return data;
     },
-    onSuccess: (_data, { teamId }) => {
+    onSuccess: (_data, args: any) => {
+      const teamId = args.teamId || args.TeamId;
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
     },
   });
 }
@@ -358,6 +370,8 @@ export function useConfirmTeamRegistration() {
     onSuccess: (_data, teamId) => {
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
+      queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 }
@@ -434,57 +448,63 @@ export interface MyTeam {
   members: MyTeamMember[];
 }
 
-/** GET /Teams/my-team?eventId=... — trả null (không phải 404 rỗng) nếu chưa có đội trong sự kiện đó. */
-export function useGetMyTeam(eventId: string | undefined) {
+// ─── Legacy / Compatibility Helpers & Aliases ────────────────────────────────
+
+export function useGetTeamsByEvent(eventId?: string, status?: string) {
   return useQuery({
-    queryKey: ["myTeam", eventId],
+    queryKey: ["teams-by-event", eventId || "all", status || "all"],
     queryFn: async () => {
-      const { data } = await apiClient.get<MyTeam | null>("/Teams/my-team", { params: { eventId } });
-      return data;
-    },
-    enabled: !!eventId,
-  });
-}
-
-export interface MyTeamInvitation {
-  invitationId: string;
-  teamId: string;
-  teamName: string;
-  invitedByUserId: string;
-  status: string;
-  expiresAt: string;
-  notes?: string | null;
-}
-
-/** GET /Teams/{teamId}/my-invitation — lời mời CHỜ PHẢN HỒI của chính người gọi cho đội này (404 nếu không có). */
-export function useGetMyTeamInvitation(teamId: string | undefined) {
-  return useQuery({
-    queryKey: ["myTeamInvitation", teamId],
-    queryFn: async () => {
-      const { data } = await apiClient.get<MyTeamInvitation>(`/Teams/${teamId}/my-invitation`);
-      return data;
-    },
-    enabled: !!teamId,
-    retry: false,
-  });
-}
-
-export interface GetMySubmissionsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  sortBy?: string;
-  isAscending?: boolean;
-}
-
-/** GET /Teams/my-submissions — bài nộp của (các) đội mà người dùng hiện tại đang tham gia. */
-export function useGetMySubmissions(params: GetMySubmissionsParams = {}) {
-  return useQuery({
-    queryKey: ["mySubmissions", params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<SubmitResultListItem>>("/Teams/my-submissions", {
-        params,
-      });
-      return data;
+      const params: Record<string, any> = { PageSize: 200 };
+      if (eventId) params.EventId = eventId;
+      if (status) params.Status = status;
+      const res = await apiClient.get<PagedResult<TeamListItem>>("/Teams", { params });
+      return res.data?.data ?? [];
     },
   });
 }
+
+export function useGetPendingTeams() {
+  return useQuery({
+    queryKey: ["pending-teams"],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<PagedResult<any>>("/Teams", {
+          params: { Status: "PendingApproval", PageSize: 100 },
+        });
+        return res.data?.data ?? [];
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Teams (pending) error:", err?.message);
+        return [];
+      }
+    },
+  });
+}
+
+export function useMyTeam(eventId?: string) {
+  return useQuery({
+    queryKey: ["my-team", eventId],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>("/Teams/my-team", {
+          params: eventId ? { eventId } : undefined,
+        });
+        return res.data;
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Teams/my-team error:", err?.message);
+        return null;
+      }
+    },
+  });
+}
+
+export function useTeamInvitations(teamId?: string) {
+  return useGetTeamInvitations(teamId);
+}
+
+export const useConfirmRegistration = useConfirmTeamRegistration;
+export const useTransferLeadership = useTransferTeamLeader;
+export const useCancelInvitation = useCancelTeamInvitation;
+export const useInviteMember = useInviteTeamMember;
+export const useAcceptOrDeclineInvitation = useRespondTeamInvitation;
+export const useRejectTeam = useRejectTeamRegistration;
+export const useApproveTeam = useApproveTeamRegistration;

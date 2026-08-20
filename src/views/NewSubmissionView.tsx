@@ -14,8 +14,11 @@ import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import { ApiMissingDataBadge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
 
 import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
+
+import { parseLinkRules } from "@/components/domain/event-wizard/Step3TrackConfig";
 
 // ─── Deliverable Icon Metadata ────────────────────────────────────────────────
 const DELIVERABLE_ICONS: Record<DeliverableType, { label: string; icon: string; badgeColor: string }> = {
@@ -42,11 +45,77 @@ function TrackSubmissionCard({
   teamId: string;
   roundId: string;
 }) {
-  const deliverables: DeliverableItem[] = [
-    { id: "github", type: "github", label: "GitHub / GitLab repo", placeholder: "https://github.com/org/repo", required: true, trackId: track.id },
-    { id: "deployed_url", type: "deployed_url", label: "Live demo", placeholder: "https://demo.example.com", required: true, trackId: track.id },
-    { id: "slides", type: "slides", label: "Slides", placeholder: "https://docs.google.com/presentation/...", required: true, trackId: track.id },
-  ];
+  const toast = useToast();
+
+  const linkRules = useMemo(() => {
+    const raw = (track as any)?.submissionRuleDescription || (track as any)?.SubmissionRuleDescription || track.description;
+    return parseLinkRules(raw);
+  }, [track]);
+
+  const deliverables: DeliverableItem[] = useMemo(() => {
+    const list: DeliverableItem[] = [];
+    if (linkRules.github !== "none") {
+      list.push({
+        id: "github",
+        type: "github",
+        label: "Mã nguồn GitHub / GitLab",
+        placeholder: "https://github.com/org/repo",
+        required: linkRules.github === "required",
+        trackId: track.id,
+      });
+    }
+    if (linkRules.demo !== "none") {
+      list.push({
+        id: "deployed_url",
+        type: "demo_video",
+        label: "Video Demo / Live Demo",
+        placeholder: "https://youtube.com/watch?v=... hoặc https://demo.com",
+        required: linkRules.demo === "required",
+        trackId: track.id,
+      });
+    }
+    if (linkRules.slides !== "none") {
+      list.push({
+        id: "slides",
+        type: "slides",
+        label: "Slide Thuyết Trình",
+        placeholder: "https://docs.google.com/presentation/... hoặc Canva",
+        required: linkRules.slides === "required",
+        trackId: track.id,
+      });
+    }
+    if (linkRules.figma !== "none") {
+      list.push({
+        id: "figma",
+        type: "figma",
+        label: "Thiết Kế UI/UX Figma / XD",
+        placeholder: "https://figma.com/file/...",
+        required: linkRules.figma === "required",
+        trackId: track.id,
+      });
+    }
+    if (linkRules.docs !== "none") {
+      list.push({
+        id: "docs",
+        type: "report",
+        label: "Báo Cáo / Tài Liệu PDF",
+        placeholder: "https://docs.google.com/document/... hoặc Drive PDF",
+        required: linkRules.docs === "required",
+        trackId: track.id,
+      });
+    }
+    if (list.length === 0) {
+      list.push({
+        id: "github",
+        type: "github",
+        label: "Mã nguồn GitHub / GitLab",
+        placeholder: "https://github.com/org/repo",
+        required: true,
+        trackId: track.id,
+      });
+    }
+    return list;
+  }, [linkRules, track.id]);
   const createSubmission = useCreateSubmission();
   const updateSubmission = useUpdateSubmission();
 
@@ -73,13 +142,23 @@ function TrackSubmissionCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
+  const sanitizeUrl = (url: string) => {
+    const trimmed = (url || "").trim();
+    if (!trimmed) return "";
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  };
+
   // Check completion
   const { filledCount, requiredFilled, requiredTotal } = useMemo(() => {
     let filled = 0;
     let reqFilled = 0;
     let reqTotal = 0;
     for (const d of deliverables) {
-      const val = (linkValues[d.type] || linkValues[d.id] || "").trim();
+      const rawVal = (linkValues[d.type] || linkValues[d.id] || "").trim();
+      const val = sanitizeUrl(rawVal);
       const valid = val.startsWith("http://") || val.startsWith("https://");
       if (valid) filled++;
       if (d.required) {
@@ -99,55 +178,70 @@ function TrackSubmissionCard({
 
   const handleCardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!allRequiredDone) return;
+    if (!allRequiredDone) {
+      setFormError("Vui lòng hoàn thành tất cả các đường link bài nộp bắt buộc.");
+      return;
+    }
 
     setIsSubmitting(true);
+    setFormError("");
+
+    const sanitizedLinkValues: Record<string, string> = {};
+    for (const [k, v] of Object.entries(linkValues)) {
+      sanitizedLinkValues[k] = sanitizeUrl(v);
+    }
+
     const primaryDeliverable = deliverables.find((d) => d.required);
     const primaryUrl = primaryDeliverable
-      ? (linkValues[primaryDeliverable.type] || linkValues[primaryDeliverable.id] || "").trim()
-      : Object.values(linkValues).find((v) => v.trim().length > 0) || "";
+      ? (sanitizedLinkValues[primaryDeliverable.type] || sanitizedLinkValues[primaryDeliverable.id] || "").trim()
+      : Object.values(sanitizedLinkValues).find((v) => v.trim().length > 0) || "";
 
     const allLinks = deliverables.map((d) => ({
       type: d.type,
       label: d.label,
-      url: (linkValues[d.type] || linkValues[d.id] || "").trim(),
+      url: (sanitizedLinkValues[d.type] || sanitizedLinkValues[d.id] || "").trim(),
       required: d.required,
     }));
+
+    const finalRoundId = track.roundId || roundId || "";
 
     const payload = {
       TeamId: teamId,
       TrackId: track.id,
-      RoundId: roundId,
-      RepoUrl: (linkValues.github || "").trim(),
-      DemoUrl: (linkValues.deployed_url || "").trim(),
-      SlideUrl: (linkValues.slides || "").trim(),
-      SubmissionUrl: (linkValues.github || primaryUrl).trim(),
-      Description: JSON.stringify({ links: allLinks, notes }),
+      RoundId: finalRoundId,
+      RepoUrl: (sanitizedLinkValues.github || "").trim(),
+      DemoUrl: (sanitizedLinkValues.deployed_url || sanitizedLinkValues.demo_video || "").trim(),
+      SlideUrl: (sanitizedLinkValues.slides || "").trim(),
+      SubmissionUrl: (sanitizedLinkValues.github || primaryUrl).trim(),
+      Description: JSON.stringify({ links: allLinks, notes: notes.trim() }),
     };
 
     try {
       const created = existingSubmission?.id
-        ? await updateSubmission.mutateAsync({ id: existingSubmission.id, data: payload as Partial<SubmitResultRequest> })
-        : await createSubmission.mutateAsync(payload as SubmitResultRequest);
+        ? await updateSubmission.mutateAsync({ id: existingSubmission.id, data: payload } as any)
+        : await createSubmission.mutateAsync(payload as any);
       const updatedItem: SubmissionItem = {
         id: (created as { id?: string })?.id || existingSubmission?.id || `sub-${Date.now()}`,
         teamId,
-        roundId,
+        roundId: finalRoundId,
         roundName: "Vòng hiện tại",
         trackId: track.id,
         trackName: track.trackName,
         submissionUrl: primaryUrl,
-        description: JSON.stringify({ links: allLinks, notes }),
+        description: JSON.stringify({ links: allLinks, notes: notes.trim() }),
         teamName: "",
         createdTime: new Date().toISOString(),
         isActive: true,
-        isEliminated: false,
       };
       setIsSaved(true);
       setFormError("");
+      const okMsg = `🎉 Nộp bài thành công cho hạng mục "${track.trackName}"! Hệ thống đã ghi nhận bài thi và gửi email xác nhận biên nhận nộp bài tới các thành viên trong đội.`;
+      toast.success(okMsg);
       onSubmitSuccess(track.id, updatedItem);
     } catch (err) {
-      setFormError(readApiError(err));
+      const errMsg = readApiError(err);
+      setFormError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -356,10 +450,9 @@ export function NewSubmissionView() {
   const teamTrackId = (team as any)?.TrackId || (team as any)?.trackId || "";
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
   const { data: rounds = [] } = useEventRounds(eventId);
-  const { data: existingSubs = [] } = useMySubmissions();
-  const roundId = rounds.length
-    ? (rounds[rounds.length - 1].id || rounds[rounds.length - 1].Id || "")
-    : "";
+  const { data: existingSubs = [] } = useMySubmissions(teamId || undefined);
+  const currentOrLastRound = rounds.find((r: any) => r.isCurrentRound || r.status === "Active" || r.status === "InProgress") || rounds[rounds.length - 1] || rounds[0];
+  const roundId = currentOrLastRound?.id || currentOrLastRound?.Id || "";
 
   const availableTracks: TrackItem[] = (tracks as any[])
     .filter((t) => !teamTrackId || (t.id || t.Id) === teamTrackId)
@@ -367,7 +460,8 @@ export function NewSubmissionView() {
       id: t.id || t.Id,
       trackName: t.trackName || t.TrackName || "",
       description: t.description || t.Description || "",
-      roundId,
+      submissionRuleDescription: t.submissionRuleDescription || t.SubmissionRuleDescription || "",
+      roundId: t.roundId || t.RoundId || roundId,
       templateId: t.templateId || t.TemplateId || null,
     }));
 
@@ -384,7 +478,7 @@ export function NewSubmissionView() {
       map[trackId] = {
         id: raw.id || raw.Id || "",
         teamId: raw.teamId || raw.TeamId || "",
-        roundId: "",
+        roundId: raw.roundId || raw.RoundId || roundId,
         roundName: "Vòng hiện tại",
         trackId,
         trackName: raw.trackName || raw.TrackName || "",
@@ -400,11 +494,10 @@ export function NewSubmissionView() {
         teamName: raw.teamName || raw.TeamName || "",
         createdTime: raw.createdTime || raw.CreatedTime || "",
         isActive: raw.isActive !== false && raw.IsActive !== false,
-        isEliminated: false,
       };
     }
     return map;
-  }, [existingSubs]);
+  }, [existingSubs, roundId]);
 
   const [localOverrides, setLocalOverrides] = useState<Record<string, SubmissionItem>>({});
   const submissions = { ...submissionsFromServer, ...localOverrides };
@@ -418,7 +511,7 @@ export function NewSubmissionView() {
 
   const teamStatus = String((team as { status?: string; Status?: string } | undefined)?.status
     || (team as { Status?: string } | undefined)?.Status || "");
-  const canSubmit = teamStatus === "Registered";
+  const canSubmit = teamStatus === "Registered" || teamStatus === "Approved";
 
   // Guard: chưa có đội hoặc đội chưa được duyệt
   if (!isLoading && (!team || !canSubmit)) {

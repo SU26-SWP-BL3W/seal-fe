@@ -1,37 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useEventDetailViewModel, type RoundSummary } from "@/viewModels/useEventDetailViewModel";
 import type { PrizeItem } from "@/viewModels/eventsMetadata";
 import { useCountdown } from "@/lib/useCountdown";
-import {
-  Calendar,
-  Trophy,
-  Users,
-  User,
-  Layers,
-  ArrowLeft,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  ChevronRight,
-  Shield,
-  Award,
-  Sparkles,
-  Info,
-  Scale,
-  Briefcase,
-  Upload,
-  FileCode,
-  FileCheck2,
-  AlertCircle,
-  Megaphone,
-  HelpCircle,
-  Flame,
-} from "lucide-react";
+import { useGetEventRolesByUser } from "@/repositories/events/eventRolesRepository";
+import { useMyTeam } from "@/repositories/teamsRepository";
+import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
+import { AvailableTeamsList } from "@/components/domain/team";
+import { PageShell } from "@/components/layout/PageShell";
+import { Badge, Button, Card, EmptyState, HexagonLoader, StatCard } from "@/components/ui";
+import { AlertTriangle, ChevronRight } from "lucide-react";
+
+function formatVnd(value: number): string {
+  return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
+}
 
 function formatShortDate(iso?: string): string {
   if (!iso) return "N/A";
@@ -58,605 +44,578 @@ function formatDateTime(iso?: string): string {
   })}`;
 }
 
-function formatFullDateTime(iso?: string): string {
-  if (!iso) return "N/A";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return `${d.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  })} ${d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
-}
+const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
+
+const DETAIL_TABS = [
+  { id: "timeline" as const, label: "Lịch trình" },
+  { id: "tracks" as const, label: "Hạng mục" },
+  { id: "prizes" as const, label: "Giải thưởng" },
+  { id: "rules" as const, label: "Thể lệ" },
+  { id: "teams" as const, label: "Đội thi" },
+];
 
 export function EventDetailView({ eventId: propEventId }: { eventId?: string }) {
   const params = useParams();
   const eventId = propEventId || (params?.id as string) || "evt-01";
 
   const { user, activeRole } = useAuth();
-  const [activeTab, setActiveTab] = useState<"timeline" | "tracks" | "prizes" | "rules">("timeline");
-  const [selectedRoundIndex, setSelectedRoundIndex] = useState<number>(0);
-
-  const rawRole = activeRole?.roleName || activeRole?.RoleName;
-  const userEmail = (user?.email || user?.Email || "").toLowerCase();
-  let roleName = "Guest";
-  if (user) {
-    let detected = rawRole || "";
-    if (detected === "EventCoordinator") detected = "Coordinator";
-    if (!detected) {
-      if (userEmail.includes("coordinator") || userEmail.includes("ec.") || userEmail.includes("ec_")) {
-        detected = "Coordinator";
-      } else if (userEmail.includes("judge")) {
-        detected = "Judge";
-      } else if (userEmail.includes("mentor")) {
-        detected = "Mentor";
-      } else if (user?.isAdmin || user?.IsAdmin) {
-        detected = "Admin";
-      } else {
-        detected = "Student";
-      }
-    }
-    roleName = detected;
-  }
+  const [activeTab, setActiveTab] = useState<"timeline" | "tracks" | "prizes" | "rules" | "teams">("timeline");
 
   const {
+    event,
     eventName,
     season,
     year,
     tagline,
     description,
     tracks,
+    trackItems,
     rounds,
     teamCount,
     maxTeams,
     prizes,
+    totalPrizeVnd,
     deadline,
     deadlineRoundName,
+    isLoading,
+    notFound,
+    refetch,
   } = useEventDetailViewModel(eventId);
+
+  const currentUserId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
+  const { data: userRolesResult } = useGetEventRolesByUser(currentUserId, { pageSize: 100 });
+  const userRoles = useMemo(() => {
+    const raw = (userRolesResult as any)?.data?.items ?? (userRolesResult as any)?.items ?? (Array.isArray(userRolesResult) ? userRolesResult : []);
+    return Array.isArray(raw) ? raw : [];
+  }, [userRolesResult]);
+
+  const { data: myTeamResult } = useMyTeam();
+  const myTeam = (myTeamResult as any)?.team ?? myTeamResult;
+
+  const targetEventId = normalizeId(eventId);
+
+  // Lọc tất cả các vai trò của người dùng trong chính eventId này (Khớp chính xác qua ID chuẩn hóa)
+  const myEventRoles = useMemo(() => {
+    return userRoles.filter(
+      (r: any) => normalizeId(r.eventId || r.EventId) === targetEventId
+    );
+  }, [userRoles, targetEventId]);
+
+  const judgeRoles = useMemo(() => {
+    return myEventRoles.filter((r: any) => (r.roleName || r.RoleName) === "Judge");
+  }, [myEventRoles]);
+
+  const mentorRoles = useMemo(() => {
+    return myEventRoles.filter((r: any) => (r.roleName || r.RoleName) === "Mentor");
+  }, [myEventRoles]);
+
+  const hasJudgeRole = judgeRoles.length > 0;
+  const hasMentorRole = mentorRoles.length > 0;
+
+  // Kiểm tra sự kiện đã đóng / kết thúc chưa
+  const isEventEnded = Boolean(
+    event && (event.status === false || (event.endDate && new Date(event.endDate).getTime() < Date.now()))
+  );
+
+  // XÁC ĐỊNH CHÍNH XÁC VAI TRÒ CỦA NGƯỜI DÙNG ĐỐI VỚI SỰ KIỆN NÀY (EVENT-SCOPED ROLE)
+  const roleName = useMemo(() => {
+    if (!user) return "Guest";
+    if (user.isAdmin || user.IsAdmin) return "Admin";
+
+    if (myEventRoles.length > 0) {
+      const roleNames = myEventRoles.map((r: any) => r.roleName || r.RoleName);
+      if (roleNames.some((rn: string) => rn === "EventCoordinator" || rn === "Coordinator")) return "Coordinator";
+      if (roleNames.includes("Judge") && roleNames.includes("Mentor")) return "JudgeAndMentor";
+      if (roleNames.some((rn: string) => rn === "Judge")) return "Judge";
+      if (roleNames.some((rn: string) => rn === "Mentor")) return "Mentor";
+      if (roleNames.some((rn: string) => rn === "TeamLeader")) return "TeamLeader";
+      if (roleNames.some((rn: string) => rn === "TeamMember")) return "TeamMember";
+      return roleNames[0] || "Guest";
+    }
+
+    const assignedIds = (activeRole?.assignedEventIds || activeRole?.AssignedEventIds || []).map((id: string) => normalizeId(id));
+    if (activeRole && (normalizeId(activeRole.eventId) === targetEventId || normalizeId(activeRole.EventId) === targetEventId || assignedIds.includes(targetEventId))) {
+      const rn = activeRole.roleName || activeRole.RoleName;
+      if (rn === "EventCoordinator") return "Coordinator";
+      if (rn === "Judge") return "Judge";
+      if (rn === "Mentor") return "Mentor";
+      if (rn === "TeamLeader") return "TeamLeader";
+      if (rn === "TeamMember") return "TeamMember";
+      return rn || "Guest";
+    }
+
+    if (myTeam && (normalizeId(myTeam.eventId) === targetEventId || normalizeId(myTeam.EventId) === targetEventId)) {
+      return myTeam.isLeader ? "TeamLeader" : "TeamMember";
+    }
+
+    return "Guest";
+  }, [user, myEventRoles, activeRole, targetEventId, myTeam]);
 
   const countdown = useCountdown(deadline);
 
-  const activeRound = rounds[selectedRoundIndex] || rounds[0] || {
-    id: "rnd-0",
-    roundNumber: 0,
-    roundName: "Mở Cổng Đăng Ký Đội Thi",
-    startDate: "2026-06-01T00:00:00Z",
-    endDate: "2026-07-10T23:59:59Z",
-    submissionDeadline: "2026-07-10T23:59:59Z",
-    evaluationEndDate: "2026-07-12T18:00:00Z",
-    resultAnnouncementDate: "2026-07-13T09:00:00Z",
-    appealDeadline: "2026-07-14T23:59:59Z",
-    description: "Mở cổng nhận hồ sơ thành lập Đội thi.",
-    status: "past" as const,
-  };
+  const [isComprehensiveEditOpen, setIsComprehensiveEditOpen] = useState(false);
 
-  // 5 Milestones for the active selected round
-  const activeMilestones = [
-    {
-      id: "m1",
-      number: "01",
-      title: "Mở Cổng & Bắt Đầu Vòng",
-      date: formatDateTime(activeRound.startDate),
-      desc: "Khởi động giai đoạn, mở đề bài và nhận bài thi.",
-      icon: Flame,
-      color: "#38bdf8", // Sky
-    },
-    {
-      id: "m2",
-      number: "02",
-      title: "Khóa Cổng Nộp Bài",
-      date: formatDateTime(activeRound.submissionDeadline || activeRound.endDate),
-      desc: "Hạn chót khóa form tải lên tài liệu và mã nguồn.",
-      icon: Clock,
-      color: "#f59e0b", // Amber
-    },
-    {
-      id: "m3",
-      number: "03",
-      title: "Hội Đồng Chấm Điểm",
-      date: formatDateTime(activeRound.evaluationEndDate || activeRound.endDate),
-      desc: "Giám khảo đánh giá ẩn danh dựa trên rubric tiêu chí.",
-      icon: Scale,
-      color: "#a855f7", // Purple
-    },
-    {
-      id: "m4",
-      number: "04",
-      title: "Công Bố Điểm & Xếp Hạng",
-      date: formatDateTime(activeRound.resultAnnouncementDate || activeRound.endDate),
-      desc: "Mở Bảng xếp hạng và danh sách đội đi tiếp.",
-      icon: Megaphone,
-      color: "#10b981", // Emerald
-    },
-    {
-      id: "m5",
-      number: "05",
-      title: "Khung Giờ Phúc Khảo",
-      date: formatDateTime(activeRound.appealDeadline || activeRound.endDate),
-      desc: "48h nhận khiếu nại và phản hồi từ Ban Tổ Chức.",
-      icon: Shield,
-      color: "#ec4899", // Pink
-    },
-  ];
+  if (isLoading) {
+    return (
+      <PageShell className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center">
+        <HexagonLoader />
+        <p className="mt-4 text-sm text-[var(--text-muted)]">Đang tải thông tin sự kiện...</p>
+      </PageShell>
+    );
+  }
 
-  const backHref =
-    roleName === "Admin"
-      ? "/admin/dashboard"
-      : roleName === "Coordinator"
-      ? "/coordinator/dashboard"
-      : roleName === "Judge"
-      ? "/judge/events"
-      : roleName === "Mentor"
-      ? "/mentor/tracks"
-      : "/events";
-
-  const backLabel =
-    roleName === "Admin"
-      ? "Bảng Điều Hành Admin"
-      : roleName === "Coordinator"
-      ? "Control Center BTC"
-      : roleName === "Judge"
-      ? "Sự Kiện Giám Khảo"
-      : roleName === "Mentor"
-      ? "Khu Vực Cố Vấn"
-      : "Khám Phá Sự Kiện";
+  if (notFound || !event) {
+    return (
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <EmptyState
+          title="Không tìm thấy sự kiện"
+          description="Sự kiện không tồn tại hoặc bạn không có quyền truy cập."
+          action={
+            <Link href="/events">
+              <Button variant="secondary">Quay lại danh sách sự kiện</Button>
+            </Link>
+          }
+        />
+      </PageShell>
+    );
+  }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Breadcrumb Navigation */}
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-3 font-mono text-xs text-zinc-400">
-          <div className="flex items-center gap-2">
-            <Link href={backHref} className="hover:text-cyan-400 flex items-center gap-1 transition-colors">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>{backLabel}</span>
+    <>
+      <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
+        {/* Breadcrumb */}
+        <nav className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-muted)] pb-4">
+          <div className="flex min-w-0 items-center gap-2 text-sm text-[var(--text-muted)]">
+            <Link href="/events" className="shrink-0 transition-colors hover:text-[var(--accent-primary)]">
+              Khám phá sự kiện
             </Link>
-            <span>/</span>
-            <span className="text-zinc-500">Sự Kiện</span>
-            <span>/</span>
-            <span className="text-white font-bold">{eventName || "Chi Tiết Sự Kiện"}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 rounded text-[11px] font-bold">
-              {season} • {year}
+            <ChevronRight className="h-4 w-4 shrink-0 opacity-50" />
+            <span className="truncate font-medium text-[var(--text-primary)]">
+              {eventName || "Chi tiết sự kiện"}
             </span>
           </div>
-        </div>
+          {(season || year) && (
+            <Badge tone="info">
+              {season}{year ? ` · ${year}` : ""}
+            </Badge>
+          )}
+        </nav>
 
-        {/* Hero Event Banner */}
-        <div className="bg-[#10171a] border border-zinc-800 rounded-lg p-6 md:p-8 space-y-6 shadow-sm">
-          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-            <div className="space-y-3 max-w-3xl">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 rounded text-xs font-mono font-bold uppercase inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Đang Mở
-                </span>
-                <span className="text-xs font-mono text-zinc-400">
-                  {teamCount}/{maxTeams} Đội thi đã đăng ký
+        {/* Unverified student alert — roleName never equals "Student" (Guest / Team*) */}
+        {Boolean(user) &&
+          !(user?.isApproved ?? (user as { IsApproved?: boolean })?.IsApproved) &&
+          !hasJudgeRole &&
+          !hasMentorRole &&
+          roleName !== "Coordinator" &&
+          roleName !== "Admin" && (
+          <div className="flex flex-col gap-3 rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-warning)]" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  Hồ sơ sinh viên chưa được duyệt
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Bạn có thể xem thể lệ, lịch trình và giải thưởng. Để đăng ký đội hoặc nộp bài, hãy hoàn thiện hồ sơ sinh viên.
+                </p>
+              </div>
+            </div>
+            <Link href="/onboarding/profile" className="shrink-0">
+              <Button variant="secondary" accent="primary" className="border-[var(--color-warning)]/40">
+                Cập nhật hồ sơ
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        {/* Hero */}
+        <Card className="space-y-6 p-6 md:p-8">
+          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
+            <div className="max-w-3xl space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {isEventEnded ? (
+                  <Badge tone="neutral">Đã kết thúc</Badge>
+                ) : (
+                  <Badge tone="success">Đang mở</Badge>
+                )}
+                <span className="text-xs text-[var(--text-muted)]">
+                  {teamCount}/{maxTeams} đội đã đăng ký
                 </span>
               </div>
 
-              <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-white uppercase tracking-tight">
+              <h1 className="font-display text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl md:text-4xl">
                 {eventName}
               </h1>
 
-              <p className="font-mono text-sm text-cyan-400">{tagline}</p>
-              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">{description}</p>
+              {tagline && tagline.trim() !== description?.trim() && (
+                <p className="text-sm text-[var(--accent-primary)]">{tagline}</p>
+              )}
+              <p className="text-sm leading-relaxed text-[var(--text-muted)]">
+                {description || "Đấu trường công nghệ quy mô lớn dành cho sinh viên toàn quốc do Ban quản trị SEAL phê duyệt."}
+              </p>
             </div>
 
-            {/* Right-side Countdown Widget */}
             {deadline && (
-              <div className="bg-[#0b1013] border border-zinc-800 p-4 rounded-lg space-y-2 shrink-0 lg:w-72 font-mono">
-                <div className="flex items-center justify-between text-xs text-zinc-400">
-                  <span className="flex items-center gap-1 text-cyan-300 font-bold uppercase">
-                    <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                    {deadlineRoundName || "Hạn chót vòng"}
-                  </span>
-                </div>
-                <div className="text-2xl font-bold text-white tracking-wider">
-                  {countdown.isPast
+              <div className="shrink-0 space-y-2 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] p-4 lg:w-72">
+                <p className="text-xs font-medium text-[var(--accent-primary)]">
+                  {deadlineRoundName || "Hạn chót giai đoạn"}
+                </p>
+                <p className="font-display text-xl font-semibold tabular-nums text-[var(--text-primary)]">
+                  {countdown.isPast || isEventEnded
                     ? "Đã kết thúc"
                     : `${countdown.days} ngày ${countdown.hours} giờ ${countdown.minutes} phút`}
-                </div>
-                <div className="text-[11px] text-zinc-500">
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
                   Hạn chót: {formatShortDate(deadline)}
-                </div>
+                </p>
               </div>
             )}
           </div>
 
-          {/* 4 Summary Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-zinc-800/80 font-mono text-xs">
-            <div className="p-3 bg-[#0b1013] rounded border border-zinc-800 space-y-0.5">
-              <span className="text-zinc-500 text-[10px] uppercase block">Giải Thưởng</span>
-              <span className="text-cyan-300 font-bold text-base">
-                {prizes.length > 0 ? `${prizes.length} Giải` : "Chưa công bố"}
-              </span>
-            </div>
-            <div className="p-3 bg-[#0b1013] rounded border border-zinc-800 space-y-0.5">
-              <span className="text-zinc-500 text-[10px] uppercase block">Hạng Mục Dự Thi</span>
-              <span className="text-cyan-300 font-bold text-base">
-                {tracks.length === 1 ? "1 Bảng Đấu Trọng Tâm" : `${tracks.length} Chuyên Môn`}
-              </span>
-            </div>
-            <div className="p-3 bg-[#0b1013] rounded border border-zinc-800 space-y-0.5">
-              <span className="text-zinc-500 text-[10px] uppercase block">Đội Thi Ghi Danh</span>
-              <span className="text-emerald-300 font-bold text-base">{teamCount} / {maxTeams}</span>
-            </div>
-            <div className="p-3 bg-[#0b1013] rounded border border-zinc-800 space-y-0.5">
-              <span className="text-zinc-500 text-[10px] uppercase block">Tổng Số Vòng Thi</span>
-              <span className="text-purple-300 font-bold text-base">{rounds.length} Giai Đoạn</span>
-            </div>
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3 border-t border-[var(--border-muted)] pt-6 sm:grid-cols-4">
+            <StatCard
+              label="Tổng giải thưởng"
+              value={totalPrizeVnd > 0 ? formatVnd(totalPrizeVnd) : prizes.length > 0 ? `${prizes.length} hạng mục` : "Đang cập nhật"}
+              accent="var(--color-success)"
+            />
+            <StatCard
+              label="Hạng mục dự thi"
+              value={tracks.length === 1 ? "1 bảng đấu" : `${tracks.length} chuyên môn`}
+              accent="var(--accent-primary)"
+            />
+            <StatCard
+              label="Đội ghi danh"
+              value={`${teamCount} / ${maxTeams}`}
+              accent="var(--accent-team)"
+            />
+            <StatCard
+              label="Tổng số vòng thi"
+              value={`${rounds.length} giai đoạn`}
+              accent="var(--accent-coordinator)"
+            />
           </div>
 
-          {/* Role Action Strip */}
-          <div className="pt-2 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 font-mono text-xs">
-              <span className="text-zinc-400 font-bold">VAI TRÒ CỦA BẠN:</span>
-              <span className={`px-2.5 py-0.5 rounded font-bold uppercase ${roleName === "Guest" ? "bg-zinc-800 text-cyan-300 border border-cyan-500/30" : "bg-zinc-800 text-white"}`}>
-                {roleName === "Guest" ? "KHÁCH (GUEST)" : roleName}
-              </span>
-            </div>
+          {/* Actions */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-muted)] pt-4">
+            <p className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <span className={`h-2 w-2 rounded-full ${isEventEnded ? "bg-zinc-500" : "bg-emerald-400"}`} />
+              {isEventEnded ? "Sự kiện đã đóng" : "Sự kiện chính thức trên hệ thống SEAL"}
+            </p>
 
-            <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-              {roleName === "Guest" && (
+            <div className="flex flex-wrap items-center gap-2">
+              {user?.isAdmin && (
                 <>
-                  <Link href="/register">
-                    <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                      <User className="w-4 h-4" />
-                      <span>Đăng Ký Tài Khoản Tham Gia</span>
-                    </button>
+                  <Link href="/admin/dashboard">
+                    <Button variant="secondary" accent="primary" className="border-[var(--color-danger)]/40 text-[var(--color-danger)]">
+                      Bảng điều hành
+                    </Button>
                   </Link>
-                  <Link href="/login">
-                    <button className="px-4 py-2.5 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white rounded font-bold transition-all cursor-pointer">
-                      <span>Đăng Nhập</span>
-                    </button>
-                  </Link>
+                  <Button type="button" variant="secondary" onClick={() => setIsComprehensiveEditOpen(true)}>
+                    Chỉnh sửa sự kiện
+                  </Button>
                 </>
-              )}
-
-              {roleName === "Admin" && (
-                <Link href="/admin/dashboard">
-                  <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                    <Shield className="w-4 h-4" />
-                    <span>Bảng Điều Hành Admin</span>
-                  </button>
-                </Link>
               )}
 
               {roleName === "Coordinator" && (
                 <>
-                  <Link href={`/coordinator/events/${eventId}`}>
-                    <button className="px-3.5 py-2 bg-purple-950/60 text-purple-300 border border-purple-500/40 hover:bg-purple-900/80 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
-                      <Briefcase className="w-3.5 h-3.5" />
-                      <span>Quản Lý Vòng Thi &amp; Tiêu Chí</span>
-                    </button>
-                  </Link>
                   <Link href="/coordinator/dashboard">
-                    <button className="px-3.5 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white rounded font-bold transition-all cursor-pointer">
-                      <span>Control Center BTC</span>
-                    </button>
+                    <Button variant="secondary" accent="coordinator">Quản trị BTC</Button>
+                  </Link>
+                  <Button type="button" variant="secondary" accent="coordinator" onClick={() => setIsComprehensiveEditOpen(true)}>
+                    Chỉnh sửa sự kiện
+                  </Button>
+                </>
+              )}
+
+              {(roleName === "TeamLeader" || roleName === "TeamMember") && (
+                <Link href={`/my-team?eventId=${eventId}`}>
+                  <Button accent="team">Quản lý đội / nộp bài</Button>
+                </Link>
+              )}
+
+              {!hasJudgeRole && !hasMentorRole && roleName === "Guest" && user && !isEventEnded && (
+                <Link href={`/my-team?eventId=${eventId}`}>
+                  <Button accent="team">Đăng ký đội thi</Button>
+                </Link>
+              )}
+
+              {!user && !isEventEnded && (
+                <>
+                  <Link href="/register">
+                    <Button>Đăng ký tài khoản</Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button variant="secondary">Đăng nhập</Button>
                   </Link>
                 </>
               )}
 
-              {roleName === "Judge" && (
-                <Link href="/judge/events">
-                  <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5">
-                    <Scale className="w-4 h-4" />
-                    <span>Vào Chấm Điểm Hạng Mục</span>
-                  </button>
-                </Link>
-              )}
-
-              {roleName === "Mentor" && (
-                <Link href="/mentor/tracks">
-                  <button className="px-4 py-2 bg-teal-500 text-black hover:bg-teal-400 rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5">
-                    <Users className="w-4 h-4" />
-                    <span>Xem Đội Thi Được Phân Công</span>
-                  </button>
-                </Link>
-              )}
-
-              {roleName === "Student" && (
-                <Link href="/my-team">
-                  <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-extrabold transition-all cursor-pointer flex items-center gap-1.5">
-                    <Upload className="w-4 h-4" />
-                    <span>Quản Lý Đội Thi / Nộp Bài</span>
-                  </button>
-                </Link>
-              )}
+              <Link href={`/events/${eventId}/leaderboard`}>
+                <Button variant="secondary">Bảng xếp hạng</Button>
+              </Link>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Tab Navigation Controls */}
-        <div className="flex items-center gap-1 bg-[#10171a] p-1.5 border border-zinc-800 rounded-lg font-mono text-xs">
-          <button
-            type="button"
-            onClick={() => setActiveTab("timeline")}
-            className={`flex-1 py-2.5 rounded font-bold transition-all cursor-pointer text-center ${
-              activeTab === "timeline"
-                ? "bg-[#00d9ff] text-black font-extrabold shadow-[0_0_15px_rgba(0,217,255,0.3)]"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            1. Lịch Trình Vòng Thi ({rounds.length} Giai đoạn)
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("tracks")}
-            className={`flex-1 py-2.5 rounded font-bold transition-all cursor-pointer text-center ${
-              activeTab === "tracks"
-                ? "bg-[#00d9ff] text-black font-extrabold shadow-[0_0_15px_rgba(0,217,255,0.3)]"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            2. Hạng Mục Chuyên Môn ({tracks.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("prizes")}
-            className={`flex-1 py-2.5 rounded font-bold transition-all cursor-pointer text-center ${
-              activeTab === "prizes"
-                ? "bg-[#00d9ff] text-black font-extrabold shadow-[0_0_15px_rgba(0,217,255,0.3)]"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            3. Cơ Cấu Giải Thưởng
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("rules")}
-            className={`flex-1 py-2.5 rounded font-bold transition-all cursor-pointer text-center ${
-              activeTab === "rules"
-                ? "bg-[#00d9ff] text-black font-extrabold shadow-[0_0_15px_rgba(0,217,255,0.3)]"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            4. Thể Lệ &amp; Quy Định
-          </button>
-        </div>
-
-        {/* ─────────────────────────────────────────────────────────────
-            TAB 1: LỊCH TRÌNH TIẾN TRÌNH VÒNG THI (FORMAT DỌC LIỀN MẠCH)
-           ───────────────────────────────────────────────────────────── */}
-        {activeTab === "timeline" && (
-          <div className="bg-[#10171a] border border-zinc-800 rounded-lg p-6 md:p-8 space-y-8">
-            
-            {/* Header Section */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
-              <div>
-                <div className="flex items-center gap-2 font-mono text-xs text-cyan-400 uppercase tracking-widest font-bold">
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                  TIMELINE TIẾN TRÌNH VÒNG THI
-                </div>
-                <h2 className="font-display text-xl sm:text-2xl font-bold uppercase text-white mt-1">
-                  Lộ Trình Toàn Bộ Cuộc Thi
+        {/* Mission workspace dock */}
+        {(hasJudgeRole || hasMentorRole) && (
+          <div className="space-y-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-5 md:p-6">
+            <div className="flex flex-col gap-2 border-b border-[var(--border-muted)] pb-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${isEventEnded ? "bg-[var(--text-muted)]" : "bg-[var(--accent-primary)] animate-pulse"}`} />
+                <h2 className="font-display text-sm font-semibold text-[var(--text-primary)]">
+                  {isEventEnded ? "Nhiệm vụ chuyên môn đã hoàn tất" : "Bàn làm việc chuyên môn"}
                 </h2>
+                <Badge tone="info">
+                  {judgeRoles.length + mentorRoles.length} nhiệm vụ
+                </Badge>
               </div>
-
-              <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
-                <span className="px-3 py-1 bg-[#0b1013] border border-zinc-800 rounded">
-                  Tổng số: <strong className="text-cyan-300 font-bold">{rounds.length} Giai đoạn</strong>
-                </span>
-              </div>
+              <span className="text-xs text-[var(--text-muted)]">
+                {isEventEnded ? "Sự kiện đã đóng — dữ liệu đã niêm phong" : "Tác vụ trực tiếp theo từng hạng mục được phân công"}
+              </span>
             </div>
 
-            {/* Vertical Connected Timeline Spine Container */}
-            <div className="relative pl-4 sm:pl-8 space-y-8 before:absolute before:left-8 sm:before:left-12 before:top-4 before:bottom-4 before:w-0.5 before:bg-gradient-to-b before:from-[#00d9ff] before:via-cyan-500/40 before:to-zinc-800">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {judgeRoles.map((r: any, idx: number) => {
+                const matchedTrack = trackItems.find(t => normalizeId(t.id) === normalizeId(r.trackId || r.TrackId));
+                const trackName = matchedTrack?.trackName || r.trackName || r.TrackName || "Hạng mục";
+                const trackId = matchedTrack?.id || r.trackId || r.TrackId;
+
+                return (
+                  <div
+                    key={`dock-j-${idx}`}
+                    className="flex flex-col justify-between space-y-3 rounded-lg border border-[var(--accent-judge)]/40 bg-[var(--bg-input)]/40 p-4"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge tone="judge">
+                          {isEventEnded ? "Giám khảo — đã hoàn tất" : "Giám khảo"}
+                        </Badge>
+                        <span className={`text-xs ${isEventEnded ? "text-[var(--text-muted)]" : "text-[var(--color-success)]"}`}>
+                          {isEventEnded ? "Đã khép lại" : "Đang mở cổng"}
+                        </span>
+                      </div>
+                      <h3 className="pt-1 font-display text-base font-semibold text-[var(--text-primary)] sm:text-lg">
+                        {trackName}
+                      </h3>
+                      <p className="line-clamp-2 text-xs leading-relaxed text-[var(--text-muted)]">
+                        {matchedTrack?.description || "Phụ trách đánh giá chuyên môn và chấm điểm các bài thi thuộc Hạng mục theo khung Rubric."}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 border-t border-[var(--accent-judge)]/20 pt-2">
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {isEventEnded ? "Trạng thái: Đã niêm phong" : "Nhiệm vụ: Chấm điểm bài thi"}
+                      </span>
+                      <Link href={`/judge/scoring?trackId=${trackId}`}>
+                        <Button
+                          accent="judge"
+                          variant={isEventEnded ? "secondary" : "primary"}
+                          className="text-xs"
+                        >
+                          {isEventEnded ? "Xem lại bài đã chấm" : "Vào chấm điểm hạng mục này"}
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {mentorRoles.map((r: any, idx: number) => {
+                const matchedTrack = trackItems.find(t => normalizeId(t.id) === normalizeId(r.trackId || r.TrackId));
+                const trackName = matchedTrack?.trackName || r.trackName || r.TrackName || "Hạng mục";
+                const trackId = matchedTrack?.id || r.trackId || r.TrackId;
+
+                return (
+                  <div
+                    key={`dock-m-${idx}`}
+                    className="flex flex-col justify-between space-y-3 rounded-lg border border-[var(--accent-mentor)]/40 bg-[var(--bg-input)]/40 p-4"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge tone="mentor">
+                          {isEventEnded ? "Cố vấn — đã hoàn tất" : "Cố vấn"}
+                        </Badge>
+                        <span className={`text-xs ${isEventEnded ? "text-[var(--text-muted)]" : "text-[var(--accent-mentor)]"}`}>
+                          {isEventEnded ? "Đã khép lại" : "Đồng hành đội thi"}
+                        </span>
+                      </div>
+                      <h3 className="pt-1 font-display text-base font-semibold text-[var(--text-primary)] sm:text-lg">
+                        {trackName}
+                      </h3>
+                      <p className="line-clamp-2 text-xs leading-relaxed text-[var(--text-muted)]">
+                        {matchedTrack?.description || "Hỗ trợ định hướng kỹ thuật, giải đáp thắc mắc và cố vấn chuyên môn cho các đội thi trong Hạng mục."}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 border-t border-[var(--accent-mentor)]/20 pt-2">
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {isEventEnded ? "Trạng thái: Đã khép lại" : "Nhiệm vụ: Hỗ trợ & cố vấn"}
+                      </span>
+                      <Link href={`/mentor/teams?eventId=${targetEventId}&trackId=${trackId}`}>
+                        <Button
+                          accent="mentor"
+                          variant={isEventEnded ? "secondary" : "primary"}
+                          className="text-xs"
+                        >
+                          {isEventEnded ? "Xem danh sách đội thi" : "Vào không gian hỗ trợ"}
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tab bar */}
+        <div
+          role="tablist"
+          aria-label="Chi tiết sự kiện"
+          className="flex flex-wrap gap-1 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-1"
+        >
+          {DETAIL_TABS.map((tab) => {
+            const count =
+              tab.id === "timeline" ? rounds.length
+              : tab.id === "tracks" ? tracks.length
+              : tab.id === "teams" ? teamCount
+              : null;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`event-tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`event-panel-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 rounded-md px-3 py-2.5 text-center text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)] ${
+                  isActive
+                    ? "bg-[var(--accent-primary)]/15 font-medium text-[var(--accent-primary)]"
+                    : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {tab.label}
+                {count != null && (
+                  <span className={`ml-1 text-xs ${isActive ? "opacity-80" : "opacity-60"}`}>
+                    ({count})
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab: Timeline */}
+        {activeTab === "timeline" && (
+          <div
+            role="tabpanel"
+            id="event-panel-timeline"
+            aria-labelledby="event-tab-timeline"
+            className="space-y-8 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 md:p-8"
+          >
+            <div className="flex flex-col justify-between gap-4 border-b border-[var(--border-muted)] pb-4 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-xs font-medium text-[var(--accent-primary)]">
+                  Timeline tiến trình vòng thi
+                </p>
+                <h2 className="mt-1 font-display text-xl font-semibold text-[var(--text-primary)] sm:text-2xl">
+                  Lộ trình toàn bộ cuộc thi
+                </h2>
+              </div>
+              <Badge tone="info">
+                Tổng số: {rounds.length} giai đoạn
+              </Badge>
+            </div>
+
+            <div className="space-y-6">
               {rounds.map((round: RoundSummary, index: number) => {
                 const isCurrent = round.status === "current";
                 const isPast = round.status === "past";
                 const isRegistration = index === 0;
 
                 return (
-                  <div key={round.id || index} className="relative flex items-start gap-4 sm:gap-6 group">
-                    
-                    {/* Stepper Node Icon / Number */}
-                    <div
-                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-mono font-black text-xs shrink-0 z-10 border transition-all ${
-                        isCurrent
-                          ? "bg-[#00d9ff] text-black border-cyan-200 shadow-[0_0_20px_rgba(0,217,255,0.6)] scale-110"
-                          : isPast
-                          ? "bg-zinc-800 text-zinc-400 border-zinc-700"
-                          : "bg-[#0b1013] text-cyan-300 border-cyan-500/40"
-                      }`}
-                    >
-                      {index === 0 ? "0" : index}
+                  <div
+                    key={round.id || index}
+                    className={`space-y-4 rounded-lg border p-5 transition-all sm:p-6 ${
+                      isCurrent
+                        ? "border-[var(--accent-primary)]/50 bg-[var(--accent-primary)]/5"
+                        : isPast
+                        ? "border-[var(--border-muted)] bg-[var(--bg-input)]/40 opacity-80"
+                        : "border-[var(--border-muted)] bg-[var(--bg-input)]/40 hover:border-[var(--border-muted)]"
+                    }`}
+                  >
+                    <div className="flex flex-col justify-between gap-3 border-b border-[var(--border-muted)] pb-3 sm:flex-row sm:items-center">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge tone="info">
+                            {isRegistration ? "Giai đoạn tuyển sinh" : `Vòng thi số ${index}`}
+                          </Badge>
+                          <span className="text-xs text-[var(--text-muted)]">
+                            Thời gian: <strong className="text-[var(--text-primary)]">{formatShortDate(round.startDate)} — {formatShortDate(round.endDate)}</strong>
+                          </span>
+                        </div>
+                        <h3 className="font-display text-base font-semibold text-[var(--text-primary)] sm:text-lg">
+                          {round.roundName}
+                        </h3>
+                      </div>
+
+                      <div className="self-start sm:self-auto">
+                        <Badge tone={isCurrent ? "info" : isPast ? "neutral" : "info"}>
+                          {isCurrent ? "Đang diễn ra" : isPast ? "Đã kết thúc" : "Sắp mở"}
+                        </Badge>
+                      </div>
                     </div>
 
-                    {/* Detailed Round Card */}
-                    <div
-                      className={`flex-1 p-5 sm:p-6 rounded-lg border transition-all space-y-4 ${
-                        isCurrent
-                          ? "bg-[#131e24] border-cyan-500/60 shadow-[0_0_25px_rgba(0,217,255,0.1)]"
-                          : isPast
-                          ? "bg-[#0b1013]/90 border-zinc-800/80 opacity-85"
-                          : "bg-[#0b1013] border-zinc-800 hover:border-zinc-700"
-                      }`}
-                    >
-                      {/* Round Header & Status */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-300 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded">
-                              {isRegistration ? "Giai Đoạn Tuyển Sinh" : `VÒNG THI SỐ ${index}`}
-                            </span>
-                            <span className="font-mono text-xs text-zinc-400">
-                              Thời gian: <strong>{formatShortDate(round.startDate)} — {formatShortDate(round.endDate)}</strong>
-                            </span>
-                          </div>
-                          <h3 className="font-display font-bold text-white text-base sm:text-lg">
-                            {round.roundName}
-                          </h3>
-                        </div>
+                    <p className="text-xs leading-relaxed text-[var(--text-muted)] sm:text-sm">
+                      {round.description}
+                    </p>
 
-                        <span
-                          className={`px-3 py-1 rounded font-mono text-xs font-bold uppercase self-start sm:self-auto ${
-                            isCurrent
-                              ? "bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 animate-pulse shadow-[0_0_12px_rgba(0,217,255,0.2)]"
-                              : isPast
-                              ? "bg-zinc-800 text-zinc-400"
-                              : "bg-cyan-950/40 text-cyan-300 border border-cyan-500/30"
-                          }`}
-                        >
-                          {isCurrent ? "Đang diễn ra" : isPast ? "Đã kết thúc" : "Sắp mở"}
+                    <div className="grid grid-cols-1 gap-2.5 pt-1 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="space-y-0.5 rounded-md border border-[var(--border-muted)] bg-[var(--bg-input)] p-2.5">
+                        <span className="block text-[10px] text-[var(--text-muted)]">
+                          Mở cổng &amp; bắt đầu
+                        </span>
+                        <span className="block font-semibold text-[var(--text-primary)]">{formatDateTime(round.startDate)}</span>
+                      </div>
+
+                      <div className="space-y-0.5 rounded-md border border-[var(--border-muted)] bg-[var(--bg-input)] p-2.5">
+                        <span className="block text-[10px] text-[var(--text-muted)]">
+                          Hạn khóa nộp bài
+                        </span>
+                        <span className="block font-semibold text-[var(--accent-primary)]">
+                          {formatDateTime(round.submissionDeadline || round.endDate)}
                         </span>
                       </div>
 
-                      {/* Round Description */}
-                      <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">
-                        {round.description}
-                      </p>
+                      <div className="space-y-0.5 rounded-md border border-[var(--border-muted)] bg-[var(--bg-input)] p-2.5">
+                        <span className="block text-[10px] text-[var(--text-muted)]">
+                          Hội đồng đánh giá
+                        </span>
+                        <span className="block font-semibold text-[var(--accent-coordinator)]">
+                          {formatDateTime(round.evaluationEndDate || round.endDate)}
+                        </span>
+                      </div>
 
-                      {/* 4 Key Milestone Dates Grid (Tailored for Registration vs Competition) */}
-                      {isRegistration ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 font-mono text-xs">
-                          <div className="p-2.5 bg-[#0e161a] border border-zinc-800/80 rounded space-y-0.5">
-                            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-                              <Flame className="w-3 h-3 text-cyan-400" /> Mở Cổng Nhận Hồ Sơ:
-                            </span>
-                            <span className="text-white font-bold block">{formatDateTime(round.startDate)}</span>
-                          </div>
+                      <div className="space-y-0.5 rounded-md border border-[var(--border-muted)] bg-[var(--bg-input)] p-2.5">
+                        <span className="block text-[10px] text-[var(--text-muted)]">
+                          Công bố kết quả
+                        </span>
+                        <span className="block font-semibold text-[var(--color-success)]">
+                          {formatDateTime(round.resultAnnouncementDate || round.endDate)}
+                        </span>
+                      </div>
+                    </div>
 
-                          <div className="p-2.5 bg-[#0e161a] border border-zinc-800/80 rounded space-y-0.5">
-                            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-cyan-400" /> Đóng Cổng &amp; Khóa Form:
-                            </span>
-                            <span className="text-cyan-300 font-bold block">
-                              {formatDateTime(round.submissionDeadline || round.endDate)}
-                            </span>
-                          </div>
-
-                          <div className="p-2.5 bg-[#0e161a] border border-zinc-800/80 rounded space-y-0.5">
-                            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-                              <FileCheck2 className="w-3 h-3 text-purple-400" /> Duyệt Thẻ SV &amp; Hồ Sơ:
-                            </span>
-                            <span className="text-purple-300 font-bold block">
-                              {formatDateTime(round.evaluationEndDate || round.endDate)}
-                            </span>
-                          </div>
-
-                          <div className="p-2.5 bg-[#0e161a] border border-zinc-800/80 rounded space-y-0.5">
-                            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-                              <Megaphone className="w-3 h-3 text-emerald-400" /> Chốt Danh Sách Đội:
-                            </span>
-                            <span className="text-emerald-300 font-bold block">
-                              {formatDateTime(round.resultAnnouncementDate || round.endDate)}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 font-mono text-xs">
-                          <div className="p-2.5 bg-[#0e161a] border border-zinc-800/80 rounded space-y-0.5">
-                            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-                              <Flame className="w-3 h-3 text-cyan-400" /> Khởi Động &amp; Mở Đề:
-                            </span>
-                            <span className="text-white font-bold block">{formatDateTime(round.startDate)}</span>
-                          </div>
-
-                          <div className="p-2.5 bg-[#0e161a] border border-zinc-800/80 rounded space-y-0.5">
-                            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-cyan-400" /> Hạn Khóa Nộp Bài:
-                            </span>
-                            <span className="text-cyan-300 font-bold block">
-                              {formatDateTime(round.submissionDeadline || round.endDate)}
-                            </span>
-                          </div>
-
-                          <div className="p-2.5 bg-[#0e161a] border border-zinc-800/80 rounded space-y-0.5">
-                            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-                              <Scale className="w-3 h-3 text-purple-400" /> Hội Đồng Chấm Điểm:
-                            </span>
-                            <span className="text-purple-300 font-bold block">
-                              {formatDateTime(round.evaluationEndDate || round.endDate)}
-                            </span>
-                          </div>
-
-                          <div className="p-2.5 bg-[#0e161a] border border-zinc-800/80 rounded space-y-0.5">
-                            <span className="text-[10px] text-zinc-500 uppercase flex items-center gap-1">
-                              <Megaphone className="w-3 h-3 text-emerald-400" /> Công Bố Kết Quả:
-                            </span>
-                            <span className="text-emerald-300 font-bold block">
-                              {formatDateTime(round.resultAnnouncementDate || round.endDate)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Deliverables & Role-Based Direct Action Strip */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-zinc-800/80 font-mono text-xs">
-                        <div className="flex items-center gap-2 text-zinc-400">
-                          <FileCode className="w-4 h-4 text-cyan-400 shrink-0" />
-                          <span>
-                            {isRegistration ? "Yêu cầu hồ sơ: " : "Yêu cầu nộp: "}
-                            <strong className="text-zinc-200">
-                              {isRegistration ? "Hồ sơ đăng ký đội thi (3-5 thành viên) & thẻ sinh viên hợp lệ." : (round.deliverables || "Mã nguồn, Slide thuyết trình & Video demo.")}
-                            </strong>
-                          </span>
-                        </div>
-
-                        {/* Role-Specific Action Button */}
-                        {isCurrent && (
-                          <div className="self-start sm:self-auto shrink-0">
-                            {/* Guest Action */}
-                            {roleName === "Guest" && (
-                              <Link href={isRegistration ? "/register" : "/login"}>
-                                <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <span>{isRegistration ? "Đăng Ký Tham Gia Ngay >" : "Đăng Nhập Để Nộp Bài >"}</span>
-                                </button>
-                              </Link>
-                            )}
-
-                            {/* Student Action */}
-                            {roleName === "Student" && (
-                              <Link href={isRegistration ? "/my-team" : "/submissions/new"}>
-                                <button className="px-5 py-2.5 bg-[#00d9ff] text-black hover:bg-white hover:shadow-[0_0_20px_rgba(0,217,255,0.4)] rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                                  <Upload className="w-3.5 h-3.5" />
-                                  <span>{isRegistration ? "Đăng Ký Đội Thi Ngay >" : "Nộp Bài Vòng Này >"}</span>
-                                </button>
-                              </Link>
-                            )}
-
-                            {/* Judge Action */}
-                            {roleName === "Judge" && !isRegistration && (
-                              <Link href="/judge/scoring">
-                                <button className="px-4 py-2 bg-amber-500 text-black hover:bg-amber-400 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                                  <Scale className="w-3.5 h-3.5" />
-                                  <span>Vào Chấm Điểm Vòng Này &gt;</span>
-                                </button>
-                              </Link>
-                            )}
-
-                            {/* Mentor Action */}
-                            {roleName === "Mentor" && (
-                              <Link href="/mentor/tracks">
-                                <button className="px-4 py-2 bg-teal-500 text-black hover:bg-teal-400 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
-                                  <Users className="w-3.5 h-3.5" />
-                                  <span>Xem Đội Thi Phụ Trách &gt;</span>
-                                </button>
-                              </Link>
-                            )}
-
-                            {/* Coordinator Action */}
-                            {roleName === "Coordinator" && (
-                              <Link href={`/coordinator/events/${eventId}`}>
-                                <button className="px-4 py-2 bg-purple-950/70 text-purple-300 border border-purple-500/40 hover:bg-purple-900/80 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5">
-                                  <Briefcase className="w-3.5 h-3.5" />
-                                  <span>Quản Lý Tiến Trình Vòng &gt;</span>
-                                </button>
-                              </Link>
-                            )}
-                          </div>
-                        )}
+                    <div className="flex flex-col justify-between gap-3 border-t border-[var(--border-muted)] pt-3 text-xs sm:flex-row sm:items-center">
+                      <div className="text-[var(--text-muted)]">
+                        {isRegistration ? "Yêu cầu hồ sơ: " : "Yêu cầu nộp: "}
+                        <strong className="text-[var(--text-primary)]">
+                          {isRegistration ? "Hồ sơ đăng ký đội thi (3-5 thành viên) & thẻ sinh viên hợp lệ." : (round.deliverables || "Mã nguồn, Slide thuyết trình & Video demo.")}
+                        </strong>
                       </div>
                     </div>
                   </div>
@@ -666,144 +625,139 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           </div>
         )}
 
-        {/* ─────────────────────────────────────────────────────────────
-            TAB 2: CHỦ ĐỀ & HẠNG MỤC THI ĐẤU (HERO SINGLE TRACK SHOWCASE)
-           ───────────────────────────────────────────────────────────── */}
+        {/* Tab: Tracks */}
         {activeTab === "tracks" && (
-          <div className="bg-[#10171a] border border-zinc-800 rounded-lg p-6 md:p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+          <div
+            role="tabpanel"
+            id="event-panel-tracks"
+            aria-labelledby="event-tab-tracks"
+            className="space-y-6 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 md:p-8"
+          >
+            <div className="flex flex-col justify-between gap-3 border-b border-[var(--border-muted)] pb-4 sm:flex-row sm:items-center">
               <div>
-                <div className="flex items-center gap-2 font-mono text-xs text-cyan-400 uppercase tracking-widest font-bold">
-                  <Layers className="w-4 h-4 text-cyan-400" />
-                  CHỦ ĐỀ &amp; HẠNG MỤC THI ĐẤU CHÍNH
-                </div>
-                <h2 className="font-display text-xl sm:text-2xl font-bold uppercase text-white mt-1">
-                  Định Hướng Đề Tài &amp; Bài Toán Nghiên Cứu
+                <p className="text-xs font-medium text-[var(--accent-primary)]">
+                  Chủ đề &amp; hạng mục thi đấu
+                </p>
+                <h2 className="mt-1 font-display text-xl font-semibold text-[var(--text-primary)] sm:text-2xl">
+                  Định hướng đề tài &amp; phân công chuyên môn
                 </h2>
               </div>
-
-              <span className="px-3 py-1 bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 rounded font-mono text-xs font-bold uppercase self-start sm:self-auto">
-                1 Bảng Đấu Trọng Tâm
-              </span>
+              <Badge tone="info" className="self-start sm:self-auto">
+                {tracks.length} hạng mục thi đấu
+              </Badge>
             </div>
 
-            {/* Main Single Track Focus Card */}
-            <div className="bg-[#0b1013] border border-cyan-500/30 rounded-lg p-6 space-y-6 shadow-[0_0_20px_rgba(6,182,212,0.05)]">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
-                <div className="space-y-1.5">
-                  <span className="px-2.5 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 rounded text-[11px] font-mono font-bold uppercase">
-                    BẢNG ĐẤU TOÀN NĂNG (GENERAL TRACK)
-                  </span>
-                  <h3 className="text-xl sm:text-2xl font-display font-extrabold text-white">
-                    {tracks[0] || "Nghiên Cứu & Phát Triển Ứng Dụng RBL Project (Research-Based Learning)"}
-                  </h3>
-                </div>
+            <div className="space-y-5">
+              {trackItems.map((track, idx) => {
+                const tId = normalizeId(track.id);
+                const trackRole = myEventRoles.find((r: any) => {
+                  const rTrackId = normalizeId(r.trackId || r.TrackId);
+                  if (rTrackId && tId && rTrackId === tId) return true;
+                  const rTrackName = (r.trackName || r.TrackName || "").trim().toLowerCase();
+                  const tTrackName = (track.trackName || "").trim().toLowerCase();
+                  if (rTrackName && tTrackName && rTrackName === tTrackName) return true;
+                  return false;
+                });
 
-                <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-zinc-400 shrink-0">
-                  <span className="px-3 py-1.5 bg-[#162228] border border-zinc-700 rounded text-emerald-300 font-bold">
-                    Chấm Thi Ẩn Danh 100%
-                  </span>
-                  <span className="px-3 py-1.5 bg-[#162228] border border-zinc-700 rounded text-amber-300 font-bold">
-                    Có Mentor Kèm Cặp
-                  </span>
-                </div>
-              </div>
+                const roleInThisTrack = trackRole?.roleName || trackRole?.RoleName;
+                const isJudgeThisTrack = roleInThisTrack === "Judge";
+                const isMentorThisTrack = roleInThisTrack === "Mentor";
 
-              <div className="space-y-3 font-sans text-xs sm:text-sm text-zinc-300 leading-relaxed">
-                <p>
-                  Toàn bộ các đội thi trong giải đấu sẽ cùng tranh tài trong <strong>Hạng mục Dự án Nghiên cứu Ứng dụng RBL</strong>. Thí sinh được tự do lựa chọn đề tài thực tiễn trong đời sống, doanh nghiệp hoặc xã hội để thiết kế, phát triển và thử nghiệm một giải pháp công nghệ hoàn chỉnh.
-                </p>
-              </div>
+                return (
+                  <div
+                    key={track.id || idx}
+                    className={`space-y-4 rounded-lg border p-6 transition-all ${
+                      isJudgeThisTrack
+                        ? "border-[var(--accent-judge)]/40 bg-[var(--bg-input)]/40"
+                        : isMentorThisTrack
+                        ? "border-[var(--accent-mentor)]/40 bg-[var(--bg-input)]/40"
+                        : "border-[var(--border-muted)] bg-[var(--bg-input)]/40 hover:border-[var(--border-muted)]"
+                    }`}
+                  >
+                    <div className="flex flex-col justify-between gap-3 border-b border-[var(--border-muted)] pb-3 sm:flex-row sm:items-center">
+                      <div className="space-y-1">
+                        <Badge
+                          tone={isJudgeThisTrack ? "judge" : isMentorThisTrack ? "mentor" : "info"}
+                        >
+                          Track 0{idx + 1}
+                        </Badge>
+                        <h3 className="font-display text-lg font-semibold text-[var(--text-primary)] sm:text-xl">
+                          {track.trackName}
+                        </h3>
+                      </div>
 
-              {/* 3 Core Pillars */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                <div className="p-4 bg-[#10171a] border border-zinc-800 rounded-lg space-y-2">
-                  <div className="flex items-center gap-2 text-amber-400 font-mono text-xs font-bold uppercase">
-                    <Sparkles className="w-4 h-4" />
-                    <span>1. Đổi Mới &amp; Sáng Tạo</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isJudgeThisTrack && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge tone="judge">Bạn là giám khảo</Badge>
+                            <Link href={`/judge/scoring?trackId=${track.id}`}>
+                              <Button accent="judge" className="text-xs">
+                                Vào bàn chấm điểm
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
+
+                        {isMentorThisTrack && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge tone="mentor">Bạn là cố vấn chuyên môn</Badge>
+                            <Link href={`/mentor/teams?eventId=${targetEventId}&trackId=${track.id}`}>
+                              <Button accent="mentor" className="text-xs">
+                                Vào không gian hỗ trợ
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
+
+                        {!isJudgeThisTrack && !isMentorThisTrack && (
+                          <Badge tone="neutral">Thể lệ &amp; đề tài</Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-xs leading-relaxed text-[var(--text-muted)] sm:text-sm">
+                      {track.description || `Định hướng nghiên cứu và phát triển giải pháp công nghệ thuộc Hạng mục ${track.trackName}. Đồ án được đánh giá theo khung tiêu chí Rubric chuẩn mực.`}
+                    </p>
                   </div>
-                  <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                    Ý tưởng giải quyết bài toán mới mẻ, cách tiếp cận đột phá và có tính khác biệt so với các sản phẩm sẵn có trên thị trường.
-                  </p>
-                </div>
-
-                <div className="p-4 bg-[#10171a] border border-zinc-800 rounded-lg space-y-2">
-                  <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs font-bold uppercase">
-                    <FileCode className="w-4 h-4" />
-                    <span>2. Kiến Trúc &amp; Hoàn Thiện</span>
-                  </div>
-                  <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                    Chất lượng mã nguồn, độ ổn định của hệ thống và khả năng vận hành thực tế trong buổi Pitching.
-                  </p>
-                </div>
-
-                <div className="p-4 bg-[#10171a] border border-zinc-800 rounded-lg space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs font-bold uppercase">
-                    <Trophy className="w-4 h-4" />
-                    <span>3. Giá Trị Thực Tiễn</span>
-                  </div>
-                  <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                    Tính khả thi khi đưa vào vận hành thực tế, giải quyết được nhu cầu của người dùng mục tiêu và tiềm năng ứng dụng lâu dài.
-                  </p>
-                </div>
-              </div>
-
-              {/* Recommended Tech Stacks Tags */}
-              <div className="pt-4 border-t border-zinc-800 space-y-2.5">
-                <span className="font-mono text-xs text-zinc-400 uppercase tracking-wider block font-bold">
-                  Công Nghệ &amp; Chuyên Ngành Khuyến Khích Sử Dụng:
-                </span>
-                <div className="flex flex-wrap gap-2 font-mono text-xs">
-                  <span className="px-3 py-1 bg-purple-950/40 text-purple-300 border border-purple-500/30 rounded">
-                    Trí Tuệ Nhân Tạo (AI / Machine Learning / LLM)
-                  </span>
-                  <span className="px-3 py-1 bg-cyan-950/40 text-cyan-300 border border-cyan-500/30 rounded">
-                    Web App &amp; Mobile Development
-                  </span>
-                  <span className="px-3 py-1 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded">
-                    An Toàn Thông Tin &amp; Phòng Thủ Mạng
-                  </span>
-                  <span className="px-3 py-1 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded">
-                    IoT &amp; Hệ Thống Nhúng Thông Minh
-                  </span>
-                  <span className="px-3 py-1 bg-teal-950/40 text-teal-300 border border-teal-500/30 rounded">
-                    Cloud Native &amp; Microservices
-                  </span>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* ─────────────────────────────────────────────────────────────
-            TAB 3: CƠ CẤU GIẢI THƯỞNG
-           ───────────────────────────────────────────────────────────── */}
+        {/* Tab: Prizes */}
         {activeTab === "prizes" && (
-          <div className="bg-[#10171a] border border-zinc-800 rounded-lg p-6 md:p-8 space-y-4">
-            <h2 className="font-mono text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <span>CƠ CẤU GIẢI THƯỞNG TOÀN GIẢI</span>
+          <div
+            role="tabpanel"
+            id="event-panel-prizes"
+            aria-labelledby="event-tab-prizes"
+            className="space-y-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 md:p-8"
+          >
+            <h2 className="font-display text-xl font-semibold text-[var(--text-primary)]">
+              Cơ cấu giải thưởng toàn giải
             </h2>
 
             {prizes.length === 0 ? (
-              <p className="text-sm text-zinc-400 font-mono">
-                Ban Tổ Chức chưa công bố cơ cấu giải thưởng cho sự kiện này.
+              <p className="text-sm text-[var(--text-muted)]">
+                Ban tổ chức chưa công bố cơ cấu giải thưởng cho sự kiện này
               </p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-3">
                 {prizes.map((p: PrizeItem, idx: number) => (
                   <div
                     key={p.id || idx}
-                    className={`bg-[#0b1013] border p-6 rounded-lg space-y-3 text-center ${
-                      idx === 0 ? "border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.08)]" : "border-zinc-700"
+                    className={`space-y-3 rounded-lg border bg-[var(--bg-input)]/40 p-6 text-center ${
+                      idx === 0
+                        ? "border-[var(--accent-judge)]/40"
+                        : "border-[var(--border-muted)]"
                     }`}
                   >
-                    <h3 className={`font-bold text-sm uppercase ${idx === 0 ? "text-amber-300" : "text-zinc-300"}`}>
+                    <h3 className={`text-sm font-semibold ${idx === 0 ? "text-[var(--accent-judge)]" : "text-[var(--text-muted)]"}`}>
                       {p.prizeName}
                     </h3>
-                    <div className="text-2xl font-mono font-black text-white">{p.value}</div>
+                    <div className="font-display text-2xl font-semibold text-[var(--text-primary)]">{p.value}</div>
                     {p.quantity > 1 && (
-                      <p className="text-xs text-zinc-400">Số lượng: {p.quantity}</p>
+                      <p className="text-xs text-[var(--text-muted)]">Số lượng: {p.quantity}</p>
                     )}
                   </div>
                 ))}
@@ -812,35 +766,90 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           </div>
         )}
 
-        {/* ─────────────────────────────────────────────────────────────
-            TAB 4: THỂ LỆ & QUY ĐỊNH
-           ───────────────────────────────────────────────────────────── */}
+        {/* Tab: Rules */}
         {activeTab === "rules" && (
-          <div className="bg-[#10171a] border border-zinc-800 rounded-lg p-6 md:p-8 space-y-4">
-            <h2 className="font-mono text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Info className="w-4 h-4 text-emerald-400" />
-              <span>THỂ LỆ &amp; QUY ĐỊNH THAM GIA</span>
+          <div
+            role="tabpanel"
+            id="event-panel-rules"
+            aria-labelledby="event-tab-rules"
+            className="space-y-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 md:p-8"
+          >
+            <h2 className="font-display text-xl font-semibold text-[var(--text-primary)]">
+              Thể lệ &amp; quy định tham gia
             </h2>
 
-            <div className="space-y-3 pt-2 font-sans text-xs text-zinc-300 leading-relaxed">
-              <div className="p-4 bg-[#0b1013] rounded border border-zinc-800 space-y-1.5">
-                <h4 className="font-bold text-white text-sm">1. Điều Kiện Tham Dự</h4>
+            <div className="space-y-3 pt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+              <div className="space-y-1.5 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)]/40 p-4">
+                <h4 className="font-display text-sm font-semibold text-[var(--text-primary)]">1. Điều kiện tham dự</h4>
                 <p>Sinh viên các trường đại học/cao đẳng toàn quốc đã hoàn tất xác thực thẻ sinh viên hợp lệ trên hệ thống SEAL.</p>
               </div>
 
-              <div className="p-4 bg-[#0b1013] rounded border border-zinc-800 space-y-1.5">
-                <h4 className="font-bold text-white text-sm">2. Quy Định Lập Đội</h4>
+              <div className="space-y-1.5 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)]/40 p-4">
+                <h4 className="font-display text-sm font-semibold text-[var(--text-primary)]">2. Quy định lập đội</h4>
                 <p>Mỗi đội thi bao gồm từ 3 đến 5 thành viên. Mỗi thí sinh chỉ được ghi danh tham gia trong 1 đội thi duy nhất tại cùng một giải đấu.</p>
               </div>
 
-              <div className="p-4 bg-[#0b1013] rounded border border-zinc-800 space-y-1.5">
-                <h4 className="font-bold text-white text-sm">3. Quy Chế Chấm Điểm Ẩn Danh</h4>
+              <div className="space-y-1.5 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)]/40 p-4">
+                <h4 className="font-display text-sm font-semibold text-[var(--text-primary)]">3. Quy chế chấm điểm ẩn danh</h4>
                 <p>Toàn bộ bài dự thi trong các Hạng mục đều được ẩn danh danh tính thí sinh và tên trường học để đảm bảo tính khách quan và công bằng tuyệt đối từ Hội đồng Giám khảo.</p>
               </div>
             </div>
           </div>
         )}
-      </div>
-    </div>
+
+        {/* Tab: Teams */}
+        {activeTab === "teams" && (
+          <div
+            role="tabpanel"
+            id="event-panel-teams"
+            aria-labelledby="event-tab-teams"
+            className="space-y-6 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 md:p-8"
+          >
+            <div className="flex flex-col justify-between gap-4 border-b border-[var(--border-muted)] pb-4 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-xs font-medium text-[var(--accent-primary)]">
+                  Không gian đội thi &amp; tìm đồng đội
+                </p>
+                <h2 className="mt-1 font-display text-xl font-semibold text-[var(--text-primary)] sm:text-2xl">
+                  Đội thi đang tuyển thành viên
+                </h2>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Khám phá các đội thi đang tham gia sự kiện và liên hệ Đội trưởng qua email để đề nghị gia nhập đội.
+                </p>
+              </div>
+
+              {user && !isEventEnded && (roleName === "Guest" || roleName === "TeamLeader" || roleName === "TeamMember") && (
+                <Link href={`/my-team?eventId=${eventId}`}>
+                  <Button accent="team" className="text-xs">
+                    Quản lý / tạo đội
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            <AvailableTeamsList
+              eventId={eventId}
+              eventName={eventName}
+            />
+          </div>
+        )}
+      </PageShell>
+
+      {isComprehensiveEditOpen && (
+        <ComprehensiveEventEditModal
+          event={{
+            id: eventId,
+            eventName,
+            season,
+            year,
+            tagline,
+            description,
+            maxTeams,
+          }}
+          onClose={() => setIsComprehensiveEditOpen(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+    </>
   );
 }

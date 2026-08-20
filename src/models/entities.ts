@@ -138,6 +138,7 @@ export interface User {
   isFpt?: boolean;
   isRejected?: boolean;
   isTemporary?: boolean;
+  mustChangePassword?: boolean;
   photoStudentCardUrl?: string | null;
   rejectionReason?: string | null;
   rejectionCount?: number;

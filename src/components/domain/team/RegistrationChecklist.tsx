@@ -43,19 +43,23 @@ export function RegistrationChecklist({ requirements }: { requirements: Registra
   ];
 
   return (
-    <ul className="flex flex-col gap-[var(--space-sm)]">
+    <ul className="flex flex-col gap-3">
       {items.map((item) => (
-        <li key={item.label} className="flex items-start gap-[var(--space-sm)]">
+        <li key={item.label} className="flex items-start gap-3 p-2.5 rounded bg-zinc-900/40 border border-zinc-800/80">
           {item.ok ? (
-            <Check className="mt-0.5 size-4 shrink-0 text-[color:var(--color-success)]" aria-hidden="true" />
+            <div className="p-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 shrink-0 mt-0.5">
+              <Check className="size-4 text-emerald-400" aria-hidden="true" />
+            </div>
           ) : (
-            <X className="mt-0.5 size-4 shrink-0 text-[color:var(--color-warning)]" aria-hidden="true" />
+            <div className="p-1 rounded-full bg-amber-950/60 border border-amber-500/40 shrink-0 mt-0.5">
+              <X className="size-4 text-amber-400" aria-hidden="true" />
+            </div>
           )}
           <div className="min-w-0">
-            <div className="font-mono text-xs text-[color:var(--text-primary)]">{item.label}</div>
+            <div className="text-sm font-bold text-white tracking-wide">{item.label}</div>
             <div
-              className={`font-mono text-[10px] text-pretty ${
-                item.ok ? "text-[color:var(--text-muted)]" : "text-[color:var(--color-warning)]"
+              className={`text-xs mt-0.5 leading-relaxed ${
+                item.ok ? "text-emerald-300/80" : "text-amber-300"
               }`}
             >
               {item.detail}

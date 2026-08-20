@@ -136,7 +136,7 @@ export function VerifyEmailForm({
               {/* Error Message */}
               {error && (
                 <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-sm text-red-400 text-sm font-mono">
-                  ⚠ {error}
+                  {error}
                 </div>
               )}
 

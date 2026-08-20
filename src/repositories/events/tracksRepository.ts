@@ -120,17 +120,24 @@ export function useAssignTemplateToTrack() {
 
 export interface Track {
   id: string;
+  Id?: string;
   eventId: string;
+  EventId?: string;
   trackName: string;
+  TrackName?: string;
   templateId?: string | null;
+  TemplateId?: string | null;
   description?: string | null;
+  Description?: string | null;
   submissionRuleDescription?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   scoringStartDate?: string | null;
   scoringEndDate?: string | null;
   judges?: User[] | null;
+  Judges?: User[] | null;
   mentors?: User[] | null;
+  Mentors?: User[] | null;
   createdTime: string;
   lastUpdatedTime: string;
 }
@@ -157,12 +164,52 @@ export interface GetTracksByEventParams {
 export function useGetTracksByEvent(eventId: string | undefined, params: GetTracksByEventParams = {}) {
   return useQuery({
     queryKey: ["tracksByEvent", eventId, params],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<Track>>("/Tracks/event", {
-        params: { eventId, ...params },
+    queryFn: async (): Promise<TrackWithStaffModel[]> => {
+      const res = await apiClient.get<any>("/Tracks/event", {
+        params: { eventId, EventId: eventId, ...params, PageSize: 100 },
       });
-      return data;
+      const items = res.data?.data?.items ?? res.data?.items ?? res.data?.data ?? res.data ?? [];
+      return Array.isArray(items) ? items : [];
     },
     enabled: !!eventId,
   });
 }
+
+export interface TrackWithStaffModel extends Track {
+  Mentors?: any[];
+  Judges?: any[];
+  TrackName?: string;
+  Description?: string;
+  Id?: string;
+}
+
+export const tracksRepository = {
+  async createTrack(payload: CreateTrackPayload): Promise<TrackCreated> {
+    const res = await apiClient.post<TrackCreated>("/Tracks", payload);
+    return res.data;
+  },
+  async updateTrack(id: string, payload: UpdateTrackPayload): Promise<TrackUpdated> {
+    const res = await apiClient.put<TrackUpdated>(`/Tracks/${id}`, payload);
+    return res.data;
+  },
+  async deleteTrack(id: string): Promise<boolean> {
+    const res = await apiClient.delete<boolean>(`/Tracks/${id}`);
+    return res.data;
+  },
+  async assignTemplate(trackId: string, templateId: string): Promise<boolean> {
+    const res = await apiClient.patch<boolean>(`/Tracks/${trackId}/assign-template`, { templateId });
+    return res.data;
+  },
+  async assignTemplateToTrack(trackId: string, templateId: string): Promise<boolean> {
+    const res = await apiClient.patch<boolean>(`/Tracks/${trackId}/assign-template`, { templateId });
+    return res.data;
+  },
+  async getTracksByEvent(eventId: string): Promise<Track[]> {
+    const res = await apiClient.get<PagedResult<Track>>("/Tracks/event", {
+      params: { EventId: eventId, PageSize: 100 },
+    });
+    return res.data?.data ?? [];
+  },
+};
+
+

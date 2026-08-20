@@ -1,326 +1,357 @@
 "use client";
 
-import React, { useState } from "react";
-import { useGetUsers, usersRepository } from "@/repositories/usersRepository";
-import { Check, X, Eye, AlertCircle, CheckCircle2, IdCard, History, User, School, Mail, FileText } from "lucide-react";
-
-export interface StudentProfileItem {
-  id: string;
-  fullName: string;
-  email: string;
-  schoolName: string;
-  studentCode: string;
-  photoStudentCardUrl: string;
-  rejectionCount: number;
-  lastRejectionReason?: string;
-}
+import React, { useState, useMemo } from "react";
+import { useAuth } from "@/providers/AuthProvider";
+import { useGetUsers, useApproveUser, useRejectUser } from "@/repositories/usersRepository";
+import {
+  Search,
+  RefreshCw,
+  CheckCircle2,
+  Lock,
+  Eye,
+  AlertTriangle,
+  UserX,
+} from "lucide-react";
+import { Link } from "@/i18n/routing";
+import type { User } from "@/models/entities";
+import { readApiError } from "@/repositories/submitResultsRepository";
+import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
 
 export const CoordinatorProfilesView: React.FC = () => {
-  const { data: usersResponse, isLoading, refetch } = useGetUsers({ isApproved: false });
-  const pendingUsers = usersResponse?.data ?? [];
+  const { user: currentUser } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  const [activeProfileModal, setActiveProfileModal] = useState<StudentProfileItem | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Modals state
+  const [detailUserModal, setDetailUserModal] = useState<User | null>(null);
 
-  // Real API pending users mapping
-  const displayProfiles: StudentProfileItem[] = pendingUsers.map((u: any, idx: number) => ({
-    id: u.id || u.Id || u.userId || u.UserId || "",
-    fullName: u.fullName || u.FullName || "Sinh viên",
-    email: u.email || u.Email || "",
-    schoolName: u.schoolName || u.SchoolName || u.school?.schoolName || "Trường ĐH",
-    studentCode: u.studentCode || u.StudentCode || u.studentId || "",
-    photoStudentCardUrl: u.photoStudentCardUrl || u.PhotoStudentCardUrl || "",
-    rejectionCount: u.rejectionCount ?? u.RejectionCount ?? 0,
-    lastRejectionReason: u.lastRejectionReason || u.LastRejectionReason || undefined,
-  }));
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  // Handle Approve Profile
-  const handleApprove = async () => {
-    if (!activeProfileModal) return;
-    setIsSubmitting(true);
-    setActionSuccessMsg(null);
-    setErrorMessage(null);
+  const { data: rawUsersData, isLoading, refetch } = useGetUsers({ pageSize: 500 });
+  const usersList: User[] = useMemo(() => {
+    const list = rawUsersData?.data ?? (Array.isArray(rawUsersData) ? rawUsersData : []);
+    return Array.isArray(list) ? list : [];
+  }, [rawUsersData]);
 
+  const { mutateAsync: approveUser } = useApproveUser();
+  const { mutateAsync: rejectUser } = useRejectUser();
+
+  // Helper: Check if user has card submission (studentCode OR photoStudentCardUrl)
+  const hasCardSubmission = (u: User) => {
+    const hasStudentCode = Boolean(u.studentCode && u.studentCode.trim() !== "");
+    const hasPhotoCardUrl = Boolean(
+      (u as any).photoStudentCardUrl && (u as any).photoStudentCardUrl.trim() !== ""
+    );
+    return hasStudentCode || hasPhotoCardUrl;
+  };
+
+  // Filtered Candidate Students List
+  const filteredCandidates = useMemo(() => {
+    return usersList.filter((u) => {
+      const emailLower = (u.email || "").toLowerCase();
+
+      // Only candidate student accounts
+      const isStudentRole =
+        !u.isAdmin &&
+        !emailLower.includes("admin") &&
+        !emailLower.includes("ec.") &&
+        !emailLower.includes("coordinator") &&
+        !emailLower.includes("judge") &&
+        !emailLower.includes("mentor");
+
+      if (!isStudentRole) return false;
+
+      // Must have card submission for EC inspection
+      if (!hasCardSubmission(u)) return false;
+
+      // Search term
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !searchLower ||
+        (u.fullName || "").toLowerCase().includes(searchLower) ||
+        (u.email || "").toLowerCase().includes(searchLower) ||
+        (u.studentCode || "").toLowerCase().includes(searchLower) ||
+        (u.schoolName || "").toLowerCase().includes(searchLower);
+
+      // Status filter
+      let matchesStatus = true;
+      if (statusFilter === "approved") matchesStatus = !!u.isApproved;
+      else if (statusFilter === "pending") matchesStatus = !u.isApproved && (u.rejectionCount ?? 0) < 2;
+      else if (statusFilter === "locked") matchesStatus = (u.rejectionCount ?? 0) >= 2;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [usersList, searchTerm, statusFilter]);
+
+  const handleApprove = async (userId: string) => {
+    setActionError(null);
     try {
-      if (!activeProfileModal.id.startsWith("EXT-")) {
-        await usersRepository.approveUser(activeProfileModal.id);
-      }
-      setActionSuccessMsg(`Đã DUYỆT thành công tài khoản & Thẻ sinh viên của "${activeProfileModal.fullName}".`);
-      setActiveProfileModal(null);
-      setRejectReason("");
-      await refetch();
-    } catch (err: any) {
-      setErrorMessage(`Duyệt thất bại: ${err?.response?.data?.message || err?.message}`);
-    } finally {
-      setIsSubmitting(false);
+      await approveUser(userId);
+      setActionSuccess("Đã duyệt hồ sơ sinh viên thành công!");
+      refetch();
+      setTimeout(() => setActionSuccess(null), 2500);
+    } catch (err) {
+      setActionError("Lỗi phê duyệt: " + readApiError(err));
     }
   };
 
-  // Handle Reject Profile
-  const handleReject = async () => {
-    if (!activeProfileModal) return;
-    if (!rejectReason.trim()) {
-      alert("Vui lòng nhập lý do từ chối hồ sơ thẻ sinh viên!");
-      return;
-    }
-    setIsSubmitting(true);
-    setActionSuccessMsg(null);
-    setErrorMessage(null);
-
+  const handleReject = async (userId: string, reason: string) => {
+    setActionError(null);
     try {
-      if (!activeProfileModal.id.startsWith("EXT-")) {
-        await usersRepository.rejectUser(activeProfileModal.id, rejectReason.trim());
-      }
-      setActionSuccessMsg(`Đã TỪ CHỐI hồ sơ của "${activeProfileModal.fullName}" với lý do: "${rejectReason}".`);
-      setActiveProfileModal(null);
-      setRejectReason("");
-      await refetch();
-    } catch (err: any) {
-      setErrorMessage(`Từ chối thất bại: ${err?.response?.data?.message || err?.message}`);
-    } finally {
-      setIsSubmitting(false);
+      await rejectUser({ userId, reason });
+      setActionSuccess("Đã từ chối hồ sơ sinh viên và ghi nhận lịch sử.");
+      refetch();
+      setTimeout(() => setActionSuccess(null), 2500);
+    } catch (err) {
+      setActionError("Lỗi từ chối hồ sơ: " + readApiError(err));
     }
   };
+
+  const isCoordinatorAccess = Boolean(currentUser);
+
+  if (!isCoordinatorAccess) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#080f11] border border-[#ef4444] p-8 text-center glow-box-red relative space-y-4">
+          <div className="w-12 h-12 bg-[#ef4444]/10 border border-[#ef4444] rounded-full flex items-center justify-center mx-auto text-[#ef4444]">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h2 className="font-display text-xl font-bold uppercase text-[#ef4444]">
+            YÊU CẦU QUYỀN TRUY CẬP
+          </h2>
+          <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
+            Trang duyệt hồ sơ thẻ sinh viên dành riêng cho Ban Tổ Chức (Event Coordinator).
+          </p>
+          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors">
+                Đến trang đăng nhập
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
-      {/* Main Container */}
-      <div className="flex-1 p-6 space-y-6 max-w-[1400px] w-full mx-auto">
-        
-        {/* Title Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#263339] pb-4">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Top Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
           <div>
-            <div className="flex items-center gap-2 font-mono text-xs text-[#00d9ff] font-bold uppercase tracking-wider mb-1">
-              <IdCard className="w-4 h-4 text-[#00d9ff]" />
-              <span>HÀNG ĐỢI XÁC THỰC TÀI KHOẢN MEMBER</span>
+            <div className="font-mono text-[11px] text-cyan-400 mb-1 uppercase tracking-wider">
+              BAN TỔ CHỨC / DUYỆT &amp; QUẢN LÝ HỒ SƠ THÍ SINH
             </div>
-            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
-              DUYỆT THẺ SINH VIÊN (NON-FPT)
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
+              DANH SÁCH THÍ SINH &amp; DUYỆT THẺ SINH VIÊN
             </h1>
+            <p className="text-xs text-zinc-400 font-sans mt-1">
+              Tra cứu danh sách sinh viên, xem ảnh thẻ 3x4, kiểm tra MSSV và phê duyệt/từ chối hồ sơ đăng ký tham gia cuộc thi.
+            </p>
           </div>
 
-          <div className="font-mono text-xs border border-[#00d9ff]/40 bg-[#00d9ff]/10 text-[#00d9ff] px-3.5 py-1.5 font-bold uppercase tracking-wider">
-            [ {displayProfiles.length} HỒ SƠ CHỜ DUYỆT ]
-          </div>
-        </div>
-
-        {/* Feedback Alert Banners */}
-        {errorMessage && (
-          <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs flex items-center gap-3">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
-
-        {actionSuccessMsg && (
-          <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono text-xs flex items-center gap-3">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span>{actionSuccessMsg}</span>
-          </div>
-        )}
-
-        {/* Main Simplified Table Card */}
-        <div className="bg-[#13191c] border border-[#263339]">
-          
-          {/* Table (Simplified to Name Column & View Detail Button Column) */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
-              <thead>
-                <tr className="border-b border-[#263339] text-[#8a9ba8] tracking-wider text-[11px] bg-[#182024]">
-                  <th className="p-4">TÊN THÍ SINH (MEMBER)</th>
-                  <th className="p-4 w-64 text-right pr-6">THÔNG TIN CHI TIẾT &amp; DUYỆT</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#263339]">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={2} className="p-8 text-center text-[#8a9ba8] font-mono text-xs">
-                      Đang tải danh sách tài khoản sinh viên...
-                    </td>
-                  </tr>
-                ) : (
-                  displayProfiles.map((prof) => (
-                    <tr key={prof.id} className="hover:bg-[#182024] transition-colors">
-                      {/* Column 1: Member Name */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-[#00d9ff]/10 border border-[#00d9ff]/30 text-[#00d9ff] font-bold font-mono text-sm flex items-center justify-center">
-                            {prof.fullName.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-sans font-bold text-sm text-[#e1e7ec]">{prof.fullName}</div>
-                            <div className="text-[11px] text-[#8a9ba8] font-mono mt-0.5">{prof.email}</div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Column 2: Open Detail Pop-up Modal Button */}
-                      <td className="p-4 text-right pr-6">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveProfileModal(prof);
-                            setRejectReason("");
-                          }}
-                          className="px-4 py-2 bg-[#182024] hover:bg-[#8b5cf6] text-[#00d9ff] hover:text-white border border-[#00d9ff]/40 hover:border-[#8b5cf6] font-mono text-xs font-bold uppercase transition-all flex items-center gap-1.5 ml-auto cursor-pointer"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span>XEM CHI TIẾT &amp; DUYỆT</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-
-      {/* POP-UP MODAL: CHI TIẾT HỒ SƠ & TÙY CHỌN DUYỆT / TỪ CHỐI */}
-      {activeProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#13191c] border border-[#263339] max-w-2xl w-full p-6 space-y-6 font-mono text-xs my-8 relative shadow-2xl">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[#263339] pb-4">
-              <div className="flex items-center gap-2 font-bold text-sm text-[#00d9ff] uppercase">
-                <IdCard className="w-5 h-5 text-[#00d9ff]" />
-                <span>XÁC THỰC THẺ SINH VIÊN: {activeProfileModal.fullName}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveProfileModal(null)}
-                className="text-[#8a9ba8] hover:text-white p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
+          <div className="flex items-center gap-2.5">
+            <Link href="/coordinator/dashboard">
+              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-cyan-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
+                <span>← Bảng Điều Hành</span>
               </button>
-            </div>
+            </Link>
+            <button
+              onClick={() => refetch()}
+              className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 text-zinc-300 font-mono text-xs uppercase hover:border-cyan-400 hover:text-white transition-colors rounded cursor-pointer flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Làm Mới</span>
+            </button>
+          </div>
+        </div>
 
-            {/* Student Info Details Matrix */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0a0e10] p-4 border border-[#263339]">
-              
-              {/* Info 1: Full Name */}
-              <div className="space-y-1">
-                <span className="text-[#8a9ba8] text-[10px] uppercase flex items-center gap-1">
-                  <User className="w-3 h-3 text-[#8b5cf6]" /> TÊN ĐẦY ĐỦ:
-                </span>
-                <div className="font-sans font-bold text-sm text-[#e1e7ec]">{activeProfileModal.fullName}</div>
-              </div>
+        {/* Action Notifications */}
+        {actionSuccess && (
+          <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 font-mono text-xs flex items-center gap-2 rounded">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{actionSuccess}</span>
+          </div>
+        )}
 
-              {/* Info 2: Email */}
-              <div className="space-y-1">
-                <span className="text-[#8a9ba8] text-[10px] uppercase flex items-center gap-1">
-                  <Mail className="w-3 h-3 text-[#8b5cf6]" /> EMAIL TÀI KHOẢN:
-                </span>
-                <div className="font-bold text-[#e1e7ec]">{activeProfileModal.email}</div>
-              </div>
+        {actionError && (
+          <div className="p-3 bg-red-950/40 border border-red-500/40 text-red-300 font-mono text-xs rounded">
+            {actionError}
+          </div>
+        )}
 
-              {/* Info 3: School Name */}
-              <div className="space-y-1">
-                <span className="text-[#8a9ba8] text-[10px] uppercase flex items-center gap-1">
-                  <School className="w-3 h-3 text-[#8b5cf6]" /> TRƯỜNG HỌC:
-                </span>
-                <div className="font-bold text-[#e1e7ec]">{activeProfileModal.schoolName}</div>
-              </div>
-
-              {/* Info 4: Student Code (MSSV) */}
-              <div className="space-y-1">
-                <span className="text-[#8a9ba8] text-[10px] uppercase flex items-center gap-1">
-                  <FileText className="w-3 h-3 text-[#8b5cf6]" /> MÃ SỐ SINH VIÊN (MSSV):
-                </span>
-                <div className="font-bold text-[#00d9ff] text-sm">{activeProfileModal.studentCode}</div>
-              </div>
-
-            </div>
-
-            {/* Rejection History Section */}
-            <div className="p-3 bg-[#182024] border border-[#263339] space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[#8a9ba8] text-[11px] uppercase flex items-center gap-1.5 font-bold">
-                  <History className="w-3.5 h-3.5 text-[#f59e0b]" /> LỊCH SỬ TỪ CHỐI TÀI KHOẢN:
-                </span>
-                <span className={`px-2 py-0.5 font-bold text-[10px] ${
-                  activeProfileModal.rejectionCount > 0
-                    ? "bg-red-500/10 text-red-400 border border-red-500/30"
-                    : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                }`}>
-                  {activeProfileModal.rejectionCount > 0
-                    ? `ĐÃ BỊ TỪ CHỐI ${activeProfileModal.rejectionCount} LẦN`
-                    : "CHƯA BỊ TỪ CHỐI LẦN NÀO"}
-                </span>
-              </div>
-              {activeProfileModal.lastRejectionReason && (
-                <div className="text-[11px] text-[#f59e0b] pt-1 italic">
-                  Lý do lần từ chối gần nhất: &quot;{activeProfileModal.lastRejectionReason}&quot;
-                </div>
-              )}
-            </div>
-
-            {/* Student ID Card Photo Preview Box */}
-            <div className="space-y-2">
-              <span className="text-[#8a9ba8] text-[11px] font-bold uppercase tracking-wider block">
-                ẢNH THẺ SINH VIÊN XÁC THỰC:
-              </span>
-              <div className="bg-[#0a0e10] border border-[#263339] p-2 flex items-center justify-center min-h-[220px]">
-                {/* eslint-disable-next-html-img-element */}
-                <img
-                  src={activeProfileModal.photoStudentCardUrl}
-                  alt={`Thẻ sinh viên ${activeProfileModal.fullName}`}
-                  className="max-h-60 w-auto object-contain rounded border border-[#263339]"
-                />
-              </div>
-            </div>
-
-            {/* Rejection Reason Text Area */}
-            <div className="space-y-1.5">
-              <label className="text-[#8a9ba8] text-[11px] font-bold uppercase tracking-wider block">
-                LÝ DO TỪ CHỐI (NẾU KHÔNG DUYỆT):
-              </label>
-              <textarea
-                rows={3}
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Ví dụ: Ảnh thẻ chụp bị mờ không rõ MSSV, hoặc MSSV không đúng định dạng nhà trường..."
-                className="w-full p-3 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans text-xs focus:outline-none focus:border-[#ef4444]"
+        {/* Filter Bar */}
+        <div className="bg-[#10171a] border border-zinc-800 p-4 rounded-lg space-y-3.5 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm kiếm Họ tên, Email, Mã SV..."
+                className="w-full bg-[#0b1013] border border-zinc-700 pl-9 pr-3.5 py-2 text-white font-mono text-xs rounded placeholder:text-zinc-500 focus:border-amber-400 outline-none"
               />
             </div>
 
-            {/* Action Buttons: DUYỆT & TỪ CHỐI */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2 border-t border-[#263339]">
-              
-              {/* Button Reject */}
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleReject}
-                className="w-full sm:w-auto px-5 py-2.5 border border-[#ef4444] text-[#ef4444] hover:bg-red-500/10 font-mono text-xs font-bold uppercase flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <X className="w-4 h-4 stroke-[3]" />
-                <span>{isSubmitting ? "ĐANG XỬ LÝ..." : "TỪ CHỐI HỒ SƠ"}</span>
-              </button>
+            <span className="font-mono text-xs text-zinc-400">
+              Kết quả: <strong className="text-white">{filteredCandidates.length}</strong> / {usersList.length} thí sinh
+            </span>
+          </div>
 
-              {/* Button Approve */}
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleApprove}
-                className="w-full sm:w-auto px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-[#0a0e10] font-mono text-xs font-bold uppercase flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-lg"
-              >
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>{isSubmitting ? "ĐANG DUYỆT..." : "DUYỆT THẺ SINH VIÊN"}</span>
-              </button>
-
-            </div>
-
+          <div className="flex items-center gap-1.5 pt-2 border-t border-zinc-800/80 text-xs font-mono">
+            <span className="text-zinc-400 font-bold mr-1">TRẠNG THÁI:</span>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                statusFilter === "all"
+                  ? "bg-amber-500 text-black font-extrabold"
+                  : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
+              }`}
+            >
+              Tất Cả
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("approved")}
+              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                statusFilter === "approved"
+                  ? "bg-emerald-500 text-black font-extrabold"
+                  : "bg-[#0b1013] text-emerald-400 border border-emerald-500/20 hover:bg-emerald-950/30"
+              }`}
+            >
+              Đã Duyệt
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("pending")}
+              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                statusFilter === "pending"
+                  ? "bg-amber-400 text-black font-extrabold"
+                  : "bg-[#0b1013] text-amber-300 border border-amber-500/20 hover:bg-amber-950/30"
+              }`}
+            >
+              Chờ Phê Duyệt
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("locked")}
+              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+                statusFilter === "locked"
+                  ? "bg-rose-500 text-white font-extrabold"
+                  : "bg-[#0b1013] text-rose-400 border border-rose-500/20 hover:bg-rose-950/30"
+              }`}
+            >
+              Tạm Khóa (≥2 lần)
+            </button>
           </div>
         </div>
-      )}
 
+        {/* Candidates Table (No Role Column, No Inline Quick Action Buttons) */}
+        <div className="bg-[#10171a] border border-zinc-800 rounded-lg overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-[#131d21]">
+            <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">
+              DANH SÁCH THÍ SINH &amp; DUYỆT THẺ SINH VIÊN ({filteredCandidates.length})
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="p-12 text-center font-mono text-xs text-zinc-400 animate-pulse">
+              Đang truy vấn cơ sở dữ liệu sinh viên...
+            </div>
+          ) : filteredCandidates.length === 0 ? (
+            <div className="p-12 text-center font-mono text-xs text-zinc-400">
+              Không tìm thấy hồ sơ sinh viên nào phù hợp với bộ lọc tìm kiếm.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left font-mono text-xs">
+                <thead className="bg-[#0e1619] border-b border-zinc-800 text-zinc-400 uppercase text-[11px]">
+                  <tr>
+                    <th className="py-3 px-4 w-12 text-center">#</th>
+                    <th className="py-3 px-4">HỌ VÀ TÊN</th>
+                    <th className="py-3 px-4">EMAIL</th>
+                    <th className="py-3 px-4">TRƯỜNG</th>
+                    <th className="py-3 px-4 text-center">HỒ SƠ SV</th>
+                    <th className="py-3 px-4 text-right">THAO TÁC</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/60">
+                  {filteredCandidates.map((u, idx) => {
+                    const userId = u.id || (u as any).Id || u.userId || "";
+                    const isLocked = (u.rejectionCount ?? 0) >= 2;
+                    const isApproved = !!u.isApproved;
+
+                    return (
+                      <tr key={userId || idx} className="hover:bg-[#141e22] transition-colors">
+                        <td className="py-3.5 px-4 text-zinc-500 text-center">{idx + 1}</td>
+                        <td className="py-3.5 px-4 font-bold text-white tracking-wider">
+                          <button
+                            onClick={() => setDetailUserModal(u)}
+                            className="hover:text-amber-300 transition-colors text-left cursor-pointer"
+                          >
+                            {u.fullName || "Chưa cập nhật"}
+                          </button>
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-300">{u.email}</td>
+                        <td className="py-3.5 px-4 text-zinc-400">{u.schoolName || (u.isFpt ? "FPT University" : "N/A")}</td>
+                        <td className="py-3.5 px-4 text-center">
+                          {isLocked ? (
+                            <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
+                              KHÓA ({u.rejectionCount})
+                            </span>
+                          ) : isApproved ? (
+                            <span className="px-2 py-0.5 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 rounded font-bold text-[10px]">
+                              ĐÃ DUYỆT
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
+                              CHỜ DUYỆT
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => setDetailUserModal(u)}
+                              className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-300 font-mono text-xs rounded transition-all cursor-pointer flex items-center gap-1.5"
+                              title="Xem ảnh 3x4, MSSV & Phê duyệt/Từ chối"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Xem &amp; Duyệt</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal View Detail 3x4 Photo & MSSV Inspection */}
+      {detailUserModal && (
+        <StudentProfileModal
+          user={detailUserModal as any}
+          isOpen={!!detailUserModal}
+          onClose={() => setDetailUserModal(null)}
+          canManage={true}
+          onApprove={async (uId) => {
+            await handleApprove(uId);
+            setDetailUserModal(null);
+          }}
+          onReject={async (uId, reason) => {
+            await handleReject(uId, reason);
+            setDetailUserModal(null);
+          }}
+        />
+      )}
     </div>
   );
 };

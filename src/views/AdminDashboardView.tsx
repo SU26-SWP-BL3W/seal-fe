@@ -1,637 +1,683 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { useAuth } from "@/providers/AuthProvider";
-import { useEvents } from "@/repositories/eventsRepository";
-import { useGetUsers, usersRepository } from "@/repositories/usersRepository";
-import { Link } from "@/i18n/routing";
+import { Button, Card, Badge, Input, ApiMissingDataBadge, StatCard, EmptyState } from "@/components/ui";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
-  ShieldAlert,
   Plus,
   Users,
   School,
-  Activity,
-  ArrowRight,
-  Shield,
   UserCheck,
-  X,
-  CheckCircle2,
+  Edit,
+  ExternalLink,
+  RefreshCw,
+  Search,
+  Grid,
+  List,
   Calendar,
   Layers,
-  Terminal,
-  Lock,
-  Radio,
+  AlertTriangle,
+  SlidersHorizontal,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { staffRepository } from "@/repositories/staffRepository";
-import { readApiError } from "@/repositories/submitResultsRepository";
+import { Link } from "@/i18n/routing";
 
-export function AdminDashboardView() {
-  const { user, loginAsDemoRole } = useAuth();
-  const { data: rawEvents = [], isLoading: loadingEvents, refetch: refetchEvents } = useEvents();
-  const { data: usersResponse, isLoading: loadingUsers } = useGetUsers();
+import { useEvents } from "@/repositories/eventsRepository";
+import { useGetUsers } from "@/repositories/usersRepository";
+import { useGetSchools } from "@/repositories/schoolsRepository";
+import { useGetAllEventsCoordinators } from "@/repositories/staffRepository";
+import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
+import { AdminCoordinatorModal } from "@/components/domain/AdminCoordinatorModal";
 
-  const events = useMemo(() => {
-    const list = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
-    return Array.isArray(list) ? list : [];
-  }, [rawEvents]);
-
-  const usersList = useMemo(() => {
-    const list = Array.isArray(usersResponse) ? usersResponse : (usersResponse as any)?.data ?? [];
-    return Array.isArray(list) ? list : [];
-  }, [usersResponse]);
-
-  const [eventStatusFilter, setEventStatusFilter] = useState<"all" | "ongoing" | "upcoming" | "closed">("all");
-  const [eventSearch, setEventSearch] = useState("");
-
-  const filteredEvents = useMemo(() => {
-    return events.filter((evt: any) => {
-      const name = (evt.eventName || evt.EventName || "").toLowerCase();
-      const matchesSearch = !eventSearch.trim() || name.includes(eventSearch.toLowerCase().trim());
-      if (!matchesSearch) return false;
-
-      const endDate = evt.endDate || evt.EndDate;
-      const startDate = evt.startDate || evt.StartDate;
-      const isOngoing = endDate ? new Date(endDate) > new Date() : true;
-      const isUpcoming = startDate ? new Date(startDate) > new Date() : false;
-
-      if (eventStatusFilter === "ongoing") return isOngoing && !isUpcoming;
-      if (eventStatusFilter === "upcoming") return isUpcoming;
-      if (eventStatusFilter === "closed") return !isOngoing;
-      return true;
-    });
-  }, [events, eventStatusFilter, eventSearch]);
-
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
-  const [ecEmailsList, setEcEmailsList] = useState<string[]>([]);
-  const [currentEmailInput, setCurrentEmailInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [assignSuccessMessage, setAssignSuccessMessage] = useState<string | null>(null);
-  const [assignErrorMessage, setAssignErrorMessage] = useState<string | null>(null);
-
-  const handleOpenAssignModal = (ev: any) => {
-    setSelectedEvent(ev);
-    const existing = ev.assignedCoordinatorEmail ? [ev.assignedCoordinatorEmail] : [];
-    setEcEmailsList(existing);
-    setCurrentEmailInput("");
-    setAssignSuccessMessage(null);
-    setAssignErrorMessage(null);
-  };
-
-  const handleAddEmail = () => {
-    const trimmed = currentEmailInput.trim().toLowerCase();
-    if (!trimmed) return;
-    if (!trimmed.includes("@")) {
-      setAssignErrorMessage("Vui lòng nhập địa chỉ email hợp lệ!");
-      return;
-    }
-    if (ecEmailsList.includes(trimmed)) {
-      setAssignErrorMessage("Email này đã có trong danh sách phân công!");
-      return;
-    }
-    setEcEmailsList([...ecEmailsList, trimmed]);
-    setCurrentEmailInput("");
-    setAssignErrorMessage(null);
-  };
-
-  const handleRemoveEmail = (emailToRemove: string) => {
-    setEcEmailsList(ecEmailsList.filter((e) => e !== emailToRemove));
-  };
-
-  const handleAssignEc = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const finalEmails = [...ecEmailsList];
-    if (currentEmailInput.trim() && !finalEmails.includes(currentEmailInput.trim().toLowerCase())) {
-      finalEmails.push(currentEmailInput.trim().toLowerCase());
-    }
-
-    if (finalEmails.length === 0 || !selectedEvent) {
-      setAssignErrorMessage("Vui lòng thêm ít nhất 1 email Điều Phối Viên!");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setAssignErrorMessage(null);
-    setAssignSuccessMessage(null);
-
-    const eventId = selectedEvent.id || selectedEvent.Id || "";
-    const eventName = selectedEvent.eventName || selectedEvent.EventName || "Sự kiện";
-
-    try {
-      let successCount = 0;
-      for (const email of finalEmails) {
-        try {
-          const foundUser = await usersRepository.findUserByEmail(email);
-          if (foundUser) {
-            const realUserId = foundUser.id || (foundUser as any).Id || (foundUser as any).userId || (foundUser as any).UserId;
-            await staffRepository.assignRoleDirectly({
-              userId: realUserId,
-              eventId: eventId,
-              roleName: "EventCoordinator",
-            });
-            successCount++;
-          } else {
-            await staffRepository.inviteCoordinator({
-              eventId: eventId,
-              email: email,
-            });
-            successCount++;
-          }
-        } catch {
-          successCount++;
-        }
-      }
-
-      setIsSubmitting(false);
-      setAssignSuccessMessage(`Đã phân công thành công ${finalEmails.length} Điều Phối Viên cho sự kiện "${eventName}"!`);
-      refetchEvents();
-      setTimeout(() => {
-        setSelectedEvent(null);
-        setAssignSuccessMessage(null);
-      }, 1500);
-    } catch (err: any) {
-      setIsSubmitting(false);
-      setAssignErrorMessage(err?.response?.data?.message || err?.message || "Phân công Điều Phối Viên thất bại.");
-    }
-  };
-
-  if (!user || (!user.isAdmin && !user.IsAdmin)) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#11181c] border border-zinc-800 p-8 text-center rounded-lg space-y-4 shadow-xl">
-          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto text-amber-400">
-            <Lock className="w-6 h-6" />
-          </div>
-          <h2 className="font-display text-xl font-bold uppercase text-white">
-            YÊU CẦU QUYỀN QUẢN TRỊ VIÊN (ADMIN)
-          </h2>
-          <p className="font-sans text-xs text-zinc-400 leading-relaxed">
-            Khu vực quản trị hệ thống chỉ dành riêng cho Admin. Bấm nút bên dưới để vào bằng tài khoản Admin Demo:
-          </p>
-          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Admin")}
-              className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer rounded"
-            >
-              [ 🛡️ Vào Bằng Tài Khoản System Admin Demo ]
-            </button>
-            <Link href="/login" className="w-full">
-              <button className="w-full border border-zinc-800 text-zinc-400 py-2 uppercase hover:text-white hover:border-zinc-600 transition-colors rounded">
-                Đến trang đăng nhập chính thức
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const ecCount = usersList.filter(
-    (u: any) => u && ((u.role || u.Role) === "Coordinator" || (u.email || "").toLowerCase().includes("coordinator"))
-  ).length;
-
+function FilterPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Header Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
-          <div>
-            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider">
-              BẢNG ĐIỀU HÀNH HỆ THỐNG / QUẢN TRỊ TOÀN QUYỀN
-            </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
-              TỔNG QUAN QUẢN TRỊ VIÊN
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Link href="/admin/events/new">
-              <button className="px-4 py-2.5 bg-amber-500 text-black font-mono font-extrabold text-xs uppercase hover:bg-amber-400 transition-all rounded flex items-center gap-1.5 cursor-pointer shadow-md">
-                <Plus className="w-4 h-4" />
-                <span>TẠO SỰ KIỆN MỚI</span>
-              </button>
-            </Link>
-            <Link href="/admin/users">
-              <button className="px-3.5 py-2.5 bg-[#141f23] border border-zinc-700 hover:border-amber-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
-                <span>Quản Lý Người Dùng</span>
-              </button>
-            </Link>
-            <Link href="/admin/schools">
-              <button className="px-3.5 py-2.5 bg-[#141f23] border border-zinc-700 hover:border-amber-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
-                <span>Danh Mục Trường</span>
-              </button>
-            </Link>
-          </div>
-        </div>
-
-        {/* 4 Stat Widgets - Dịu Mắt, Không Chói Lóa */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#10171a] border border-zinc-800/90 p-4 rounded-lg space-y-1">
-            <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider block">
-              Tổng Sự Kiện
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-2xl text-white">
-                {loadingEvents ? "..." : events.length}
-              </span>
-              <span className="text-xs font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                {events.filter((e: any) => !e.endDate || new Date(e.endDate) > new Date()).length} Đang mở
-              </span>
-            </div>
-            <span className="font-mono text-[10px] text-zinc-500 block">
-              Toàn bộ các mùa giải trên hệ thống
-            </span>
-          </div>
-
-          <div className="bg-[#10171a] border border-zinc-800/90 p-4 rounded-lg space-y-1">
-            <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider block">
-              Người Dùng Đăng Ký
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-2xl text-cyan-300">
-                {loadingUsers ? "..." : usersList.length}
-              </span>
-              <span className="text-xs font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                Hoạt động
-              </span>
-            </div>
-            <span className="font-mono text-[10px] text-zinc-500 block">
-              Sinh viên, Giám khảo, Cố vấn, BTC
-            </span>
-          </div>
-
-          <div className="bg-[#10171a] border border-zinc-800/90 p-4 rounded-lg space-y-1">
-            <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider block">
-              Điều Phối Viên (EC)
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-2xl text-purple-300">
-                {ecCount}
-              </span>
-              <span className="text-xs font-mono text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
-                Phân công
-              </span>
-            </div>
-            <span className="font-mono text-[10px] text-zinc-500 block">
-              Trực tiếp quản lý giải đấu
-            </span>
-          </div>
-
-          <div className="bg-[#10171a] border border-zinc-800/90 p-4 rounded-lg space-y-1">
-            <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider block">
-              Trạng Thái Hệ Thống
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono font-bold text-2xl text-zinc-500">
-                —
-              </span>
-              <span className="text-xs font-mono text-zinc-500 bg-zinc-500/10 px-2 py-0.5 rounded border border-zinc-500/20">
-                Chưa đo
-              </span>
-            </div>
-            <span className="font-mono text-[10px] text-zinc-500 block">
-              Chưa nối nguồn dữ liệu uptime thật
-            </span>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* TRUNG TÂM QUẢN LÝ SỰ KIỆN (BẢNG SỰ KIỆN + BỘ LỌC + NÚT XEM CHI TIẾT)       */}
-        {/* ========================================================================= */}
-        <div className="bg-[#10171a] border border-zinc-800 rounded-lg overflow-hidden shadow-sm">
-          
-          {/* Table Header Controls */}
-          <div className="p-4 border-b border-zinc-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-[#131d21]">
-            <div>
-              <h2 className="font-mono text-sm font-bold text-white uppercase tracking-wider">
-                DANH SÁCH TẤT CẢ SỰ KIỆN CUỘC THI
-              </h2>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Xem chi tiết, gán Điều phối viên hoặc tạo sự kiện mới
-              </p>
-            </div>
-
-            {/* Event Filter Pills & Search */}
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-              <input
-                type="text"
-                value={eventSearch}
-                onChange={(e) => setEventSearch(e.target.value)}
-                placeholder="Tìm tên sự kiện..."
-                className="px-3 py-1.5 bg-[#0b1013] border border-zinc-700 text-white font-mono text-xs rounded placeholder:text-zinc-500 focus:border-amber-400 outline-none w-full sm:w-48"
-              />
-
-              {/* Dải Nút Filter Trực Quan Dễ Dùng */}
-              <div className="flex items-center gap-1 bg-[#0b1013] p-1 border border-zinc-800 rounded">
-                <button
-                  type="button"
-                  onClick={() => setEventStatusFilter("all")}
-                  className={`px-2.5 py-1 font-mono text-xs font-bold rounded transition-all cursor-pointer ${
-                    eventStatusFilter === "all"
-                      ? "bg-amber-500 text-black font-extrabold"
-                      : "text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  Tất Cả ({events.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEventStatusFilter("ongoing")}
-                  className={`px-2.5 py-1 font-mono text-xs font-bold rounded transition-all cursor-pointer ${
-                    eventStatusFilter === "ongoing"
-                      ? "bg-emerald-500 text-black font-extrabold"
-                      : "text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  Đang Mở
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEventStatusFilter("upcoming")}
-                  className={`px-2.5 py-1 font-mono text-xs font-bold rounded transition-all cursor-pointer ${
-                    eventStatusFilter === "upcoming"
-                      ? "bg-cyan-500 text-black font-extrabold"
-                      : "text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  Sắp Mở
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEventStatusFilter("closed")}
-                  className={`px-2.5 py-1 font-mono text-xs font-bold rounded transition-all cursor-pointer ${
-                    eventStatusFilter === "closed"
-                      ? "bg-zinc-700 text-white font-extrabold"
-                      : "text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  Đã Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Table Content */}
-          {loadingEvents ? (
-            <div className="p-12 text-center font-mono text-xs text-zinc-400 animate-pulse">
-              Đang tải dữ liệu danh sách sự kiện...
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <div className="p-12 text-center font-mono text-xs text-zinc-400 space-y-2">
-              <p>Không tìm thấy sự kiện nào phù hợp với bộ lọc.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setEventStatusFilter("all");
-                  setEventSearch("");
-                }}
-                className="text-amber-400 hover:underline cursor-pointer"
-              >
-                Xóa bộ lọc tìm kiếm
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left font-mono text-xs">
-                <thead className="bg-[#0e1619] border-b border-zinc-800 text-zinc-400 uppercase text-[11px]">
-                  <tr>
-                    <th className="py-3 px-4 w-12 text-center">STT</th>
-                    <th className="py-3 px-4">TÊN SỰ KIỆN &amp; MÙA GIẢI</th>
-                    <th className="py-3 px-4">THỜI GIAN TỔ CHỨC</th>
-                    <th className="py-3 px-4">ĐIỀU PHỐI VIÊN (EC)</th>
-                    <th className="py-3 px-4">TRẠNG THÁI</th>
-                    <th className="py-3 px-4 text-right">THAO TÁC</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {filteredEvents.map((evt: any, idx: number) => {
-                    const eventId = evt.id || evt.Id || `evt-${idx}`;
-                    const eventName = evt.eventName || evt.EventName || "Sự kiện cuộc thi";
-                    const season = evt.season || evt.Season || "Season 2026";
-                    const year = evt.year || evt.Year || 2026;
-                    const startDate = evt.startDate || evt.StartDate;
-                    const endDate = evt.endDate || evt.EndDate;
-                    const isOngoing = !endDate || new Date(endDate) > new Date();
-                    const coordinatorName = evt.assignedCoordinatorName || evt.AssignedCoordinatorName;
-                    const coordinatorEmail = evt.assignedCoordinatorEmail || evt.AssignedCoordinatorEmail;
-
-                    return (
-                      <tr key={eventId} className="hover:bg-[#141e22] transition-colors">
-                        <td className="py-3.5 px-4 text-zinc-500 text-center">{idx + 1}</td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-white text-sm hover:text-amber-300 transition-colors">
-                            <Link href={`/events/${eventId}`}>{eventName}</Link>
-                          </div>
-                          <div className="text-[11px] text-zinc-400 mt-0.5">
-                            {season} • Năm {year}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 text-zinc-300">
-                          {startDate ? new Date(startDate).toLocaleDateString("vi-VN") : "Bắt đầu"} —{" "}
-                          {endDate ? new Date(endDate).toLocaleDateString("vi-VN") : "Kết thúc"}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {coordinatorName || coordinatorEmail ? (
-                            <div className="space-y-0.5">
-                              <span className="font-bold text-purple-300">{coordinatorName || "Đã phân công"}</span>
-                              <span className="block text-[10px] text-zinc-500">{coordinatorEmail || ""}</span>
-                            </div>
-                          ) : (
-                            <span className="text-[11px] text-zinc-500 italic">Chưa phân công</span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span
-                            className={`px-2.5 py-1 font-bold text-[10px] uppercase rounded inline-flex items-center gap-1.5 ${
-                              isOngoing
-                                ? "bg-emerald-950/50 text-emerald-300 border border-emerald-500/30"
-                                : "bg-zinc-800 text-zinc-400 border border-zinc-700"
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${isOngoing ? "bg-emerald-400" : "bg-zinc-500"}`} />
-                            {isOngoing ? "Đang Mở" : "Đã Đóng"}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {/* NÚT XEM CHI TIẾT SỰ KIỆN CHO ADMIN */}
-                            <Link href={`/events/${eventId}`}>
-                              <button
-                                type="button"
-                                className="px-3 py-1.5 bg-[#162228] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-200 font-mono text-xs font-bold rounded transition-all cursor-pointer flex items-center gap-1"
-                              >
-                                <span>👁 Xem Chi Tiết</span>
-                              </button>
-                            </Link>
-
-                            {/* NÚT GÁN ĐIỀU PHỐI VIÊN */}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenAssignModal(evt)}
-                              className="px-3 py-1.5 bg-purple-950/40 text-purple-300 border border-purple-500/40 hover:bg-purple-900/60 font-mono text-xs font-bold rounded transition-all cursor-pointer"
-                            >
-                              Gán EC
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Modal Phân Công Nhiều Event Coordinator */}
-      {selectedEvent && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="max-w-lg w-full bg-[#11181c] border border-zinc-700 p-6 rounded-lg space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h3 className="font-display font-bold text-lg text-white uppercase flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-amber-400" />
-                <span>PHÂN CÔNG BAN ĐIỀU PHỐI (MULTI-EC)</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedEvent(null)}
-                className="text-zinc-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="font-mono text-xs space-y-1 bg-[#0b1013] p-3 rounded border border-zinc-800">
-              <span className="text-zinc-400">Sự kiện chỉ định:</span>
-              <div className="text-white font-bold">{selectedEvent.eventName || selectedEvent.EventName}</div>
-            </div>
-
-            {assignSuccessMessage && (
-              <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 font-mono text-xs flex items-center gap-2 rounded">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{assignSuccessMessage}</span>
-              </div>
-            )}
-
-            {assignErrorMessage && (
-              <div className="p-3 bg-red-950/40 border border-red-500/40 text-red-300 font-mono text-xs rounded">
-                {assignErrorMessage}
-              </div>
-            )}
-
-            <form onSubmit={handleAssignEc} className="space-y-4 font-mono text-xs">
-              
-              {/* Danh Sách Email EC Đã Thêm (Tags) */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-zinc-300 font-bold uppercase">
-                    Danh Sách Điều Phối Viên ({ecEmailsList.length}) *
-                  </label>
-                  <span className="text-[11px] text-zinc-500">Nhập email rồi bấm &quot;Thêm&quot; hoặc Enter</span>
-                </div>
-
-                {ecEmailsList.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 p-2.5 bg-[#0b1013] border border-zinc-800 rounded min-h-[44px]">
-                    {ecEmailsList.map((email, idx) => (
-                      <span
-                        key={email}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-950/60 text-purple-300 border border-purple-500/40 rounded text-xs"
-                      >
-                        <span className="font-bold">{idx === 0 ? "👑 " : ""}{email}</span>
-                        {idx === 0 && <span className="text-[10px] text-amber-400">(Trưởng ban)</span>}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveEmail(email)}
-                          className="text-purple-400 hover:text-white font-bold ml-1 cursor-pointer"
-                          title="Gỡ email này"
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-3 bg-[#0b1013] border border-zinc-800 rounded text-center text-zinc-500 italic">
-                    Chưa có Điều phối viên nào trong danh sách. Hãy nhập email bên dưới.
-                  </div>
-                )}
-              </div>
-
-              {/* Ô Nhập Email & Nút Thêm */}
-              <div className="space-y-1.5">
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={currentEmailInput}
-                    onChange={(e) => setCurrentEmailInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddEmail();
-                      }
-                    }}
-                    placeholder="coordinator@seal.edu.vn"
-                    className="flex-1 bg-[#0b1013] border border-zinc-700 px-3.5 py-2 text-white font-mono rounded focus:border-amber-400 outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddEmail}
-                    className="px-4 py-2 bg-[#1c272c] border border-zinc-700 text-zinc-200 hover:border-amber-400 hover:text-white rounded font-bold transition-colors cursor-pointer"
-                  >
-                    + Thêm
-                  </button>
-                </div>
-
-                {/* Gợi ý email demo nhanh */}
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="text-[11px] text-zinc-500">Gợi ý nhanh:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!ecEmailsList.includes("ec.coordinator@seal.edu.vn")) {
-                        setEcEmailsList([...ecEmailsList, "ec.coordinator@seal.edu.vn"]);
-                      }
-                    }}
-                    className="text-[11px] text-cyan-400 hover:underline cursor-pointer"
-                  >
-                    + ec.coordinator@seal.edu.vn
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!ecEmailsList.includes("ec.lehoa@seal.edu.vn")) {
-                        setEcEmailsList([...ecEmailsList, "ec.lehoa@seal.edu.vn"]);
-                      }
-                    }}
-                    className="text-[11px] text-cyan-400 hover:underline cursor-pointer"
-                  >
-                    + ec.lehoa@seal.edu.vn
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setSelectedEvent(null)}
-                  className="px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white rounded uppercase cursor-pointer"
-                >
-                  Hủy Bỏ
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2 bg-amber-500 text-black font-bold uppercase hover:bg-amber-400 transition-all rounded cursor-pointer disabled:opacity-50"
-                >
-                  {isSubmitting ? "Đang gán..." : `Lưu Phân Công (${ecEmailsList.length || (currentEmailInput ? 1 : 0)} EC)`}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+        active
+          ? "bg-[var(--accent-primary)]/15 text-[var(--accent-primary)]"
+          : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
+
+export const AdminDashboardView: React.FC = () => {
+  const { data: rawEvents = [], isLoading: isLoadingEvents, refetch: refetchEvents } = useEvents();
+  const realEvents = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
+  const displayEvents = realEvents;
+
+  const { data: ecMap = {}, refetch: refetchEcs } = useGetAllEventsCoordinators(displayEvents);
+
+  const { data: rawUsersData, refetch: refetchUsers } = useGetUsers({ pageSize: 500 });
+  const usersList = rawUsersData?.data ?? [];
+  const totalUsersCount = rawUsersData?.totalItems ?? usersList.length;
+
+  const { data: schoolsList = [] } = useGetSchools();
+  const totalSchoolsCount = schoolsList.length;
+
+  const availableCoordinators = useMemo(() => {
+    return usersList.filter((u: any) => {
+      const em = (u.email || u.Email || "").toLowerCase();
+      const role = (u.roleName || u.RoleName || "").toLowerCase();
+      const isAdmin = Boolean(u.isAdmin || u.IsAdmin || em.includes("admin") || role.includes("admin"));
+      if (isAdmin) return false;
+
+      const isStudent = Boolean(u.isStudent || u.IsStudent || u.studentCode || u.StudentCode);
+      if (isStudent) return false;
+
+      return (
+        role.includes("coordinator") ||
+        role.includes("coodinator") ||
+        em.includes("coordinator") ||
+        em.includes("ec.") ||
+        em.includes("ec_") ||
+        em.includes("ec@") ||
+        em.startsWith("ec")
+      );
+    });
+  }, [usersList]);
+
+  const ecCount = availableCoordinators.length;
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "has_ec" | "no_ec">("all");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
+
+  const [editingEvent, setEditingEvent] = useState<any | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([refetchEvents(), refetchEcs(), refetchUsers()]);
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const filteredEvents = useMemo(() => {
+    return displayEvents.filter((ev: any) => {
+      const id = ev.id || ev.Id || ev.eventId || ev.EventId || "";
+      const name = (ev.eventName || ev.EventName || "").toLowerCase();
+      const season = (ev.season || ev.Season || "").toLowerCase();
+      const year = String(ev.year || ev.Year || "");
+
+      const assignedEcs = ecMap[id] || [];
+      const ecNames = assignedEcs.map((x: any) => (x.name || x.email || "").toLowerCase()).join(" ");
+      const fallbackEc = (ev.coordinatorEmail || ev.CoordinatorEmail || "").toLowerCase();
+
+      const query = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !query ||
+        name.includes(query) ||
+        season.includes(query) ||
+        year.includes(query) ||
+        ecNames.includes(query) ||
+        fallbackEc.includes(query);
+
+      let matchesStatus = true;
+      if (statusFilter === "no_ec") {
+        matchesStatus = assignedEcs.length === 0 && !fallbackEc;
+      } else if (statusFilter === "has_ec") {
+        matchesStatus = assignedEcs.length > 0 || Boolean(fallbackEc);
+      }
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [displayEvents, searchTerm, statusFilter, ecMap]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedEvents = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredEvents.slice(start, start + PAGE_SIZE);
+  }, [filteredEvents, safePage]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (filter: "all" | "has_ec" | "no_ec") => {
+    setStatusFilter(filter);
+    setCurrentPage(1);
+  };
+
+  return (
+    <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
+      <PageHeader
+        title="Bảng điều hành admin"
+        description="Quản lý sự kiện, phân công event coordinator, phê duyệt người dùng và giám sát trường đại học đối tác."
+        breadcrumb={
+          <nav className="text-xs text-[var(--text-muted)]">
+            <Link href="/admin/dashboard" className="hover:text-[var(--accent-primary)]">
+              Admin
+            </Link>
+            <span className="mx-1.5">/</span>
+            <span className="text-[var(--text-primary)]">Tổng quan</span>
+          </nav>
+        }
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              accent="primary"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="text-sm"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              {isRefreshing ? "Đang tải..." : "Làm mới"}
+            </Button>
+            <Link href="/admin/users">
+              <Button variant="secondary" accent="coordinator">
+                <Users className="h-4 w-4" />
+                Người dùng
+              </Button>
+            </Link>
+            <Link href="/admin/schools">
+              <Button variant="secondary" accent="primary">
+                <School className="h-4 w-4" />
+                Trường học
+              </Button>
+            </Link>
+            <Link href="/admin/events/new">
+              <Button variant="primary" accent="primary">
+                <Plus className="h-4 w-4" />
+                Tạo sự kiện
+              </Button>
+            </Link>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Tổng sự kiện"
+          value={displayEvents.length}
+          subtext="Đang vận hành trên hệ thống"
+          accent="var(--accent-primary)"
+        />
+        <StatCard
+          label="Event coordinators"
+          value={ecCount}
+          subtext="Sẵn sàng gán sự kiện"
+          accent="var(--accent-coordinator)"
+        />
+        <Link href="/admin/users" className="block">
+          <StatCard
+            label="Người dùng"
+            value={totalUsersCount}
+            subtext="Thí sinh, giám khảo và EC"
+            accent="var(--accent-judge)"
+          />
+        </Link>
+        <Link href="/admin/schools" className="block">
+          <StatCard
+            label="Trường đại học"
+            value={totalSchoolsCount}
+            subtext="Danh mục trường đối tác"
+            accent="var(--color-success)"
+          />
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="flex flex-col gap-3 p-5">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Khởi tạo sự kiện mới</h3>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Thiết lập mùa giải, cấu hình vòng thi và thể lệ.</p>
+          </div>
+          <Link href="/admin/events/new">
+            <Button variant="secondary" accent="primary" className="w-full">
+              Tạo sự kiện
+            </Button>
+          </Link>
+        </Card>
+        <Card className="flex flex-col gap-3 p-5">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Quản lý người dùng</h3>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Duyệt hồ sơ, phân quyền EC, giám khảo và cố vấn.</p>
+          </div>
+          <Link href="/admin/users">
+            <Button variant="secondary" accent="coordinator" className="w-full">
+              Mở trang duyệt
+            </Button>
+          </Link>
+        </Card>
+        <Card className="flex flex-col gap-3 p-5">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Danh mục trường học</h3>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Thêm mới, sửa thông tin và mã các trường đối tác.</p>
+          </div>
+          <Link href="/admin/schools">
+            <Button variant="secondary" accent="primary" className="w-full">
+              Quản lý trường
+            </Button>
+          </Link>
+        </Card>
+      </div>
+
+      <Card className="space-y-5 p-6">
+        <div className="flex flex-col gap-4 border-b border-[var(--border-muted)] pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
+              Tất cả sự kiện
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {filteredEvents.length} / {displayEvents.length} sự kiện
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+              <Input
+                type="text"
+                placeholder="Tìm sự kiện, mùa giải, EC..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-9"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-base)] p-1">
+              <FilterPill active={statusFilter === "all"} onClick={() => handleStatusFilterChange("all")}>
+                Tất cả ({displayEvents.length})
+              </FilterPill>
+              <FilterPill active={statusFilter === "has_ec"} onClick={() => handleStatusFilterChange("has_ec")}>
+                Đã gán EC
+              </FilterPill>
+              <FilterPill active={statusFilter === "no_ec"} onClick={() => handleStatusFilterChange("no_ec")}>
+                Chưa gán EC
+              </FilterPill>
+            </div>
+
+            <div className="flex items-center gap-1 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-base)] p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={`rounded-md p-1.5 transition-colors ${
+                  viewMode === "table"
+                    ? "bg-[var(--bg-panel)] text-[var(--accent-primary)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+                title="Chế độ bảng"
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={`rounded-md p-1.5 transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-[var(--bg-panel)] text-[var(--accent-primary)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+                title="Chế độ thẻ"
+              >
+                <Grid className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {isLoadingEvents ? (
+          <EmptyState
+            icon={RefreshCw}
+            title="Đang tải sự kiện"
+            description="Đang truy vấn danh sách sự kiện từ cơ sở dữ liệu..."
+          />
+        ) : displayEvents.length === 0 ? (
+          <ApiMissingDataBadge
+            endpoint="GET /api/Events"
+            title="Chưa có sự kiện nào"
+            message="Hệ thống chưa có sự kiện. Bấm 'Tạo sự kiện' để bắt đầu."
+          />
+        ) : filteredEvents.length === 0 ? (
+          <EmptyState
+            icon={SlidersHorizontal}
+            title="Không tìm thấy sự kiện"
+            description={`Không có sự kiện phù hợp với bộ lọc và từ khóa "${searchTerm}".`}
+            action={
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  handleSearchChange("");
+                  handleStatusFilterChange("all");
+                }}
+              >
+                Xóa bộ lọc
+              </Button>
+            }
+          />
+        ) : viewMode === "table" ? (
+          <div className="overflow-x-auto rounded-lg border border-[var(--border-muted)]">
+            <table className="w-full min-w-[1060px] table-fixed border-collapse text-left text-sm">
+              <thead className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
+                <tr>
+                  <th className="w-[23%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Tên sự kiện</th>
+                  <th className="w-[12%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Mùa giải</th>
+                  <th className="w-[10%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Vòng thi</th>
+                  <th className="w-[18%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Event coordinator</th>
+                  <th className="w-[12%] px-2 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Trạng thái</th>
+                  <th className="w-[25%] px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)]">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-muted)]/50">
+                {paginatedEvents.map((ev: any, index: number) => {
+                  const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-admin-${index}`;
+                  const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
+                  const season = ev.season || ev.Season || "Mùa Hè";
+                  const year = ev.year || ev.Year || 2026;
+                  const roundsCount = ev.rounds?.length ?? ev.Rounds?.length ?? 1;
+
+                  const assignedEcs = ecMap[id] || [];
+                  const fallbackEc = ev.coordinatorEmail || ev.CoordinatorEmail;
+                  const ecSummaryTitle =
+                    assignedEcs.length > 0
+                      ? assignedEcs.map((x: any) => (x.name ? `${x.name} (${x.email})` : x.email)).join(", ")
+                      : fallbackEc || "Chưa gán EC";
+
+                  return (
+                    <tr key={id} className="transition-colors hover:bg-[var(--bg-input)]/50">
+                      <td className="px-4 py-3 align-middle">
+                        <div className="max-w-full space-y-0.5">
+                          <div className="truncate text-sm font-medium text-[var(--text-primary)]" title={name}>
+                            {name}
+                          </div>
+                          <div className="truncate text-xs text-[var(--text-muted)]" title={id}>
+                            ID: {id}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3 align-middle">
+                        <Badge tone="team">
+                          <Calendar className="h-3 w-3" />
+                          {season} {year}
+                        </Badge>
+                      </td>
+
+                      <td className="px-4 py-3 align-middle">
+                        <span className="inline-flex items-center gap-1.5 text-sm text-[var(--text-primary)]">
+                          <Layers className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                          {roundsCount} vòng
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3 align-middle">
+                        {assignedEcs.length > 0 ? (
+                          <div className="flex max-w-full items-center gap-2" title={ecSummaryTitle}>
+                            <span className="truncate text-sm text-[var(--text-primary)]">
+                              {assignedEcs[0].name || assignedEcs[0].email}
+                            </span>
+                            {assignedEcs.length > 1 && (
+                              <Badge tone="coordinator">+{assignedEcs.length - 1}</Badge>
+                            )}
+                          </div>
+                        ) : fallbackEc ? (
+                          <span className="truncate text-sm text-[var(--text-primary)]" title={fallbackEc}>
+                            {fallbackEc}
+                          </span>
+                        ) : (
+                          <Badge tone="warning">
+                            <AlertTriangle className="h-3 w-3" />
+                            Chưa gán EC
+                          </Badge>
+                        )}
+                      </td>
+
+                      <td className="px-2 py-3 text-center align-middle">
+                        <Badge tone="success">Hoạt động</Badge>
+                      </td>
+
+                      <td className="px-4 py-3 text-right align-middle">
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                          <Button
+                            variant="ghost"
+                            accent="primary"
+                            onClick={() => setEditingEvent(ev)}
+                            className="h-8 px-2.5 text-xs"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                            Sửa
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            accent="coordinator"
+                            onClick={() => setSelectedEvent(ev)}
+                            className="h-8 px-2.5 text-xs"
+                          >
+                            <UserCheck className="h-3.5 w-3.5" />
+                            EC
+                          </Button>
+                          <Link href={`/events/${id}`}>
+                            <Button variant="ghost" accent="primary" className="h-8 w-8 p-0">
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paginatedEvents.map((ev: any, index: number) => {
+              const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-grid-${index}`;
+              const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
+              const season = ev.season || ev.Season || "Mùa Hè";
+              const year = ev.year || ev.Year || 2026;
+              const roundsCount = ev.rounds?.length ?? ev.Rounds?.length ?? 1;
+
+              const assignedEcs = ecMap[id] || [];
+              const fallbackEc = ev.coordinatorEmail || ev.CoordinatorEmail;
+
+              return (
+                <Card key={id} className="flex flex-col justify-between gap-4 p-5">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <Badge tone="team">
+                        <Calendar className="h-3 w-3" />
+                        {season} {year}
+                      </Badge>
+                      <Badge tone="success">Hoạt động</Badge>
+                    </div>
+
+                    <div>
+                      <h3 className="line-clamp-2 text-base font-semibold text-[var(--text-primary)]" title={name}>
+                        {name}
+                      </h3>
+                      <p className="mt-0.5 text-xs text-[var(--text-muted)]">ID: {id}</p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 border-t border-[var(--border-muted)]/40 pt-2 text-xs text-[var(--text-muted)]">
+                      <Layers className="h-3.5 w-3.5" />
+                      {roundsCount} vòng thi
+                    </div>
+
+                    <div className="space-y-1 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-base)] p-3">
+                      <span className="text-xs font-medium text-[var(--text-muted)]">Event coordinator</span>
+                      {assignedEcs.length > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm text-[var(--text-primary)]">
+                            {assignedEcs[0].name || assignedEcs[0].email}
+                          </span>
+                          {assignedEcs.length > 1 && (
+                            <Badge tone="coordinator">+{assignedEcs.length - 1}</Badge>
+                          )}
+                        </div>
+                      ) : fallbackEc ? (
+                        <span className="block truncate text-sm text-[var(--text-primary)]">{fallbackEc}</span>
+                      ) : (
+                        <Badge tone="warning">
+                          <AlertTriangle className="h-3 w-3" />
+                          Chưa phân công
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 border-t border-[var(--border-muted)] pt-3">
+                    <Button
+                      variant="ghost"
+                      accent="coordinator"
+                      onClick={() => setSelectedEvent(ev)}
+                      className="flex-1 text-xs"
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      EC
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      accent="primary"
+                      onClick={() => setEditingEvent(ev)}
+                      className="flex-1 text-xs"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                      Sửa
+                    </Button>
+                    <Link href={`/events/${id}`}>
+                      <Button variant="ghost" accent="primary" className="h-8 w-8 p-0">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {filteredEvents.length > 0 && (
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border-muted)] pt-4 text-xs text-[var(--text-muted)] sm:flex-row">
+            <div>
+              Hiển thị{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {(safePage - 1) * PAGE_SIZE + 1}
+              </span>
+              {" – "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {Math.min(safePage * PAGE_SIZE, filteredEvents.length)}
+              </span>
+              {" / "}
+              <span className="font-medium text-[var(--accent-primary)]">
+                {filteredEvents.length}
+              </span>{" "}
+              sự kiện (tối đa {PAGE_SIZE}/trang)
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  accent="primary"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Trước
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  if (
+                    totalPages > 7 &&
+                    p !== 1 &&
+                    p !== totalPages &&
+                    Math.abs(p - safePage) > 1
+                  ) {
+                    if (p === 2 || p === totalPages - 1) {
+                      return (
+                        <span key={p} className="select-none px-1 text-[var(--text-muted)]">
+                          …
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+
+                  const isActivePage = p === safePage;
+                  return (
+                    <Button
+                      key={p}
+                      variant={isActivePage ? "primary" : "ghost"}
+                      accent="primary"
+                      onClick={() => setCurrentPage(p)}
+                      className="h-8 w-8 px-0 text-xs"
+                    >
+                      {p}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  variant="ghost"
+                  accent="primary"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  Sau
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {selectedEvent && (
+        <AdminCoordinatorModal
+          event={selectedEvent}
+          allUsers={usersList}
+          onClose={() => setSelectedEvent(null)}
+          onSuccess={() => {
+            refetchEvents();
+            refetchEcs();
+          }}
+        />
+      )}
+
+      {editingEvent && (
+        <ComprehensiveEventEditModal
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSuccess={() => {
+            refetchEvents();
+            setEditingEvent(null);
+          }}
+        />
+      )}
+    </PageShell>
+  );
+};

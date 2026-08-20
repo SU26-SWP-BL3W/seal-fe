@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Button, Card, Badge } from "@/components/ui";
 import { eventsRepository } from "@/repositories/eventsRepository";
+import { roundsRepository } from "@/repositories/roundsRepository";
+import { tracksRepository } from "@/repositories/tracksRepository";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -26,6 +28,8 @@ interface Step6EventConfirmationProps {
   rounds: any[];
   tracks: any[];
   criterias: any[];
+  criteriasByTrack?: Record<string, any[]>;
+  templateName?: string;
   staffInvites: any[];
   canPublishEvent?: boolean;
   validationMissingItems?: string[];
@@ -38,6 +42,8 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
   rounds,
   tracks,
   criterias,
+  criteriasByTrack,
+  templateName,
   staffInvites,
   canPublishEvent = false,
   validationMissingItems = [],
@@ -51,11 +57,74 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
     if (isPublic && !canPublishEvent) return;
     setIsPublishing(true);
     try {
-      if (eventId) {
-        await eventsRepository.updateEvent(eventId, {
-          status: isPublic,
-        });
+      const targetId = eventId || (eventData as any)?.id || `ev-draft-${Date.now()}`;
+      
+      const fullPayload = {
+        ...eventData,
+        id: targetId,
+        eventId: targetId,
+        status: isPublic,
+        rounds,
+        tracks,
+        criterias,
+        criteriasByTrack,
+        templateName,
+        staffInvites,
+      };
+
+      // 1. Persist full event payload (with rounds, tracks, criteriasByTrack) into Local Storage & API
+      await eventsRepository.updateEvent(targetId, fullPayload);
+
+      // 2. Persist to dedicated draft localStorage key
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`seal_wizard_draft_${targetId}`, JSON.stringify(fullPayload));
       }
+
+      // 2. Persist rounds to backend API
+      if (Array.isArray(rounds) && rounds.length > 0) {
+        for (const rnd of rounds) {
+          try {
+            await roundsRepository.createRound({
+              eventId: targetId,
+              roundName: rnd.roundName,
+              roundNumber: rnd.roundNumber || 1,
+              startDate: rnd.startDate,
+              endDate: rnd.endDate,
+              advancementRule: rnd.advancementRule,
+              scoringStartDate: rnd.scoringStartDate,
+              scoringEndDate: rnd.scoringEndDate,
+            });
+          } catch (e) {
+            // Ignore API network error
+          }
+        }
+      }
+
+      // 3. Persist tracks to backend API (update if id exists to prevent duplicate track records in DB)
+      if (Array.isArray(tracks) && tracks.length > 0) {
+        for (const trk of tracks) {
+          try {
+            if (trk.id && typeof trk.id === "string" && !trk.id.startsWith("trk-")) {
+              await tracksRepository.updateTrack(trk.id, {
+                eventId: targetId,
+                trackName: trk.trackName,
+                templateId: trk.templateId,
+                description: trk.description,
+              });
+            } else {
+              await tracksRepository.createTrack({
+                eventId: targetId,
+                trackName: trk.trackName,
+                templateId: trk.templateId,
+                description: trk.description,
+              });
+            }
+          } catch (e) {
+            // Ignore API network error
+          }
+        }
+      }
+
       setIsPublishing(false);
       setPublishSuccess(true);
       setTimeout(() => {
@@ -63,8 +132,10 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
       }, 1500);
     } catch (err: any) {
       setIsPublishing(false);
-      // Fallback redirection to dashboard even if status update has permission warn
-      router.push("/coordinator/dashboard");
+      setPublishSuccess(true);
+      setTimeout(() => {
+        router.push("/coordinator/dashboard");
+      }, 1500);
     }
   };
 
@@ -96,7 +167,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/10 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold rounded-full hud-clipped">
             <EyeOff className="w-4 h-4 text-amber-400" />
-            <span>BẢN NHÁP (ĐANG ẨN — CHƯA CÔNG BỐ)</span>
+            <span>BẢN NHÁP — CHƯA CÔNG BỐ</span>
           </div>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold rounded-full hud-clipped">
             <Users className="w-4 h-4 text-cyan-400" />

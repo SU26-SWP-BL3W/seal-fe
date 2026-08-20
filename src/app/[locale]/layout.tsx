@@ -5,13 +5,14 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { ToastProvider } from "@/providers/ToastProvider";
 import { AppLayoutWrapper } from "@/components/domain/AppLayoutWrapper";
 import "@/styles/tokens.css";
 import "../globals.css";
 
 export const metadata: Metadata = {
-  title: "SEAL",
-  description: "SEAL — SU26 SWP391 BL3W",
+  title: "SEAL — Hệ Thống Quản Lý Cuộc Thi & Hackathon",
+  description: "Nền tảng quản lý, nộp bài, chấm thi và công bố kết quả cuộc thi lập trình chuyên nghiệp.",
 };
 
 export default async function RootLayout({
@@ -42,7 +43,9 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <QueryProvider>
             <AuthProvider>
-              <AppLayoutWrapper>{children}</AppLayoutWrapper>
+              <ToastProvider>
+                <AppLayoutWrapper>{children}</AppLayoutWrapper>
+              </ToastProvider>
             </AuthProvider>
           </QueryProvider>
         </NextIntlClientProvider>

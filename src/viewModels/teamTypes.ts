@@ -11,6 +11,7 @@ export interface TrackItem {
   id: string;
   trackName: string;
   description: string;
+  submissionRuleDescription?: string;
   roundId: string;
   templateId: string | null;
 }
@@ -44,7 +45,7 @@ export interface SubmissionItem {
   submissionUrl: string;
   description: string;
   isActive: boolean;
-  isEliminated: boolean;
+  isEliminated?: boolean;
   eliminatedReason?: string;
   createdTime: string;
 }

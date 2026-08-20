@@ -9,6 +9,8 @@ import apiClient from "@/models/apiClient";
 export interface Prize {
   id: string;
   eventId: string;
+  /** Hạng mục (Track) áp dụng. null/undefined = giải chung toàn sự kiện. */
+  trackId?: string | null;
   prizeName: string;
   /** Giá trị giải — kiểu string (vd "10,000,000 VNĐ" hoặc mô tả hiện vật), không phải số tiền thuần. */
   value: string;
@@ -19,15 +21,16 @@ export interface Prize {
 export function useGetPrizesByEvent(eventId: string | undefined) {
   return useQuery({
     queryKey: ["prizesByEvent", eventId],
-    queryFn: async () => {
+    queryFn: async (): Promise<Prize[]> => {
       const { data } = await apiClient.get<Prize[]>(`/Events/${eventId}/Prizes`);
-      return data;
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!eventId,
   });
 }
 
 export interface CreatePrizePayload {
+  trackId?: string | null;
   prizeName: string;
   value: string;
   quantity: number;
@@ -72,4 +75,23 @@ export function useDeletePrize() {
       queryClient.invalidateQueries({ queryKey: ["prizesByEvent"] });
     },
   });
+}
+
+export function saveStoredPrizesForEvent(eventId: string, prizes: any[]) {
+  if (typeof window === "undefined" || !eventId) return;
+  try {
+    localStorage.setItem(`seal_stored_prizes_${eventId}`, JSON.stringify(prizes));
+  } catch {
+    // ignore
+  }
+}
+
+export function getStoredPrizesForEvent(eventId: string): any[] {
+  if (typeof window === "undefined" || !eventId) return [];
+  try {
+    const raw = localStorage.getItem(`seal_stored_prizes_${eventId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }

@@ -1,10 +1,8 @@
-import { useState } from "react";
-import { eventsRepository } from "@/repositories/eventsRepository";
-import { roundsRepository } from "@/repositories/roundsRepository";
-import { tracksRepository } from "@/repositories/tracksRepository";
-import { templatesRepository } from "@/repositories/templatesRepository";
-import { staffRepository } from "@/repositories/staffRepository";
-import { EventEntity, RoundEntity, TrackEntity, TemplateEntity, TemplateCriteriaEntity, EventRoleInvitationEntity } from "@/models/entities";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { eventsRepository, useMyEvents } from "@/repositories/eventsRepository";
+import { useGetRoundsByEvent } from "@/repositories/events/roundsRepository";
+import type { EventEntity } from "@/models/entities";
 
 export interface EventFormState {
   eventName: string;
@@ -40,6 +38,7 @@ export interface TrackFormState {
   trackName: string;
   templateId: string;
   description: string;
+  submissionRuleDescription?: string;
   startDate?: string;
   endDate?: string;
   scoringStartDate?: string;
@@ -67,89 +66,159 @@ export function useCreateEventWizardViewModel() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState<boolean>(false);
 
-  // Step 1 State: Event Basic Info (Pre-populated by Admin)
+  // Step 1 State: Event Basic Info
   const [eventData, setEventData] = useState<EventFormState>({
-    eventName: "SEAL Hackathon 2026",
-    season: "Mùa Hè",
-    year: 2026,
-    startDate: "2026-06-01T08:00",
-    endDate: "2026-06-30T18:00",
-    registrationStartDate: "2026-05-01T08:00",
-    registrationEndDate: "2026-05-25T23:59",
-    maxTeams: 50,
-    minTeamSize: 3,
+    eventName: "",
+    season: "",
+    year: new Date().getFullYear(),
+    startDate: "",
+    endDate: "",
+    registrationStartDate: "",
+    registrationEndDate: "",
+    maxTeams: 0,
+    minTeamSize: 1,
     maxTeamSize: 5,
-    tagline: "Cuộc thi lập trình công nghệ SEAL 2026",
-    description: "Sự kiện thi đấu phát triển giải pháp phần mềm và thuật toán dành cho sinh viên do Admin khởi tạo.",
+    tagline: "",
+    description: "",
   });
 
-  // Created Event Entity after Step 1 submit (Pre-set for Coordinator context)
-  const [createdEvent, setCreatedEvent] = useState<EventEntity | null>({
-    id: "EV-02",
-    eventName: "SEAL Hackathon 2026",
-    season: "Mùa Hè",
-    year: 2026,
-    startDate: "2026-06-01T08:00",
-    endDate: "2026-06-30T18:00",
-    status: false,
-  } as any);
+  // Created Event Entity after Step 1 submit
+  const [createdEvent, setCreatedEvent] = useState<EventEntity | null>(null);
 
   // Step 2 State: Initial Rounds for Coordinator to configure
-  const [rounds, setRounds] = useState<RoundFormState[]>([
-    {
-      id: "tmp-r1",
-      roundName: "Vòng 1: Sơ Loại",
-      roundNumber: 1,
-      startDate: "2026-06-01T08:00",
-      endDate: "2026-06-15T18:00",
-      scoringStartDate: "2026-06-16T08:00",
-      scoringEndDate: "2026-06-20T18:00",
-      advancementRule: "top:10",
-    },
-    {
-      id: "tmp-r2",
-      roundName: "Vòng 2: Chung Kết",
-      roundNumber: 2,
-      startDate: "2026-06-21T08:00",
-      endDate: "2026-06-30T18:00",
-      scoringStartDate: "2026-07-01T08:00",
-      scoringEndDate: "2026-07-03T18:00",
-      advancementRule: "top:3",
-    },
-  ]);
+  const [rounds, setRounds] = useState<RoundFormState[]>([]);
 
   // Step 3 State: Initial Tracks
-  const [tracks, setTracks] = useState<TrackFormState[]>([
-    {
-      id: "tmp-t1",
-      trackName: "Advanced Cloud Architecture",
-      templateId: "TPL-CLOUD-02",
-      description: "Hạng mục phát triển kiến trúc đám mây nâng cao.",
-    },
-    {
-      id: "tmp-t2",
-      trackName: "DevOps & AI Security",
-      templateId: "TPL-DEVOPS-01",
-      description: "Hạng mục tự động hóa hạ tầng và bảo mật AI.",
-    },
-  ]);
+  const [tracks, setTracks] = useState<TrackFormState[]>([]);
 
   // Step 4 State: Criteria & Template Config
-  const [templateName, setTemplateName] = useState<string>("Bản mẫu Tiêu chí Chấm RBL");
-  const [criterias, setCriterias] = useState<TemplateCriteriaFormState[]>([
-    { criteriaId: "crit-1", criterionName: "Kiến trúc hệ thống (System Architecture)", description: "Đánh giá tính mở rộng và tối ưu", weight: 30, maxScore: 10 },
-    { criteriaId: "crit-2", criterionName: "Bảo mật & Compliance", description: "Đánh giá bảo mật dữ liệu và mã nguồn", weight: 30, maxScore: 10 },
-    { criteriaId: "crit-3", criterionName: "Tính sáng tạo & Giải pháp", description: "Đánh giá đột phá tính năng", weight: 40, maxScore: 10 },
-  ]);
+  const [templateName, setTemplateName] = useState<string>("");
+  const [criterias, setCriterias] = useState<TemplateCriteriaFormState[]>([]);
 
   const [criteriasByTrack, setCriteriasByTrack] = useState<Record<string, TemplateCriteriaFormState[]>>({});
 
+  // Sync real Event data from Backend API / myEvents
+  const searchParams = useSearchParams();
+  const targetEventId = searchParams?.get("eventId");
+  const { data: myEvents = [] } = useMyEvents();
+
+  useEffect(() => {
+    if (Array.isArray(myEvents) && myEvents.length > 0) {
+      const activeEv = (targetEventId ? myEvents.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === targetEventId) : null) || myEvents[0];
+      if (activeEv) {
+        setCreatedEvent(activeEv as any);
+        const targetId = activeEv.id || activeEv.Id || activeEv.eventId || activeEv.EventId;
+
+        // Check if there is a dedicated local draft saved
+        let localDraft: any = null;
+        if (typeof window !== "undefined" && targetId) {
+          try {
+            const rawDraft = localStorage.getItem(`seal_wizard_draft_${targetId}`);
+            if (rawDraft) localDraft = JSON.parse(rawDraft);
+          } catch {
+            // ignore
+          }
+        }
+
+        const effectiveEv = localDraft ? { ...activeEv, ...localDraft } : activeEv;
+
+        // Reset or sync current step for the selected event
+        if (effectiveEv.currentStep && typeof effectiveEv.currentStep === "number") {
+          setCurrentStep(Math.min(Math.max(1, effectiveEv.currentStep), 5));
+        } else {
+          setCurrentStep(1);
+        }
+
+        setEventData({
+          eventName: effectiveEv.eventName || effectiveEv.EventName || "",
+          season: effectiveEv.season || effectiveEv.Season || "",
+          year: effectiveEv.year || effectiveEv.Year || new Date().getFullYear(),
+          startDate: effectiveEv.startDate || effectiveEv.StartDate || "",
+          endDate: effectiveEv.endDate || effectiveEv.EndDate || "",
+          registrationStartDate: effectiveEv.registrationStartDate || effectiveEv.RegistrationStartDate || "",
+          registrationEndDate: effectiveEv.registrationEndDate || effectiveEv.RegistrationEndDate || "",
+          maxTeams: effectiveEv.maxTeams || effectiveEv.MaxTeams || 50,
+          minTeamSize: 1,
+          maxTeamSize: 5,
+          tagline: effectiveEv.description || effectiveEv.Description || "",
+          description: effectiveEv.description || effectiveEv.Description || "",
+        });
+
+        // Also sync rounds if available
+        if (Array.isArray(effectiveEv.rounds) && effectiveEv.rounds.length > 0) {
+          const mappedRounds: RoundFormState[] = effectiveEv.rounds.map((r: any, idx: number) => ({
+            id: r.id || r.Id || r.roundId || `rnd-${idx}`,
+            roundName: r.roundName || r.RoundName || `Vòng ${idx + 1}`,
+            roundNumber: r.roundNumber || r.RoundNumber || idx + 1,
+            startDate: r.startDate || r.StartDate || "",
+            endDate: r.endDate || r.EndDate || "",
+            advancementRule: r.advancementRule || r.AdvancementRule || "top:10",
+            scoringStartDate: r.scoringStartDate || r.ScoringStartDate || "",
+            scoringEndDate: r.scoringEndDate || r.ScoringEndDate || "",
+          }));
+          setRounds(mappedRounds);
+        }
+
+        // Also sync tracks if available
+        if (Array.isArray(effectiveEv.tracks) && effectiveEv.tracks.length > 0) {
+          const mappedTracks: TrackFormState[] = effectiveEv.tracks.map((t: any, idx: number) => ({
+            id: t.id || t.Id || t.trackId || `trk-${idx}`,
+            trackName: t.trackName || t.TrackName || `Hạng mục ${idx + 1}`,
+            description: t.description || t.Description || "",
+            templateId: t.templateId || t.TemplateId || "",
+            submissionRuleDescription: t.submissionRuleDescription || t.SubmissionRuleDescription || "",
+          }));
+          setTracks(mappedTracks);
+        }
+
+        // Also sync criterias & criteriasByTrack if available in draft
+        if (effectiveEv.criteriasByTrack && typeof effectiveEv.criteriasByTrack === "object") {
+          setCriteriasByTrack(effectiveEv.criteriasByTrack);
+        }
+        if (Array.isArray(effectiveEv.criterias) && effectiveEv.criterias.length > 0) {
+          setCriterias(effectiveEv.criterias);
+        }
+        if (effectiveEv.templateName) {
+          setTemplateName(effectiveEv.templateName);
+        }
+      }
+    }
+  }, [myEvents, targetEventId]);
+
+  // Fetch rounds from backend API if rounds state is empty
+  const activeEventIdForRounds = (createdEvent as any)?.id || (createdEvent as any)?.Id || targetEventId || "";
+  const { data: dbRoundsPaged } = useGetRoundsByEvent(activeEventIdForRounds || undefined);
+
+  useEffect(() => {
+    if (activeEventIdForRounds) {
+      const rawRounds = (dbRoundsPaged as any)?.data || (dbRoundsPaged as any)?.items || (Array.isArray(dbRoundsPaged) ? dbRoundsPaged : []);
+      if (Array.isArray(rawRounds) && rawRounds.length > 0) {
+        setRounds((prev) => {
+          if (prev.length > 0) return prev; // Don't overwrite if user or draft already has rounds
+          return rawRounds.map((r: any, idx: number) => ({
+            id: r.id || r.Id || r.roundId || `rnd-${idx}`,
+            roundName: r.roundName || r.RoundName || `Vòng ${idx + 1}`,
+            roundNumber: r.roundNumber || r.RoundNumber || idx + 1,
+            startDate: r.startDate || r.StartDate || "",
+            endDate: r.endDate || r.EndDate || "",
+            advancementRule: r.advancementRule || r.AdvancementRule || "top:10",
+            scoringStartDate: r.scoringStartDate || r.ScoringStartDate || "",
+            scoringEndDate: r.scoringEndDate || r.ScoringEndDate || "",
+          }));
+        });
+      }
+    }
+  }, [dbRoundsPaged, activeEventIdForRounds]);
+
   const setCriteriasForTrack = (trackId: string, list: TemplateCriteriaFormState[]) => {
+    setIsDirty(true);
     setCriteriasByTrack((prev) => ({ ...prev, [trackId]: list }));
   };
 
   const applyCriteriasToAllTracks = (list: TemplateCriteriaFormState[]) => {
+    setIsDirty(true);
     const nextMap: Record<string, TemplateCriteriaFormState[]> = {};
     tracks.forEach((t) => {
       nextMap[t.id] = list;
@@ -174,10 +243,6 @@ export function useCreateEventWizardViewModel() {
       status: "Pending",
     },
   ]);
-
-  // Total weight computed live
-  const totalWeight = criterias.reduce((acc, item) => acc + (Number(item.weight) || 0), 0);
-  const isValidWeight100 = Math.abs(totalWeight - 100) < 0.01;
 
   // Real data-based Step completion checks
   const isStep1Done = true; // Admin creates Step 1, so Step 1 is always completed by default
@@ -213,6 +278,10 @@ export function useCreateEventWizardViewModel() {
       return Math.abs(weight - 100) < 0.01;
     })
   );
+
+  // Total weight computed live
+  const totalWeight = criterias.reduce((acc, item) => acc + (Number(item.weight) || 0), 0);
+  const isValidWeight100 = isStep4Done;
 
   const isStep5Done = Boolean(
     staffInvites.length > 0 &&
@@ -261,10 +330,12 @@ export function useCreateEventWizardViewModel() {
 
   // Actions
   const handleUpdateEventField = (field: keyof EventFormState, value: any) => {
+    setIsDirty(true);
     setEventData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleAddRound = () => {
+    setIsDirty(true);
     const nextNumber = rounds.length + 1;
     setRounds((prev) => [
       ...prev,
@@ -281,14 +352,17 @@ export function useCreateEventWizardViewModel() {
 
   const handleRemoveRound = (id: string) => {
     if (rounds.length <= 1) return;
+    setIsDirty(true);
     setRounds((prev) => prev.filter((r) => r.id !== id));
   };
 
   const handleUpdateRound = (id: string, field: keyof RoundFormState, value: any) => {
+    setIsDirty(true);
     setRounds((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
 
   const handleAddTrack = () => {
+    setIsDirty(true);
     const defaultRoundId = rounds[0]?.id || "tmp-r1";
     setTracks((prev) => [
       ...prev,
@@ -303,14 +377,17 @@ export function useCreateEventWizardViewModel() {
   };
 
   const handleRemoveTrack = (id: string) => {
+    setIsDirty(true);
     setTracks((prev) => prev.filter((t) => t.id !== id));
   };
 
   const handleUpdateTrack = (id: string, field: keyof TrackFormState, value: any) => {
+    setIsDirty(true);
     setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, [field]: value } : t)));
   };
 
   const handleAddCriteria = (criteriaObj?: Partial<TemplateCriteriaFormState>) => {
+    setIsDirty(true);
     setCriterias((prev) => [
       ...prev,
       {
@@ -324,10 +401,12 @@ export function useCreateEventWizardViewModel() {
   };
 
   const handleRemoveCriteria = (index: number) => {
+    setIsDirty(true);
     setCriterias((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleUpdateCriteria = (index: number, field: keyof TemplateCriteriaFormState, value: any) => {
+    setIsDirty(true);
     setCriterias((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: field === "weight" || field === "maxScore" ? Number(value) : value } : item))
     );
@@ -338,6 +417,7 @@ export function useCreateEventWizardViewModel() {
       setErrorMessage("Vui lòng nhập địa chỉ email hợp lệ!");
       return;
     }
+    setIsDirty(true);
     setStaffInvites((prev) => [
       ...prev,
       {
@@ -352,6 +432,7 @@ export function useCreateEventWizardViewModel() {
   };
 
   const handleRemoveStaffInvite = (id: string) => {
+    setIsDirty(true);
     setStaffInvites((prev) => prev.filter((s) => s.id !== id));
   };
 
@@ -363,7 +444,7 @@ export function useCreateEventWizardViewModel() {
     // Step 1 -> Step 2 transition
     if (currentStep === 1) {
       if (!createdEvent) {
-        setCreatedEvent({ id: "EV-02", eventName: eventData.eventName || "SEAL Hackathon 2026" } as any);
+        setCreatedEvent({ id: `ev-draft-${Date.now()}`, eventName: eventData.eventName || "Sự kiện mới" } as any);
       }
       setCurrentStep(2);
       return;
@@ -392,14 +473,74 @@ export function useCreateEventWizardViewModel() {
       }
       setCurrentStep(4);
     } else if (currentStep === 4) {
-      if (!isValidWeight100) {
-        setErrorMessage(`Tổng trọng số tiêu chí phải đạt ĐÚNG 100%! (Hiện tại: ${totalWeight}%).`);
+      if (!isStep4Done) {
+        const invalidTracks = tracks.filter((trk) => {
+          if (trk.templateId && trk.templateId !== "__custom__") return false;
+          const list = criteriasByTrack[trk.id] ?? criterias;
+          if (!list || list.length === 0) return true;
+          const weight = list.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
+          return Math.abs(weight - 100) >= 0.01;
+        });
+
+        if (invalidTracks.length > 0) {
+          const detailMsgs = invalidTracks.map((t) => {
+            const list = criteriasByTrack[t.id] ?? criterias;
+            const w = list ? list.reduce((acc, c) => acc + (Number(c.weight) || 0), 0) : 0;
+            return `[${t.trackName}]: ${w}%`;
+          }).join(", ");
+          setErrorMessage(`Tất cả hạng mục thi đều phải đạt ĐÚNG 100% trọng số tiêu chí. Hạng mục chưa đạt: ${detailMsgs}`);
+        } else {
+          setErrorMessage("Vui lòng thiết lập ít nhất 1 tiêu chí cho từng hạng mục!");
+        }
         return;
       }
       setCurrentStep(5);
     } else if (currentStep === 5) {
       setSuccessMessage("Đã hoàn tất cấu hình nhân sự! Đang chuyển đến Bước 6 xác nhận...");
       setCurrentStep(6);
+    }
+  };
+
+  const [maxStepReached, setMaxStepReached] = useState<number>(1);
+
+  useEffect(() => {
+    setMaxStepReached((prev) => Math.max(prev, currentStep));
+  }, [currentStep]);
+
+  const handleSaveDraft = async () => {
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      const targetId = (createdEvent as any)?.id || (createdEvent as any)?.Id || (eventData as any)?.id || targetEventId || `ev-draft-${Date.now()}`;
+      
+      const fullDraftPayload = {
+        ...eventData,
+        id: targetId,
+        eventId: targetId,
+        status: false,
+        rounds,
+        tracks,
+        criterias,
+        criteriasByTrack,
+        templateName,
+        currentStep,
+      };
+
+      // 1. Update eventsRepository
+      await eventsRepository.updateEvent(targetId, fullDraftPayload);
+
+      // 2. Explicitly persist into dedicated draft localStorage key
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`seal_wizard_draft_${targetId}`, JSON.stringify(fullDraftPayload));
+      }
+
+      setIsSubmitting(false);
+      setIsDirty(false);
+      setSuccessMessage("Đã lưu bản nháp tiến trình thành công! Bạn có thể thoát và quay lại làm tiếp bất cứ lúc nào.");
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setErrorMessage("Bản nháp tiến trình đã được sao lưu vào bộ nhớ tạm trình duyệt.");
     }
   };
 
@@ -449,7 +590,13 @@ export function useCreateEventWizardViewModel() {
     handleUpdateCriteria,
     handleAddStaffInvite,
     handleRemoveStaffInvite,
+    myEvents,
+    targetEventId,
     handleNextStep,
     handlePrevStep,
+    handleSaveDraft,
+    maxStepReached,
+    isDirty,
+    setIsDirty,
   };
 }

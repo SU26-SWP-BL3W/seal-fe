@@ -3,53 +3,73 @@
 import React, { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetUsers, useApproveUser, useRejectUser, useDeleteUser } from "@/repositories/usersRepository";
-import { staffRepository } from "@/repositories/staffRepository";
-import { useEvents } from "@/repositories/eventsRepository";
 import {
   Users,
   Search,
-  Filter,
-  ShieldCheck,
-  ShieldAlert,
-  UserCheck,
-  UserX,
   Lock,
-  Plus,
   RefreshCw,
   CheckCircle2,
-  X,
-  Building2,
-  Calendar,
   Eye,
-  FileText,
   AlertTriangle,
   Trash2,
-  Edit,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import type { User } from "@/models/entities";
 import { readApiError } from "@/repositories/submitResultsRepository";
+import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Button, Badge, Card, Input, EmptyState } from "@/components/ui";
 
-export const AdminUsersView: React.FC = () => {
-  const { user: currentUser, loginAsDemoRole } = useAuth();
+export interface AdminUsersViewProps {
+  mode?: "admin" | "coordinator";
+}
+
+function FilterPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+        active
+          ? "bg-[var(--accent-coordinator)]/15 text-[var(--accent-coordinator)]"
+          : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }) => {
+  const { user: currentUser } = useAuth();
+  const isCoordinator = mode === "coordinator" || (!currentUser?.isAdmin && !currentUser?.IsAdmin);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState(isCoordinator ? "student" : "all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Modals state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
+
   const [detailUserModal, setDetailUserModal] = useState<User | null>(null);
   const [rejectUserModal, setRejectUserModal] = useState<{ userId: string; fullName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [deleteUserModal, setDeleteUserModal] = useState<User | null>(null);
 
-  const { data: eventsList = [] } = useEvents();
-  const [selectedUserForEc, setSelectedUserForEc] = useState<User | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data: rawUsersData, isLoading, refetch } = useGetUsers();
+  const { data: rawUsersData, isLoading, refetch } = useGetUsers({ pageSize: 500 });
   const usersList: User[] = useMemo(() => {
     const list = rawUsersData?.data ?? (Array.isArray(rawUsersData) ? rawUsersData : []);
     return Array.isArray(list) ? list : [];
@@ -59,7 +79,29 @@ export const AdminUsersView: React.FC = () => {
   const { mutateAsync: rejectUser } = useRejectUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
 
-  // Filtered Users List
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleRoleFilterChange = (role: string) => {
+    setRoleFilter(role);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
+
+  const hasCardSubmission = (u: User) => {
+    const hasStudentCode = Boolean(u.studentCode && u.studentCode.trim() !== "");
+    const hasPhotoCardUrl = Boolean(
+      (u as any).photoStudentCardUrl && (u as any).photoStudentCardUrl.trim() !== ""
+    );
+    return hasStudentCode || hasPhotoCardUrl;
+  };
+
   const filteredUsers = useMemo(() => {
     return usersList.filter((u) => {
       const searchLower = searchTerm.toLowerCase().trim();
@@ -70,7 +112,6 @@ export const AdminUsersView: React.FC = () => {
         (u.studentCode || "").toLowerCase().includes(searchLower) ||
         (u.schoolName || "").toLowerCase().includes(searchLower);
 
-      // Role filter
       let matchesRole = true;
       const emailLower = (u.email || "").toLowerCase();
       if (roleFilter === "admin") matchesRole = !!u.isAdmin || emailLower.includes("admin");
@@ -86,15 +127,27 @@ export const AdminUsersView: React.FC = () => {
           !emailLower.includes("judge") &&
           !emailLower.includes("mentor");
 
-      // Status filter
       let matchesStatus = true;
       if (statusFilter === "approved") matchesStatus = !!u.isApproved;
       else if (statusFilter === "pending") matchesStatus = !u.isApproved && (u.rejectionCount ?? 0) < 2;
       else if (statusFilter === "locked") matchesStatus = (u.rejectionCount ?? 0) >= 2;
 
-      return matchesSearch && matchesRole && matchesStatus;
+      let matchesCardSubmission = true;
+      if (isCoordinator) {
+        matchesCardSubmission = hasCardSubmission(u);
+      }
+
+      return matchesSearch && matchesRole && matchesStatus && matchesCardSubmission;
     });
-  }, [usersList, searchTerm, roleFilter, statusFilter]);
+  }, [usersList, searchTerm, roleFilter, statusFilter, isCoordinator]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredUsers.slice(start, start + PAGE_SIZE);
+  }, [filteredUsers, safePage]);
 
   const handleApprove = async (userId: string) => {
     setActionError(null);
@@ -127,16 +180,19 @@ export const AdminUsersView: React.FC = () => {
 
   const handleDeleteUser = async () => {
     if (!deleteUserModal) return;
+    if (!currentUser?.isAdmin && !currentUser?.IsAdmin) {
+      alert("Chỉ Quản trị viên (Admin) mới có quyền xóa tài khoản người dùng!");
+      setDeleteUserModal(null);
+      return;
+    }
     const targetId = deleteUserModal.id || (deleteUserModal as any).Id || deleteUserModal.userId;
 
-    // Guard an toan: Khong tu xoa chinh minh
     if (targetId === currentUser?.id || targetId === currentUser?.userId) {
       alert("CẢNH BÁO AN TOÀN: Bạn không thể tự xóa tài khoản của chính mình!");
       setDeleteUserModal(null);
       return;
     }
 
-    // Guard an toan: Khong xoa Admin duy nhat
     const totalAdmins = usersList.filter((u) => u.isAdmin || u.IsAdmin).length;
     if (deleteUserModal.isAdmin && totalAdmins <= 1) {
       alert("CẢNH BÁO AN TOÀN: Không thể xóa Quản trị viên cuối cùng trong hệ thống!");
@@ -155,610 +211,453 @@ export const AdminUsersView: React.FC = () => {
     }
   };
 
-  if (!currentUser || (!currentUser.isAdmin && !currentUser.IsAdmin)) {
+  const hasAccess = currentUser && (currentUser.isAdmin || currentUser.IsAdmin || isCoordinator);
+
+  if (!hasAccess) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#080f11] border border-[#ef4444] p-8 text-center glow-box-red relative space-y-4">
-          <div className="corner-accent-tl text-[#ef4444]" />
-          <div className="corner-accent-tr text-[#ef4444]" />
-          <div className="corner-accent-bl text-[#ef4444]" />
-          <div className="corner-accent-br text-[#ef4444]" />
-          <div className="w-12 h-12 bg-[#ef4444]/10 border border-[#ef4444] rounded-full flex items-center justify-center mx-auto text-[#ef4444]">
-            <Lock className="w-6 h-6" />
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Card className="max-w-md space-y-4 p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[var(--color-danger)] bg-[var(--color-danger)]/10 text-[var(--color-danger)]">
+            <Lock className="h-6 w-6" />
           </div>
-          <h2 className="font-display text-xl font-bold uppercase text-[#ef4444]">
-            YÊU CẦU QUYỀN SYSTEM ADMIN
+          <h2 className="font-display text-xl font-semibold text-[var(--color-danger)]">
+            Yêu cầu quyền truy cập
           </h2>
-          <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
-            Khu vực quản lý danh sách người dùng toàn hệ thống chỉ dành cho Quản trị viên. Bấm chọn nhanh tài khoản Admin Demo để tiếp tục:
+          <p className="text-sm text-[var(--text-muted)]">
+            Khu vực duyệt và quản lý danh sách hồ sơ chỉ dành cho Ban Tổ Chức và Quản trị viên.
           </p>
-          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <button
-              type="button"
-              onClick={() => loginAsDemoRole("Admin")}
-              className="w-full bg-[#ef4444] text-white font-bold py-2.5 uppercase hover:bg-white hover:text-[#080f11] transition-colors"
-            >
-              [ 🛡️ Đăng Nhập System Admin Demo ]
-            </button>
-          </div>
-        </div>
-      </div>
+          <Link href="/login">
+            <Button variant="primary" accent="primary" className="w-full">
+              Đến trang đăng nhập
+            </Button>
+          </Link>
+        </Card>
+      </PageShell>
     );
   }
 
+  const isCoordinatorView = isCoordinator;
+  const dashboardUrl = isCoordinatorView ? "/coordinator/dashboard" : "/admin/dashboard";
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Top Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
-          <div>
-            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider">
-              QUẢN TRỊ HỆ THỐNG / TÀI KHOẢN &amp; HỒ SƠ
-            </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
-              QUẢN LÝ NGƯỜI DÙNG TOÀN HỆ THỐNG
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <Link href="/admin/dashboard">
-              <button className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 hover:border-amber-400/60 text-zinc-300 hover:text-white font-mono text-xs font-bold uppercase transition-all rounded cursor-pointer">
-                <span>← Bảng Điều Hành</span>
-              </button>
+    <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
+      <PageHeader
+        title={isCoordinatorView ? "Danh sách thí sinh" : "Quản lý người dùng"}
+        description={
+          isCoordinatorView
+            ? "Tra cứu sinh viên, xem ảnh thẻ, kiểm tra MSSV và phê duyệt hoặc từ chối hồ sơ đăng ký."
+            : "Quản lý tài khoản admin, điều phối viên, giám khảo, cố vấn và sinh viên trong hệ thống."
+        }
+        breadcrumb={
+          <nav className="text-xs text-[var(--text-muted)]">
+            <Link href={dashboardUrl} className="hover:text-[var(--accent-coordinator)]">
+              {isCoordinatorView ? "Coordinator" : "Admin"}
             </Link>
-            <button
-              onClick={() => refetch()}
-              className="px-3.5 py-2 bg-[#141f23] border border-zinc-700 text-zinc-300 font-mono text-xs uppercase hover:border-amber-400 hover:text-white transition-colors rounded cursor-pointer flex items-center gap-1.5"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Làm Mới</span>
-            </button>
+            <span className="mx-1.5">/</span>
+            <span className="text-[var(--text-primary)]">Người dùng</span>
+          </nav>
+        }
+        actions={
+          <>
+            <Link href={dashboardUrl}>
+              <Button variant="secondary" accent="coordinator">
+                Bảng điều hành
+              </Button>
+            </Link>
+            <Button variant="ghost" accent="coordinator" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4" />
+              Làm mới
+            </Button>
+          </>
+        }
+      />
+
+      {actionSuccess && (
+        <div className="flex items-center gap-2 rounded-lg border border-[var(--color-success)]/40 bg-[var(--color-success)]/10 p-3 text-sm text-[var(--color-success)]">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{actionSuccess}</span>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 p-3 text-sm text-[var(--color-danger)]">
+          {actionError}
+        </div>
+      )}
+
+      <Card className="space-y-4 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+            <Input
+              type="search"
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Tìm họ tên, email, mã SV..."
+              className="pl-9"
+            />
           </div>
+          <span className="text-sm text-[var(--text-muted)]">
+            Kết quả: <strong className="text-[var(--text-primary)]">{filteredUsers.length}</strong> / {usersList.length}
+          </span>
         </div>
 
-        {/* Global Action Toasts */}
-        {actionSuccess && (
-          <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 font-mono text-xs flex items-center gap-2 rounded">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{actionSuccess}</span>
-          </div>
-        )}
-
-        {actionError && (
-          <div className="p-3 bg-red-950/40 border border-red-500/40 text-red-300 font-mono text-xs rounded">
-            {actionError}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* BỘ LỌC TÌM KIẾM DỄ XÀI & MÀU DỊU MẮT (FILTER PILLS THAY THẾ SELECT)         */}
-        {/* ========================================================================= */}
-        <div className="bg-[#10171a] border border-zinc-800 p-4 rounded-lg space-y-3.5 shadow-sm">
-          
-          {/* Top Search Row */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm kiếm Họ tên, Email, Mã SV..."
-                className="w-full bg-[#0b1013] border border-zinc-700 pl-9 pr-3.5 py-2 text-white font-mono text-xs rounded placeholder:text-zinc-500 focus:border-amber-400 outline-none"
-              />
-            </div>
-
-            <span className="font-mono text-xs text-zinc-400">
-              Kết quả: <strong className="text-white">{filteredUsers.length}</strong> / {usersList.length} người dùng
-            </span>
+        <div className="space-y-3 border-t border-[var(--border-muted)] pt-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs font-medium text-[var(--text-muted)]">Trạng thái:</span>
+            <FilterPill active={statusFilter === "all"} onClick={() => handleStatusFilterChange("all")}>
+              Tất cả
+            </FilterPill>
+            <FilterPill active={statusFilter === "approved"} onClick={() => handleStatusFilterChange("approved")}>
+              Đã duyệt
+            </FilterPill>
+            <FilterPill active={statusFilter === "pending"} onClick={() => handleStatusFilterChange("pending")}>
+              Chờ phê duyệt
+            </FilterPill>
+            <FilterPill active={statusFilter === "locked"} onClick={() => handleStatusFilterChange("locked")}>
+              Tạm khóa (≥2 lần)
+            </FilterPill>
           </div>
 
-          {/* Dải Nút Filter Trạng Thái & Vai Trò Trực Quan (1 Chạm) */}
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pt-2 border-t border-zinc-800/80 text-xs font-mono">
-            
-            {/* Filter Trạng Thái Hồ Sơ */}
+          {!isCoordinatorView && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-zinc-400 font-bold mr-1">TRẠNG THÁI:</span>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("all")}
-                className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === "all"
-                    ? "bg-amber-500 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Tất Cả
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("approved")}
-                className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === "approved"
-                    ? "bg-emerald-500 text-black font-extrabold"
-                    : "bg-[#0b1013] text-emerald-400 border border-emerald-500/20 hover:bg-emerald-950/30"
-                }`}
-              >
-                Đã Duyệt
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("pending")}
-                className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === "pending"
-                    ? "bg-amber-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-amber-300 border border-amber-500/20 hover:bg-amber-950/30"
-                }`}
-              >
-                Chờ Phê Duyệt
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter("locked")}
-                className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  statusFilter === "locked"
-                    ? "bg-rose-500 text-white font-extrabold"
-                    : "bg-[#0b1013] text-rose-400 border border-rose-500/20 hover:bg-rose-950/30"
-                }`}
-              >
-                Tạm Khóa (≥2 lần)
-              </button>
-            </div>
-
-            {/* Filter Vai Trò */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-zinc-400 font-bold mr-1">VAI TRÒ:</span>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("all")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "all"
-                    ? "bg-cyan-500 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Tất Cả
-              </button>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("student")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "student"
-                    ? "bg-cyan-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Sinh Viên
-              </button>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("judge")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "judge"
-                    ? "bg-amber-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Giám Khảo
-              </button>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("mentor")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "mentor"
-                    ? "bg-teal-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Cố Vấn
-              </button>
-              <button
-                type="button"
-                onClick={() => setRoleFilter("coordinator")}
-                className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
-                  roleFilter === "coordinator"
-                    ? "bg-purple-400 text-black font-extrabold"
-                    : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
-                }`}
-              >
-                Điều Phối Viên
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Users Table */}
-        <div className="bg-[#10171a] border border-zinc-800 rounded-lg overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-[#131d21]">
-            <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">
-              DANH SÁCH TÀI KHOẢN NGƯỜI DÙNG ({filteredUsers.length})
-            </span>
-          </div>
-
-          {isLoading ? (
-            <div className="p-12 text-center font-mono text-xs text-zinc-400 animate-pulse">
-              Đang truy vấn cơ sở dữ liệu người dùng...
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="p-12 text-center font-mono text-xs text-zinc-400">
-              Không tìm thấy người dùng nào phù hợp với bộ lọc tìm kiếm.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left font-mono text-xs">
-                <thead className="bg-[#0e1619] border-b border-zinc-800 text-zinc-400 uppercase text-[11px]">
-                  <tr>
-                    <th className="py-3 px-4 w-12 text-center">#</th>
-                    <th className="py-3 px-4">HỌ VÀ TÊN</th>
-                    <th className="py-3 px-4">EMAIL</th>
-                    <th className="py-3 px-4">TRƯỜNG</th>
-                    <th className="py-3 px-4 text-center">VAI TRÒ</th>
-                    <th className="py-3 px-4 text-center">HỒ SƠ SV</th>
-                    <th className="py-3 px-4 text-right">THAO TÁC</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/60">
-                  {filteredUsers.map((u, idx) => {
-                    const userId = u.id || (u as any).Id || u.userId || "";
-                    const emailLower = (u.email || "").toLowerCase();
-                    const isAdm = !!u.isAdmin || !!u.IsAdmin || emailLower.includes("admin");
-                    const isJudge = emailLower.includes("judge");
-                    const isMentor = emailLower.includes("mentor");
-                    const isCoord = emailLower.includes("ec.") || emailLower.includes("coordinator");
-                    const isStaff = isAdm || isCoord || isJudge || isMentor;
-
-                    const isLocked = (u.rejectionCount ?? 0) >= 2;
-                    const isApproved = !!u.isApproved;
-
-                    return (
-                      <tr key={userId || idx} className="hover:bg-[#141e22] transition-colors">
-                        <td className="py-3.5 px-4 text-zinc-500 text-center">{idx + 1}</td>
-                        <td className="py-3.5 px-4 font-bold text-white tracking-wider">
-                          <button
-                            onClick={() => setDetailUserModal(u)}
-                            className="hover:text-amber-300 transition-colors text-left cursor-pointer"
-                          >
-                            {u.fullName || "Chưa cập nhật"}
-                          </button>
-                        </td>
-                        <td className="py-3.5 px-4 text-zinc-300">{u.email}</td>
-                        <td className="py-3.5 px-4 text-zinc-400">{u.schoolName || (u.isFpt ? "FPT University" : "N/A")}</td>
-                        <td className="py-3.5 px-4 text-center">
-                          {isAdm ? (
-                            <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
-                              ADMIN
-                            </span>
-                          ) : isCoord ? (
-                            <span className="px-2 py-0.5 bg-purple-950/40 text-purple-300 border border-purple-500/30 rounded font-bold text-[10px]">
-                              COORD
-                            </span>
-                          ) : isJudge ? (
-                            <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
-                              JUDGE
-                            </span>
-                          ) : isMentor ? (
-                            <span className="px-2 py-0.5 bg-teal-950/40 text-teal-300 border border-teal-500/30 rounded font-bold text-[10px]">
-                              MENTOR
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-cyan-950/40 text-cyan-300 border border-cyan-500/30 rounded font-bold text-[10px]">
-                              STUDENT
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          {isStaff ? (
-                            <span className="text-zinc-500 font-mono text-[11px] italic">— (Cán bộ / Chuyên gia)</span>
-                          ) : isLocked ? (
-                            <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
-                              ✘ KHÓA ({u.rejectionCount})
-                            </span>
-                          ) : isApproved ? (
-                            <span className="px-2 py-0.5 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 rounded font-bold text-[10px]">
-                              ✔ ĐÃ DUYỆT
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
-                              ⚠ CHỜ DUYỆT
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {!isApproved && !isStaff && (
-                              <>
-                                <button
-                                  onClick={() => handleApprove(userId)}
-                                  className="px-2.5 py-1 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black font-bold text-[11px] rounded transition-all cursor-pointer"
-                                  title="Duyệt thẻ SV"
-                                >
-                                  Duyệt
-                                </button>
-                                <button
-                                  onClick={() => setRejectUserModal({ userId, fullName: u.fullName || u.email || "Sinh viên" })}
-                                  className="px-2.5 py-1 bg-rose-950/40 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white font-bold text-[11px] rounded transition-all cursor-pointer"
-                                  title="Từ chối thẻ SV"
-                                >
-                                  Từ chối
-                                </button>
-                              </>
-                            )}
-                            <button
-                              onClick={() => setDetailUserModal(u)}
-                              className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-300 font-mono text-xs rounded transition-all cursor-pointer"
-                              title="Xem chi tiết"
-                            >
-                              <Eye className="w-3.5 h-3.5 inline" />
-                            </button>
-                            {!isAdm && (
-                              <button
-                                onClick={() => setDeleteUserModal(u)}
-                                className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 text-rose-400 hover:bg-rose-500 hover:text-white font-mono text-xs rounded transition-all cursor-pointer"
-                                title="Xóa người dùng"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 inline" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <span className="mr-1 text-xs font-medium text-[var(--text-muted)]">Vai trò:</span>
+              <FilterPill active={roleFilter === "all"} onClick={() => handleRoleFilterChange("all")}>
+                Tất cả
+              </FilterPill>
+              <FilterPill active={roleFilter === "student"} onClick={() => handleRoleFilterChange("student")}>
+                Sinh viên
+              </FilterPill>
+              <FilterPill active={roleFilter === "judge"} onClick={() => handleRoleFilterChange("judge")}>
+                Giám khảo
+              </FilterPill>
+              <FilterPill active={roleFilter === "mentor"} onClick={() => handleRoleFilterChange("mentor")}>
+                Cố vấn
+              </FilterPill>
+              <FilterPill active={roleFilter === "coordinator"} onClick={() => handleRoleFilterChange("coordinator")}>
+                Điều phối viên
+              </FilterPill>
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
-      {/* Modal Chi tiết User Đầy Đủ Ảnh Thẻ, Lý Do & Nút Thao Tác Trực Tiếp */}
-      {detailUserModal && (() => {
-        const modalEmail = (detailUserModal.email || "").toLowerCase();
-        const modalIsAdm = !!detailUserModal.isAdmin || !!detailUserModal.IsAdmin || modalEmail.includes("admin");
-        const modalIsJudge = modalEmail.includes("judge");
-        const modalIsMentor = modalEmail.includes("mentor");
-        const modalIsCoord = modalEmail.includes("ec.") || modalEmail.includes("coordinator");
-        const modalIsStaff = modalIsAdm || modalIsCoord || modalIsJudge || modalIsMentor;
-        const modalUserId = detailUserModal.id || (detailUserModal as any).Id || detailUserModal.userId || "";
+      <Card className="overflow-hidden p-0">
+        <div className="border-b border-[var(--border-muted)] px-4 py-3">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+            Danh sách tài khoản ({filteredUsers.length})
+          </h2>
+        </div>
 
-        return (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-            <div className="max-w-xl w-full bg-[#11181c] border border-zinc-700 p-6 rounded-lg space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-              
-              {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                <h3 className="font-display font-bold text-lg text-white uppercase flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-amber-400" />
-                  <span>HỒ SƠ CHI TIẾT NGƯỜI DÙNG</span>
-                </h3>
-                <button onClick={() => setDetailUserModal(null)} className="text-zinc-400 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        {isLoading ? (
+          <EmptyState
+            icon={RefreshCw}
+            title="Đang tải dữ liệu"
+            description="Đang truy vấn cơ sở dữ liệu người dùng..."
+          />
+        ) : filteredUsers.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="Không tìm thấy người dùng"
+            description="Không có người dùng phù hợp với bộ lọc tìm kiếm."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] table-fixed text-left text-sm">
+              <thead className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
+                <tr>
+                  <th className="w-12 px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">#</th>
+                  <th className="w-[22%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Họ và tên</th>
+                  <th className="w-[24%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Email</th>
+                  <th className="w-[18%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Trường</th>
+                  <th className="w-[10%] px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Vai trò</th>
+                  <th className="w-[12%] px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Hồ sơ SV</th>
+                  <th className="w-[14%] px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)]">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-muted)]/60">
+                {paginatedUsers.map((u, idx) => {
+                  const userId = u.id || (u as any).Id || u.userId || "";
+                  const emailLower = (u.email || "").toLowerCase();
+                  const isAdm = !!u.isAdmin || !!u.IsAdmin || emailLower.includes("admin");
+                  const isJudge = emailLower.includes("judge");
+                  const isMentor = emailLower.includes("mentor");
+                  const isCoord = emailLower.includes("ec.") || emailLower.includes("coordinator");
+                  const isStaff = isAdm || isCoord || isJudge || isMentor;
 
-              {/* Thông tin cốt lõi */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs bg-[#0b1013] p-4 rounded border border-zinc-800">
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">HỌ VÀ TÊN:</span>
-                  <span className="text-white font-bold text-sm">{detailUserModal.fullName || "Chưa cập nhật"}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">EMAIL HỆ THỐNG:</span>
-                  <span className="text-cyan-300 font-semibold">{detailUserModal.email}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">VAI TRÒ TÀI KHOẢN:</span>
-                  <span className="font-bold text-amber-300">
-                    {modalIsAdm
-                      ? "Quản trị viên (Admin)"
-                      : modalIsCoord
-                      ? "Điều phối viên (Coordinator)"
-                      : modalIsJudge
-                      ? "Giám khảo chuyên môn (Judge)"
-                      : modalIsMentor
-                      ? "Cố vấn học thuật (Mentor)"
-                      : "Thí sinh / Sinh viên (Student)"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">TRƯỜNG ĐẠI HỌC:</span>
-                  <span className="text-white">{detailUserModal.schoolName || (detailUserModal.isFpt ? "Đại học FPT" : "N/A")}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">MÃ SỐ SINH VIÊN:</span>
-                  <span className="text-white font-mono">{detailUserModal.studentCode || (modalIsStaff ? "— (Cán bộ)" : "Chưa cập nhật")}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[11px]">TRẠNG THÁI HỒ SƠ:</span>
-                  {modalIsStaff ? (
-                    <span className="text-zinc-400 italic">Tài khoản chuyên môn (Miễn duyệt thẻ)</span>
-                  ) : detailUserModal.isApproved ? (
-                    <span className="text-emerald-400 font-bold">✔ ĐÃ PHÊ DUYỆT THẺ</span>
-                  ) : (detailUserModal.rejectionCount ?? 0) >= 2 ? (
-                    <span className="text-rose-400 font-bold">✘ TẠM KHÓA (Bị từ chối ≥2 lần)</span>
-                  ) : (
-                    <span className="text-amber-400 font-bold">⚠ CHỜ DUYỆT THẺ SV</span>
-                  )}
-                </div>
-              </div>
+                  const hasCard = Boolean(u.photoStudentCardUrl || (u as any).PhotoStudentCardUrl);
+                  const isFptUser = Boolean(u.isFpt || (u.schoolName && u.schoolName.toLowerCase().includes("fpt")) || emailLower.endsWith("@fpt.edu.vn"));
+                  const isLocked = (u.rejectionCount ?? 0) >= 2;
+                  const isApproved = !!u.isApproved;
 
-              {/* Lịch sử & Lý do từ chối (Nếu có) */}
-              {(detailUserModal.rejectionReason || (detailUserModal.rejectionCount ?? 0) > 0) && (
-                <div className="bg-rose-950/30 border border-rose-500/40 p-3 rounded space-y-1 font-mono text-xs text-rose-300">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <span>⚠ LỊCH SỬ TỪ CHỐI HỒ SƠ ({detailUserModal.rejectionCount || 1} LẦN):</span>
-                  </div>
-                  <p className="text-zinc-300 text-[11px] leading-relaxed">
-                    {detailUserModal.rejectionReason || "Ảnh thẻ sinh viên chưa đạt yêu cầu hoặc thông tin không trùng khớp."}
-                  </p>
-                </div>
-              )}
-
-              {/* Khung Minh Chứng & Ảnh Thẻ Sinh Viên */}
-              {!modalIsStaff && (
-                <div className="border border-zinc-800 p-3.5 bg-[#0b1013] rounded space-y-2 font-mono text-xs">
-                  <div className="flex items-center justify-between text-zinc-300 font-bold">
-                    <span>MINH CHỨNG THẺ SINH VIÊN:</span>
-                    {detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
-                      <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                        ✓ FPT Edu Verified
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {detailUserModal.photoStudentCardUrl ? (
-                    <div className="space-y-2">
-                      <img
-                        src={detailUserModal.photoStudentCardUrl}
-                        alt="Ảnh Thẻ Sinh Viên"
-                        className="w-full max-h-56 object-contain rounded border border-zinc-800 bg-black/40"
-                      />
-                      <div className="text-right">
-                        <a
-                          href={detailUserModal.photoStudentCardUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-amber-400 text-[11px] hover:underline"
+                  return (
+                    <tr key={userId || idx} className="transition-colors hover:bg-[var(--bg-input)]/50">
+                      <td className="px-4 py-3 text-center text-[var(--text-muted)]">
+                        {(safePage - 1) * PAGE_SIZE + idx + 1}
+                      </td>
+                      <td className="truncate px-4 py-3 font-medium text-[var(--text-primary)]">
+                        <button
+                          type="button"
+                          onClick={() => setDetailUserModal(u)}
+                          className="cursor-pointer truncate text-left hover:text-[var(--accent-coordinator)]"
+                          title={u.fullName || "Chưa cập nhật"}
                         >
-                          [ ↗ Mở ảnh gốc toàn màn hình ]
-                        </a>
-                      </div>
-                    </div>
-                  ) : detailUserModal.isFpt || modalEmail.includes("@fpt.edu.vn") ? (
-                    <div className="p-4 bg-emerald-950/20 border border-emerald-500/20 rounded text-center space-y-1 text-emerald-300">
-                      <p className="font-bold text-xs">Tài khoản Sinh viên FPT</p>
-                      <p className="text-[11px] text-zinc-400">
-                        Đã xác thực tự động qua địa chỉ email @fpt.edu.vn. Không yêu cầu nộp ảnh thẻ sinh viên vật lý.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-zinc-900 border border-zinc-800 rounded text-center space-y-1 text-zinc-400">
-                      <p className="text-xs">Sinh viên chưa tải ảnh thẻ sinh viên đính kèm.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Nút Thao Tác Trực Tiếp Dưới Chân Modal */}
-              <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
-                <div className="flex items-center gap-2">
-                  {!modalIsStaff && !detailUserModal.isApproved && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await handleApprove(modalUserId);
-                          setDetailUserModal(null);
-                        }}
-                        className="px-4 py-2 bg-emerald-500 text-black hover:bg-emerald-400 font-mono text-xs font-extrabold uppercase rounded cursor-pointer transition-all flex items-center gap-1.5"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Duyệt Hồ Sơ</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const target = { userId: modalUserId, fullName: detailUserModal.fullName || detailUserModal.email || "Sinh viên" };
-                          setDetailUserModal(null);
-                          setRejectUserModal(target);
-                        }}
-                        className="px-4 py-2 bg-rose-950/60 text-rose-300 border border-rose-500/40 hover:bg-rose-600 hover:text-white font-mono text-xs font-bold uppercase rounded cursor-pointer transition-all"
-                      >
-                        Từ Chối
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setDetailUserModal(null)}
-                  className="px-4 py-2 border border-zinc-700 text-zinc-300 font-mono text-xs rounded hover:text-white hover:border-zinc-500 cursor-pointer"
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
+                          {u.fullName || "Chưa cập nhật"}
+                        </button>
+                      </td>
+                      <td className="truncate px-4 py-3 text-[var(--text-muted)]" title={u.email}>
+                        {u.email}
+                      </td>
+                      <td className="truncate px-4 py-3 text-[var(--text-muted)]">
+                        {u.schoolName || (u.isFpt ? "FPT University" : "N/A")}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {isAdm ? (
+                          <Badge tone="danger">Admin</Badge>
+                        ) : isCoord ? (
+                          <Badge tone="coordinator">Coord</Badge>
+                        ) : isJudge ? (
+                          <Badge tone="judge">Judge</Badge>
+                        ) : isMentor ? (
+                          <Badge tone="mentor">Mentor</Badge>
+                        ) : (
+                          <Badge tone="team">Student</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {isStaff ? (
+                          <span className="text-xs italic text-[var(--text-muted)]">— Cán bộ</span>
+                        ) : isLocked ? (
+                          <Badge tone="danger">Khóa ({u.rejectionCount})</Badge>
+                        ) : !isFptUser && !hasCard ? (
+                          <Badge tone="warning">Thiếu ảnh thẻ</Badge>
+                        ) : isApproved ? (
+                          <Badge tone="success">Đã duyệt</Badge>
+                        ) : (
+                          <Badge tone="warning">Chờ duyệt</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap">
+                          {!isApproved && !isStaff && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                accent="coordinator"
+                                onClick={() => handleApprove(userId)}
+                                className="h-8 px-2.5 text-xs"
+                              >
+                                Duyệt
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                accent="primary"
+                                onClick={() =>
+                                  setRejectUserModal({ userId, fullName: u.fullName || u.email || "Sinh viên" })
+                                }
+                                className="h-8 px-2.5 text-xs"
+                              >
+                                Từ chối
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            accent="coordinator"
+                            onClick={() => setDetailUserModal(u)}
+                            className="h-8 w-8 p-0"
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          {!isAdm && (currentUser?.isAdmin || currentUser?.IsAdmin) && (
+                            <Button
+                              variant="ghost"
+                              accent="primary"
+                              onClick={() => setDeleteUserModal(u)}
+                              className="h-8 w-8 p-0"
+                              title="Xóa người dùng"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        );
-      })()}
+        )}
 
-      {/* Modal Từ Chối Hồ Sơ */}
+        {filteredUsers.length > 0 && (
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border-muted)] px-4 py-4 text-xs text-[var(--text-muted)] sm:flex-row">
+            <div>
+              Hiển thị{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {(safePage - 1) * PAGE_SIZE + 1}
+              </span>
+              {" – "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {Math.min(safePage * PAGE_SIZE, filteredUsers.length)}
+              </span>
+              {" / "}
+              <span className="font-medium text-[var(--accent-coordinator)]">
+                {filteredUsers.length}
+              </span>{" "}
+              người dùng (tối đa {PAGE_SIZE}/trang)
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  accent="coordinator"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Trước
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  if (
+                    totalPages > 7 &&
+                    p !== 1 &&
+                    p !== totalPages &&
+                    Math.abs(p - safePage) > 1
+                  ) {
+                    if (p === 2 || p === totalPages - 1) {
+                      return (
+                        <span key={p} className="select-none px-1 text-[var(--text-muted)]">
+                          …
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+
+                  const isActivePage = p === safePage;
+                  return (
+                    <Button
+                      key={p}
+                      variant={isActivePage ? "primary" : "ghost"}
+                      accent="coordinator"
+                      onClick={() => setCurrentPage(p)}
+                      className="h-8 w-8 px-0 text-xs"
+                    >
+                      {p}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  variant="ghost"
+                  accent="coordinator"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  Sau
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {detailUserModal && (
+        <StudentProfileModal
+          user={detailUserModal as any}
+          isOpen={!!detailUserModal}
+          onClose={() => setDetailUserModal(null)}
+          canManage={true}
+          onApprove={async (uId) => {
+            await handleApprove(uId);
+            setDetailUserModal(null);
+          }}
+          onReject={async (uId, reason) => {
+            setActionError(null);
+            try {
+              await rejectUser({ userId: uId, reason });
+              setDetailUserModal(null);
+              setActionSuccess("Đã từ chối hồ sơ sinh viên và ghi lại lịch sử.");
+              refetch();
+              setTimeout(() => setActionSuccess(null), 2500);
+            } catch (err) {
+              setActionError("Lỗi từ chối hồ sơ: " + readApiError(err));
+            }
+          }}
+        />
+      )}
+
       {rejectUserModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="max-w-md w-full bg-[#11181c] border border-zinc-700 p-6 rounded-lg space-y-4 shadow-2xl">
-            <h3 className="font-display font-bold text-lg text-rose-400 uppercase flex items-center gap-2">
-              <UserX className="w-5 h-5" /> TỪ CHỐI HỒ SƠ SINH VIÊN
+        <div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-black/80 p-4">
+          <Card className="w-full max-w-md space-y-4 p-6">
+            <h3 className="flex items-center gap-2 font-display text-lg font-semibold text-[var(--color-danger)]">
+              Từ chối hồ sơ sinh viên
             </h3>
-            <p className="font-mono text-xs text-zinc-300">
+            <p className="text-sm text-[var(--text-muted)]">
               Bạn đang từ chối hồ sơ của <strong>{rejectUserModal.fullName}</strong>. Vui lòng nhập lý do cụ thể:
             </p>
 
-            <form onSubmit={handleConfirmReject} className="space-y-4 font-mono text-xs">
+            <form onSubmit={handleConfirmReject} className="space-y-4">
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="VD: Ảnh thẻ sinh viên bị mờ, không rõ mã số hoặc không trùng khớp với họ tên đăng ký..."
                 required
                 rows={3}
-                className="w-full bg-[#0b1013] border border-zinc-700 p-3 text-white rounded focus:border-amber-400 outline-none resize-none"
+                className="w-full resize-none rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] p-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
               />
 
-              <div className="flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setRejectUserModal(null)}
-                  className="px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white rounded uppercase cursor-pointer"
-                >
-                  Hủy Bỏ
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-rose-600 text-white font-bold uppercase hover:bg-rose-500 transition-colors rounded cursor-pointer"
-                >
-                  Xác Nhận Từ Chối
-                </button>
+              <div className="flex items-center justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={() => setRejectUserModal(null)}>
+                  Hủy bỏ
+                </Button>
+                <Button type="submit" variant="primary" accent="primary">
+                  Xác nhận từ chối
+                </Button>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* Modal Xóa User An Toàn */}
       {deleteUserModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in">
-          <div className="max-w-md w-full bg-[#11181c] border border-rose-500/50 p-6 rounded-lg space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3 text-rose-400">
-              <AlertTriangle className="w-8 h-8 shrink-0" />
+        <div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-black/80 p-4">
+          <Card className="w-full max-w-md space-y-4 border-[var(--color-danger)]/50 p-6">
+            <div className="flex items-center gap-3 text-[var(--color-danger)]">
+              <AlertTriangle className="h-8 w-8 shrink-0" />
               <div>
-                <h3 className="font-display font-bold text-lg uppercase text-white">XÓA TÀI KHOẢN NGƯỜI DÙNG</h3>
-                <span className="font-mono text-[11px] text-rose-400 uppercase font-bold">HÀNH ĐỘNG NGUY HIỂM — KHÔNG THỂ HOÀN TÁC</span>
+                <h3 className="font-display text-lg font-semibold text-[var(--text-primary)]">
+                  Xóa tài khoản người dùng
+                </h3>
+                <span className="text-xs text-[var(--color-danger)]">
+                  Hành động nguy hiểm — không thể hoàn tác
+                </span>
               </div>
             </div>
 
-            <p className="font-mono text-xs text-zinc-300 leading-relaxed">
-              Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản <strong>{deleteUserModal.fullName}</strong> ({deleteUserModal.email}) khỏi hệ thống không?
+            <p className="text-sm text-[var(--text-muted)]">
+              Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản{" "}
+              <strong>{deleteUserModal.fullName}</strong> ({deleteUserModal.email}) khỏi hệ thống không?
             </p>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2 font-mono text-xs">
-              <button
-                type="button"
-                onClick={() => setDeleteUserModal(null)}
-                className="px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white rounded uppercase cursor-pointer"
-              >
-                Hủy Bỏ
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteUser}
-                className="px-5 py-2 bg-rose-600 text-white font-bold uppercase hover:bg-rose-500 transition-colors rounded cursor-pointer"
-              >
-                Xác Nhận Xóa
-              </button>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setDeleteUserModal(null)}>
+                Hủy bỏ
+              </Button>
+              <Button type="button" variant="primary" accent="primary" onClick={handleDeleteUser}>
+                Xác nhận xóa
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 };

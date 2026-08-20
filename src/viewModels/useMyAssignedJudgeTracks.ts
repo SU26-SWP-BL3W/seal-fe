@@ -48,7 +48,7 @@ export function useMyAssignedJudgeTracks() {
   const eventRoleIdByTrack = useMemo(() => {
     const map = new Map<string, string>();
     myEventRoles.forEach((r) => {
-      if (r.trackId) map.set(r.trackId, r.id);
+      if (r.roleName === "Judge" && r.trackId) map.set(r.trackId, r.id);
     });
     return map;
   }, [myEventRoles]);
@@ -69,7 +69,10 @@ export function useMyAssignedJudgeTracks() {
   const candidateEventIds = useMemo(() => {
     if (!user) return [];
     if (isAdmin) return eventsList.map((e: any) => e.id || e.Id).filter(Boolean);
-    const ids = myEventRoles.map((r) => r.eventId).filter(Boolean);
+    const ids = myEventRoles
+      .filter((r) => r.roleName === "Judge")
+      .map((r) => r.eventId)
+      .filter(Boolean);
     const single = activeRole?.eventId || (activeRole as any)?.EventId;
     if (single) ids.push(single);
     return [...new Set(ids)];
@@ -99,12 +102,19 @@ export function useMyAssignedJudgeTracks() {
 
         if (!isAdmin) {
           const judges = t.judges || t.Judges;
-          const judgeIds: string[] = (judges || []).map((j: any) => j.id || j.Id).filter(Boolean);
-          const hasJudgeList = Array.isArray(judges);
-          const isRealAssigned = userId && judgeIds.includes(userId);
-          // Nếu BE không trả judges (mảng undefined) mới cần dự phòng bằng trackId đã chọn lúc login.
-          const isFallbackAssigned = !hasJudgeList && assignedTrackId === trackId;
-          if (!isRealAssigned && !isFallbackAssigned) return;
+          const judgeIds: string[] = (judges || []).map((j: any) => (j.id || j.Id || "").replace(/-/g, "").toLowerCase()).filter(Boolean);
+          const hasJudgeList = Array.isArray(judges) && judges.length > 0;
+          const normUserId = (userId || "").replace(/-/g, "").toLowerCase();
+          const normTrackId = (trackId || "").replace(/-/g, "").toLowerCase();
+          const isRealAssigned = normUserId && judgeIds.includes(normUserId);
+          const isFallbackAssigned = assignedTrackId && (assignedTrackId.replace(/-/g, "").toLowerCase() === normTrackId);
+          const isDirectRoleAssigned = myEventRoles.some((r: any) => {
+            const rn = r.roleName || r.RoleName;
+            const rTId = (r.trackId || r.TrackId || "").replace(/-/g, "").toLowerCase();
+            return rn === "Judge" && rTId === normTrackId;
+          });
+
+          if (!isDirectRoleAssigned && !isRealAssigned) return;
         }
 
         list.push({
@@ -148,7 +158,8 @@ export function useMyAssignedJudgeTracks() {
   const submittedIds = useMemo(() => {
     const set = new Set<string>();
     scoreQueries.forEach((q) => {
-      (q.data ?? []).forEach((s) => {
+      const list = Array.isArray(q.data) ? q.data : ((q.data as any)?.data ?? []);
+      list.forEach((s: any) => {
         if (s.isSubmitted) set.add(s.submitResultId);
       });
     });

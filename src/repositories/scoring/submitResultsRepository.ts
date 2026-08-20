@@ -41,8 +41,18 @@ export interface SubmitResultCreated {
 export function useCreateSubmitResult() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: CreateSubmitResultPayload) => {
-      const { data } = await apiClient.post<SubmitResultCreated>("/SubmitResults", payload);
+    mutationFn: async (payload: any) => {
+      const body = {
+        teamId: payload.teamId || payload.TeamId,
+        trackId: payload.trackId || payload.TrackId,
+        roundId: payload.roundId || payload.RoundId,
+        submissionUrl: payload.submissionUrl || payload.SubmissionUrl || "",
+        repoUrl: payload.repoUrl || payload.RepoUrl || "",
+        demoUrl: payload.demoUrl || payload.DemoUrl || "",
+        slideUrl: payload.slideUrl || payload.SlideUrl || "",
+        description: payload.description || payload.Description || "",
+      };
+      const { data } = await apiClient.post<SubmitResultCreated>("/SubmitResults", body);
       return data;
     },
     onSuccess: () => {
@@ -53,8 +63,6 @@ export function useCreateSubmitResult() {
 
 /**
  * PUT /SubmitResults/{id} — mọi field đều optional, không gửi = giữ nguyên giá trị cũ
- * (BE tự xử lý null-nghĩa-là-giữ). Ngoại lệ: `description` chuỗi rỗng `""` = XOÁ mô tả
- * (khác null = giữ nguyên) — theo đúng comment trong UpdateSubmitResultRequestModel.
  */
 export interface UpdateSubmitResultPayload {
   submissionUrl?: string;
@@ -81,13 +89,26 @@ export interface SubmitResultUpdated {
 export function useUpdateSubmitResult() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: UpdateSubmitResultPayload }) => {
-      const { data } = await apiClient.put<SubmitResultUpdated>(`/SubmitResults/${id}`, payload);
+    mutationFn: async (args: any) => {
+      const id = args.id || args.submitResultId || args.Id;
+      const payload = args.payload || args.data || args;
+      const body = {
+        submissionUrl: payload.submissionUrl || payload.SubmissionUrl,
+        repoUrl: payload.repoUrl || payload.RepoUrl,
+        demoUrl: payload.demoUrl || payload.DemoUrl,
+        slideUrl: payload.slideUrl || payload.SlideUrl,
+        description: payload.description !== undefined ? payload.description : payload.Description,
+        isActive: payload.isActive !== undefined ? payload.isActive : payload.IsActive,
+      };
+      const { data } = await apiClient.put<SubmitResultUpdated>(`/SubmitResults/${id}`, body);
       return data;
     },
-    onSuccess: (_data, { id }) => {
+    onSuccess: (_data, args: any) => {
+      const id = args.id || args.submitResultId || args.Id;
       queryClient.invalidateQueries({ queryKey: ["submitResults"] });
-      queryClient.invalidateQueries({ queryKey: ["submitResult", id] });
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: ["submitResult", id] });
+      }
     },
   });
 }
@@ -137,17 +158,33 @@ export function useGetSubmitResultById(id: string | undefined) {
 }
 
 export interface SubmitResultListItem {
-  id: string;
-  teamId: string;
-  trackId: string;
+  id?: string;
+  Id?: string;
+  teamId?: string;
+  TeamId?: string;
+  trackId?: string;
+  TrackId?: string;
+  roundId?: string;
+  RoundId?: string;
   teamName?: string | null;
+  TeamName?: string | null;
+  isTeamDisqualified?: boolean;
+  IsTeamDisqualified?: boolean;
   displayCode?: string | null;
-  submissionUrl: string;
+  submissionUrl?: string;
+  SubmissionUrl?: string;
   repoUrl?: string | null;
+  RepoUrl?: string | null;
   demoUrl?: string | null;
+  DemoUrl?: string | null;
   slideUrl?: string | null;
-  isActive: boolean;
-  createdTime: string;
+  SlideUrl?: string | null;
+  description?: string | null;
+  Description?: string | null;
+  isActive?: boolean;
+  IsActive?: boolean;
+  createdTime?: string;
+  CreatedTime?: string;
 }
 
 export interface SubmitResultListFilters {
@@ -169,11 +206,134 @@ export interface SubmitResultListFilters {
 export function useGetSubmitResults(filters: SubmitResultListFilters = {}) {
   return useQuery({
     queryKey: ["submitResults", filters],
-    queryFn: async () => {
-      const { data } = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", {
+    queryFn: async (): Promise<SubmitResultListItem[]> => {
+      const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", {
         params: filters,
       });
-      return data;
+      if (Array.isArray(res.data?.data)) return res.data.data;
+      if (Array.isArray(res.data)) return res.data as unknown as SubmitResultListItem[];
+      return [];
+    },
+    // BE bat buoc it nhat 1 filter (teamId/trackId/eventId), goi rong luon 400.
+    enabled: Object.values(filters).some((v) => !!v),
+  });
+}
+
+// ─── Aliases & Helpers ────────────────────────────────────────────────────────
+export type SubmitResultRequest = CreateSubmitResultPayload;
+export const useCreateSubmission = useCreateSubmitResult;
+export const useUpdateSubmission = useUpdateSubmitResult;
+export { readApiError } from "../shared/errorHelper";
+
+export function useMySubmissions(teamId?: string) {
+  return useGetSubmitResults({ teamId });
+}
+
+export function useGetSubmitResultsByTrack(trackId?: string, eventId?: string) {
+  return useGetSubmitResults({ trackId, eventId });
+}
+
+export const useDeleteSubmission = useDeleteSubmitResult;
+
+export interface MentorFeedbackItem {
+  id: string;
+  submitResultId: string;
+  mentorId: string;
+  mentorName?: string;
+  comment: string;
+  createdTime: string;
+}
+
+// BE (MentorFeedbackModel) chỉ lưu duy nhất 1 field Comment — không có cột riêng cho
+// "lời khuyên kỹ thuật" hay "điểm tham khảo". Để không mất 2 trường có cấu trúc đó khi
+// Mentor nhập (khớp pattern JSON.stringify trong Description của SubmitResult), FE tự
+// mã hoá cả 3 field vào Comment dạng JSON và giải mã lại khi hiển thị. Comment cũ dạng
+// chuỗi thường (trước khi có encode này) vẫn hiển thị được, chỉ mất phần text gốc.
+export interface MentorFeedbackContent {
+  text: string;
+  technicalAdvice?: string;
+  suggestedScore?: number;
+}
+
+export function encodeMentorFeedbackComment(content: MentorFeedbackContent): string {
+  return JSON.stringify(content);
+}
+
+export function parseMentorFeedbackComment(raw: string): MentorFeedbackContent {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && typeof parsed.text === "string") {
+      return {
+        text: parsed.text,
+        technicalAdvice: typeof parsed.technicalAdvice === "string" ? parsed.technicalAdvice : undefined,
+        suggestedScore: typeof parsed.suggestedScore === "number" ? parsed.suggestedScore : undefined,
+      };
+    }
+  } catch {
+    // Không phải JSON -> comment cũ dạng chuỗi thường, hiển thị nguyên văn.
+  }
+  return { text: raw };
+}
+
+export function useMentorFeedbacks(submitResultId?: string) {
+  return useQuery({
+    queryKey: ["mentor-feedbacks", submitResultId],
+    queryFn: async (): Promise<MentorFeedbackItem[]> => {
+      if (!submitResultId) return [];
+      try {
+        const res = await apiClient.get<any>(`/SubmitResults/${submitResultId}/mentor-feedback`);
+        const list = res.data?.data ?? res.data ?? [];
+        return Array.isArray(list) ? list : [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!submitResultId,
+  });
+}
+
+export function useCreateMentorFeedback() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: any) => {
+      const submitResultId = args.submitResultId;
+      const comment = args.comment || args.data?.feedbackContent || args.feedbackContent || JSON.stringify(args.data || {});
+      const res = await apiClient.post<any>(`/SubmitResults/${submitResultId}/mentor-feedback`, {
+        comment,
+        ...(args.data || {}),
+      });
+      return res.data;
+    },
+    onSuccess: (_, args: any) => {
+      const submitResultId = args.submitResultId;
+      queryClient.invalidateQueries({ queryKey: ["mentor-feedbacks", submitResultId] });
     },
   });
 }
+
+export function useDeleteMentorFeedback() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ feedbackId, submitResultId }: { feedbackId: string; submitResultId?: string }) => {
+      const res = await apiClient.delete<any>(`/SubmitResults/mentor-feedback/${feedbackId}`);
+      return res.data;
+    },
+    onSuccess: (_, { submitResultId }) => {
+      if (submitResultId) {
+        queryClient.invalidateQueries({ queryKey: ["mentor-feedbacks", submitResultId] });
+      }
+    },
+  });
+}
+
+export async function fetchSubmitResultsByTrack(trackId: string, eventId?: string): Promise<SubmitResultListItem[]> {
+  try {
+    const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", {
+      params: { TrackId: trackId, EventId: eventId, PageSize: 100 },
+    });
+    return res.data?.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
