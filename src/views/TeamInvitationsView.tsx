@@ -1,30 +1,74 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
+import { useSearchParams } from "next/navigation";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
-import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
+import {
+  useRespondEventRoleInvitation,
+  useDeclineEventRoleInvitationPublic,
+} from "@/repositories/eventRolesRepository";
 import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, RefreshCw, XCircle, Lock, LogIn, Sparkles, ArrowRight } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  RefreshCw,
+  XCircle,
+  Lock,
+  LogIn,
+  UserPlus,
+  Sparkles,
+  ArrowRight,
+  Shield,
+  Info,
+} from "lucide-react";
 
 export function TeamInvitationsView() {
   const toast = useToast();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { user, refreshRoles } = useAuth();
+
+  const queryInvitationId = searchParams.get("invitationId") || searchParams.get("id") || "";
+  const queryAction = searchParams.get("action") || "";
+  const queryRole = searchParams.get("role") || "";
+  const queryEventName = searchParams.get("eventName") || searchParams.get("event") || "";
+  const queryEmail = searchParams.get("email") || "";
+
   const { data, isLoading, isError, refetch, isFetching } = useMyInvitations(Boolean(user));
   const invitations = data?.invitations ?? [];
 
   const { mutateAsync: respondTeam, isPending: isRespondingTeam } = useAcceptOrDeclineInvitation();
   const { mutateAsync: respondEventRole, isPending: isRespondingEventRole } = useRespondEventRoleInvitation();
-  const isResponding = isRespondingTeam || isRespondingEventRole;
+  const { mutateAsync: declinePublic, isPending: isDecliningPublic } = useDeclineEventRoleInvitationPublic();
+  const isResponding = isRespondingTeam || isRespondingEventRole || isDecliningPublic;
 
   const [error, setError] = useState("");
+  const [publicDeclineSuccess, setPublicDeclineSuccess] = useState(false);
 
   const isProfileIncomplete = user?.isStudent && (!user?.schoolId || (!user?.isFpt && !user?.studentCode));
+
+  const formatRoleLabel = (role?: string) => {
+    switch (role) {
+      case "Coordinator":
+      case "EventCoordinator":
+        return "Cán Bộ Điều Phối (Event Coordinator)";
+      case "Judge":
+        return "Ban Giám Khảo (Judge)";
+      case "Mentor":
+        return "Cố Vấn Chuyên Môn (Mentor)";
+      case "TeamLeader":
+        return "Trưởng Nhóm (Team Leader)";
+      case "TeamMember":
+        return "Thành Viên Đội Thi";
+      default:
+        return role || "Cán Bộ Sự Kiện";
+    }
+  };
 
   const handleRespond = async (inv: MyInvitationItem | any, isAccepted: boolean) => {
     setError("");
@@ -91,39 +135,95 @@ export function TeamInvitationsView() {
     }
   };
 
+  const handlePublicDecline = async () => {
+    if (!queryInvitationId) return;
+    if (!confirm("Bạn có chắc chắn muốn từ chối lời mời tham gia sự kiện này?")) return;
+    try {
+      await declinePublic(queryInvitationId);
+      setPublicDeclineSuccess(true);
+      toast.success("Bạn đã từ chối lời mời tham gia sự kiện.");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Từ chối lời mời thất bại hoặc lời mời đã hết hạn.";
+      toast.error(msg);
+    }
+  };
+
   // Guard: Not Logged In Notice
   if (!user) {
+    const currentParams = searchParams.toString();
+    const returnUrl = `/my-invitations${currentParams ? `?${currentParams}` : ""}`;
+    const loginUrl = `/login?returnUrl=${encodeURIComponent(returnUrl)}${queryEmail ? `&email=${encodeURIComponent(queryEmail)}` : ""}`;
+    const registerUrl = `/register?returnUrl=${encodeURIComponent(returnUrl)}${queryEmail ? `&email=${encodeURIComponent(queryEmail)}` : ""}`;
+
     return (
       <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)] flex items-center justify-center">
-        <Card className="max-w-md w-full p-8 text-center border border-cyan-500/40 bg-[#0c1417] hud-clipped shadow-2xl space-y-5 font-mono">
-          <div className="size-14 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
-            <Lock className="size-7" />
+        <Card className="max-w-lg w-full p-8 text-center border border-cyan-500/40 bg-[#0c1417] hud-clipped shadow-2xl space-y-6 font-mono">
+          <div className="size-16 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+            <Lock className="size-8" />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">
-              [ YÊU CẦU XÁC THỰC TÀI KHOẢN ]
+              [ XÁC THỰC TÀI KHOẢN & PHẢN HỒI LỜI MỜI ]
             </span>
-            <h2 className="font-display text-xl font-bold uppercase text-white">
-              Đăng Nhập Để Xem Lời Mời
+            <h2 className="font-display text-2xl font-bold uppercase text-white">
+              Đăng Nhập Để Phản Hồi Lời Mời
             </h2>
-            <p className="text-xs text-zinc-300 font-sans leading-relaxed">
-              Bạn đang truy cập Trung tâm lời mời. Vui lòng đăng nhập vào tài khoản SEAL của bạn (hoặc tài khoản tạm thời được cấp) để xem chi tiết và phản hồi lời mời tham gia sự kiện / đội thi.
-            </p>
+
+            {queryRole || queryEventName ? (
+              <div className="p-3 bg-cyan-950/40 border border-cyan-500/30 rounded text-left space-y-1 text-xs">
+                <div className="text-zinc-300">
+                  Sự kiện: <strong className="text-white">{queryEventName || "SEAL Hackathon"}</strong>
+                </div>
+                <div className="text-zinc-300">
+                  Vai trò: <strong className="text-cyan-300">{formatRoleLabel(queryRole)}</strong>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                Bạn nhận được thư mời tham gia sự kiện / đội thi trên hệ thống SEAL. Vui lòng đăng nhập để hệ thống tự động gán quyền và hiển thị lời mời của bạn.
+              </p>
+            )}
           </div>
 
-          <div className="flex flex-col gap-2.5 pt-2">
-            <Link href="/login?returnUrl=/my-invitations">
-              <Button variant="primary" accent="primary" className="w-full font-bold text-xs py-2.5 flex items-center justify-center gap-2">
-                <LogIn className="size-4" />
-                <span>ĐĂNG NHẬP ĐỂ XEM LỜI MỜI</span>
-              </Button>
-            </Link>
-            <Link href="/register?returnUrl=/my-invitations">
-              <Button variant="secondary" className="w-full text-xs py-2.5">
-                ĐĂNG KÝ TÀI KHOẢN MỚI
-              </Button>
-            </Link>
+          {publicDeclineSuccess ? (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded text-xs text-emerald-300 font-sans flex items-center gap-2">
+              <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+              <span>Bạn đã từ chối lời mời tham gia sự kiện thành công. Bạn có thể đóng trang này.</span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 pt-2">
+              <Link href={loginUrl}>
+                <Button variant="primary" accent="primary" className="w-full font-bold text-xs py-3 flex items-center justify-center gap-2">
+                  <LogIn className="size-4" />
+                  <span>ĐĂNG NHẬP ĐỂ ĐỒNG Ý NHẬN VAI TRÒ</span>
+                </Button>
+              </Link>
+
+              <Link href={registerUrl}>
+                <Button variant="secondary" className="w-full text-xs py-2.5 flex items-center justify-center gap-2">
+                  <UserPlus className="size-4" />
+                  <span>CHƯA CÓ TÀI KHOẢN? ĐĂNG KÝ NGAY</span>
+                </Button>
+              </Link>
+
+              {queryInvitationId && (
+                <button
+                  type="button"
+                  onClick={handlePublicDecline}
+                  disabled={isDecliningPublic}
+                  className="mt-2 text-xs text-red-400 hover:text-red-300 hover:underline transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <XCircle className="size-3.5" />
+                  <span>Từ chối lời mời này ngay (Không cần đăng nhập)</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="pt-2 border-t border-[var(--border-muted)] text-[11px] text-zinc-300 flex items-center justify-center gap-1.5">
+            <Info className="size-3.5 text-cyan-400 shrink-0" />
+            <span>Nếu bạn được cấp mật khẩu tạm thời trong email, hãy dùng để Đăng nhập.</span>
           </div>
         </Card>
       </main>
@@ -132,20 +232,6 @@ export function TeamInvitationsView() {
 
   const pending = invitations.filter((i) => i.status === "PendingAccept");
   const history = invitations.filter((i) => i.status !== "PendingAccept");
-
-  const formatRoleLabel = (role?: string) => {
-    switch (role) {
-      case "Coordinator":
-      case "EventCoordinator":
-        return "Cán Bộ Điều Phối (Coordinator)";
-      case "Judge":
-        return "Ban Giám Khảo (Judge)";
-      case "Mentor":
-        return "Cố Vấn Chuyên Môn (Mentor)";
-      default:
-        return role || "Cán Bộ Sự Kiện";
-    }
-  };
 
   const titleOf = (inv: MyInvitationItem) =>
     inv.type === "TEAM"
