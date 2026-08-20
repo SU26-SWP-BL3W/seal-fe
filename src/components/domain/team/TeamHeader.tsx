@@ -2,7 +2,7 @@
 
 import { Link } from "@/i18n/routing";
 import { Badge, Button } from "@/components/ui";
-import { Crown, LogOut, Pencil, Trophy, UserPlus, Users } from "lucide-react";
+import { Crown, LogOut, Pencil, Trophy, UserPlus, Users, Upload, FileText } from "lucide-react";
 import { TEAM_STATUS, TONE_TEXT } from "./teamStatus";
 import type { TeamView } from "./types";
 
@@ -101,9 +101,21 @@ export function TeamHeader({
               <UserPlus className="size-3.5" /> Mời thành viên
             </Button>
           )}
+          {team.status === "Registered" && isLeader && (
+            <Link href="/submissions/new">
+              <Button
+                id="submit-project-btn"
+                variant="primary"
+                accent="team"
+                className="text-xs font-bold shadow-[0_0_15px_rgba(56,189,248,0.3)] bg-[var(--accent-team)] text-black hover:bg-white"
+              >
+                <Upload className="size-3.5" /> + Nộp bài thi
+              </Button>
+            </Link>
+          )}
           <Link href="/my-submissions">
             <Button id="view-submissions-btn" variant="ghost" accent="team" className="text-xs">
-              Bài nộp
+              <FileText className="size-3.5" /> Quản lý bài nộp
             </Button>
           </Link>
           <Link href={`/events/${team.eventId}/leaderboard`}>

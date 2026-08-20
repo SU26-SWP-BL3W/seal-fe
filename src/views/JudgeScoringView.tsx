@@ -7,13 +7,15 @@ import { useGetSubmitResultsByTrack } from "@/repositories/submitResultsReposito
 import { useGetTemplate } from "@/repositories/templatesRepository";
 import { useSaveScore, useGetScoresByEventRole } from "@/repositories/scoresRepository";
 import { useMyAssignedJudgeTracks } from "@/viewModels/useMyAssignedJudgeTracks";
-import { useEvents, useEventRounds } from "@/repositories/eventsRepository";
+import { useEvents } from "@/repositories/eventsRepository";
+import { useEventRounds } from "@/repositories/events/eventsRepository";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge, Button, Card, EmptyState } from "@/components/ui";
 import { Scale, ChevronLeft, ChevronRight } from "lucide-react";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
 
@@ -265,6 +267,15 @@ export function JudgeScoringView() {
       const okMsg = isFinalSubmit ? "Đã khóa và chốt điểm chính thức thành công!" : "Đã lưu nháp bảng điểm thành công.";
       setSaveOk(`[✓ ${okMsg}]`);
       toast.success(okMsg);
+
+      if (isFinalSubmit) {
+        pushSystemNotification({
+          title: "Đã hoàn tất chấm điểm bài thi",
+          message: `Ban Giám Khảo đã hoàn tất chấm điểm bài thi cho Hạng mục "${selectedTrack?.trackName || 'Hạng mục'}". Bảng điểm đã được ghi nhận vào hệ thống!`,
+          type: "success",
+        });
+      }
+
       if (autoAdvance && currentSubIndex < apiSubmissions.length - 1) {
         setTimeout(() => handleNextSubmission(), 600);
       }

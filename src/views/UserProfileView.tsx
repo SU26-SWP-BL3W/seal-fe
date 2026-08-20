@@ -109,7 +109,7 @@ export const getRoleDetails = (
 
 export function UserProfileView() {
   const toast = useToast();
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
   const currentUserId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
@@ -564,6 +564,13 @@ export function UserProfileView() {
         confirmNewPassword: confirmPassword,
       });
       setPasswordSuccess(true);
+      updateUser({ mustChangePassword: false });
+      if (typeof window !== "undefined") {
+        try {
+          const stored = JSON.parse(localStorage.getItem("currentUser") || "{}");
+          localStorage.setItem("currentUser", JSON.stringify({ ...stored, mustChangePassword: false }));
+        } catch {}
+      }
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");

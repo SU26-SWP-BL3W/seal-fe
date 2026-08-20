@@ -10,6 +10,7 @@ import { usePublicEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent, type TrackWithStaffModel } from "@/repositories/tracksRepository";
 import { useToast } from "@/providers/ToastProvider";
 import { AlertCircle, Calendar, Sparkles, Info } from "lucide-react";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import { MAX_MEMBERS, MIN_MEMBERS } from "./teamStatus";
 
 const SELECT_CLASS =
@@ -104,6 +105,11 @@ export function CreateTeamForm({ defaultEventId }: CreateTeamFormProps) {
         trackId,
       });
       toast.success(`Tạo đội "${teamName.trim()}" thành công! Bạn hiện là Đội trưởng.`);
+      pushSystemNotification({
+        title: "Tạo đội thi thành công",
+        message: `Chúc mừng! Bạn đã tạo đội "${teamName.trim()}" thành công và là Đội trưởng. Hãy mời thành viên để hoàn thiện đội thi!`,
+        type: "success",
+      });
     } catch (err: unknown) {
       const detail = err as { message?: string; response?: { data?: { message?: string } } };
       const msg = detail?.response?.data?.message || detail?.message || "Không tạo được đội.";

@@ -221,7 +221,7 @@ export function resolveStaffLandingPath(roles: NormalizedEventRole[]): string | 
       return "/judge/events";
     }
     if (names.includes("Mentor")) {
-      return `/events/${eventId}`;
+      return eventId ? `/mentor?eventId=${eventId}` : "/mentor";
     }
   }
 

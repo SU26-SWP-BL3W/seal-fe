@@ -5,6 +5,7 @@ import { Badge, Button, Card, Field, Input, SkeletonRows } from "@/components/ui
 import { AlertTriangle, Clock, ShieldAlert, X } from "lucide-react";
 import { MAX_MEMBERS } from "./teamStatus";
 import type { InvitationView } from "./types";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 interface Props {
   invitations: InvitationView[];
@@ -62,6 +63,19 @@ export function InvitePanel({
       } else {
         setSuccessNotice(`Đã gửi lời mời tham gia đội tới ${value}. Ứng viên có thể mở email hoặc thông báo chuông trên SEAL để nhấn "Đồng ý vào đội" ngay.`);
       }
+
+      pushSystemNotification({
+        title: "Gửi lời mời vào đội thi",
+        message: `Đã gửi lời mời tham gia đội thi tới ${value}.`,
+        type: "info",
+      });
+      pushSystemNotification({
+        title: "Lời mời tham gia đội thi",
+        message: `Bạn nhận được lời mời gia nhập đội thi.`,
+        type: "info",
+        recipientEmail: value,
+      });
+
       setEmail("");
     } catch (err: unknown) {
       const detail = err as { message?: string; response?: { data?: { message?: string } } };

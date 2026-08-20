@@ -9,14 +9,23 @@ import type { PagedResult } from "@/models/types";
 // cửa sổ thời gian của Track (hoặc Round nếu Track không có mốc riêng).
 
 export interface CreateSubmitResultPayload {
-  teamId: string;
-  trackId: string;
-  roundId: string;
-  submissionUrl: string;
-  repoUrl: string;
-  demoUrl: string;
-  slideUrl: string;
-  description: string;
+  teamId?: string;
+  trackId?: string;
+  roundId?: string;
+  submissionUrl?: string;
+  repoUrl?: string;
+  demoUrl?: string;
+  slideUrl?: string;
+  description?: string;
+  /** Alias PascalCase back-compat cho code cũ — mutationFn tự nhận diện cả 2 kiểu. */
+  TeamId?: string;
+  TrackId?: string;
+  RoundId?: string;
+  SubmissionUrl?: string;
+  RepoUrl?: string;
+  DemoUrl?: string;
+  SlideUrl?: string;
+  Description?: string;
 }
 
 export interface SubmitResultCreated {
@@ -242,6 +251,10 @@ export interface MentorFeedbackItem {
   mentorName?: string;
   comment: string;
   createdTime: string;
+  /** Giải mã sẵn từ `comment` (xem parseMentorFeedbackComment) để UI cũ đọc trực tiếp không cần tự parse. */
+  feedbackContent?: string;
+  technicalAdvice?: string;
+  suggestedScore?: number;
 }
 
 // BE (MentorFeedbackModel) chỉ lưu duy nhất 1 field Comment — không có cột riêng cho
@@ -283,7 +296,16 @@ export function useMentorFeedbacks(submitResultId?: string) {
       try {
         const res = await apiClient.get<any>(`/SubmitResults/${submitResultId}/mentor-feedback`);
         const list = res.data?.data ?? res.data ?? [];
-        return Array.isArray(list) ? list : [];
+        const items = Array.isArray(list) ? list : [];
+        return items.map((item: any) => {
+          const decoded = parseMentorFeedbackComment(item.comment ?? "");
+          return {
+            ...item,
+            feedbackContent: decoded.text,
+            technicalAdvice: decoded.technicalAdvice,
+            suggestedScore: decoded.suggestedScore,
+          };
+        });
       } catch {
         return [];
       }
@@ -297,10 +319,18 @@ export function useCreateMentorFeedback() {
   return useMutation({
     mutationFn: async (args: any) => {
       const submitResultId = args.submitResultId;
-      const comment = args.comment || args.data?.feedbackContent || args.feedbackContent || JSON.stringify(args.data || {});
+      const text = args.data?.feedbackContent ?? args.feedbackContent;
+      const comment =
+        args.comment ||
+        (text !== undefined
+          ? encodeMentorFeedbackComment({
+              text,
+              technicalAdvice: args.data?.technicalAdvice ?? args.technicalAdvice,
+              suggestedScore: args.data?.suggestedScore ?? args.suggestedScore,
+            })
+          : JSON.stringify(args.data || {}));
       const res = await apiClient.post<any>(`/SubmitResults/${submitResultId}/mentor-feedback`, {
         comment,
-        ...(args.data || {}),
       });
       return res.data;
     },
