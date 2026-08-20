@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Badge } from "@/components/ui";
+/**
+ * Landing — Command Deck (proposal FE).
+ * Geometry: hud-clipped / lattice / square — not soft rounded SaaS.
+ * Logic: auth-aware CTAs, registration window, capacity, live countdown.
+ */
+
+import { useState, useEffect, useMemo } from "react";
+import { Badge, Button } from "@/components/ui";
 import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { SealShield } from "@/components/domain/SealShield";
@@ -18,133 +24,286 @@ import { useLandingPreviewViewModel } from "@/viewModels/useLandingPreviewViewMo
 import { LandingMetricsStrip } from "@/components/domain/LandingMetricsStrip";
 import { LandingWorkflowSteps } from "@/components/domain/LandingWorkflowSteps";
 import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
+import { formatShortId } from "@/lib/formatId";
+
+function isRegistrationOpen(event: EventCardData, now = Date.now()): boolean {
+  const start = new Date(event.registrationStartDate || event.startDate).getTime();
+  const end = new Date(event.registrationEndDate || event.endDate).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end)) return event.status === "registration_open";
+  return now >= start && now <= end;
+}
+
+function getHeroCtas(args: {
+  user: any;
+  latestEvent: EventCardData | null;
+  regOpen: boolean;
+}) {
+  const { user, latestEvent, regOpen } = args;
+  const approved = Boolean(user?.isApproved ?? user?.IsApproved);
+  const isStaffEmail = (() => {
+    const email = (user?.email || user?.Email || "").toLowerCase();
+    return (
+      email.includes("judge") ||
+      email.includes("mentor") ||
+      email.includes("ec.") ||
+      email.includes("admin")
+    );
+  })();
+
+  if (!user) {
+    return {
+      primary: { href: "/register", label: "Đăng ký tham gia" },
+      secondary: {
+        href: latestEvent ? `/events/${latestEvent.id}` : "/events",
+        label: latestEvent ? "Xem sự kiện đang mở" : "Khám phá sự kiện",
+      },
+      note: regOpen
+        ? "Cổng đăng ký đang mở — tạo tài khoản để lập đội."
+        : "Xem thể lệ trước, đăng ký khi cổng mở.",
+    };
+  }
+
+  if (!approved && !isStaffEmail) {
+    return {
+      primary: { href: "/onboarding/profile", label: "Hoàn thiện hồ sơ" },
+      secondary: {
+        href: latestEvent ? `/events/${latestEvent.id}` : "/events",
+        label: "Xem sự kiện",
+      },
+      note: "Hồ sơ chưa duyệt — xem được sự kiện nhưng chưa tạo đội / nộp bài.",
+    };
+  }
+
+  if (latestEvent && regOpen) {
+    return {
+      primary: { href: `/events/${latestEvent.id}`, label: "Vào sự kiện & lập đội" },
+      secondary: { href: "/my-team", label: "Đội của tôi" },
+      note: `Tiếp tục với ${latestEvent.eventName}.`,
+    };
+  }
+
+  return {
+    primary: { href: "/events", label: "Khám phá sự kiện" },
+    secondary: { href: "/my-team", label: "Đội thi của tôi" },
+    note: "Chọn sự kiện phù hợp để bắt đầu.",
+  };
+}
 
 export function LandingPortalView() {
-  const { latestEvent, featuredEvents } = useLandingPreviewViewModel();
+  const { latestEvent, featuredEvents, totalRealCount } = useLandingPreviewViewModel();
   const { user, activeRole } = useAuth();
   const router = useRouter();
 
-  // Tự động chuyển hướng Cán bộ / BTC / Giám khảo / Cố vấn về thẳng Dashboard khi đã đăng nhập
   useEffect(() => {
-    if (user) {
-      const rawRole = activeRole?.roleName || activeRole?.RoleName;
-      const userEmail = (user.email || user.Email || "").toLowerCase();
-      const isAdm = !!user.isAdmin || !!user.IsAdmin || userEmail.includes("admin");
-      const isCoord = rawRole === "Coordinator" || rawRole === "EventCoordinator" || userEmail.includes("ec.") || userEmail.includes("coordinator");
-      const isJudge = rawRole === "Judge" || userEmail.includes("judge");
-      const isMentor = rawRole === "Mentor" || userEmail.includes("mentor");
+    if (!user) return;
 
-      if (isAdm) router.replace("/admin/dashboard");
-      else if (isCoord) router.replace("/coordinator/dashboard");
-      else if (isJudge) router.replace("/judge/events");
-      else if (isMentor) router.replace("/events");
-    }
+    const rawRole = activeRole?.roleName || activeRole?.RoleName;
+    const userEmail = (user.email || user.Email || "").toLowerCase();
+    const isAdm = !!user.isAdmin || !!user.IsAdmin || userEmail.includes("admin");
+    const isCoord =
+      rawRole === "Coordinator" ||
+      rawRole === "EventCoordinator" ||
+      userEmail.includes("ec.") ||
+      userEmail.includes("coordinator");
+    const isJudge = rawRole === "Judge" || userEmail.includes("judge");
+    const isMentor = rawRole === "Mentor" || userEmail.includes("mentor");
+
+    if (isAdm) router.replace("/admin/dashboard");
+    else if (isCoord) router.replace("/coordinator/dashboard");
+    else if (isJudge) router.replace("/judge/events");
+    else if (isMentor) router.replace("/events");
   }, [user, activeRole, router]);
 
+  const regOpen = useMemo(
+    () => (latestEvent ? isRegistrationOpen(latestEvent) : false),
+    [latestEvent],
+  );
+  const ctas = getHeroCtas({ user, latestEvent, regOpen });
+
   return (
-    <main className="hud-lattice flex flex-1 flex-col overflow-hidden">
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 1: TACTICAL CYBER HERO & QUICK PROTOCOL BAR (SYMMETRICAL)
-         ───────────────────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center gap-8 px-6 py-20 md:py-28 text-center overflow-hidden">
-        {/* Soft Center Radial Glow */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[450px] md:h-[600px] md:w-[600px] rounded-full bg-[radial-gradient(circle,rgba(45,212,191,0.12)_0%,rgba(10,15,29,0)_70%)] blur-3xl" aria-hidden="true" />
+    <main className="hud-lattice flex flex-1 flex-col overflow-x-clip">
+      {/* Hero — asymmetric Command Deck: brand + live panel (fills right) */}
+      <section className="relative border-b border-[var(--border-muted)] px-4 py-16 sm:px-6 md:py-20">
+        <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)] lg:items-stretch lg:gap-12">
+          <div className="flex min-w-0 flex-col justify-center">
+            <div className="flex items-center gap-3">
+              <div className="border border-[var(--accent-primary)]/40 bg-[var(--bg-panel)] p-2.5 hud-clipped">
+                <SealShield className="h-12 w-12 text-[var(--accent-primary)] sm:h-14 sm:w-14" />
+              </div>
+              <div>
+                <p className="font-display text-2xl font-bold tracking-wide text-[var(--text-primary)] sm:text-3xl">
+                  SEAL
+                </p>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-primary)]">
+                  Hackathon Arena
+                </p>
+              </div>
+            </div>
 
-        {/* Foreground Content */}
-        <div className="relative z-10 flex flex-col items-center gap-6 max-w-4xl w-full">
+            <h1 className="mt-8 font-display text-3xl font-extrabold uppercase leading-[1.12] tracking-wide text-[var(--text-primary)] md:text-5xl lg:text-[3.25rem]">
+              Nơi ý tưởng công nghệ
+              <br />
+              <span className="text-[var(--accent-primary)]">bứt phá giới hạn</span>
+            </h1>
+            <p className="mt-5 max-w-lg text-sm leading-relaxed text-[var(--text-muted)] sm:text-base">
+              Đấu trường hackathon cho sinh viên toàn quốc — lập đội, nộp sản phẩm, nhận mentor và
+              chấm theo rubric công khai.
+            </p>
+            <p className="mt-4 font-mono text-xs text-[var(--text-muted)]">{ctas.note}</p>
 
-          {/* Central Shield Logo */}
-          <div className="relative flex items-center justify-center mb-1">
-            <div className="border border-[var(--accent-primary)]/40 bg-[var(--bg-panel)]/90 p-3.5 hud-clipped shadow-[0_0_25px_rgba(45,212,191,0.15)]">
-              <SealShield className="h-16 w-16 md:h-20 md:w-20 text-[var(--accent-primary)]" />
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href={ctas.primary.href}>
+                <Button className="min-w-[180px]">{ctas.primary.label}</Button>
+              </Link>
+              <Link href={ctas.secondary.href}>
+                <Button variant="secondary" className="min-w-[180px]">
+                  {ctas.secondary.label}
+                </Button>
+              </Link>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-[var(--border-muted)] pt-5 font-mono text-[10px] uppercase tracking-wider">
+              <span className="text-[var(--text-muted)]">Truy cập nhanh</span>
+              <Link
+                href="/my-team"
+                className="hud-clipped border border-[var(--accent-team)]/40 bg-[var(--bg-panel)] px-3 py-1.5 font-semibold text-[var(--accent-team)] hover:bg-[var(--accent-team)]/15"
+              >
+                Đội thi
+              </Link>
+              <Link
+                href="/judge/scoring"
+                className="hud-clipped border border-[var(--accent-judge)]/40 bg-[var(--bg-panel)] px-3 py-1.5 font-semibold text-[var(--accent-judge)] hover:bg-[var(--accent-judge)]/15"
+              >
+                Giám khảo
+              </Link>
+              <Link
+                href="/coordinator/dashboard"
+                className="hud-clipped border border-[var(--accent-coordinator)]/40 bg-[var(--bg-panel)] px-3 py-1.5 font-semibold text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/15"
+              >
+                Ban tổ chức
+              </Link>
             </div>
           </div>
 
-          {/* Status Tag Line */}
-          <div className="flex items-center gap-2 bg-[var(--bg-panel)]/90 border border-[var(--accent-primary)]/30 px-4 py-1.5 hud-clipped backdrop-blur-sm font-mono text-xs text-[var(--accent-primary)] tracking-wider">
-            <span className="h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-            <span>HỆ THỐNG ĐẤU TRƯỜNG HACKATHON SEAL</span>
-          </div>
-
-          {/* Main Heading */}
-          <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold uppercase leading-[1.15] text-[var(--text-primary)] tracking-wide w-full text-center">
-            NƠI Ý TƯỞNG CÔNG NGHỆ
-            <br />
-            <span className="bg-gradient-to-r from-teal-300 via-cyan-400 to-sky-400 bg-clip-text text-transparent">
-              BỨT PHÁ GIỚI HẠN
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="max-w-2xl w-full font-sans text-sm md:text-base text-slate-400 leading-relaxed text-center">
-            Đấu trường hackathon dành cho sinh viên toàn quốc — tranh tài xây dựng sản phẩm thực tế,
-            nhận tư vấn từ Mentor và nhận đánh giá minh bạch theo tiêu chí chuẩn.
-          </p>
-
-          {/* Symmetrical Button Group */}
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-            <Link href="/events">
-              <button className="hud-clipped relative px-8 py-3.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono font-bold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] focus:outline-none min-w-[200px] cursor-pointer">
-                KHÁM PHÁ SỰ KIỆN &gt;
-              </button>
-            </Link>
-            <Link href="/register">
-              <button className="hud-clipped px-8 py-3.5 bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:text-white hover:border-[var(--accent-primary)] hover:bg-[rgba(45,212,191,0.08)] font-mono text-sm tracking-wider uppercase transition-all duration-200 min-w-[200px] cursor-pointer">
-                ĐĂNG KÝ THAM GIA
-              </button>
-            </Link>
-          </div>
-
-          {/* Quick Access Protocol */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-3 font-mono text-xs border-t border-slate-800/80 pt-5 w-full max-w-xl">
-            <span className="text-slate-500 font-semibold">TRUY CẬP NHANH:</span>
-            <Link href="/my-team" className="border border-[var(--accent-team)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-team)] hover:bg-[var(--accent-team)]/20 transition-colors hud-clipped font-semibold">
-              ĐỘI THI
-            </Link>
-            <Link href="/judge/scoring" className="border border-[var(--accent-judge)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-judge)] hover:bg-[var(--accent-judge)]/20 transition-colors hud-clipped font-semibold">
-              GIÁM KHẢO
-            </Link>
-            <Link href="/coordinator/dashboard" className="border border-[var(--accent-coordinator)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/20 transition-colors hud-clipped font-semibold">
-              BAN TỔ CHỨC
-            </Link>
+          <div className="relative min-h-[300px]">
+            <SealShield
+              aria-hidden
+              className="pointer-events-none absolute -right-4 -top-6 h-44 w-44 text-[var(--accent-primary)] opacity-[0.12] sm:h-56 sm:w-56"
+            />
+            <div className="hud-clipped relative z-10 h-full border border-[var(--accent-primary)]/35 bg-[var(--bg-panel)] p-5 sm:p-6">
+              {latestEvent ? (
+                <HeroLivePanel event={latestEvent} regOpen={regOpen} />
+              ) : (
+                <div className="flex h-full flex-col justify-center gap-4">
+                  <SealShield className="h-10 w-10 text-[var(--accent-primary)]" />
+                  <p className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    Arena status
+                  </p>
+                  <p className="font-display text-xl font-bold uppercase text-[var(--text-primary)]">
+                    {totalRealCount === 0 ? "Chưa có sự kiện mở" : "Đang tải sự kiện…"}
+                  </p>
+                  <Link href="/events">
+                    <Button variant="secondary">Danh sách sự kiện</Button>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
 
-
-
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 2: LIVE METRICS STRIP
-         ───────────────────────────────────────────────────────────── */}
       <LandingMetricsStrip />
 
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 3: LATEST EVENT SPOTLIGHT (ASYMMETRIC COMMAND PANEL)
-         ───────────────────────────────────────────────────────────── */}
       {latestEvent && <LatestEventSpotlight event={latestEvent} />}
 
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 4: FEATURED EVENTS PREVIEW & TRACK EXPLORER
-         ───────────────────────────────────────────────────────────── */}
       {featuredEvents.length > 0 && (
-        <PreviewSection title="SỰ KIỆN NỔI BẬT KHÁC" events={featuredEvents} showAllHref="/events" />
+        <PreviewSection title="Sự kiện nổi bật khác" events={featuredEvents} showAllHref="/events" />
       )}
 
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 5: OPERATIONAL WORKFLOW STEPS
-         ───────────────────────────────────────────────────────────── */}
       <LandingWorkflowSteps />
-
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 6: PODIUM HALL OF FAME & PROOF OF RESULTS
-         ───────────────────────────────────────────────────────────── */}
       <LandingLeaderboardPodium />
-
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 7: FREQUENTLY ASKED QUESTIONS (FAQ HUD CONSOLE)
-         ───────────────────────────────────────────────────────────── */}
       <LandingFaqSection />
     </main>
+  );
+}
+
+function HeroLivePanel({ event, regOpen }: { event: EventCardData; regOpen: boolean }) {
+  const countdownTarget = event.status === "ongoing" ? event.endDate : event.registrationEndDate;
+  const countdown = useCountdown(event.status === "ended" ? null : countdownTarget);
+  const slotsLeft = Math.max(0, event.maxTeams - event.teamCount);
+  const fillPercent = Math.min(100, Math.round((event.teamCount / Math.max(event.maxTeams, 1)) * 100));
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
+          <Badge tone={regOpen ? "success" : "neutral"}>
+            {regOpen ? "Cổng mở" : "Ngoài cửa sổ ĐK"}
+          </Badge>
+        </div>
+        <SealShield className="h-8 w-8 shrink-0 text-[var(--accent-primary)]" />
+      </div>
+
+      <p className="mt-4 font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+        {event.season} {event.year} · #{formatShortId(event.id)}
+      </p>
+      <h2 className="mt-2 font-display text-xl font-extrabold uppercase leading-tight text-[var(--text-primary)] sm:text-2xl">
+        {event.eventName}
+      </h2>
+      <p className="mt-2 line-clamp-2 text-sm text-[var(--text-muted)]">{event.tagline}</p>
+
+      {!countdown.isPast && (
+        <div className="mt-5 border-t border-[var(--border-muted)] pt-4" suppressHydrationWarning>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+            {event.status === "ongoing" ? "Hạn nộp còn" : "Đóng cổng sau"}
+          </p>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {[
+              { value: countdown.days, label: "ngày" },
+              { value: countdown.hours, label: "giờ" },
+              { value: countdown.minutes, label: "phút" },
+              { value: countdown.seconds, label: "giây" },
+            ].map((u) => (
+              <div key={u.label} suppressHydrationWarning>
+                <span
+                  className={`font-mono text-xl font-bold tabular-nums ${
+                    countdown.isUrgent ? "text-[var(--color-danger)]" : "text-[var(--accent-primary)]"
+                  }`}
+                  suppressHydrationWarning
+                >
+                  {String(u.value).padStart(2, "0")}
+                </span>
+                <span className="mt-0.5 block font-mono text-[9px] text-[var(--text-muted)]">
+                  {u.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-5 space-y-2">
+        <div className="flex justify-between font-mono text-[10px] uppercase text-[var(--text-muted)]">
+          <span>Sức chứa đội</span>
+          <span className="tabular-nums text-[var(--accent-team)]">
+            {event.teamCount}/{event.maxTeams} · còn {slotsLeft}
+          </span>
+        </div>
+        <div className="h-2 border border-[var(--border-muted)] bg-[var(--bg-base)] p-0.5">
+          <div
+            className="h-full bg-[var(--accent-primary)] transition-[width] duration-500"
+            style={{ width: `${fillPercent}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-auto pt-6">
+        <Link href={`/events/${event.id}`} className="block">
+          <Button className="w-full">{regOpen ? "Đăng ký sự kiện này" : "Chi tiết sự kiện"}</Button>
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -198,7 +357,7 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
                   </span>
                 )}
                 <span className="font-mono text-xs text-[var(--text-muted)] border border-[var(--border-muted)] px-2 py-0.5">
-                  ID: #{event.id.toUpperCase()}
+                  ID: #{formatShortId(event.id)}
                 </span>
               </div>
 
@@ -292,77 +451,118 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Compact Countdown + Round Timeline */}
-            {!countdown.isPast && (
-              <div className="flex flex-col gap-4 border border-[var(--border-muted)]/60 bg-[var(--bg-base)]/70 p-5">
+            {/* RIGHT COLUMN: always filled — countdown and/or schedule + mark */}
+            <div className="relative flex flex-col gap-4 overflow-hidden border border-[var(--border-muted)] bg-[var(--bg-base)]/80 p-5 hud-clipped">
+              <SealShield
+                aria-hidden
+                className="pointer-events-none absolute -bottom-6 -right-6 h-28 w-28 text-[var(--accent-primary)] opacity-20"
+              />
 
-                {/* Label */}
-                <div className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
-                  <span className={`h-1.5 w-1.5 rounded-full ${countdown.isUrgent ? "bg-[var(--color-danger)] animate-ping" : "bg-[var(--accent-primary)]"}`} />
-                  {countdownLabel}
-                </div>
-
-                {/* Compact single-row countdown */}
-                <div className="flex items-center justify-between gap-1" suppressHydrationWarning>
-                  {[
-                    { value: countdown.days, label: "ngày" },
-                    { value: countdown.hours, label: "giờ" },
-                    { value: countdown.minutes, label: "phút" },
-                    { value: countdown.seconds, label: "giây" },
-                  ].map((u, i) => (
-                    <div key={u.label} className="flex items-baseline gap-1" suppressHydrationWarning>
-                      <span
-                        className={`font-mono font-bold tabular-nums text-2xl tracking-tight ${countdown.isUrgent ? "text-[var(--color-danger)]" : "text-[var(--accent-primary)]"}`}
-                        suppressHydrationWarning
-                      >
-                        {String(u.value).padStart(2, "0")}
-                      </span>
-                      <span className="font-mono text-[10px] text-[var(--text-muted)]">{u.label}</span>
-                      {i < 3 && <span className="font-mono text-[var(--border-muted)] ml-1">:</span>}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Round Timeline */}
-                {event.rounds && event.rounds.length > 0 && (
-                  <div className="flex flex-col gap-0 border-t border-[var(--border-muted)]/50 pt-3 mt-1">
-                    <span className="font-mono text-[9px] text-[var(--text-muted)] uppercase tracking-widest mb-2">
-                      Lịch vòng thi
-                    </span>
-                    {event.rounds.map((r, idx) => {
-                      const isPast = new Date(r.startDate) < new Date();
-                      return (
-                        <div key={r.id} className="flex items-center gap-3 py-1.5 group">
-                          {/* Timeline dot + line */}
-                          <div className="flex flex-col items-center shrink-0 w-3">
-                            <span className={`w-2 h-2 rounded-full border ${isPast ? "bg-[var(--text-muted)]/30 border-[var(--border-muted)]" : "bg-[var(--accent-primary)]/80 border-[var(--accent-primary)]"}`} />
-                            {idx < event.rounds.length - 1 && (
-                              <span className="w-px flex-1 bg-[var(--border-muted)]/50 h-3 mt-0.5" />
-                            )}
-                          </div>
-                          {/* Content */}
-                          <div className="flex-1 flex items-center justify-between min-w-0">
-                            <span className={`font-mono text-[11px] font-medium ${isPast ? "text-[var(--text-muted)]/50 line-through" : "text-[var(--text-primary)]"}`}>
-                              {r.roundName}
-                            </span>
-                            <span className="font-mono text-[10px] text-[var(--text-muted)] shrink-0 ml-2">
-                              {formatShortDate(r.startDate)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
+              {!countdown.isPast ? (
+                <>
+                  <div className="relative z-10 flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        countdown.isUrgent
+                          ? "bg-[var(--color-danger)] animate-ping"
+                          : "bg-[var(--accent-primary)]"
+                      }`}
+                    />
+                    {countdownLabel}
                   </div>
-                )}
 
-                {countdown.isUrgent && (
-                  <span className="font-mono text-[10px] font-bold text-[var(--color-danger)] uppercase tracking-wider animate-pulse text-center border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 py-1">
-                    Sắp đóng cổng — Nộp bài ngay!
+                  <div className="relative z-10 flex items-center justify-between gap-1" suppressHydrationWarning>
+                    {[
+                      { value: countdown.days, label: "ngày" },
+                      { value: countdown.hours, label: "giờ" },
+                      { value: countdown.minutes, label: "phút" },
+                      { value: countdown.seconds, label: "giây" },
+                    ].map((u, i) => (
+                      <div key={u.label} className="flex items-baseline gap-1" suppressHydrationWarning>
+                        <span
+                          className={`font-mono font-bold tabular-nums text-2xl tracking-tight ${
+                            countdown.isUrgent
+                              ? "text-[var(--color-danger)]"
+                              : "text-[var(--accent-primary)]"
+                          }`}
+                          suppressHydrationWarning
+                        >
+                          {String(u.value).padStart(2, "0")}
+                        </span>
+                        <span className="font-mono text-[10px] text-[var(--text-muted)]">{u.label}</span>
+                        {i < 3 && <span className="ml-1 font-mono text-[var(--border-muted)]">:</span>}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="relative z-10 space-y-3">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                    Mốc thời gian
+                  </p>
+                  <div className="flex justify-between gap-3 border-b border-[var(--border-muted)] pb-2 font-mono text-xs">
+                    <span className="text-[var(--text-muted)]">Đăng ký</span>
+                    <span className="tabular-nums text-[var(--text-primary)]">
+                      {formatShortDate(event.registrationStartDate)} –{" "}
+                      {formatShortDate(event.registrationEndDate)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-3 font-mono text-xs">
+                    <span className="text-[var(--text-muted)]">Diễn ra</span>
+                    <span className="tabular-nums text-[var(--text-primary)]">
+                      {formatShortDate(event.startDate)} – {formatShortDate(event.endDate)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {event.rounds && event.rounds.length > 0 && (
+                <div className="relative z-10 mt-1 flex flex-col gap-0 border-t border-[var(--border-muted)]/50 pt-3">
+                  <span className="mb-2 font-mono text-[9px] uppercase tracking-widest text-[var(--text-muted)]">
+                    Lịch vòng thi
                   </span>
-                )}
-              </div>
-            )}
+                  {event.rounds.map((r, idx) => {
+                    const isPast = new Date(r.startDate) < new Date();
+                    return (
+                      <div key={r.id} className="flex items-center gap-3 py-1.5">
+                        <div className="flex w-3 shrink-0 flex-col items-center">
+                          <span
+                            className={`h-2 w-2 rounded-full border ${
+                              isPast
+                                ? "border-[var(--border-muted)] bg-[var(--text-muted)]/30"
+                                : "border-[var(--accent-primary)] bg-[var(--accent-primary)]/80"
+                            }`}
+                          />
+                          {idx < event.rounds.length - 1 && (
+                            <span className="mt-0.5 h-3 w-px bg-[var(--border-muted)]/50" />
+                          )}
+                        </div>
+                        <div className="flex min-w-0 flex-1 items-center justify-between">
+                          <span
+                            className={`font-mono text-[11px] font-medium ${
+                              isPast
+                                ? "text-[var(--text-muted)]/50 line-through"
+                                : "text-[var(--text-primary)]"
+                            }`}
+                          >
+                            {r.roundName}
+                          </span>
+                          <span className="ml-2 shrink-0 font-mono text-[10px] text-[var(--text-muted)]">
+                            {formatShortDate(r.startDate)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
+              {countdown.isUrgent && !countdown.isPast && (
+                <span className="relative z-10 border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/5 py-1 text-center font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--color-danger)] animate-pulse">
+                  Sắp đóng cổng — Nộp bài ngay!
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -408,34 +608,67 @@ function PreviewSection({
           {featuredEvent && (
             <Link
               href={`/events/${featuredEvent.id}`}
-              className="hud-clipped group flex flex-col justify-between border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 transition-all hover:border-[var(--accent-primary)]/70 hover:shadow-lg"
+              className="hud-clipped group relative grid grid-cols-1 overflow-hidden border border-[var(--border-muted)] bg-[var(--bg-panel)] transition-all hover:border-[var(--accent-primary)]/70 sm:grid-cols-[minmax(0,1.2fr)_minmax(140px,0.8fr)]"
               style={{ borderTop: `4px solid ${STATUS_DOT_VAR[featuredEvent.status]}` }}
             >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Badge tone={STATUS_TONE[featuredEvent.status]}>{STATUS_LABEL[featuredEvent.status]}</Badge>
-                  <span className="font-mono text-xs font-bold text-[var(--accent-primary)] uppercase">
-                    TIÊU ĐIỂM • {featuredEvent.season} {featuredEvent.year}
-                  </span>
+              <div className="flex flex-col justify-between p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge tone={STATUS_TONE[featuredEvent.status]}>
+                      {STATUS_LABEL[featuredEvent.status]}
+                    </Badge>
+                    <span className="font-mono text-xs font-bold uppercase text-[var(--accent-primary)]">
+                      Tiêu điểm · {featuredEvent.season} {featuredEvent.year}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-display text-2xl font-bold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-primary)]">
+                      {featuredEvent.eventName}
+                    </h3>
+                    <p className="mt-2 line-clamp-3 text-sm text-[color:var(--text-muted)]">
+                      {featuredEvent.tagline}
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="font-display text-2xl font-bold text-[color:var(--text-primary)] group-hover:text-[color:var(--accent-primary)] transition-colors">
-                    {featuredEvent.eventName}
-                  </h3>
-                  <p className="mt-2 text-sm text-[color:var(--text-muted)] line-clamp-3">
-                    {featuredEvent.tagline}
-                  </p>
+                <div className="mt-6 flex items-center justify-between border-t border-[var(--border-muted)] pt-4 font-mono text-xs text-[color:var(--text-muted)]">
+                  <span>{featuredEvent.teamCount} đội đã đăng ký</span>
+                  {featuredEvent.prizes.length > 0 && (
+                    <span className="text-sm font-bold text-[var(--accent-judge)]">
+                      {featuredEvent.prizes[0].prizeName}: {featuredEvent.prizes[0].value}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="mt-6 border-t border-[var(--border-muted)] pt-4 flex items-center justify-between font-mono text-xs text-[color:var(--text-muted)]">
-                <span>{featuredEvent.teamCount} Đội Thi Đã Đăng Ký</span>
-                {featuredEvent.prizes.length > 0 && (
-                  <span className="font-bold text-[var(--accent-judge)] text-sm">
-                    {featuredEvent.prizes[0].prizeName}: {featuredEvent.prizes[0].value}
-                  </span>
-                )}
+              {/* Right fill — logo mark + capacity (no empty void) */}
+              <div className="relative flex min-h-[160px] flex-col items-center justify-center gap-3 border-t border-[var(--border-muted)] bg-[var(--bg-base)]/50 p-6 sm:border-l sm:border-t-0">
+                <SealShield className="h-20 w-20 text-[var(--accent-primary)] opacity-80 sm:h-24 sm:w-24" />
+                <div className="w-full max-w-[140px] space-y-1.5">
+                  <div className="flex justify-between font-mono text-[9px] uppercase text-[var(--text-muted)]">
+                    <span>Đội</span>
+                    <span className="text-[var(--accent-team)]">
+                      {featuredEvent.teamCount}/{featuredEvent.maxTeams}
+                    </span>
+                  </div>
+                  <div className="h-1.5 border border-[var(--border-muted)] bg-[var(--bg-input)] p-px">
+                    <div
+                      className="h-full bg-[var(--accent-primary)]"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.round(
+                            (featuredEvent.teamCount / Math.max(featuredEvent.maxTeams, 1)) * 100,
+                          ),
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--accent-primary)]">
+                  Xem chi tiết →
+                </span>
               </div>
             </Link>
           )}
