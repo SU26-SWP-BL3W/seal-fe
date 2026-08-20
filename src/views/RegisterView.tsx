@@ -19,10 +19,6 @@ export function RegisterView() {
   const toast = useToast();
   const [step, setStep] = useState<RegisterStep>("form");
 
-  if (currentUser) {
-    return <AlreadyLoggedInNotice />;
-  }
-
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +31,10 @@ export function RegisterView() {
   const { mutateAsync: registerApi, isPending } = useRegister();
   const { mutateAsync: resendApi, isPending: isResending } = useResendVerification();
   const [resendMsg, setResendMsg] = useState("");
+
+  if (currentUser) {
+    return <AlreadyLoggedInNotice />;
+  }
 
   const validate = () => {
     const errs: Record<string, string> = {};
