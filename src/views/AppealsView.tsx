@@ -23,7 +23,9 @@ import {
   TableCell,
   Badge,
   ApiMissingDataBadge,
+  Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/providers/ToastProvider";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import {
@@ -72,6 +74,16 @@ export function AppealsView() {
 
   const { data: appealsRaw, isLoading, refetch } = isEC ? eventAppeals : teamAppeals;
   const appeals: Appeal[] = Array.isArray(appealsRaw) ? appealsRaw : ((appealsRaw as any)?.data ?? []);
+
+  const {
+    paginatedItems: paginatedAppeals,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(appeals, 6);
 
   const { mutateAsync: createAppeal, isPending: isSubmitting } = useCreateAppeal();
   const { mutateAsync: respondAppeal, isPending: isResponding } = useRespondAppeal();
@@ -268,7 +280,7 @@ export function AppealsView() {
                 </TableRow>
               </TableHeader>
               <tbody>
-                {appeals.map((item) => {
+                {paginatedAppeals.map((item) => {
                   const isPending = item.status === AppealStatus.Pending;
                   const isApproved = item.status === AppealStatus.Approved;
                   return (
@@ -309,6 +321,20 @@ export function AppealsView() {
                 })}
               </tbody>
             </Table>
+          )}
+
+          {appeals.length > 0 && (
+            <div className="pt-2">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="đơn phúc khảo"
+              />
+            </div>
           )}
         </div>
       </div>

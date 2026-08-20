@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Badge, Button, Card, EmptyState } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 
 type EventTab = "all" | "ongoing" | "upcoming" | "past";
 
@@ -96,6 +97,16 @@ export function JudgeEventsView() {
   }, [judgeEvents]);
 
   const displayedEvents = categorizedEvents[activeTab] || [];
+
+  const {
+    paginatedItems: paginatedEvents,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(displayedEvents, 6);
 
   if (!user) {
     return (
@@ -192,102 +203,116 @@ export function JudgeEventsView() {
       )}
 
       {!isLoading && displayedEvents.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {displayedEvents.map((evt: any) => {
-            const eventId = evt.id || evt.Id || "";
-            const eventName = evt.eventName || evt.EventName || evt.name || "Sự kiện Hackathon";
-            const season = evt.season || evt.Season || "Season 2026";
-            const year = evt.year || evt.Year || new Date().getFullYear();
-            const startDate = evt.startDate || evt.StartDate;
-            const endDate = evt.endDate || evt.EndDate;
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paginatedEvents.map((evt: any) => {
+              const eventId = evt.id || evt.Id || "";
+              const eventName = evt.eventName || evt.EventName || evt.name || "Sự kiện Hackathon";
+              const season = evt.season || evt.Season || "Season 2026";
+              const year = evt.year || evt.Year || new Date().getFullYear();
+              const startDate = evt.startDate || evt.StartDate;
+              const endDate = evt.endDate || evt.EndDate;
 
-            const now = new Date();
-            const start = startDate ? new Date(startDate) : null;
-            const end = endDate ? new Date(endDate) : null;
-            const { isPast, isUpcoming, isOngoing } = eventStatus(now, start, end);
+              const now = new Date();
+              const start = startDate ? new Date(startDate) : null;
+              const end = endDate ? new Date(endDate) : null;
+              const { isPast, isUpcoming, isOngoing } = eventStatus(now, start, end);
 
-            return (
-              <Card
-                key={eventId}
-                className="flex flex-col justify-between gap-4 transition-colors hover:border-[var(--accent-judge)]/40"
-              >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {season} · {year}
-                    </span>
-                    <Badge
-                      tone={isOngoing ? "success" : isUpcoming ? "info" : "neutral"}
-                      className="gap-1.5"
-                    >
-                      {isOngoing && (
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--color-success)]" />
-                      )}
-                      {isOngoing
-                        ? "Đang diễn ra"
-                        : isUpcoming
-                          ? "Sắp khởi tranh"
-                          : "Đã kết thúc"}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <h3 className="line-clamp-2 font-display text-lg font-semibold text-[var(--text-primary)]">
-                      {eventName}
-                    </h3>
-                    <p className="mt-1 line-clamp-2 text-sm text-[var(--text-muted)]">
-                      {evt.description || evt.Description || "Sự kiện thi đấu lập trình và đổi mới sáng tạo SEAL."}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] p-3 text-xs">
-                    <div className="flex items-center justify-between text-[var(--text-primary)]">
-                      <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
-                        <Calendar className="h-3.5 w-3.5" /> Bắt đầu
+              return (
+                <Card
+                  key={eventId}
+                  className="flex flex-col justify-between gap-4 transition-colors hover:border-[var(--accent-judge)]/40"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {season} · {year}
                       </span>
-                      <span>{startDate ? new Date(startDate).toLocaleDateString("vi-VN") : "N/A"}</span>
+                      <Badge
+                        tone={isOngoing ? "success" : isUpcoming ? "info" : "neutral"}
+                        className="gap-1.5"
+                      >
+                        {isOngoing && (
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--color-success)]" />
+                        )}
+                        {isOngoing
+                          ? "Đang diễn ra"
+                          : isUpcoming
+                            ? "Sắp khởi tranh"
+                            : "Đã kết thúc"}
+                      </Badge>
                     </div>
-                    <div className="flex items-center justify-between text-[var(--text-primary)]">
-                      <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
-                        <Clock className="h-3.5 w-3.5" /> Hạn chót
-                      </span>
-                      <span className="font-medium text-[var(--accent-judge)]">
-                        {endDate ? new Date(endDate).toLocaleDateString("vi-VN") : "N/A"}
-                      </span>
+
+                    <div>
+                      <h3 className="line-clamp-2 font-display text-lg font-semibold text-[var(--text-primary)]">
+                        {eventName}
+                      </h3>
+                      <p className="mt-1 line-clamp-2 text-sm text-[var(--text-muted)]">
+                        {evt.description || evt.Description || "Sự kiện thi đấu lập trình và đổi mới sáng tạo SEAL."}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] p-3 text-xs">
+                      <div className="flex items-center justify-between text-[var(--text-primary)]">
+                        <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                          <Calendar className="h-3.5 w-3.5" /> Bắt đầu
+                        </span>
+                        <span>{startDate ? new Date(startDate).toLocaleDateString("vi-VN") : "N/A"}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[var(--text-primary)]">
+                        <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                          <Clock className="h-3.5 w-3.5" /> Hạn chót
+                        </span>
+                        <span className="font-medium text-[var(--accent-judge)]">
+                          {endDate ? new Date(endDate).toLocaleDateString("vi-VN") : "N/A"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="border-t border-[var(--border-muted)] pt-4">
-                  {isOngoing && (
-                    <Link href="/judge/tracks">
-                      <Button accent="judge" className="w-full">
-                        Vào chấm điểm hạng mục
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  )}
-                  {isUpcoming && (
-                    <Link href={`/events/${eventId}`}>
-                      <Button variant="secondary" accent="judge" className="w-full">
-                        Xem thể lệ & tiêu chí
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  )}
-                  {isPast && (
-                    <Link href="/judge/tracks">
-                      <Button variant="ghost" accent="judge" className="w-full">
-                        Xem lại bảng điểm đã chấm
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                  <div className="border-t border-[var(--border-muted)] pt-4">
+                    {isOngoing && (
+                      <Link href="/judge/tracks">
+                        <Button accent="judge" className="w-full">
+                          Vào chấm điểm hạng mục
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
+                    {isUpcoming && (
+                      <Link href={`/events/${eventId}`}>
+                        <Button variant="secondary" accent="judge" className="w-full">
+                          Xem thể lệ & tiêu chí
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
+                    {isPast && (
+                      <Link href="/judge/tracks">
+                        <Button variant="ghost" accent="judge" className="w-full">
+                          Xem lại bảng điểm đã chấm
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="pt-2">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="sự kiện"
+            />
+          </div>
+        </>
       )}
     </PageShell>
   );

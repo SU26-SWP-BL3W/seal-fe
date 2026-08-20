@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import {
   useGetPrizesByEvent,
@@ -11,18 +11,10 @@ import {
 } from "@/repositories/results/prizesRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, DollarSign, Save, ChevronDown } from "lucide-react";
-
-// Bản trước ở view này: danh sách sự kiện + hạng mục (track) đều là mảng bịa
-// cứng ("EV-01"/"trk-1"...), state giải thưởng khởi tạo sẵn 4 giải giả và
-// KHÔNG BAO GIỜ tải giải thật đã lưu (useGetPrizesByEvent bị import nhưng
-// không dùng), Save nuốt mọi lỗi API ("catch { // Ignore }") nên luôn báo
-// "thành công" dù request thất bại. Đối chiếu Prize.cs (Domain) xác nhận
-// Prize KHÔNG có TrackId — việc gán giải theo Hạng mục chỉ xảy ra ở
-// FinalResult lúc công bố kết quả, không phải lúc khai báo giải, nên bỏ hẳn
-// tính năng "phân bổ theo hạng mục" bịa ở đây và viết lại thành CRUD thật.
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface DraftPrize {
-  /** id thật từ server nếu đã tồn tại, hoặc id tạm "new-..." nếu vừa thêm ở FE */
   id: string;
   isNew: boolean;
   prizeName: string;
@@ -30,9 +22,13 @@ interface DraftPrize {
   value: string;
 }
 
-function toDraft(p: Prize): DraftPrize {
-  return { id: p.id, isNew: false, prizeName: p.prizeName, quantity: p.quantity, value: p.value };
-}
+const toDraft = (p: Prize): DraftPrize => ({
+  id: p.id || (p as any).Id || "",
+  isNew: false,
+  prizeName: p.prizeName || (p as any).PrizeName || "",
+  quantity: p.quantity || (p as any).Quantity || 1,
+  value: p.value || (p as any).Value || "",
+});
 
 export const CoordinatorPrizesView: React.FC = () => {
   const params = useParams();
@@ -60,7 +56,6 @@ export const CoordinatorPrizesView: React.FC = () => {
   const [prizes, setPrizes] = useState<DraftPrize[]>([]);
   const [removedIds, setRemovedIds] = useState<string[]>([]);
 
-  // Nạp lại state khi đổi sự kiện hoặc dữ liệu server thay đổi
   useEffect(() => {
     setPrizes((serverPrizes as Prize[]).map(toDraft));
     setRemovedIds([]);
@@ -73,14 +68,32 @@ export const CoordinatorPrizesView: React.FC = () => {
     ]);
   };
 
-  const handleRemovePrize = (id: string, isNew: boolean) => {
+  const handleRemovePrize = (id: string, isNew?: boolean) => {
     setPrizes((prev) => prev.filter((p) => p.id !== id));
-    if (!isNew) setRemovedIds((prev) => [...prev, id]);
+    if (!isNew) {
+      setRemovedIds((prev) => [...prev, id]);
+    }
   };
 
   const handleUpdatePrize = (id: string, field: keyof DraftPrize, value: any) => {
-    setPrizes((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+    setPrizes((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+    );
   };
+
+  const prizeEntries = useMemo(() => {
+    return prizes.map((p, originalIdx) => ({ p, originalIdx }));
+  }, [prizes]);
+
+  const {
+    paginatedItems: paginatedPrizeEntries,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(prizeEntries, 5);
 
   const totalPrizeBudget = prizes.reduce((acc, p) => {
     const val = Number(p.value.replace(/[^0-9]/g, "")) || 0;
@@ -212,28 +225,24 @@ export const CoordinatorPrizesView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#263339]">
-                  {!eventId ? (
-                    <tr>
-                      <td colSpan={5} className="p-8 text-center text-[#8a9ba8]">
-                        Chọn một sự kiện để xem/cấu hình giải thưởng.
-                      </td>
-                    </tr>
-                  ) : isLoadingPrizes ? (
+                  {isLoadingPrizes ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-[#8a9ba8]">
                         Đang tải danh sách giải thưởng...
                       </td>
                     </tr>
-                  ) : prizes.length === 0 ? (
+                  ) : prizeEntries.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-[#8a9ba8]">
                         Chưa có giải thưởng nào cho sự kiện này. Bấm &quot;Thêm giải thưởng mới&quot; để bắt đầu.
                       </td>
                     </tr>
                   ) : (
-                    prizes.map((p, idx) => (
+                    paginatedPrizeEntries.map(({ p, originalIdx }) => (
                       <tr key={p.id} className="hover:bg-[#182024]">
-                        <td className="p-3 text-center text-[#8a9ba8] font-bold">0{idx + 1}</td>
+                        <td className="p-3 text-center text-[#8a9ba8] font-bold">0{originalIdx + 1}</td>
+
+                        {/* Tên giải thưởng editable input */}
                         <td className="p-3">
                           <input
                             type="text"
@@ -243,6 +252,8 @@ export const CoordinatorPrizesView: React.FC = () => {
                             className="w-full px-3 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans font-bold text-sm focus:outline-none focus:border-[#f59e0b]"
                           />
                         </td>
+
+                        {/* Số lượng */}
                         <td className="p-3 text-center">
                           <input
                             type="number"
@@ -253,6 +264,8 @@ export const CoordinatorPrizesView: React.FC = () => {
                             className="w-16 px-2 py-1 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-xs text-center font-bold focus:outline-none focus:border-[#f59e0b]"
                           />
                         </td>
+
+                        {/* Giá trị */}
                         <td className="p-3">
                           <input
                             type="text"
@@ -262,6 +275,8 @@ export const CoordinatorPrizesView: React.FC = () => {
                             className="w-full px-3 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono font-bold text-xs focus:outline-none focus:border-[#f59e0b]"
                           />
                         </td>
+
+                        {/* Nút xóa */}
                         <td className="p-3 text-center">
                           <button
                             type="button"
@@ -277,39 +292,52 @@ export const CoordinatorPrizesView: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {prizeEntries.length > 0 && (
+              <div className="p-4 border-t border-[#263339]">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="giải thưởng"
+                />
+              </div>
+            )}
           </div>
 
           {/* Right Panel: Live Budget Summary (4 cols) */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-[#13191c] border border-[#263339] p-6 space-y-4 font-mono text-xs">
-              <div className="border-b border-[#263339] pb-3 font-bold text-[#f59e0b] tracking-widest uppercase flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-[#f59e0b]" />
-                <span>TỔNG NGÂN SÁCH GIẢI THƯỞNG</span>
+            <div className="bg-[#13191c] border border-[#263339] p-6 space-y-5 font-mono text-xs">
+              <div className="border-b border-[#263339] pb-3 flex items-center justify-between">
+                <span className="font-bold text-[#e1e7ec] uppercase tracking-wider flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-[#f59e0b]" />
+                  TỔNG KẾT NGÂN SÁCH GIẢI
+                </span>
+                <span className="text-[10px] text-[#8a9ba8]">{prizes.length} Hạng mục giải</span>
               </div>
 
-              <div className="text-3xl font-bold text-[#f59e0b]">
-                {totalPrizeBudget.toLocaleString("vi-VN")} <span className="text-sm text-[#8a9ba8]">VNĐ</span>
+              <div className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2">
+                <span className="text-[10px] text-[#8a9ba8] uppercase block">Tổng Giá Trị Giải Thưởng:</span>
+                <div className="text-2xl font-bold text-[#f59e0b] tracking-wider">
+                  {totalPrizeBudget.toLocaleString("vi-VN")} <span className="text-sm text-[#8a9ba8]">VNĐ</span>
+                </div>
               </div>
 
-              <p className="text-[11px] text-[#8a9ba8] leading-relaxed">
-                Tự động tính tổng ngân sách dựa trên số lượng x giá trị của tất cả giải thưởng
-                (chỉ áp dụng khi giá trị nhập là số tiền VNĐ thuần).
-              </p>
+              <button
+                type="button"
+                onClick={handleSaveConfig}
+                disabled={isSubmitting || !eventId}
+                className="w-full py-3 bg-[#f59e0b] hover:bg-amber-400 text-[#0a0e10] font-mono font-bold text-xs uppercase flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-lg shadow-[#f59e0b]/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Save className="w-4 h-4" />
+                <span>{isSubmitting ? "ĐANG LƯU..." : "LƯU CƠ CẤU GIẢI THƯỞNG"}</span>
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={handleSaveConfig}
-              disabled={isSubmitting || !eventId || prizes.length === 0}
-              className="w-full py-3 bg-[#f59e0b] hover:bg-amber-400 text-[#0a0e10] font-mono font-bold text-xs uppercase flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isSubmitting ? "ĐANG GHI NHẬN..." : "GHI NHẬN CẤU HÌNH GIẢI THƯỞNG"}</span>
-            </button>
           </div>
-
         </div>
-
       </div>
     </div>
   );

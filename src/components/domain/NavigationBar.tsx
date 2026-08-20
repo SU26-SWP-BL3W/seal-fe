@@ -298,38 +298,62 @@ export function NavigationBar() {
             </span>
           </div>
 
-          {/* Vertical Coordinator Menu Section with Big Numbers 1 2 3 4 5 6 */}
+          {/* Vertical Coordinator Menu Section with Big Numbers 01 02 03 04 05 06 07 */}
           <nav className="flex flex-col gap-2 font-mono text-xs">
             <span className="font-mono text-[10px] font-bold text-[#a855f7] tracking-wider px-2 py-1 uppercase border-b border-[#263339] mb-1 flex items-center justify-between">
               <span>LUỒNG ĐIỀU PHỐI VIÊN (EC)</span>
-              <span className="text-[9px] text-zinc-500 font-normal">6 MODULES</span>
+              <span className="text-[9px] text-zinc-500 font-normal">7 MODULES</span>
             </span>
 
-            {/* 01. Quản lý sự kiện */}
+            {/* 01. Dashboard */}
             <Link
-              href="/coordinator/staff"
+              href="/coordinator/dashboard"
               className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
-                pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")
+                pathname.includes("/coordinator/dashboard")
                   ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
                   : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] border border-transparent hover:border-zinc-800"
               }`}
             >
               <div className={`w-7 h-7 hud-clipped flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-all ${
-                pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")
+                pathname.includes("/coordinator/dashboard")
                   ? "bg-white text-[#a855f7]"
                   : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
                 01
               </div>
               <div className="min-w-0 flex-1">
+                <div className="text-xs uppercase tracking-wide truncate">Dashboard</div>
+                <div className={`text-[10px] truncate ${pathname.includes("/coordinator/dashboard") ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
+                  Thống kê • Tổng quan sự kiện
+                </div>
+              </div>
+            </Link>
+
+            {/* 02. Quản lý sự kiện */}
+            <Link
+              href="/coordinator/staff"
+              className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
+                (pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")) && !pathname.includes("/coordinator/dashboard")
+                  ? "bg-[#a855f7] text-white shadow-md shadow-[#a855f7]/30"
+                  : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)] border border-transparent hover:border-zinc-800"
+              }`}
+            >
+              <div className={`w-7 h-7 hud-clipped flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-all ${
+                (pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")) && !pathname.includes("/coordinator/dashboard")
+                  ? "bg-white text-[#a855f7]"
+                  : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
+              }`}>
+                02
+              </div>
+              <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-wide truncate">Quản Lý Sự Kiện</div>
-                <div className={`text-[10px] truncate ${pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events") ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
+                <div className={`text-[10px] truncate ${(pathname.includes("/coordinator/staff") || pathname.includes("/coordinator/events")) && !pathname.includes("/coordinator/dashboard") ? "text-white/80 font-normal" : "text-zinc-500 font-normal"}`}>
                   Vòng thi • Mentor • Judge
                 </div>
               </div>
             </Link>
 
-            {/* 02. Quản lý đội thi */}
+            {/* 03. Quản lý đội thi */}
             <Link
               href="/coordinator/teams"
               className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
@@ -343,7 +367,7 @@ export function NavigationBar() {
                   ? "bg-white text-[#a855f7]"
                   : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
-                02
+                03
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-wide truncate">Quản Lý Đội Thi</div>
@@ -353,7 +377,7 @@ export function NavigationBar() {
               </div>
             </Link>
 
-            {/* 03. Duyệt tài khoản sinh viên */}
+            {/* 04. Duyệt tài khoản sinh viên */}
             <Link
               href="/coordinator/profiles"
               className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
@@ -367,7 +391,7 @@ export function NavigationBar() {
                   ? "bg-white text-[#a855f7]"
                   : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
-                03
+                04
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-wide truncate">Duyệt Tài Khoản</div>
@@ -377,7 +401,7 @@ export function NavigationBar() {
               </div>
             </Link>
 
-            {/* 04. Kho tiêu chí Rubric */}
+            {/* 05. Kho tiêu chí Rubric */}
             <Link
               href="/coordinator/templates"
               className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
@@ -391,7 +415,7 @@ export function NavigationBar() {
                   ? "bg-white text-[#a855f7]"
                   : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
-                04
+                05
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-wide truncate">Kho Tiêu Chí</div>
@@ -401,7 +425,7 @@ export function NavigationBar() {
               </div>
             </Link>
 
-            {/* 05. Quản lý bài nộp & Phúc khảo */}
+            {/* 06. Quản lý bài nộp & Phúc khảo */}
             <Link
               href="/coordinator/submissions"
               className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
@@ -415,7 +439,7 @@ export function NavigationBar() {
                   ? "bg-white text-[#a855f7]"
                   : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
-                05
+                06
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-wide truncate">Quản Lý Bài Nộp</div>
@@ -425,7 +449,7 @@ export function NavigationBar() {
               </div>
             </Link>
 
-            {/* 06. Công bố kết quả & Giải thưởng */}
+            {/* 07. Công bố kết quả & Giải thưởng */}
             <Link
               href="/coordinator/publish-results"
               className={`group flex items-center gap-3 p-2.5 hud-clipped transition-all font-bold ${
@@ -439,7 +463,7 @@ export function NavigationBar() {
                   ? "bg-white text-[#a855f7]"
                   : "bg-[var(--bg-input)] text-zinc-400 group-hover:bg-[#a855f7]/20 group-hover:text-[#c084fc] border border-zinc-700"
               }`}>
-                06
+                07
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-wide truncate">Công Bố Kết Quả</div>

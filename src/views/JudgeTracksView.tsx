@@ -7,7 +7,8 @@ import { useMyAssignedJudgeTracks } from "@/viewModels/useMyAssignedJudgeTracks"
 import { Link } from "@/i18n/routing";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Badge, Button, Card, EmptyState, StatCard } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, StatCard, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 
 function TrackProgressBar({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -37,6 +38,16 @@ function TrackProgressBar({ done, total }: { done: number; total: number }) {
 export const JudgeTracksView: React.FC = () => {
   const { user } = useAuth();
   const { assignedTracks, isLoading } = useMyAssignedJudgeTracks();
+
+  const {
+    paginatedItems: paginatedTracks,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(assignedTracks, 6);
 
   const totalAssigned = assignedTracks.length;
   const totalPendingScoring = assignedTracks.reduce((acc, t) => acc + t.pendingSubmissions, 0);
@@ -166,50 +177,66 @@ export const JudgeTracksView: React.FC = () => {
             );
           })()
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {assignedTracks.map((track, idx) => {
-              const done = track.totalSubmissions - track.pendingSubmissions;
-              const isAllDone = track.pendingSubmissions === 0;
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {paginatedTracks.map((track, idx) => {
+                const done = track.totalSubmissions - track.pendingSubmissions;
+                const isAllDone = track.pendingSubmissions === 0;
 
-              return (
-                <Card
-                  key={track.trackId || idx}
-                  className="flex flex-col justify-between gap-4 transition-colors hover:border-[var(--accent-judge)]/40"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Badge tone="judge">Hạng mục {idx + 1}</Badge>
-                      <span className="text-xs text-[var(--text-muted)]">{track.roundName}</span>
+                return (
+                  <Card
+                    key={track.trackId || idx}
+                    className="flex flex-col justify-between gap-4 transition-colors hover:border-[var(--accent-judge)]/40"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge tone="judge">Hạng mục {(currentPage - 1) * pageSize + idx + 1}</Badge>
+                        <span className="text-xs text-[var(--text-muted)]">{track.roundName}</span>
+                      </div>
+
+                      <h3 className="font-display text-xl font-semibold text-[var(--text-primary)]">
+                        {track.trackName}
+                      </h3>
+                      <p className="line-clamp-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                        {(track as any).description ||
+                          "Hạng mục thi đấu chuyên môn được đánh giá theo thang điểm chuẩn mực."}
+                      </p>
+
+                      <TrackProgressBar done={done} total={track.totalSubmissions} />
                     </div>
 
-                    <h3 className="font-display text-xl font-semibold text-[var(--text-primary)]">
-                      {track.trackName}
-                    </h3>
-                    <p className="line-clamp-2 text-sm leading-relaxed text-[var(--text-muted)]">
-                      {(track as any).description ||
-                        "Hạng mục thi đấu chuyên môn được đánh giá theo thang điểm chuẩn mực."}
-                    </p>
+                    <div className="flex flex-col gap-2 border-t border-[var(--border-muted)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <Link href={`/judge/tracks/${track.trackId}/teams`} className="sm:flex-1">
+                        <Button variant="ghost" accent="judge" className="w-full">
+                          Danh sách bài nộp ({track.pendingSubmissions} chờ)
+                        </Button>
+                      </Link>
+                      <Link href={`/judge/scoring?trackId=${track.trackId}`} className="sm:flex-1">
+                        <Button accent="judge" className="w-full" disabled={isAllDone && track.totalSubmissions === 0}>
+                          Chấm hạng mục này
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
 
-                    <TrackProgressBar done={done} total={track.totalSubmissions} />
-                  </div>
-
-                  <div className="flex flex-col gap-2 border-t border-[var(--border-muted)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-                    <Link href={`/judge/tracks/${track.trackId}/teams`} className="sm:flex-1">
-                      <Button variant="ghost" accent="judge" className="w-full">
-                        Danh sách bài nộp ({track.pendingSubmissions} chờ)
-                      </Button>
-                    </Link>
-                    <Link href={`/judge/scoring?trackId=${track.trackId}`} className="sm:flex-1">
-                      <Button accent="judge" className="w-full" disabled={isAllDone && track.totalSubmissions === 0}>
-                        Chấm hạng mục này
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+            {assignedTracks.length > 0 && (
+              <div className="pt-2">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="hạng mục"
+                />
+              </div>
+            )}
+          </>
         )}
       </section>
     </PageShell>

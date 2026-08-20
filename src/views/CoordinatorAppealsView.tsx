@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAppealsByRound, appealsRepository, type Appeal } from "@/repositories/appealsRepository";
-import { useMyEvents } from "@/repositories/eventsRepository";
-import { useEventRounds } from "@/repositories/eventsRepository";
-import { useGetEventRoles } from "@/repositories/staffRepository";
+import { appealsRepository, AppealStatus, useGetAppealsByEvent } from "@/repositories/appealsRepository";
+import { useAuth } from "@/providers/AuthProvider";
+import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
+import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
+import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import { Check, X, AlertCircle, CheckCircle2, UserPlus, Filter, ChevronDown } from "lucide-react";
 
 // Bản trước ở view này roundId luôn là hằng số gia "round-phase-02" (không có
@@ -27,6 +30,16 @@ export const CoordinatorAppealsView: React.FC = () => {
   const judges = eventRoles.filter((r: any) => (r.roleName || r.RoleName) === "Judge");
 
   const { data: appeals = [], isLoading, refetch } = useAppealsByRound(roundId);
+
+  const {
+    paginatedItems: paginatedAppeals,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(displayAppeals, 6);
 
   const [selectedAppealId, setSelectedAppealId] = useState<string | null>(null);
   const [assignedJudgeId, setAssignedJudgeId] = useState("");
@@ -184,8 +197,9 @@ export const CoordinatorAppealsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  (appeals as Appeal[]).map((apl) => {
-                    const isPending = apl.status === 0;
+                  paginatedAppeals.map((apl) => {
+                    const team = teamNameById.get(apl.teamId) || apl.teamId;
+
                     return (
                       <tr key={apl.id} className="hover:bg-[#182024] transition-colors">
                         <td className="p-4 text-[#8b5cf6] font-bold">#{apl.submitResultId}</td>
@@ -229,6 +243,20 @@ export const CoordinatorAppealsView: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {displayAppeals.length > 0 && (
+            <div className="p-4 border-t border-[#263339]">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="đơn phúc khảo"
+              />
+            </div>
+          )}
         </div>
       </div>
 
