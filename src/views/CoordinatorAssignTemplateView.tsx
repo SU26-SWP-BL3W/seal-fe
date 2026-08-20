@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
+import { useParams } from "next/navigation";
+import { useGetTemplates } from "@/repositories/templatesRepository";
 import { tracksRepository } from "@/repositories/tracksRepository";
 import { AlertCircle, Lock, CheckCircle2, Info } from "lucide-react";
 import Link from "next/link";
@@ -12,7 +12,6 @@ import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
 
 export const CoordinatorAssignTemplateView: React.FC = () => {
   const params = useParams();
-  const router = useRouter();
   const trackId = (params?.trackId as string) || "";
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");

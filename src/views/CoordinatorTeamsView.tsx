@@ -25,12 +25,12 @@ import {
   AlertTriangle,
   Eye,
   Crown,
-  Building2,
-  FileText,
   Ban,
   Filter,
 } from "lucide-react";
 import type { TeamEntity } from "@/models/entities";
+
+const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
 
 function pickId(item: any): string {
   return item?.id || item?.Id || item?.eventId || item?.EventId || item?.TeamId || "";
@@ -69,16 +69,19 @@ export function CoordinatorTeamsView() {
   const { data: registeredTeamsRaw = [], refetch: refetchRegistered } = useGetTeamsByEvent(eventId, "Registered");
 
   // Filter pending and registered teams by selectedTrackId
+  const normSelectedTrackId = normalizeId(selectedTrackId);
   const pendingTeams = pendingTeamsRaw.filter((t: any) => {
     if (!selectedTrackId || selectedTrackId === "ALL") return true;
-    const tTrackId = t.trackId || t.TrackId || t.trackName || t.TrackName || "";
-    return tTrackId === selectedTrackId;
+    const tTrackId = normalizeId(t.trackId || t.TrackId);
+    const tTrackName = (t.trackName || t.TrackName || "").toLowerCase();
+    return tTrackId === normSelectedTrackId || tTrackName === selectedTrackId.toLowerCase();
   });
 
   const registeredTeams = (Array.isArray(registeredTeamsRaw) ? registeredTeamsRaw : []).filter((t: any) => {
     if (!selectedTrackId || selectedTrackId === "ALL") return true;
-    const tTrackId = t.trackId || t.TrackId || t.trackName || t.TrackName || "";
-    return tTrackId === selectedTrackId;
+    const tTrackId = normalizeId(t.trackId || t.TrackId);
+    const tTrackName = (t.trackName || t.TrackName || "").toLowerCase();
+    return tTrackId === normSelectedTrackId || tTrackName === selectedTrackId.toLowerCase();
   });
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();

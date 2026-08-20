@@ -10,13 +10,6 @@ import {
   Clock,
   ChevronRight,
   ShieldAlert,
-  Award,
-  Layers,
-  CheckCircle2,
-  AlertTriangle,
-  Lock,
-  Flame,
-  CheckCircle,
 } from "lucide-react";
 
 export function JudgeEventsView() {

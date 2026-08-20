@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Clock, Search, Globe, ShieldAlert } from "lucide-react";
+import { Bell, Clock, Search, Globe } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 
 export function DashboardHeader() {

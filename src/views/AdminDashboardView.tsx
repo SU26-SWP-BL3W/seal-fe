@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
+import { Button, Card, Input, ApiMissingDataBadge } from "@/components/ui";
 import {
   Shield,
   Plus,
   Users,
   School,
-  Activity,
   ArrowRight,
   UserCheck,
   Edit,
@@ -19,10 +18,8 @@ import {
   Building2,
   Calendar,
   Layers,
-  Sparkles,
   ChevronRight,
   ChevronLeft,
-  CheckCircle2,
   AlertTriangle,
   SlidersHorizontal,
   X,
@@ -70,7 +67,7 @@ export const AdminDashboardView: React.FC = () => {
   const { data: ecMap = {}, refetch: refetchEcs } = useGetAllEventsCoordinators(displayEvents);
 
   const { data: rawUsersData, refetch: refetchUsers } = useGetUsers({ pageSize: 500 });
-  const usersList = rawUsersData?.data ?? [];
+  const usersList = useMemo(() => rawUsersData?.data ?? [], [rawUsersData]);
   const totalUsersCount = rawUsersData?.totalItems ?? usersList.length;
 
   const { data: schoolsList = [] } = useGetSchools();

@@ -12,8 +12,6 @@ import {
   School as SchoolIcon,
   Plus,
   Search,
-  Building2,
-  MapPin,
   RefreshCw,
   CheckCircle2,
   X,

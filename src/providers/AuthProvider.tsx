@@ -6,7 +6,7 @@ import { User, EventRole } from "@/models/entities";
 import apiClient from "@/models/apiClient";
 
 // Trang đích sau khi đăng nhập cho từng vai trò
-const REDIRECT_BY_ROLE: Record<string, string> = {
+const _REDIRECT_BY_ROLE: Record<string, string> = {
   EventCoordinator: "/coordinator/dashboard",
   Coordinator: "/coordinator/dashboard",
   Judge: "/judge/events",
@@ -78,6 +78,7 @@ interface AuthContextType {
   loginWithGoogleCredential: (idToken: string) => Promise<string>;
   logout: () => void;
   refreshRoles: () => Promise<EventRole | null>;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -118,6 +119,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     return latestRole;
+  };
+
+  const refreshUser = async (): Promise<User | null> => {
+    try {
+      const res = await apiClient.get<User>("/Users/profile");
+      if (res.data) {
+        let updatedUser: User | null = null;
+        setUser((prev) => {
+          updatedUser = {
+            ...(prev || {}),
+            ...res.data,
+            isApproved: res.data.isApproved ?? prev?.isApproved ?? false,
+            isStudent: res.data.isStudent ?? prev?.isStudent ?? true,
+            isAdmin: res.data.isAdmin ?? prev?.isAdmin ?? false,
+          } as User;
+          if (typeof window !== "undefined") {
+            localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+          }
+          return updatedUser;
+        });
+        const raw = res.data as any;
+        const uid = raw.id || raw.Id || raw.userId || raw.UserId;
+        if (uid) {
+          await fetchUserRoles(uid).then((r) => {
+            setActiveRole(r);
+            if (typeof window !== "undefined") {
+              if (r) localStorage.setItem("activeRole", JSON.stringify(r));
+              else localStorage.removeItem("activeRole");
+            }
+          });
+        }
+        return updatedUser;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   };
 
   // Khôi phục phiên từ localStorage (F5 safe) & đồng bộ profile + eventRoles mới nhất từ BE
@@ -458,6 +496,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loginWithGoogleCredential,
           logout,
           refreshRoles,
+          refreshUser,
         }}
       >
         {children}

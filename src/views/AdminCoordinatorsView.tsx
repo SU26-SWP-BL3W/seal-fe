@@ -2,12 +2,11 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import { useEvents } from "@/repositories/eventsRepository";
 import { useGetUsers } from "@/repositories/usersRepository";
 import { useGetEventRoles, staffRepository } from "@/repositories/staffRepository";
 import type { User, EventRole } from "@/models/entities";
-import { Link, useRouter } from "@/i18n/routing";
+import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import {
   UserCheck,
@@ -22,7 +21,6 @@ import {
   RefreshCw,
   UserPlus,
   ExternalLink,
-  Users,
 } from "lucide-react";
 
 function pickEventId(ev: any): string {
@@ -30,7 +28,6 @@ function pickEventId(ev: any): string {
 }
 
 export function AdminCoordinatorsView() {
-  const router = useRouter();
   const { user: currentUser, refreshRoles } = useAuth();
   const currentUserId =
     currentUser?.id ||
@@ -43,10 +40,16 @@ export function AdminCoordinatorsView() {
 
   // Lấy danh sách toàn bộ sự kiện & người dùng
   const { data: rawEvents = [], isLoading: isLoadingEvents } = useEvents();
-  const eventsList: any[] = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
+  const eventsList: any[] = useMemo(
+    () => (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? []),
+    [rawEvents]
+  );
 
-  const { data: rawUsers = [], isLoading: isLoadingUsers } = useGetUsers();
-  const allUsers: User[] = Array.isArray(rawUsers) ? rawUsers : (rawUsers as any)?.data ?? [];
+  const { data: rawUsers = [], isLoading: _isLoadingUsers } = useGetUsers();
+  const allUsers: User[] = useMemo(
+    () => (Array.isArray(rawUsers) ? rawUsers : (rawUsers as any)?.data ?? []),
+    [rawUsers]
+  );
 
   // State chọn sự kiện
   const [selectedEventId, setSelectedEventId] = useState<string>(initialEventId);
@@ -64,7 +67,7 @@ export function AdminCoordinatorsView() {
     if (initialEventId && initialEventId !== selectedEventId) {
       setSelectedEventId(initialEventId);
     }
-  }, [initialEventId]);
+  }, [initialEventId, selectedEventId]);
 
   const selectedEvent = useMemo(() => {
     return eventsList.find((e) => pickEventId(e) === selectedEventId) || null;

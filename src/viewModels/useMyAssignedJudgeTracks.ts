@@ -40,8 +40,10 @@ export function useMyAssignedJudgeTracks() {
   const userId = user?.id || (user as any)?.userId || "";
   const isAdmin = Boolean(user?.isAdmin || user?.IsAdmin);
 
-  const events = (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data) || [];
-  const eventsList = Array.isArray(events) ? events : [];
+  const eventsList = useMemo(() => {
+    const events = (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data) || [];
+    return Array.isArray(events) ? events : [];
+  }, [rawEvents]);
 
   // Toàn bộ EventRole thật của user này — nguồn để suy ra eventRoleId ĐÚNG theo từng track.
   const { data: myEventRoles = [], isLoading: loadingRoles } = useGetMyEventRoles(userId || undefined);
@@ -100,7 +102,6 @@ export function useMyAssignedJudgeTracks() {
         if (!isAdmin) {
           const judges = t.judges || t.Judges;
           const judgeIds: string[] = (judges || []).map((j: any) => (j.id || j.Id || "").replace(/-/g, "").toLowerCase()).filter(Boolean);
-          const hasJudgeList = Array.isArray(judges) && judges.length > 0;
           const normUserId = (userId || "").replace(/-/g, "").toLowerCase();
           const normTrackId = (trackId || "").replace(/-/g, "").toLowerCase();
           const isRealAssigned = normUserId && judgeIds.includes(normUserId);
@@ -128,7 +129,7 @@ export function useMyAssignedJudgeTracks() {
     });
 
     return list;
-  }, [candidateEventIds, trackQueries, eventMeta, isAdmin, userId, assignedTrackId, eventRoleIdByTrack, fallbackEventRoleId]);
+  }, [candidateEventIds, trackQueries, eventMeta, isAdmin, userId, assignedTrackId, eventRoleIdByTrack, fallbackEventRoleId, myEventRoles]);
 
   // Bài nộp thật của từng track (song song — không gọi hook trong vòng lặp được nên dùng useQueries).
   const submissionQueries = useQueries({

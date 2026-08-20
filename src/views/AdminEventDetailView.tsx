@@ -2,43 +2,31 @@
 
 import React, { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
+import { ApiMissingDataBadge } from "@/components/ui";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import { useGetRoundsByEvent } from "@/repositories/events/roundsRepository";
 import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetEventRoles, staffRepository } from "@/repositories/staffRepository";
-import { Link, useRouter } from "@/i18n/routing";
+import { Link } from "@/i18n/routing";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 import { RevokeDraftConfirmModal } from "@/components/domain/RevokeDraftConfirmModal";
 import { ActivatePublicConfirmModal } from "@/components/domain/ActivatePublicConfirmModal";
 import {
-  Calendar,
   Layers,
-  Award,
   Users,
   ArrowLeft,
   UserCheck,
-  ExternalLink,
-  ShieldCheck,
   RefreshCw,
-  Clock,
-  CheckCircle2,
   FileText,
-  Building2,
   Target,
-  Sparkles,
   Scale,
   Lightbulb,
   Search,
   Filter,
-  Eye,
-  Sliders,
-  Edit,
 } from "lucide-react";
 
 export function AdminEventDetailView() {
-  const router = useRouter();
   const params = useParams();
   const eventId = (params?.eventId as string) || (params?.id as string) || "";
 
@@ -54,7 +42,7 @@ export function AdminEventDetailView() {
   const [emergencyMessage, setEmergencyMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   // Load Event Detail
-  const { data: event, isLoading: isLoadingEvent, refetch: refetchEvent } = useEventDetail(eventId);
+  const { data: event, isLoading: _isLoadingEvent, refetch: refetchEvent } = useEventDetail(eventId);
 
   // Load Rounds
   const { data: rounds = [], isLoading: isLoadingRounds, refetch: refetchRounds } = useGetRoundsByEvent(eventId);
@@ -70,7 +58,10 @@ export function AdminEventDetailView() {
 
   // Load Staff & Event Roles (Judges, Mentors, Coordinators)
   const { data: rawEventRoles = [], isLoading: isLoadingStaff, refetch: refetchStaff } = useGetEventRoles(eventId);
-  const eventRoles: any[] = Array.isArray(rawEventRoles) ? rawEventRoles : (rawEventRoles as any)?.data ?? [];
+  const eventRoles: any[] = useMemo(
+    () => (Array.isArray(rawEventRoles) ? rawEventRoles : (rawEventRoles as any)?.data ?? []),
+    [rawEventRoles]
+  );
 
   const judgesList = useMemo(() => {
     return eventRoles.filter((r) => {
@@ -755,7 +746,7 @@ export function AdminEventDetailView() {
           <RevokeDraftConfirmModal
             event={event}
             onClose={() => setIsRevokingDraft(false)}
-            onConfirmSuccess={(updatedEvent) => {
+            onConfirmSuccess={(_updatedEvent) => {
               handleRefreshAll();
               setIsRevokingDraft(false);
             }}

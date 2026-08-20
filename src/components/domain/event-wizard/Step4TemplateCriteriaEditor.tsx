@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { TemplateCriteriaFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
 import { templatesRepository, getStoredCustomTemplates, saveStoredCustomTemplates } from "@/repositories/templatesRepository";
-import { AlertTriangle, Plus, X, Sliders, ArrowLeft, ArrowRight, CheckCircle2, Save, Layers, Lock, Edit3, ShieldCheck, BookmarkPlus, Copy } from "lucide-react";
+import { AlertTriangle, X, Sliders, ArrowLeft, ArrowRight, CheckCircle2, Save, Layers, Edit3, BookmarkPlus } from "lucide-react";
 
 interface Step4TemplateCriteriaEditorProps {
   tracks?: TrackFormState[];
@@ -32,12 +32,12 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
   criteriasByTrack = {},
   onUpdateTrackCriterias,
   onUpdateTrack,
-  onApplyToAllTracks,
+  onApplyToAllTracks: _onApplyToAllTracks,
   templateName = "",
   onUpdateTemplateName,
   criterias,
-  totalWeight,
-  isValidWeight100,
+  totalWeight: _totalWeight,
+  isValidWeight100: _isValidWeight100,
   onAddCriteria,
   onRemoveCriteria,
   onUpdateCriteria,
@@ -212,7 +212,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
               const trkTemplate = templates.find(
                 (t: any) => (t.id || t.Id || t.templateId || t.TemplateId) === trk.templateId
               );
-              const isTrkInherited = Boolean(trkTemplate && trk.templateId !== "__custom__");
+              const _isTrkInherited = Boolean(trkTemplate && trk.templateId !== "__custom__");
               const isSelected = trk.id === (activeTrack?.id || selectedTrackId);
 
               return (

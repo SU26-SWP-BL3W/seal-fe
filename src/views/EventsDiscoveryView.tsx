@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyTeam } from "@/repositories/teamsRepository";
@@ -301,8 +300,6 @@ export function EventsDiscoveryView() {
     trackFilter, setTrackFilter,
     sort, setSort,
   } = useEventsDiscoveryViewModel();
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleClear = () => {
     setStatusFilter("all");

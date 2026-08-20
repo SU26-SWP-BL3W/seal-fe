@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
+import { Button, Card, SkeletonRows } from "@/components/ui";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { JoinRequestEmailModal } from "./JoinRequestEmailModal";
@@ -29,10 +29,10 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
   const [onlyRecruiting, setOnlyRecruiting] = useState<boolean>(true);
   const [selectedTeamForEmail, setSelectedTeamForEmail] = useState<any | null>(null);
 
-  const { data: rawTeams = [], isLoading: isLoadingTeams, refetch } = useGetTeamsByEvent(eventId);
+  const { data: rawTeams = [], isLoading: isLoadingTeams, refetch: _refetch } = useGetTeamsByEvent(eventId);
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
 
-  const trackList = Array.isArray(tracks) ? tracks : [];
+  const trackList = useMemo(() => (Array.isArray(tracks) ? tracks : []), [tracks]);
   const trackMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const t of trackList as any[]) {

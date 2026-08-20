@@ -15,9 +15,7 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Lock,
   ExternalLink,
-  ChevronRight,
 } from "lucide-react";
 
 export function JudgeTrackTeamsView() {
