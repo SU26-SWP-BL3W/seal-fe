@@ -36,8 +36,8 @@ export function LandingPortalView() {
 
       if (isAdm) router.replace("/admin/dashboard");
       else if (isCoord) router.replace("/coordinator/dashboard");
-      else if (isJudge) router.replace("/judge/scoring");
-      else if (isMentor) router.replace("/mentor/tracks");
+      else if (isJudge) router.replace("/judge/events");
+      else if (isMentor) router.replace("/events");
     }
   }, [user, activeRole, router]);
 
