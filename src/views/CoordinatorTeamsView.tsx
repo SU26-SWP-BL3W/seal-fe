@@ -8,14 +8,10 @@ import {
   useGetTeamsByEvent,
   useDisqualifyTeam,
   useGetTeamById,
-  useDeleteTeam,
-  useAddTeamMember,
-  useUpdateTeam,
 } from "@/repositories/teamsRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Button, Card, Badge } from "@/components/ui";
-import { useToast } from "@/providers/ToastProvider";
 import {
   Users,
   CheckCircle2,
@@ -37,7 +33,6 @@ function pickId(item: any): string {
 }
 
 export function CoordinatorTeamsView() {
-  const toast = useToast();
   const [rejectModal, setRejectModal] = useState<{ teamId: string; teamName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [disqualifyModal, setDisqualifyModal] = useState<{ teamId: string; teamName: string } | null>(null);
@@ -45,14 +40,6 @@ export function CoordinatorTeamsView() {
   const [detailModal, setDetailModal] = useState<TeamEntity | null>(null);
   const [eventId, setEventId] = useState("");
   const [selectedTrackId, setSelectedTrackId] = useState<string>("ALL");
-  const [deleteModal, setDeleteModal] = useState<{ teamId: string; teamName: string } | null>(null);
-  const [showAddMember, setShowAddMember] = useState(false);
-  const [addMemberUserId, setAddMemberUserId] = useState("");
-  const [addMemberError, setAddMemberError] = useState("");
-  const [showEditTeam, setShowEditTeam] = useState(false);
-  const [editTeamName, setEditTeamName] = useState("");
-  const [editTeamDesc, setEditTeamDesc] = useState("");
-  const [editTeamError, setEditTeamError] = useState("");
 
   const { data: myEvents = [] } = useMyEvents();
   useEffect(() => {
@@ -83,9 +70,6 @@ export function CoordinatorTeamsView() {
   const { mutateAsync: approveTeam, isPending: isApproving } = useApproveTeamRegistration();
   const { mutateAsync: rejectTeam, isPending: isRejecting } = useRejectTeamRegistration();
   const { mutateAsync: disqualifyTeam, isPending: isDisqualifying } = useDisqualifyTeam();
-  const { mutateAsync: deleteTeam, isPending: isDeleting } = useDeleteTeam();
-  const { mutateAsync: addMember, isPending: isAddingMember } = useAddTeamMember();
-  const { mutateAsync: updateTeam, isPending: isUpdatingTeam } = useUpdateTeam();
 
   // TeamListItemModel (danh sách) không có field members — phải gọi riêng GET /Teams/{id}
   // để lấy roster thật khi mở modal chi tiết.
@@ -96,97 +80,38 @@ export function CoordinatorTeamsView() {
   const handleApprove = async (teamId: string) => {
     try {
       await approveTeam(teamId);
-      toast.success("Phê duyệt hồ sơ đội thi thành công! Hệ thống đã gửi email và thông báo cho đội.");
       setDetailModal(null);
       refetch();
-      refetchRegistered();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || "Duyệt đội thi thất bại. Vui lòng thử lại.");
+      alert(err?.response?.data?.message || err?.message || "Duyệt đội thi thất bại. Vui lòng thử lại.");
     }
   };
 
   const handleReject = async () => {
     if (!rejectModal) return;
-    if (!rejectReason.trim()) {
-      toast.warning("Vui lòng nhập lý do từ chối để gửi thông báo cho đội thi.");
-      return;
-    }
+    if (!rejectReason.trim()) return;
 
     try {
       await rejectTeam({ teamId: rejectModal.teamId, reason: rejectReason.trim() });
-      toast.success(`Đã từ chối đơn ghi danh của đội "${rejectModal.teamName}". Lý do đã được gửi qua email và thông báo chuông tới đội.`);
       setRejectModal(null);
       setDetailModal(null);
       setRejectReason("");
       refetch();
-      refetchRegistered();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || "Từ chối đăng ký thất bại. Vui lòng thử lại.");
+      alert(err?.response?.data?.message || err?.message || "Từ chối đăng ký thất bại. Vui lòng thử lại.");
     }
   };
 
   const handleDisqualify = async () => {
     if (!disqualifyModal) return;
-    if (!disqualifyReason.trim()) {
-      toast.warning("Vui lòng nhập lý do loại đội.");
-      return;
-    }
+    if (!disqualifyReason.trim()) return;
     try {
       await disqualifyTeam({ teamId: disqualifyModal.teamId, reason: disqualifyReason.trim() });
-      toast.success(`Đã loại đội "${disqualifyModal.teamName}" khỏi cuộc thi.`);
       setDisqualifyModal(null);
       setDisqualifyReason("");
       refetchRegistered();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || "Loại đội thất bại. Vui lòng thử lại.");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteModal) return;
-    try {
-      await deleteTeam(deleteModal.teamId);
-      toast.success(`Đã xóa đội "${deleteModal.teamName}" thành công.`);
-      setDeleteModal(null);
-      setDetailModal(null);
-      refetch();
-      refetchRegistered();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || "Xóa đội thi thất bại.");
-    }
-  };
-
-  const handleAddMember = async () => {
-    if (!detailModal || !addMemberUserId.trim()) return;
-    setAddMemberError("");
-    try {
-      await addMember({ teamId: pickId(detailModal), payload: { userId: addMemberUserId.trim() } });
-      setAddMemberUserId("");
-      setShowAddMember(false);
-    } catch (err: any) {
-      setAddMemberError(err?.response?.data?.message || err?.message || "Không thêm được thành viên.");
-    }
-  };
-
-  const openEditTeam = () => {
-    if (!detailModal) return;
-    setEditTeamName(detailModal.teamName || (detailModal as any).TeamName || "");
-    setEditTeamDesc((detailModal as any).description || (detailModal as any).Description || "");
-    setEditTeamError("");
-    setShowEditTeam(true);
-  };
-
-  const handleSaveEditTeam = async () => {
-    if (!detailModal || !editTeamName.trim()) return;
-    setEditTeamError("");
-    try {
-      await updateTeam({
-        id: pickId(detailModal),
-        payload: { name: editTeamName.trim(), description: editTeamDesc.trim() },
-      });
-      setShowEditTeam(false);
-    } catch (err: any) {
-      setEditTeamError(err?.response?.data?.message || err?.message || "Không cập nhật được thông tin đội.");
+      alert(err?.response?.data?.message || err?.message || "Loại đội thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -440,95 +365,11 @@ export function CoordinatorTeamsView() {
               </div>
             </div>
 
-            {/* Sửa thông tin đội (BTC — hoạt động cả khi đội đã khóa) */}
-            <div className="space-y-2 border-t border-[var(--border-muted)] pt-3 font-mono text-xs">
-              {showEditTeam ? (
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase text-[var(--text-muted)]">Tên đội:</label>
-                  <input
-                    type="text"
-                    value={editTeamName}
-                    onChange={(e) => setEditTeamName(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)]"
-                  />
-                  <label className="text-[10px] uppercase text-[var(--text-muted)]">Mô tả:</label>
-                  <textarea
-                    rows={2}
-                    value={editTeamDesc}
-                    onChange={(e) => setEditTeamDesc(e.target.value)}
-                    className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)]"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      disabled={isUpdatingTeam || !editTeamName.trim()}
-                      onClick={handleSaveEditTeam}
-                      className="text-xs font-mono bg-[var(--accent-coordinator)] text-black font-bold"
-                    >
-                      {isUpdatingTeam ? "Đang lưu..." : "Lưu"}
-                    </Button>
-                    <Button variant="ghost" onClick={() => { setShowEditTeam(false); setEditTeamError(""); }} className="text-xs font-mono">
-                      Hủy
-                    </Button>
-                  </div>
-                  {editTeamError && <p className="text-[var(--color-danger)]">{editTeamError}</p>}
-                </div>
-              ) : (
-                <Button variant="ghost" onClick={openEditTeam} className="text-xs font-mono border border-[var(--border-muted)]">
-                  Sửa Thông Tin Đội (BTC)
-                </Button>
-              )}
-            </div>
-
-            {/* Thêm thành viên trực tiếp (bỏ qua lời mời) */}
-            <div className="space-y-2 border-t border-[var(--border-muted)] pt-3 font-mono text-xs">
-              {showAddMember ? (
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase text-[var(--text-muted)]">User ID người dùng đã có tài khoản:</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="User ID..."
-                      value={addMemberUserId}
-                      onChange={(e) => setAddMemberUserId(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)]"
-                    />
-                    <Button
-                      disabled={isAddingMember || !addMemberUserId.trim()}
-                      onClick={handleAddMember}
-                      className="text-xs font-mono bg-[var(--accent-coordinator)] text-black font-bold"
-                    >
-                      {isAddingMember ? "Đang thêm..." : "Thêm"}
-                    </Button>
-                    <Button variant="ghost" onClick={() => { setShowAddMember(false); setAddMemberError(""); }} className="text-xs font-mono">
-                      Hủy
-                    </Button>
-                  </div>
-                  {addMemberError && <p className="text-[var(--color-danger)]">{addMemberError}</p>}
-                </div>
-              ) : (
-                <Button variant="ghost" onClick={() => setShowAddMember(true)} className="text-xs font-mono border border-[var(--border-muted)]">
-                  + Thêm Thành Viên Trực Tiếp
-                </Button>
-              )}
-            </div>
-
             {/* Action Buttons */}
             <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--border-muted)]">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={() => setDetailModal(null)} className="font-mono text-xs">
-                  Đóng
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setDeleteModal({
-                    teamId: detailModal.id || (detailModal as any).TeamId || "",
-                    teamName: detailModal.teamName || (detailModal as any).TeamName || "Đội thi",
-                  })}
-                  className="text-xs font-mono border border-[var(--color-danger)]/50 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10"
-                >
-                  Xóa Đội
-                </Button>
-              </div>
+              <Button variant="ghost" onClick={() => setDetailModal(null)} className="font-mono text-xs">
+                Đóng
+              </Button>
 
               <div className="flex items-center gap-2">
                 <Button
@@ -605,87 +446,37 @@ export function CoordinatorTeamsView() {
 
       {disqualifyModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
-          <Card className="w-full max-w-lg p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)]/50 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-3 border-b border-[var(--color-danger)]/30 pb-3">
-              <div className="p-2 rounded-full bg-red-950/60 border border-red-500/40">
-                <Ban className="w-5 h-5 text-[var(--color-danger)]" />
-              </div>
-              <div>
-                <h3 className="font-display text-base font-bold text-[var(--color-danger)] tracking-wider uppercase">
-                  LOẠI ĐỘI THI KHỎI GIẢI ĐẤU
-                </h3>
-                <p className="text-xs text-zinc-400 font-mono">Xử lý vi phạm quy chế & kỷ luật thi đấu</p>
-              </div>
+          <Card className="w-full max-w-md p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)]/40 space-y-4">
+            <div className="flex items-center gap-3">
+              <Ban className="w-5 h-5 text-[var(--color-danger)]" />
+              <h3 className="font-display text-base font-bold text-[var(--color-danger)] tracking-widest uppercase">
+                LOẠI ĐỘI KHỎI CUỘC THI
+              </h3>
             </div>
-
-            <div className="p-3 bg-red-950/20 border border-red-500/30 rounded text-xs space-y-1 font-sans text-zinc-300 leading-relaxed">
-              <p>
-                ⚠️ Đội <strong className="text-white font-mono">{disqualifyModal.teamName}</strong> sẽ bị chuyển sang trạng thái <strong className="text-rose-400 font-mono">Bị Loại (Disqualified)</strong>.
-              </p>
-              <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-zinc-400">
-                <li>Đội không thể tiếp tục nộp bài thi, không được chấm điểm hoặc xếp hạng.</li>
-                <li>Hệ thống sẽ gửi email và thông báo chuông tới tất cả thành viên trong đội kèm lý do loại đội bên dưới.</li>
-              </ul>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-mono font-bold text-[var(--text-primary)] uppercase flex items-center gap-1">
-                <span>Lý do loại đội (Bắt buộc):</span>
-              </label>
-              <textarea
-                value={disqualifyReason}
-                onChange={(e) => setDisqualifyReason(e.target.value)}
-                placeholder="Nhập lý do loại đội (Ví dụ: Gian lận bài nộp, vi phạm điều lệ giải đấu, sử dụng thành viên trái quy chế, v.v.)..."
-                rows={3}
-                className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs rounded resize-none focus:outline-none focus:border-[var(--color-danger)] focus:ring-1 focus:ring-[var(--color-danger)]/50"
-              />
-            </div>
-
+            <p className="text-xs font-mono text-[var(--text-muted)]">
+              Đội <strong className="text-white">{disqualifyModal.teamName}</strong> sẽ bị Disqualified. Lý do gửi tới đội trưởng.
+            </p>
+            <textarea
+              value={disqualifyReason}
+              onChange={(e) => setDisqualifyReason(e.target.value)}
+              placeholder="Lý do loại đội (bắt buộc)"
+              rows={3}
+              className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs resize-none focus:outline-none focus:border-[var(--color-danger)]"
+            />
             <div className="flex gap-3 pt-2">
               <Button
                 variant="ghost"
                 onClick={() => { setDisqualifyModal(null); setDisqualifyReason(""); }}
-                className="flex-1 justify-center font-mono text-xs py-2.5"
-              >
-                HỦY BỎ
-              </Button>
-              <Button
-                disabled={!disqualifyReason.trim() || isDisqualifying}
-                onClick={handleDisqualify}
-                className="flex-1 justify-center bg-[var(--color-danger)] text-white font-mono text-xs font-bold py-2.5 hover:bg-red-600 transition-colors shadow-[0_0_12px_rgba(239,68,68,0.3)]"
-              >
-                {isDisqualifying ? "Đang gửi quyết định..." : "🚫 XÁC NHẬN LOẠI ĐỘI"}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-      {deleteModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
-          <Card className="w-full max-w-md p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)]/40 space-y-4">
-            <div className="flex items-center gap-3">
-              <XCircle className="w-5 h-5 text-[var(--color-danger)]" />
-              <h3 className="font-display text-base font-bold text-[var(--color-danger)] tracking-widest uppercase">
-                XÓA ĐỘI THI
-              </h3>
-            </div>
-            <p className="text-xs font-mono text-[var(--text-muted)]">
-              Đội <strong className="text-white">{deleteModal.teamName}</strong> sẽ bị xóa vĩnh viễn, không thể hoàn tác. Chỉ nên xóa đội chưa có bài nộp.
-            </p>
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteModal(null)}
                 className="flex-1 justify-center font-mono text-xs"
               >
                 Hủy
               </Button>
               <Button
-                disabled={isDeleting}
-                onClick={handleDelete}
+                disabled={!disqualifyReason.trim() || isDisqualifying}
+                onClick={handleDisqualify}
                 className="flex-1 justify-center bg-[var(--color-danger)] text-white font-mono text-xs font-bold"
               >
-                {isDeleting ? "Đang xóa..." : "// XÁC NHẬN XÓA"}
+                {isDisqualifying ? "Đang gửi..." : "// XÁC NHẬN LOẠI"}
               </Button>
             </div>
           </Card>

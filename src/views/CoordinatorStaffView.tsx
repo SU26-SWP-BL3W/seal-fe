@@ -10,7 +10,6 @@ import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, S
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
 import { Button, Card, Badge, Input } from "@/components/ui";
-import { useAuth } from "@/providers/AuthProvider";
 
 export const checkEmailInSystem = (email: string, usersList: Array<any> = []) => {
   if (!email.trim()) return true;
@@ -24,9 +23,6 @@ export const checkEmailInSystem = (email: string, usersList: Array<any> = []) =>
 export const CoordinatorStaffView: React.FC = () => {
   const searchParams = useSearchParams();
   const queryEventId = searchParams.get("eventId");
-  const { user: currentUser } = useAuth();
-  const isAdmin = Boolean(currentUser?.isAdmin || (currentUser as any)?.IsAdmin);
-  const currentUserEmail = (currentUser?.email || (currentUser as any)?.Email || "").toLowerCase();
 
   const { data: usersPaged } = useGetUsers({ pageSize: 500 });
   const systemAccounts = usersPaged?.data || [];
@@ -64,14 +60,6 @@ export const CoordinatorStaffView: React.FC = () => {
   const handleInviteCoordinator = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!coordinatorEmail.trim() || !selectedEventId) return;
-
-    if (coordinatorEmail.trim().toLowerCase() === currentUserEmail) {
-      setCoordinatorMessage({
-        text: "Bạn không thể tự mời chính mình làm Điều phối viên.",
-        isError: true,
-      });
-      return;
-    }
 
     setIsSubmittingCoordinator(true);
     setCoordinatorMessage(null);
@@ -638,17 +626,13 @@ export const CoordinatorStaffView: React.FC = () => {
                         </td>
                         <td className="p-3 text-[var(--text-muted)]">{trackName}</td>
                         <td className="p-3 text-right">
-                          {(!isEC || isAdmin) ? (
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleRemoveRole(roleId, email)}
-                              className="text-[11px] font-mono text-[var(--color-danger)] hover:bg-red-500/10"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Gỡ vai trò
-                            </Button>
-                          ) : (
-                            <span className="text-[10px] font-mono text-[var(--text-muted)]">Chỉ Admin</span>
-                          )}
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleRemoveRole(roleId, email)}
+                            className="text-[11px] font-mono text-[var(--color-danger)] hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Gỡ vai trò
+                          </Button>
                         </td>
                       </tr>
                     );
