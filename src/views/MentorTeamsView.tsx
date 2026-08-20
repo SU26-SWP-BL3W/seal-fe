@@ -80,7 +80,7 @@ export function MentorTeamsView() {
         {/* Track selector — chỉ hạng mục Mentor được phân công */}
         {myTracks.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 font-mono text-xs bg-[#10171a] p-3 border border-zinc-800 hud-clipped">
-            <span className="text-zinc-400 font-bold">Chọn hạng mục:</span>
+            <span className="text-zinc-400 font-bold">Hạng mục được giao:</span>
             <div className="flex flex-wrap items-center gap-2">
               {myTracks.map((t) => {
                 const tid = (t.id || t.Id) as string;

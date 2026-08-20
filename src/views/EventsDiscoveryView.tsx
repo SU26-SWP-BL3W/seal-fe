@@ -289,22 +289,25 @@ export function EventsDiscoveryView() {
 
   const { data: teamResponse } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
-  const myEventId =
-    allEventRoles[0]?.eventId ||
-    activeRole?.eventId ||
-    activeRole?.EventId ||
-    team?.EventId ||
-    (team as { eventId?: string })?.eventId ||
-    "";
-  const { data: assignedEvent } = useEventDetail(myEventId);
 
   const {
     events, totalCount, topTracks,
+    myEventIds,
     search, setSearch,
     statusFilter, setStatusFilter,
     trackFilter, setTrackFilter,
     sort, setSort,
   } = useEventsDiscoveryViewModel();
+
+  const myEventId =
+    myEventIds[0] ||
+    activeRole?.eventId ||
+    activeRole?.EventId ||
+    team?.EventId ||
+    (team as { eventId?: string })?.eventId ||
+    "";
+  const myAssignedCount = myEventIds.length;
+  const { data: assignedEvent } = useEventDetail(myAssignedCount === 1 ? myEventId : "");
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -315,16 +318,19 @@ export function EventsDiscoveryView() {
 
   const listedMine = events.find((e) => e.id === myEventId);
   const bannerName =
-    listedMine?.eventName ||
-    assignedEvent?.eventName ||
-    assignedEvent?.EventName ||
-    assignedEvent?.name ||
-    (team as { eventName?: string; EventName?: string })?.eventName ||
-    (team as { EventName?: string })?.EventName ||
-    "";
-  const bannerStatus = listedMine
-    ? listedMine.status
-    : assignedEvent?.startDate && assignedEvent?.endDate
+    myAssignedCount === 1
+      ? listedMine?.eventName ||
+        assignedEvent?.eventName ||
+        assignedEvent?.EventName ||
+        assignedEvent?.name ||
+        (team as { eventName?: string; EventName?: string })?.eventName ||
+        (team as { EventName?: string })?.EventName ||
+        ""
+      : "";
+  const bannerStatus =
+    myAssignedCount === 1 && listedMine
+      ? listedMine.status
+      : myAssignedCount === 1 && assignedEvent?.startDate && assignedEvent?.endDate
       ? computeEventStatus(
           {
             id: myEventId,
@@ -402,32 +408,49 @@ export function EventsDiscoveryView() {
         )}
 
         {/* ── User Assigned Event Banner ── */}
-        {user && roleName !== "Guest" && roleName !== "Admin" && (
+        {user && roleName !== "Guest" && roleName !== "Admin" && myAssignedCount > 0 && (
           <div className="p-5 bg-[#10171a] border border-cyan-500/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
             <div className="space-y-1">
               <div className="font-mono text-[11px] font-bold text-cyan-400 uppercase tracking-wider">
-                [ SỰ KIỆN CỦA TÔI: {roleName.toUpperCase()} ]
+                {myAssignedCount > 1
+                  ? `[ ${myAssignedCount} SỰ KIỆN ĐƯỢC PHÂN CÔNG ]`
+                  : "[ SỰ KIỆN ĐƯỢC PHÂN CÔNG ]"}
               </div>
               <h2 className="font-display text-lg font-bold text-white uppercase">
-                {bannerName || "Sự kiện được phân công"}
+                {myAssignedCount > 1
+                  ? "Chọn sự kiện bên dưới để vào bàn làm việc"
+                  : bannerName || "Sự kiện được phân công"}
               </h2>
               <div className="flex items-center gap-3 font-mono text-xs text-zinc-400">
-                <span>Vai trò: <strong className="text-cyan-300">{roleName}</strong></span>
+                <span>
+                  Vai trò: <strong className="text-cyan-300">{roleName}</strong>
+                </span>
                 {bannerStatus && (
                   <>
                     <span>•</span>
-                    <span>Trạng thái: <strong className="text-emerald-400">{STATUS_LABEL[bannerStatus]}</strong></span>
+                    <span>
+                      Trạng thái:{" "}
+                      <strong className="text-emerald-400">{STATUS_LABEL[bannerStatus]}</strong>
+                    </span>
                   </>
                 )}
               </div>
             </div>
 
-            {myEventId && (
+            {myAssignedCount === 1 && myEventId ? (
               <Link href={`/events/${myEventId}`} className="shrink-0">
                 <button className="px-4 py-2 bg-[#141f23] border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono font-bold text-xs uppercase hud-clipped transition-all cursor-pointer">
                   [ TRUY CẬP SỰ KIỆN &gt; ]
                 </button>
               </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setStatusFilter("my_event")}
+                className="shrink-0 px-4 py-2 bg-[#141f23] border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono font-bold text-xs uppercase hud-clipped transition-all cursor-pointer"
+              >
+                [ XEM DANH SÁCH CỦA TÔI &gt; ]
+              </button>
             )}
           </div>
         )}

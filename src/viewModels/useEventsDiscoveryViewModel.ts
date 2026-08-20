@@ -11,7 +11,7 @@ import {
 
 import { usePublicEvents } from "@/repositories/eventsRepository";
 import { useAuth } from "@/providers/AuthProvider";
-import { getAssignedEventIdsFromRoles, getStaffRoleDisplayLabel } from "@/lib/eventRoles";
+import { getAssignedEventIdsFromRoles } from "@/lib/eventRoles";
 
 export type { EventDisplayStatus, EventCardData };
 
@@ -37,12 +37,22 @@ export function useEventsDiscoveryViewModel() {
   const { data: realPublicEvents = [] } = usePublicEvents();
   const [now] = useState(() => Date.now());
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<EventStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<EventStatusFilter>(() => {
+    if (typeof window === "undefined") return "all";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("filter") === "mine" || params.get("status") === "my_event" ? "my_event" : "all";
+  });
   const [sort, setSort] = useState<EventSortOption>("relevant");
   const [trackFilter, setTrackFilterState] = useState<string | null>(null);
 
   useEffect(() => {
-    const readFromUrl = () => setTrackFilterState(new URLSearchParams(window.location.search).get("track"));
+    const readFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      setTrackFilterState(params.get("track"));
+      if (params.get("filter") === "mine" || params.get("status") === "my_event") {
+        setStatusFilter("my_event");
+      }
+    };
     readFromUrl();
     window.addEventListener("popstate", readFromUrl);
     return () => window.removeEventListener("popstate", readFromUrl);
@@ -179,6 +189,7 @@ export function useEventsDiscoveryViewModel() {
     events: filteredEvents,
     totalCount: allEvents.length,
     topTracks,
+    myEventIds,
     search,
     setSearch,
     statusFilter,

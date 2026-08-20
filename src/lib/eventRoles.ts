@@ -198,9 +198,6 @@ export function getStaffRoleDisplayLabel(roles: NormalizedEventRole[], eventId?:
 }
 
 export function resolveStaffLandingPath(roles: NormalizedEventRole[]): string | null {
-  const mixedEventId = findMixedJudgeMentorEventId(roles);
-  if (mixedEventId) return `/events/${mixedEventId}`;
-
   const coord = roles.find((r) => r.roleName === "EventCoordinator" || r.roleName === "Coordinator");
   if (coord) {
     return coord.eventId
@@ -208,14 +205,24 @@ export function resolveStaffLandingPath(roles: NormalizedEventRole[]): string | 
       : "/coordinator/dashboard";
   }
 
-  const judge = roles.find((r) => r.roleName === "Judge");
-  if (judge) {
-    return judge.eventId ? `/judge/events?eventId=${judge.eventId}` : "/judge/events";
+  // Judge/Mentor: chỉ vào hạng mục đã được mời/gắn — không tự chọn track.
+  // Nhiều sự kiện → danh sách để chọn event; 1 sự kiện → dock/chi tiết hoặc panel Judge.
+  const judgeMentorEventIds = getAssignedEventIdsFromRoles(roles, ["Judge", "Mentor"]);
+  if (judgeMentorEventIds.length > 1) {
+    return "/events?filter=mine";
   }
-
-  const mentor = roles.find((r) => r.roleName === "Mentor");
-  if (mentor) {
-    return mentor.eventId ? `/events/${mentor.eventId}` : "/events";
+  if (judgeMentorEventIds.length === 1) {
+    const eventId = judgeMentorEventIds[0];
+    const names = getUniqueRoleNames(getRolesForEvent(roles, eventId));
+    if (names.includes("Judge") && names.includes("Mentor")) {
+      return `/events/${eventId}`;
+    }
+    if (names.includes("Judge")) {
+      return "/judge/events";
+    }
+    if (names.includes("Mentor")) {
+      return `/events/${eventId}`;
+    }
   }
 
   const team = roles.find((r) => r.roleName === "TeamLeader" || r.roleName === "TeamMember");

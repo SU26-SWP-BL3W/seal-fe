@@ -428,7 +428,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                             ? "bg-[#141f23] border border-zinc-700 hover:border-amber-400 text-zinc-300 hover:text-white"
                             : "bg-amber-500 text-black hover:bg-white"
                         }`}>
-                          {isEventEnded ? "[ XEM LẠI BÀI ĐÃ CHẤM (CHẾ ĐỘ XEM) > ]" : "[ VÀO CHẤM ĐIỂM TRACK NÀY > ]"}
+                          {isEventEnded ? "[ XEM LẠI BÀI ĐÃ CHẤM (CHẾ ĐỘ XEM) > ]" : "[ VÀO CHẤM ĐIỂM HẠNG MỤC NÀY > ]"}
                         </button>
                       </Link>
                     </div>
