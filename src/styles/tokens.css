@@ -48,10 +48,12 @@
   --space-sm: 10px;
   --space-md: 16px;
   --space-lg: 24px;
-  --space-xl: 36px;  /* FE cu: 36px, FE moi: 48px -> fix ve 36px */
+  --space-xl: 48px;
 
   /* ---------- Shape ---------- */
-  --clip-size: 12px;  /* FE cu: 12px, FE moi: 8px -> fix ve 12px */
+  --clip-size: 8px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 
   /* ---------- Layout ---------- */
   --container-max: 1280px;
@@ -91,5 +93,56 @@
 @media (prefers-reduced-motion: reduce) {
   .scanline-overlay {
     display: none !important;
+  }
+}
+
+/* Landing — SEAL Arena · Narrative Workflow */
+.landing-hero-atmosphere {
+  background:
+    linear-gradient(
+      105deg,
+      var(--bg-base) 0%,
+      var(--bg-base) 48%,
+      color-mix(in srgb, var(--accent-primary) 12%, var(--bg-panel)) 100%
+    );
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-mark-drift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(1deg);
+  }
+}
+
+.landing-hero-copy {
+  animation: landing-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-hero-mark {
+  animation: landing-mark-drift 14s ease-in-out infinite;
+}
+
+.landing-section-kicker {
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-copy,
+  .landing-hero-mark {
+    animation: none;
   }
 }
