@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Key, RefreshCw } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useChangePassword } from "@/repositories/authRepository";
@@ -11,13 +12,33 @@ import { resolveStaffLandingPath } from "@/lib/eventRoles";
 
 export function ForceChangePasswordView() {
   const toast = useToast();
-  const { user, activeRole, allEventRoles } = useAuth();
+  const router = useRouter();
+  const { user, activeRole, allEventRoles, updateUser } = useAuth();
   const { mutateAsync: changePassword, isPending } = useChangePassword();
 
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [error, setError] = useState("");
+
+  // Guard: If user is authenticated and has ALREADY changed password, redirect out immediately!
+  useEffect(() => {
+    if (user && user.mustChangePassword === false) {
+      const landing = user?.isAdmin
+        ? "/admin/dashboard"
+        : resolveStaffLandingPath(allEventRoles) ||
+          (activeRole?.roleName === "Judge"
+            ? "/judge/events"
+            : activeRole?.roleName === "Mentor"
+            ? "/mentor"
+            : activeRole?.roleName === "EventCoordinator" || activeRole?.roleName === "Coordinator"
+            ? "/coordinator/dashboard"
+            : activeRole?.roleName === "TeamLeader" || activeRole?.roleName === "TeamMember"
+            ? "/my-team"
+            : "/events");
+      router.replace(landing);
+    }
+  }, [user, allEventRoles, activeRole, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +66,7 @@ export function ForceChangePasswordView() {
     try {
       await changePassword({ oldPassword, newPassword, confirmNewPassword });
       toast.success("Đổi mật khẩu mới thành công.");
+      updateUser({ mustChangePassword: false });
 
       if (typeof window !== "undefined") {
         try {
@@ -65,7 +87,7 @@ export function ForceChangePasswordView() {
               : activeRole?.roleName === "TeamLeader" || activeRole?.roleName === "TeamMember"
               ? "/my-team"
               : "/events");
-        window.location.href = landing;
+        window.location.replace(landing);
       }
     } catch (err: any) {
       const msg =

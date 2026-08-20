@@ -20,6 +20,7 @@ interface AuthContextType {
   loginWithGoogleCredential: (idToken: string) => Promise<string>;
   logout: () => void;
   refreshRoles: () => Promise<EventRole | null>;
+  updateUser: (updatedUser: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -367,6 +368,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return targetPath;
   };
 
+  const updateUser = (updatedUser: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const next = { ...prev, ...updatedUser };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("currentUser", JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     setActiveRole(null);
@@ -394,6 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loginWithGoogleCredential,
           logout,
           refreshRoles,
+          updateUser,
         }}
       >
         {children}
