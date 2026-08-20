@@ -18,6 +18,8 @@ import { useLandingPreviewViewModel } from "@/viewModels/useLandingPreviewViewMo
 import { LandingMetricsStrip } from "@/components/domain/LandingMetricsStrip";
 import { LandingWorkflowSteps } from "@/components/domain/LandingWorkflowSteps";
 import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
+import { formatShortId } from "@/lib/formatId";
+import { Button } from "@/components/ui";
 
 export function LandingPortalView() {
   const { latestEvent, featuredEvents } = useLandingPreviewViewModel();
@@ -42,72 +44,49 @@ export function LandingPortalView() {
   }, [user, activeRole, router]);
 
   return (
-    <main className="hud-lattice flex flex-1 flex-col overflow-hidden">
-      {/* ─────────────────────────────────────────────────────────────
-          SECTION 1: TACTICAL CYBER HERO & QUICK PROTOCOL BAR (SYMMETRICAL)
-         ───────────────────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center gap-8 px-6 py-20 md:py-28 text-center overflow-hidden">
-        {/* Soft Center Radial Glow */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[450px] md:h-[600px] md:w-[600px] rounded-full bg-[radial-gradient(circle,rgba(45,212,191,0.12)_0%,rgba(10,15,29,0)_70%)] blur-3xl" aria-hidden="true" />
-
-        {/* Foreground Content */}
-        <div className="relative z-10 flex flex-col items-center gap-6 max-w-4xl w-full">
-
-          {/* Central Shield Logo */}
-          <div className="relative flex items-center justify-center mb-1">
-            <div className="border border-[var(--accent-primary)]/40 bg-[var(--bg-panel)]/90 p-3.5 hud-clipped shadow-[0_0_25px_rgba(45,212,191,0.15)]">
-              <SealShield className="h-16 w-16 md:h-20 md:w-20 text-[var(--accent-primary)]" />
-            </div>
+    <main className="flex flex-1 flex-col">
+      <section className="border-b border-[var(--border-muted)] px-4 py-16 sm:px-6 md:py-24">
+        <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)]">
+            <SealShield className="h-8 w-8 text-[var(--accent-primary)]" />
           </div>
 
-          {/* Status Tag Line */}
-          <div className="flex items-center gap-2 bg-[var(--bg-panel)]/90 border border-[var(--accent-primary)]/30 px-4 py-1.5 hud-clipped backdrop-blur-sm font-mono text-xs text-[var(--accent-primary)] tracking-wider">
-            <span className="h-2 w-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
-            <span>HỆ THỐNG ĐẤU TRƯỜNG HACKATHON SEAL</span>
-          </div>
+          <p className="text-sm font-medium text-[var(--accent-primary)]">Hệ thống đấu trường hackathon SEAL</p>
 
-          {/* Main Heading */}
-          <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold uppercase leading-[1.15] text-[var(--text-primary)] tracking-wide w-full text-center">
-            NƠI Ý TƯỞNG CÔNG NGHỆ
-            <br />
-            <span className="bg-gradient-to-r from-teal-300 via-cyan-400 to-sky-400 bg-clip-text text-transparent">
-              BỨT PHÁ GIỚI HẠN
-            </span>
+          <h1 className="font-display text-3xl font-semibold leading-tight text-[var(--text-primary)] md:text-5xl">
+            Nơi ý tưởng công nghệ bứt phá giới hạn
           </h1>
 
-          {/* Subtitle */}
-          <p className="max-w-2xl w-full font-sans text-sm md:text-base text-slate-400 leading-relaxed text-center">
-            Đấu trường hackathon dành cho sinh viên toàn quốc — tranh tài xây dựng sản phẩm thực tế,
-            nhận tư vấn từ Mentor và nhận đánh giá minh bạch theo tiêu chí chuẩn.
+          <p className="max-w-xl text-base leading-relaxed text-[var(--text-muted)]">
+            Đấu trường hackathon dành cho sinh viên toàn quốc — xây dựng sản phẩm thực tế,
+            nhận tư vấn từ mentor và đánh giá minh bạch theo tiêu chí chuẩn.
           </p>
 
-          {/* Symmetrical Button Group */}
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link href="/events">
-              <button className="hud-clipped relative px-8 py-3.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-mono font-bold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] focus:outline-none min-w-[200px] cursor-pointer">
-                KHÁM PHÁ SỰ KIỆN &gt;
-              </button>
+              <Button className="min-w-[180px]">Khám phá sự kiện</Button>
             </Link>
             <Link href="/register">
-              <button className="hud-clipped px-8 py-3.5 bg-[var(--bg-panel)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:text-white hover:border-[var(--accent-primary)] hover:bg-[rgba(45,212,191,0.08)] font-mono text-sm tracking-wider uppercase transition-all duration-200 min-w-[200px] cursor-pointer">
-                ĐĂNG KÝ THAM GIA
-              </button>
+              <Button variant="secondary" className="min-w-[180px]">
+                Đăng ký tham gia
+              </Button>
             </Link>
           </div>
 
-          {/* Quick Access Protocol */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-3 font-mono text-xs border-t border-slate-800/80 pt-5 w-full max-w-xl">
-            <span className="text-slate-500 font-semibold">TRUY CẬP NHANH:</span>
-            <Link href="/my-team" className="border border-[var(--accent-team)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-team)] hover:bg-[var(--accent-team)]/20 transition-colors hud-clipped font-semibold">
-              ĐỘI THI
+          <p className="text-sm text-[var(--text-muted)]">
+            Truy cập nhanh:{" "}
+            <Link href="/my-team" className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] hover:underline">
+              Đội thi
             </Link>
-            <Link href="/judge/scoring" className="border border-[var(--accent-judge)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-judge)] hover:bg-[var(--accent-judge)]/20 transition-colors hud-clipped font-semibold">
-              GIÁM KHẢO
+            {" · "}
+            <Link href="/judge/scoring" className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] hover:underline">
+              Giám khảo
             </Link>
-            <Link href="/coordinator/dashboard" className="border border-[var(--accent-coordinator)]/40 bg-[var(--bg-panel)] px-3.5 py-1.5 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/20 transition-colors hud-clipped font-semibold">
-              BAN TỔ CHỨC
+            {" · "}
+            <Link href="/coordinator/dashboard" className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] hover:underline">
+              Ban tổ chức
             </Link>
-          </div>
+          </p>
         </div>
       </section>
 
@@ -197,8 +176,8 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
                     ĐANG TRỰC TIẾP CHẤM BÀI
                   </span>
                 )}
-                <span className="font-mono text-xs text-[var(--text-muted)] border border-[var(--border-muted)] px-2 py-0.5">
-                  ID: #{event.id.toUpperCase()}
+                <span className="text-xs text-[var(--text-muted)]">
+                  Mã: {formatShortId(event.id)}
                 </span>
               </div>
 
@@ -510,39 +489,32 @@ function LandingFaqSection() {
   return (
     <section className="border-t border-[var(--border-muted)] px-[var(--space-xl)] py-[calc(var(--space-xl)*1.5)] mb-12">
       <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-[var(--space-xl)]">
-        <div className="flex flex-col items-center text-center gap-2">
-          <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-primary)]">
-            HỎI ĐÁP PHỔ BIẾN
-          </span>
-          <h2 className="font-display text-2xl font-bold uppercase text-[var(--text-primary)] md:text-4xl">
-            CÂU HỎI THƯỜNG GẶP
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="font-display text-2xl font-semibold text-[var(--text-primary)] md:text-3xl">
+            Câu hỏi thường gặp
           </h2>
         </div>
 
-        <div className="flex flex-col gap-4 max-w-3xl mx-auto w-full">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
           {FAQS.map((faq, idx) => {
             const isOpen = openIdx === idx;
-            const logNumber = `[Q.0${idx + 1}]`;
             return (
               <div
                 key={idx}
-                className={`hud-clipped border transition-all bg-[var(--bg-panel)] overflow-hidden ${isOpen ? "border-[var(--accent-primary)] shadow-sm" : "border-[var(--border-muted)]"
-                  }`}
+                className={`overflow-hidden rounded-lg border bg-[var(--bg-panel)] transition-colors ${
+                  isOpen ? "border-[var(--accent-primary)]" : "border-[var(--border-muted)]"
+                }`}
               >
                 <button
+                  type="button"
                   onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  className="w-full p-4 text-left font-display text-sm font-bold text-[var(--text-primary)] flex items-center justify-between hover:text-[var(--accent-primary)] transition-colors"
+                  className="flex w-full items-center justify-between gap-3 p-4 text-left text-sm font-medium text-[var(--text-primary)] hover:text-[var(--accent-primary)]"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs font-bold text-[var(--accent-primary)] bg-[var(--bg-input)] px-2 py-1 border border-[var(--accent-primary)]/30">
-                      {logNumber}
-                    </span>
-                    <span>{faq.q}</span>
-                  </div>
-                  <span className="font-mono text-sm text-[var(--accent-primary)] font-bold">{isOpen ? "[ - ]" : "[ + ]"}</span>
+                  <span>{faq.q}</span>
+                  <span className="shrink-0 text-[var(--text-muted)]">{isOpen ? "−" : "+"}</span>
                 </button>
                 {isOpen && (
-                  <div className="px-4 pb-4 font-sans text-xs leading-relaxed text-[var(--text-muted)] border-t border-[var(--border-muted)] pt-3">
+                  <div className="border-t border-[var(--border-muted)] px-4 pb-4 pt-3 text-sm leading-relaxed text-[var(--text-muted)]">
                     {faq.a}
                   </div>
                 )}
