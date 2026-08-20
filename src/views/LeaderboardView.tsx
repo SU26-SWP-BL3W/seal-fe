@@ -5,7 +5,9 @@ import { Link } from "@/i18n/routing";
 import { ApiMissingDataBadge } from "@/components/ui";
 import { useEvents } from "@/repositories/eventsRepository";
 import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
-import { Trophy, Target } from "lucide-react";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
+import { Trophy, Target, Download, FileSpreadsheet, ArrowLeft, SlidersHorizontal } from "lucide-react";
 
 interface TableTeam {
   rank: number;
@@ -51,6 +53,32 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
     if (selectedRound !== "all" && !r.roundName.includes(selectedRound)) return false;
     return true;
   });
+
+  const {
+    paginatedItems: paginatedResults,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredResults, 10);
+
+  const topPodiumTeams = useMemo(() => {
+    if (filteredResults.length === 0) return [];
+    return filteredResults.slice(0, 3).map((r, idx) => ({
+      eventName: event.eventName,
+      season: event.season,
+      teamName: r.teamName,
+      projectName: r.projectName,
+      school: r.school || "SEAL Candidate",
+      track: r.track,
+      score: r.score,
+      prizeTitle: (idx + 1) === 1 ? "QUÁN QUÂN" : (idx + 1) === 2 ? "Á QUÂN 1" : "Á QUÂN 2",
+      prizeVnd: (idx + 1) === 1 ? 50_000_000 : (idx + 1) === 2 ? 30_000_000 : 20_000_000,
+      rank: (idx + 1) as 1 | 2 | 3,
+    }));
+  }, [filteredResults, event.eventName, event.season]);
 
   return (
     <main className="hud-lattice flex flex-1 flex-col pb-16">
@@ -220,9 +248,9 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
                   <th className="p-4 font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase text-right">ĐIỂM SỐ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--border-muted)]">
-                {filteredResults.map((row) => (
-                  <tr key={row.teamCode} className="hover:bg-[rgba(251,191,36,0.03)] transition-colors duration-150 group">
+              <tbody className="divide-y divide-zinc-800/60">
+                {paginatedResults.map((row) => (
+                  <tr key={row.teamCode} className="hover:bg-zinc-800/40 transition-colors">
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center justify-center w-7 h-7 font-mono font-bold text-xs hud-clipped border ${
                         row.rank === 1 ? "bg-[var(--accent-judge)]/20 border-[var(--accent-judge)] text-[var(--accent-judge)] font-extrabold" :
@@ -254,6 +282,20 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
                 ))}
               </tbody>
             </table>
+
+            {filteredResults.length > 0 && (
+              <div className="p-4 border-t border-zinc-800 bg-[#0b1013]">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="đội thi"
+                />
+              </div>
+            )}
           </div>
         )}
       </section>

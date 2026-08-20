@@ -10,6 +10,8 @@ import apiClient from "@/models/apiClient";
 import { PagedResult } from "@/models/types";
 import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
 import { Link } from "@/i18n/routing";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import {
   FileCode,
   Globe,
@@ -84,6 +86,16 @@ export const CoordinatorSubmissionsView: React.FC = () => {
     const trackName = (sub.trackName || sub.TrackName || "").toLowerCase();
     return teamName.includes(term) || eventName.includes(term) || trackName.includes(term);
   });
+
+  const {
+    paginatedItems: paginatedSubmissions,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(displaySubmissions, 8);
 
   const uniqueTeamsCount = new Set(submissions.map((s: any) => s.teamId || s.TeamId)).size;
   const reposCount = submissions.filter((s: any) => s.repoUrl || s.RepoUrl || s.submissionUrl || s.SubmissionUrl).length;
@@ -320,7 +332,7 @@ export const CoordinatorSubmissionsView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {displaySubmissions.map((sub: any, idx: number) => {
+                  {paginatedSubmissions.map((sub: any, idx: number) => {
                     const subId = sub.id || sub.Id || `sub-${idx}`;
                     const teamName = sub.teamName || sub.TeamName || `Đội #${(sub.teamId || sub.TeamId)?.slice(-4) || idx + 1}`;
                     const trackName = sub.trackName || sub.TrackName || "Chung";
@@ -395,6 +407,18 @@ export const CoordinatorSubmissionsView: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {displaySubmissions.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="bài nộp"
+            />
           )}
         </Card>
 

@@ -28,6 +28,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { User } from "@/models/entities";
+import { readApiError } from "@/repositories/submitResultsRepository";
+import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Button, Badge, Card, Input, EmptyState, Pagination } from "@/components/ui";
+
+export interface AdminUsersViewProps {
+  mode?: "admin" | "coordinator";
+}
 
 function HudLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -640,80 +649,16 @@ export const AdminUsersView: React.FC = () => {
           </div>
         )}
 
-        {/* Modal 3: Gán Event Coordinator */}
-        {selectedUserForEc && (
-          <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 animate-fade-in">
-            <Card className="w-full max-w-lg p-6 bg-[var(--bg-panel)] border border-[var(--accent-coordinator)] space-y-4 relative hud-clipped">
-              <button
-                type="button"
-                onClick={() => setSelectedUserForEc(null)}
-                className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="space-y-1">
-                <h3 className="font-display font-bold text-lg text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
-                  <UserCheck className="w-5 h-5 text-[var(--accent-coordinator)]" />
-                  Gán Quyền Event Coordinator (EC)
-                </h3>
-                <p className="font-mono text-xs text-[var(--text-muted)]">
-                  Chỉ định tài khoản{" "}
-                  <span className="text-[var(--accent-primary)] font-bold">{selectedUserForEc.fullName}</span> (
-                  {selectedUserForEc.email}) phụ trách điều phối sự kiện.
-                </p>
-              </div>
-
-              {successMessage ? (
-                <div className="p-4 bg-[rgba(16,185,129,0.1)] border border-[var(--color-success)] text-[var(--color-success)] font-mono text-xs hud-clipped flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-[var(--color-success)]" />
-                  <span>{successMessage}</span>
-                </div>
-              ) : (
-                <form onSubmit={handleAssignEc} className="space-y-4 pt-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                      1. Chọn Sự Kiện Điều Phối *
-                    </label>
-                    <select
-                      value={selectedEventId}
-                      onChange={(e) => setSelectedEventId(e.target.value)}
-                      className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs focus:outline-none focus:border-[var(--accent-coordinator)] cursor-pointer"
-                    >
-                      {eventsList.map((ev: any) => {
-                        const id = ev.id || ev.Id || ev.eventId || ev.EventId;
-                        const name = ev.eventName || ev.EventName || "Sự kiện";
-                        const season = ev.season || ev.Season || "SWP";
-                        const year = ev.year || ev.Year || 2026;
-                        return (
-                          <option key={id} value={id}>
-                            {name} ({season} {year})
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1">
-                    <span className="font-mono text-[10px] text-[var(--accent-coordinator)] uppercase block font-bold">
-                      Quyền hạn Event Coordinator được cấp:
-                    </span>
-                    <p className="font-mono text-[10px] text-[var(--text-muted)]">
-                      Tài khoản sau khi gán sẽ có toàn quyền cấu hình Vòng thi (Rounds), Hạng mục (Tracks), duyệt Đội thi, hiệu chuẩn điểm số và công bố kết quả sự kiện này.
-                    </p>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="ghost" type="button" onClick={() => setSelectedUserForEc(null)}>
-                      Hủy Bỏ
-                    </Button>
-                    <Button variant="primary" accent="coordinator" type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Đang xử lý..." : "Xác Nhận Gán EC"}
-                    </Button>
-                  </div>
-                </form>
-              )}
-            </Card>
+        {filteredUsers.length > 0 && (
+          <div className="p-4 border-t border-[var(--border-muted)]">
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              totalItems={filteredUsers.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+              itemLabel="người dùng"
+            />
           </div>
         )}
 

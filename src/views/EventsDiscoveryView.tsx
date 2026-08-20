@@ -17,7 +17,8 @@ import {
 } from "@/viewModels/useEventsDiscoveryViewModel";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Badge, Button, Input } from "@/components/ui";
+import { Badge, Button, Input, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
 function formatShortDate(iso: string): string {
@@ -250,6 +251,16 @@ export function EventsDiscoveryView() {
     sort, setSort,
   } = useEventsDiscoveryViewModel();
 
+  const {
+    paginatedItems: paginatedEvents,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(events, 6);
+
   const myEventId =
     myEventIds[0] ||
     activeRole?.eventId ||
@@ -418,11 +429,27 @@ export function EventsDiscoveryView() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {events.map((e) => (
-                  <EventCard key={e.id} event={e} />
-                ))}
-              </div>
+              <>
+                <div className="space-y-3">
+                  {paginatedEvents.map((e) => (
+                    <EventCard key={e.id} event={e} />
+                  ))}
+                </div>
+
+                {events.length > 0 && (
+                  <div className="pt-2">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalItems}
+                      pageSize={pageSize}
+                      onPageChange={setCurrentPage}
+                      onPageSizeChange={setPageSize}
+                      itemLabel="sự kiện"
+                    />
+                  </div>
+                )}
+              </>
             )}
 
           </div>

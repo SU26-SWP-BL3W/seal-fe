@@ -6,11 +6,9 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useSearchParams } from "next/navigation";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
-import { useRespondEventRoleInvitation, useDeclineEventRoleInvitationPublic } from "@/repositories/eventRolesRepository";
-import { useRegister } from "@/repositories/authRepository";
-import { useEvents } from "@/repositories/eventsRepository";
-import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
-import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
+import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
+import { Badge, Button, Card, SkeletonRows, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -235,61 +233,37 @@ export function TeamInvitationsView() {
     }
   };
 
-  const handleQuickActivate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const targetEmail = (inputEmail || queryEmail || "").trim();
-    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
-      toast.error("Vui lòng nhập đúng định dạng email nhận lời mời.");
-      return;
-    }
-    if (!quickFullName.trim()) {
-      toast.error("Vui lòng nhập họ và tên của bạn.");
-      return;
-    }
-    if (!quickPassword || quickPassword.length < 8) {
-      toast.error("Mật khẩu phải có ít nhất 8 ký tự.");
-      return;
-    }
+  const {
+    paginatedItems: paginatedPending,
+    currentPage: pendingPage,
+    totalPages: totalPendingPages,
+    totalItems: totalPendingItems,
+    pageSize: pendingPageSize,
+    setCurrentPage: setPendingPage,
+    setPageSize: setPendingPageSize,
+  } = usePagination(pending, 5);
 
-    setIsQuickSubmitting(true);
-    try {
-      try {
-        await registerApi({
-          email: targetEmail,
-          password: quickPassword,
-          fullName: quickFullName.trim(),
-        });
-      } catch (regErr: any) {
-        console.warn("Register note:", regErr?.message);
-      }
+  const {
+    paginatedItems: paginatedHistory,
+    currentPage: historyPage,
+    totalPages: totalHistoryPages,
+    totalItems: totalHistoryItems,
+    pageSize: historyPageSize,
+    setCurrentPage: setHistoryPage,
+    setPageSize: setHistoryPageSize,
+  } = usePagination(history, 5);
 
-      await loginWithCredentials(targetEmail, quickPassword);
-      toast.success("🎉 Đã kích hoạt tài khoản tạm thành công! Đang chuyển hướng đổi mật khẩu...");
-
-      if (queryInvitationId) {
-        try {
-          await respondEventRole({ invitationId: queryInvitationId, isAccepted: true });
-        } catch {}
-      }
-
-      pushSystemNotification({
-        title: "Cấp tài khoản tạm thời thành công",
-        message: `Tài khoản ${targetEmail} đã được kích hoạt. Hãy đổi mật khẩu để bảo vệ tài khoản chính thức.`,
-        type: "success",
-      });
-
-      if (typeof window !== "undefined") {
-        try {
-          const stored = JSON.parse(localStorage.getItem("currentUser") || "{}");
-          localStorage.setItem("currentUser", JSON.stringify({ ...stored, mustChangePassword: true }));
-        } catch {}
-        window.location.href = "/change-password";
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Kích hoạt tài khoản thất bại. Vui lòng kiểm tra lại.";
-      toast.error(msg);
-    } finally {
-      setIsQuickSubmitting(false);
+  const formatRoleLabel = (role?: string) => {
+    switch (role) {
+      case "Coordinator":
+      case "EventCoordinator":
+        return "Cán Bộ Điều Phối (Coordinator)";
+      case "Judge":
+        return "Ban Giám Khảo (Judge)";
+      case "Mentor":
+        return "Cố Vấn Chuyên Môn (Mentor)";
+      default:
+        return role || "Cán Bộ Sự Kiện";
     }
   };
 
@@ -513,7 +487,7 @@ export function TeamInvitationsView() {
                 </Card>
               ) : (
                 <ul className="flex flex-col gap-[var(--space-sm)]">
-                  {pending.map((inv) => (
+                  {paginatedPending.map((inv) => (
                     <li key={inv.invitationId}>
                       <Card className="flex flex-col gap-[var(--space-md)] sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
@@ -555,6 +529,19 @@ export function TeamInvitationsView() {
                       </Card>
                     </li>
                   ))}
+
+                  {pending.length > 0 && (
+                    <Pagination
+                      currentPage={pendingPage}
+                      totalPages={totalPendingPages}
+                      totalItems={totalPendingItems}
+                      pageSize={pendingPageSize}
+                      onPageChange={setPendingPage}
+                      onPageSizeChange={setPendingPageSize}
+                      itemLabel="lời mời đang chờ"
+                      compact={true}
+                    />
+                  )}
                 </ul>
               )}
             </section>
@@ -565,59 +552,29 @@ export function TeamInvitationsView() {
                   Đã phản hồi gần đây
                 </h2>
                 <ul className="flex flex-col gap-[var(--space-xs)]">
-                  {history.map((inv) => {
-                    const isAccepted = inv.status === "Accepted";
-                    const role = inv.role || "";
-                    const isTeam = inv.type === "TEAM";
+                  {paginatedHistory.map((inv) => (
+                    <li key={inv.invitationId}>
+                      <Card className="flex items-center justify-between gap-[var(--space-md)] bg-[var(--bg-panel)]/60 py-[var(--space-sm)]">
+                        <span className="truncate font-mono text-xs text-[color:var(--text-muted)]">
+                          {titleOf(inv)}
+                        </span>
+                        <Badge tone={inv.status === "Accepted" ? "success" : "neutral"}>
+                          {inv.status === "Accepted" ? "Đã chấp nhận" : "Đã từ chối"}
+                        </Badge>
+                      </Card>
+                    </li>
+                  ))}
 
-                    // Find matching event
-                    const matchedEvent = (rawEvents || []).find((ev: any) => {
-                      const evId = ev.id || ev.Id || ev.eventId || ev.EventId;
-                      const evName = ev.name || ev.eventName || ev.EventName || "";
-                      if ((inv as any).eventId && ((inv as any).eventId === evId || (inv as any).EventId === evId)) return true;
-                      if (inv.targetName && evName.trim().toLowerCase() === inv.targetName.trim().toLowerCase()) return true;
-                      return false;
-                    });
-                    const eventId = (inv as any).eventId || (inv as any).EventId || (inv as any).targetId || (inv as any).TargetId || matchedEvent?.id || (matchedEvent as any)?.Id;
-
-                    let destinationUrl = "/events";
-                    if (role === "Coordinator" || role === "EventCoordinator") {
-                      destinationUrl = eventId ? `/coordinator/events/${eventId}` : "/coordinator/dashboard";
-                    } else if (role === "Judge") {
-                      destinationUrl = eventId ? `/judge/scoring?eventId=${eventId}` : "/judge/events";
-                    } else if (role === "Mentor") {
-                      destinationUrl = eventId ? `/mentor/teams?eventId=${eventId}` : "/mentor/teams";
-                    } else if (isTeam) {
-                      destinationUrl = eventId ? `/events/${eventId}` : "/my-team";
-                    } else if (eventId) {
-                      destinationUrl = `/events/${eventId}`;
-                    }
-
-                    return (
-                      <li key={inv.invitationId}>
-                        <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--bg-panel)]/60 py-3">
-                          <div className="min-w-0">
-                            <span className="truncate font-mono text-xs text-[color:var(--text-muted)] block">
-                              {titleOf(inv)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Badge tone={isAccepted ? "success" : "neutral"}>
-                              {isAccepted ? "Đã chấp nhận" : "Đã từ chối"}
-                            </Badge>
-                            {isAccepted && (
-                              <Link href={destinationUrl}>
-                                <Button variant="secondary" className="text-[11px] py-1 px-2.5 h-7">
-                                  <span>Truy cập sự kiện</span>
-                                  <ArrowRight className="size-3" />
-                                </Button>
-                              </Link>
-                            )}
-                          </div>
-                        </Card>
-                      </li>
-                    );
-                  })}
+                  <Pagination
+                    currentPage={historyPage}
+                    totalPages={totalHistoryPages}
+                    totalItems={totalHistoryItems}
+                    pageSize={historyPageSize}
+                    onPageChange={setHistoryPage}
+                    onPageSizeChange={setHistoryPageSize}
+                    itemLabel="lời mời lịch sử"
+                    compact={true}
+                  />
                 </ul>
               </section>
             )}

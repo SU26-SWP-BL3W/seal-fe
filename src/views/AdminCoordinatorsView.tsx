@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button, Card, Badge, Input, EmptyState } from "@/components/ui";
+import { Button, Card, Badge, Input, EmptyState, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useEvents } from "@/repositories/eventsRepository";
@@ -91,6 +92,16 @@ export function AdminCoordinatorsView() {
       );
     });
   }, [rawRoles]);
+
+  const {
+    paginatedItems: paginatedCoordinators,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(currentCoordinators, 5);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -643,7 +654,7 @@ export function AdminCoordinatorsView() {
               />
             ) : (
               <div className="space-y-3">
-                {currentCoordinators.map((c: any, idx) => {
+                {paginatedCoordinators.map((c: any, idx) => {
                   const roleId = c.id || c.Id || c.roleId || c.RoleId || `ec-${idx}`;
                   const coordUserId = c.userId || c.UserId || c.user?.id || c.user?.userId || c.User?.Id;
                   const uName = c.fullName || c.FullName || c.userName || c.UserName || "Điều phối viên";
@@ -687,6 +698,21 @@ export function AdminCoordinatorsView() {
                     </div>
                   );
                 })}
+
+                {currentCoordinators.length > 0 && (
+                  <div className="pt-2">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={totalItems}
+                      pageSize={pageSize}
+                      onPageChange={setCurrentPage}
+                      onPageSizeChange={setPageSize}
+                      itemLabel="điều phối viên"
+                      compact={true}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </Card>

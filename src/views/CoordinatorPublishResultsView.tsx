@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
-import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
   const toast = useToast();
@@ -147,6 +148,16 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   };
 
   const displayResults = results;
+
+  const {
+    paginatedItems: paginatedResults,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(displayResults, 8);
 
   const handleCalculate = async () => {
     setIsSubmitting(true);
@@ -494,8 +505,8 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  displayResults.map((r: any, idx: number) => {
-                    const rankStr = String(r.rank || idx + 1).padStart(2, "0");
+                  paginatedResults.map((r: any, idx: number) => {
+                    const rankStr = String(r.rank || (currentPage - 1) * pageSize + idx + 1).padStart(2, "0");
                     const name = teamNameById.get(r.teamId) || r.teamName || r.TeamName || r.teamId;
                     const uid = `KQ: ${(r.id || "").slice(0, 8).toUpperCase()}`;
                     const score = Number(r.finalScore || r.totalScore || r.TotalScore || 0).toFixed(2);
@@ -550,13 +561,19 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           </div>
 
           {/* Table Footer Pagination */}
-          <div className="p-3 bg-[#0a0e10] border-t border-[#263339] flex items-center justify-between font-mono text-xs text-[#8a9ba8]">
-            <div>TỔNG SỐ BẢN GHI: {String(displayResults.length).padStart(2, "0")}</div>
-            <div className="flex items-center gap-1">
-              <button className="px-2 py-0.5 border border-[#263339] hover:border-[#8b5cf6] text-xs">&lt;</button>
-              <button className="px-2 py-0.5 border border-[#263339] hover:border-[#8b5cf6] text-xs">&gt;</button>
+          {displayResults.length > 0 && (
+            <div className="p-3 bg-[#0a0e10] border-t border-[#263339]">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="kết quả xếp hạng"
+              />
             </div>
-          </div>
+          )}
         </div>
 
       </div>
