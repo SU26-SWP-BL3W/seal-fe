@@ -12,6 +12,16 @@ export interface NormalizedEventRole {
 
 const STAFF_ROLE_NAMES = new Set(["EventCoordinator", "Coordinator", "Judge", "Mentor"]);
 
+export function normalizeRoleId(id?: string | null): string {
+  return (id || "").replace(/-/g, "").toLowerCase();
+}
+
+export function idsMatch(a?: string | null, b?: string | null): boolean {
+  const na = normalizeRoleId(a);
+  const nb = normalizeRoleId(b);
+  return !!na && !!nb && na === nb;
+}
+
 function readStr(obj: Record<string, unknown>, ...keys: string[]): string {
   for (const key of keys) {
     const value = obj[key];
@@ -74,7 +84,20 @@ export function getRolesForEvent(
   eventId: string,
 ): NormalizedEventRole[] {
   if (!eventId) return [];
-  return roles.filter((r) => r.eventId === eventId);
+  return roles.filter((r) => idsMatch(r.eventId, eventId));
+}
+
+export function getRolesForTrack(
+  roles: NormalizedEventRole[],
+  trackId: string,
+  roleName?: string,
+): NormalizedEventRole[] {
+  if (!trackId) return [];
+  return roles.filter((r) => {
+    if (!idsMatch(r.trackId, trackId)) return false;
+    if (roleName) return r.roleName === roleName;
+    return true;
+  });
 }
 
 export function hasEventRole(
@@ -84,10 +107,61 @@ export function hasEventRole(
 ): boolean {
   if (!eventId) return false;
   return roles.some((r) => {
-    if (r.eventId !== eventId) return false;
+    if (!idsMatch(r.eventId, eventId)) return false;
     if (roleName) return r.roleName === roleName;
     return true;
   });
+}
+
+export function hasTrackRole(
+  roles: NormalizedEventRole[],
+  trackId: string,
+  roleName?: string,
+): boolean {
+  if (!trackId) return false;
+  return getRolesForTrack(roles, trackId, roleName).length > 0;
+}
+
+export function resolveMentorContext(
+  roles: NormalizedEventRole[],
+  options?: { eventId?: string; trackId?: string },
+): NormalizedEventRole | null {
+  const mentors = roles.filter((r) => r.roleName === "Mentor");
+  if (mentors.length === 0) return null;
+
+  const trackId = options?.trackId || "";
+  const eventId = options?.eventId || "";
+
+  if (trackId) {
+    const byTrack = mentors.find((r) => idsMatch(r.trackId, trackId));
+    if (byTrack) return byTrack;
+  }
+  if (eventId) {
+    const byEvent = mentors.find((r) => idsMatch(r.eventId, eventId));
+    if (byEvent) return byEvent;
+  }
+  return mentors[0] || null;
+}
+
+export function resolveJudgeContext(
+  roles: NormalizedEventRole[],
+  options?: { eventId?: string; trackId?: string },
+): NormalizedEventRole | null {
+  const judges = roles.filter((r) => r.roleName === "Judge");
+  if (judges.length === 0) return null;
+
+  const trackId = options?.trackId || "";
+  const eventId = options?.eventId || "";
+
+  if (trackId) {
+    const byTrack = judges.find((r) => idsMatch(r.trackId, trackId));
+    if (byTrack) return byTrack;
+  }
+  if (eventId) {
+    const byEvent = judges.find((r) => idsMatch(r.eventId, eventId));
+    if (byEvent) return byEvent;
+  }
+  return judges[0] || null;
 }
 
 export function findMixedJudgeMentorEventId(roles: NormalizedEventRole[]): string | null {

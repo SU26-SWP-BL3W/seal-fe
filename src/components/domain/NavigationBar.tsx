@@ -1,12 +1,12 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { Link } from "@/i18n/routing";
 import { SealShield } from "./SealShield";
 import { NotificationBell } from "./NotificationBell";
-import { hasEventPermission, hasEventRolePermission } from "@/lib/permissions";
-import { getStaffRoleDisplayLabel, getRolesForEvent } from "@/lib/eventRoles";
+import { hasEventPermission, hasEventRolePermission, hasTrackRolePermission } from "@/lib/permissions";
+import { getStaffRoleDisplayLabel, getRolesForEvent, resolveMentorContext, resolveJudgeContext } from "@/lib/eventRoles";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import {
   Globe,
@@ -41,6 +41,9 @@ import {
 
 export function NavigationBar() {
   const pathname = usePathname() || "";
+  const searchParams = useSearchParams();
+  const queryEventId = searchParams.get("eventId") || "";
+  const queryTrackId = searchParams.get("trackId") || "";
   const { user, activeRole, allEventRoles, logout } = useAuth();
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
   const userEmail = (user?.email || user?.Email || "").toLowerCase();
@@ -70,7 +73,7 @@ export function NavigationBar() {
     ? (pathname.split("/events/")[1]?.split("/")[0] || "")
     : "";
   const roleEventId = activeRole?.eventId || activeRole?.EventId || "";
-  const currentEventId = urlEventId || roleEventId;
+  const currentEventId = queryEventId || urlEventId || roleEventId;
   const { data: currentEvent } = useEventDetail(currentEventId);
   const currentEventName =
     currentEvent?.eventName || currentEvent?.EventName || currentEvent?.name || "";
@@ -472,15 +475,27 @@ export function NavigationBar() {
   // CHẾ ĐỘ 1B: NAVBAR DỌC DÀNH RIÊNG CHO MENTOR CỐ VẤN
   // ─────────────────────────────────────────────────────────────
   if (showMentorSidebar) {
-    const activeViewEventId = currentEventId;
-    const isAuthorizedMentor = activeViewEventId
-      ? hasEventRolePermission(user, allEventRoles, activeViewEventId, "Mentor")
-      : allEventRoles.some((r) => r.roleName === "Mentor");
-    const mentorRoles = allEventRoles.filter((r) => r.roleName === "Mentor");
-    const currentMentorRole =
-      mentorRoles.find((r) => r.eventId === activeViewEventId) || mentorRoles[0];
-    const mentorTrackLabel = currentMentorRole?.trackName || "Hạng mục được phân công";
+    const mentorContext = resolveMentorContext(allEventRoles, {
+      eventId: currentEventId,
+      trackId: queryTrackId,
+    });
+    const activeViewEventId = mentorContext?.eventId || currentEventId;
+    const isAuthorizedMentor = Boolean(
+      mentorContext ||
+      allEventRoles.some((r) => r.roleName === "Mentor") ||
+      (queryTrackId && hasTrackRolePermission(user, allEventRoles, queryTrackId, "Mentor")) ||
+      (currentEventId && hasEventRolePermission(user, allEventRoles, currentEventId, "Mentor")),
+    );
+    const mentorTrackLabel = mentorContext?.trackName || "Hạng mục được phân công";
     const hasJudgeRole = allEventRoles.some((r) => r.roleName === "Judge");
+    const mentorQuery = (() => {
+      const params = new URLSearchParams();
+      if (activeViewEventId) params.set("eventId", activeViewEventId);
+      const trackForQuery = mentorContext?.trackId || queryTrackId;
+      if (trackForQuery) params.set("trackId", trackForQuery);
+      const qs = params.toString();
+      return qs ? `?${qs}` : "";
+    })();
 
     return (
       <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[#2dd4bf]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
@@ -528,7 +543,7 @@ export function NavigationBar() {
             {isAuthorizedMentor ? (
               <>
                 <Link
-                  href="/mentor/tracks"
+                  href={`/mentor/tracks${mentorQuery}`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname === "/mentor/tracks" || pathname === "/mentor"
                       ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
@@ -539,7 +554,7 @@ export function NavigationBar() {
                 </Link>
 
                 <Link
-                  href="/mentor/teams"
+                  href={`/mentor/teams${mentorQuery}`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/mentor/teams")
                       ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
@@ -550,7 +565,7 @@ export function NavigationBar() {
                 </Link>
 
                 <Link
-                  href="/mentor/submissions"
+                  href={`/mentor/submissions${mentorQuery}`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/mentor/submissions")
                       ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
@@ -633,14 +648,18 @@ export function NavigationBar() {
   // CHẾ ĐỘ 1C: NAVBAR DỌC DÀNH RIÊNG CHO GIÁM KHẢO (JUDGE)
   // ─────────────────────────────────────────────────────────────
   if (showJudgeSidebar) {
-    const activeViewEventId = currentEventId;
-    const isAuthorizedJudge = activeViewEventId
-      ? hasEventRolePermission(user, allEventRoles, activeViewEventId, "Judge")
-      : allEventRoles.some((r) => r.roleName === "Judge");
-    const judgeRoles = allEventRoles.filter((r) => r.roleName === "Judge");
-    const currentJudgeRole =
-      judgeRoles.find((r) => r.eventId === activeViewEventId) || judgeRoles[0];
-    const judgeTrackLabel = currentJudgeRole?.trackName || "Hạng mục được phân công";
+    const judgeContext = resolveJudgeContext(allEventRoles, {
+      eventId: currentEventId,
+      trackId: queryTrackId,
+    });
+    const activeViewEventId = judgeContext?.eventId || currentEventId;
+    const isAuthorizedJudge = Boolean(
+      judgeContext ||
+      allEventRoles.some((r) => r.roleName === "Judge") ||
+      (queryTrackId && hasTrackRolePermission(user, allEventRoles, queryTrackId, "Judge")) ||
+      (currentEventId && hasEventRolePermission(user, allEventRoles, currentEventId, "Judge")),
+    );
+    const judgeTrackLabel = judgeContext?.trackName || "Hạng mục được phân công";
     const hasMentorRole = allEventRoles.some((r) => r.roleName === "Mentor");
 
     return (

@@ -1,6 +1,7 @@
 import { User, EventRole } from "@/models/entities";
 import {
   hasEventRole,
+  hasTrackRole,
   normalizeEventRoleRows,
   type NormalizedEventRole,
 } from "@/lib/eventRoles";
@@ -31,6 +32,20 @@ export function hasEventRolePermission(
   );
 
   return hasEventRole(normalized, eventId, requiredRoleName);
+}
+
+export function hasTrackRolePermission(
+  user: User | null,
+  eventRoles: NormalizedEventRole[] | unknown[],
+  trackId: string,
+  requiredRoleName?: string,
+): boolean {
+  if (!user) return false;
+  if (user.isAdmin || user.IsAdmin) return true;
+  if (!trackId) return false;
+
+  const normalized = normalizeEventRoleRows(Array.isArray(eventRoles) ? eventRoles : []);
+  return hasTrackRole(normalized, trackId, requiredRoleName);
 }
 
 /**

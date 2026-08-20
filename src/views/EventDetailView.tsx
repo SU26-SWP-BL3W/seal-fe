@@ -466,7 +466,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
 
                     <div className="pt-2 border-t border-teal-500/20 flex items-center justify-between gap-3 font-mono text-xs">
                       <span className="text-zinc-400 text-[11px]">{isEventEnded ? "Trạng thái: Đã khép lại" : "Nhiệm vụ: Hỗ trợ & cố vấn"}</span>
-                      <Link href={`/mentor/teams?trackId=${trackId}`}>
+                      <Link href={`/mentor/teams?eventId=${targetEventId}&trackId=${trackId}`}>
                         <button className={`px-4 py-1.5 font-bold uppercase text-xs hud-clipped cursor-pointer transition-all shadow-sm ${
                           isEventEnded
                             ? "bg-[#141f23] border border-zinc-700 hover:border-teal-400 text-zinc-300 hover:text-white"
@@ -759,7 +759,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                             <span className="px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/50 text-xs font-bold uppercase hud-clipped">
                               [ BẠN LÀ CỐ VẤN CHUYÊN MÔN ]
                             </span>
-                            <Link href={`/mentor/teams?trackId=${track.id}`}>
+                            <Link href={`/mentor/teams?eventId=${targetEventId}&trackId=${track.id}`}>
                               <button className="px-4 py-1.5 bg-teal-500 text-black hover:bg-white text-xs font-bold uppercase hud-clipped cursor-pointer transition-all shadow-sm">
                                 [ VÀO KHÔNG GIAN HỖ TRỢ &gt; ]
                               </button>
