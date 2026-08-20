@@ -24,8 +24,16 @@ import {
   Info,
   RefreshCw,
   UserPlus,
+  Sparkles,
   ExternalLink,
 } from "lucide-react";
+
+import { RoleInvitationHistoryCard } from "@/components/domain/role-invitations/RoleInvitationHistoryCard";
+import {
+  invitationHistoryService,
+  RoleInvitationRecord,
+} from "@/services/invitationHistoryService";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 function pickEventId(ev: any): string {
   return ev?.id || ev?.Id || ev?.eventId || ev?.EventId || "";
@@ -102,6 +110,20 @@ export function AdminCoordinatorsView() {
   const [removingRoleId, setRemovingRoleId] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [historyRecords, setHistoryRecords] = useState<RoleInvitationRecord[]>([]);
+
+  const loadHistory = () => {
+    if (!selectedEventId) {
+      setHistoryRecords([]);
+      return;
+    }
+    const synced = invitationHistoryService.syncWithEventRoles(selectedEventId, currentCoordinators);
+    setHistoryRecords([...synced]);
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, [selectedEventId, currentCoordinators]);
 
   const searchMatches = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -160,16 +182,28 @@ export function AdminCoordinatorsView() {
     setActionError(null);
   };
 
-  const handleRemoveCoordinator = async (roleId: string, name: string, targetUserId?: string) => {
-    const ok = window.confirm(`Bạn có chắc chắn muốn thu hồi quyền Điều phối viên của "${name}" khỏi sự kiện này không?`);
-    if (!ok) return;
+  const handleRemoveCoordinator = async (roleId: string, name: string, targetUserId?: string, email?: string) => {
+    const reason = window.prompt(
+      `Nhập lý do thu hồi quyền Điều phối viên của "${name}" (hoặc để trống):`,
+      "Thay đổi kế hoạch phân công nhân sự Ban tổ chức"
+    );
+    if (reason === null) return; // Cancelled
 
     setRemovingRoleId(roleId);
     setActionError(null);
     try {
       await staffRepository.removeEventRole(roleId);
+      invitationHistoryService.updateStatus(selectedEventId, email || roleId, "Revoked", reason.trim() || undefined);
+      
+      pushSystemNotification({
+        title: "Thu hồi quyền Điều Phối Viên",
+        message: `Quyền Điều Phối Viên của ${name} trong sự kiện "${selectedEvent?.eventName || selectedEvent?.EventName || 'Sự kiện'}" đã bị thu hồi. Lý do: ${reason.trim() || 'Theo quyết định của Ban tổ chức'}.`,
+        type: "warning",
+      });
+
       setActionSuccess(`Đã thu hồi quyền Điều phối viên của ${name} thành công!`);
       await refetchRoles();
+      loadHistory();
       if (targetUserId && targetUserId === currentUserId) {
         await refreshRoles();
       }
@@ -179,6 +213,48 @@ export function AdminCoordinatorsView() {
     } finally {
       setRemovingRoleId(null);
     }
+  };
+
+  const handleResendCoordinatorInvitation = async (record: RoleInvitationRecord) => {
+    if (!selectedEventId) return;
+    await staffRepository.inviteCoordinator({
+      eventId: selectedEventId,
+      email: record.email,
+      fullName: record.fullName,
+    });
+    invitationHistoryService.addInvitation({
+      ...record,
+      status: "Pending",
+    });
+    pushSystemNotification({
+      title: "Gửi lại lời mời Điều Phối Viên",
+      message: `Đã gửi lại email mời ${record.fullName || record.email} làm Điều Phối Viên sự kiện "${selectedEvent?.eventName || selectedEvent?.EventName}".`,
+      type: "info",
+    });
+    loadHistory();
+  };
+
+  const handleRevokeCoordinatorInvitation = async (record: RoleInvitationRecord) => {
+    const reason = window.prompt(
+      `Nhập lý do thu hồi lời mời Điều phối viên của "${record.fullName || record.email}" (hoặc để trống):`,
+      "Hủy thư mời theo quyết định của Ban tổ chức"
+    );
+    if (reason === null) return;
+
+    // If it has an active role ID from server, remove it
+    if (record.id && !record.id.startsWith("inv-") && !record.id.startsWith("role-inv-")) {
+      await staffRepository.removeEventRole(record.id);
+      await refetchRoles();
+    }
+    invitationHistoryService.updateStatus(selectedEventId, record.id, "Revoked", reason.trim() || undefined);
+    
+    pushSystemNotification({
+      title: "Thu hồi lời mời Điều Phối Viên",
+      message: `Lời mời Điều Phối Viên của ${record.fullName || record.email} trong sự kiện "${selectedEvent?.eventName || selectedEvent?.EventName || 'Sự kiện'}" đã bị thu hồi. Lý do: ${reason.trim() || 'Theo quyết định của Ban tổ chức'}.`,
+      type: "warning",
+    });
+    
+    loadHistory();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -233,11 +309,20 @@ export function AdminCoordinatorsView() {
         setIsSubmitting(false);
 
         if (res && res.success !== false) {
+          invitationHistoryService.addInvitation({
+            eventId: selectedEventId,
+            eventName: selectedEvent?.eventName || selectedEvent?.EventName,
+            email: matchedUser.email || emailToUse,
+            fullName: matchedUser.fullName || (matchedUser as any).FullName || emailToUse.split("@")[0],
+            roleName: "EventCoordinator",
+            status: "Active",
+          });
           setActionSuccess(
             `Đã phân công ${matchedUser.fullName || matchedUser.email} làm Điều Phối Viên cho sự kiện thành công!`
           );
           handleClearSelection();
           await refetchRoles();
+          loadHistory();
           setTimeout(() => setActionSuccess(null), 3000);
         } else {
           setActionError("Phân công vai trò thất bại. Vui lòng kiểm tra lại quyền.");
@@ -258,9 +343,26 @@ export function AdminCoordinatorsView() {
       setIsSubmitting(false);
 
       if (res) {
-        setActionSuccess(`Đã gửi thư mời và gán quyền Điều Phối Viên cho ${emailToUse} thành công!`);
+        invitationHistoryService.addInvitation({
+          eventId: selectedEventId,
+          eventName: selectedEvent?.eventName || selectedEvent?.EventName,
+          email: emailToUse,
+          fullName: customFullName.trim() || emailToUse.split("@")[0],
+          roleName: "EventCoordinator",
+          status: "Pending",
+          notes: "Cấp tài khoản tạm / Chờ kích hoạt qua email",
+        });
+        
+        pushSystemNotification({
+          title: "Gửi thư mời & Cấp tài khoản tạm",
+          message: `Đã gửi thư mời kèm liên kết kích hoạt cấp tài khoản tạm cho ${emailToUse} làm Điều Phối Viên sự kiện "${selectedEvent?.eventName || selectedEvent?.EventName || 'Sự kiện'}".`,
+          type: "info",
+        });
+
+        setActionSuccess(`Đã gửi thư mời và liên kết kích hoạt cấp tài khoản tạm cho ${emailToUse} thành công!`);
         handleClearSelection();
         await refetchRoles();
+        loadHistory();
         setTimeout(() => setActionSuccess(null), 3000);
       } else {
         setActionError("Không thể gửi thư mời điều phối viên.");
@@ -477,8 +579,8 @@ export function AdminCoordinatorsView() {
                     onChange={(e) => setCustomFullName(e.target.value)}
                     disabled={isSubmitting}
                   />
-                  <span className="block text-xs text-[var(--accent-primary)]">
-                    Hệ thống sẽ gửi thư mời kích hoạt tài khoản EC qua email này.
+                  <span className="block text-xs text-cyan-400 font-mono">
+                    ⚡ Tài khoản chưa có trong hệ thống: Sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt qua email này.
                   </span>
                 </div>
               )}
@@ -492,11 +594,15 @@ export function AdminCoordinatorsView() {
               >
                 {isSubmitting ? (
                   <>
-                    <RefreshCw className="h-4 w-4 animate-spin" /> Đang phân công...
+                    <RefreshCw className="h-4 w-4 animate-spin" /> Đang xử lý...
+                  </>
+                ) : matchedUser ? (
+                  <>
+                    <UserCheck className="h-4 w-4" /> Xác nhận phân công EC
                   </>
                 ) : (
                   <>
-                    <UserCheck className="h-4 w-4" /> Xác nhận phân công EC
+                    <Sparkles className="h-4 w-4" /> ⚡ Gửi Mời &amp; Cấp TK Tạm EC
                   </>
                 )}
               </Button>
@@ -577,7 +683,7 @@ export function AdminCoordinatorsView() {
                         <Button
                           variant="ghost"
                           accent="primary"
-                          onClick={() => handleRemoveCoordinator(roleId, uName, coordUserId)}
+                          onClick={() => handleRemoveCoordinator(roleId, uName, coordUserId, uEmail)}
                           disabled={isRemoving}
                           className="h-8 px-2.5 text-xs"
                         >
@@ -612,6 +718,20 @@ export function AdminCoordinatorsView() {
           </Card>
         </div>
       </div>
+
+      {/* Role Invitation History & Status Tracker Section */}
+      {selectedEventId && (
+        <RoleInvitationHistoryCard
+          eventId={selectedEventId}
+          eventName={selectedEvent?.eventName || selectedEvent?.EventName || "Sự kiện"}
+          roleFilter="EventCoordinator"
+          records={historyRecords}
+          onRefresh={loadHistory}
+          onResend={handleResendCoordinatorInvitation}
+          onRevoke={handleRevokeCoordinatorInvitation}
+          onDeleteHistory={() => loadHistory()}
+        />
+      )}
     </PageShell>
   );
 }

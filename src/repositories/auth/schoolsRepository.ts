@@ -28,6 +28,33 @@ export function useGetSchools() {
   });
 }
 
+export interface SchoolWithUserCount {
+  id: string;
+  schoolName: string;
+  code?: string;
+  schoolCode?: string;
+  address?: string | null;
+  userCount: number;
+}
+
+/** GET /api/Schools/with-user-count — Danh sách trường kèm số lượng người dùng (Admin). */
+export function useGetSchoolsWithUserCount() {
+  return useQuery({
+    queryKey: ["schools-with-user-count"],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>("/Schools/with-user-count");
+        const list = res.data?.data ?? res.data ?? [];
+        return (Array.isArray(list) ? list : []) as SchoolWithUserCount[];
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Schools/with-user-count error:", err?.message);
+        return [] as SchoolWithUserCount[];
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 /** POST /api/Schools — Tạo trường mới (Admin) */
 export function useCreateSchool() {
   const queryClient = useQueryClient();

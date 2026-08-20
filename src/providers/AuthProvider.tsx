@@ -20,6 +20,7 @@ interface AuthContextType {
   loginWithGoogleCredential: (idToken: string) => Promise<string>;
   logout: () => void;
   refreshRoles: () => Promise<EventRole | null>;
+  updateUser: (updatedUser: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -237,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (detectedRole === "Judge") {
       targetPath = primaryRole?.eventId ? `/judge/events?eventId=${primaryRole.eventId}` : "/judge/events";
     } else if (detectedRole === "Mentor") {
-      targetPath = primaryRole?.eventId ? `/events/${primaryRole.eventId}` : "/events";
+      targetPath = primaryRole?.eventId ? `/mentor?eventId=${primaryRole.eventId}` : "/mentor";
     } else if (detectedRole === "TeamLeader" || detectedRole === "TeamMember") {
       targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
@@ -352,7 +353,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (detectedRole === "Judge") {
       targetPath = primaryRole?.eventId ? `/judge/events?eventId=${primaryRole.eventId}` : "/judge/events";
     } else if (detectedRole === "Mentor") {
-      targetPath = primaryRole?.eventId ? `/events/${primaryRole.eventId}` : "/events";
+      targetPath = primaryRole?.eventId ? `/mentor?eventId=${primaryRole.eventId}` : "/mentor";
     } else if (detectedRole === "TeamLeader" || detectedRole === "TeamMember") {
       targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
@@ -365,6 +366,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     saveSession(authUser, isAdmin ? null : primaryRole, allRoles);
     return targetPath;
+  };
+
+  const updateUser = (updatedUser: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const next = { ...prev, ...updatedUser };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("currentUser", JSON.stringify(next));
+      }
+      return next;
+    });
   };
 
   const logout = () => {
@@ -394,6 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loginWithGoogleCredential,
           logout,
           refreshRoles,
+          updateUser,
         }}
       >
         {children}

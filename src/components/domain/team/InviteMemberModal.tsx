@@ -5,6 +5,7 @@ import { Button, Card, Field, Input } from "@/components/ui";
 import { AlertTriangle, CheckCircle2, Mail, ShieldAlert, Sparkles, UserPlus, X } from "lucide-react";
 import { MAX_MEMBERS } from "./teamStatus";
 import type { TeamMemberInvited } from "@/repositories/teamsRepository";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 interface Props {
   open: boolean;
@@ -68,6 +69,19 @@ export function InviteMemberModal({
         email: value,
         isNewUser: isNewTemporary,
       });
+
+      pushSystemNotification({
+        title: "Gửi lời mời vào đội thi",
+        message: `Đã gửi lời mời tham gia đội "${teamName}" tới ${value}.`,
+        type: "info",
+      });
+      pushSystemNotification({
+        title: "Lời mời tham gia đội thi",
+        message: `Bạn nhận được lời mời gia nhập đội thi "${teamName}".`,
+        type: "info",
+        recipientEmail: value,
+      });
+
       setEmail("");
       setNotes("");
     } catch (err: unknown) {

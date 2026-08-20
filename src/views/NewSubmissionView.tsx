@@ -15,10 +15,9 @@ import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import { ApiMissingDataBadge } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
-
-import { parseLinkRules } from "@/components/domain/event-wizard/Step3TrackConfig";
 
 // ─── Deliverable Icon Metadata ────────────────────────────────────────────────
 const DELIVERABLE_ICONS: Record<DeliverableType, { label: string; icon: string; badgeColor: string }> = {
@@ -45,77 +44,11 @@ function TrackSubmissionCard({
   teamId: string;
   roundId: string;
 }) {
-  const toast = useToast();
-
-  const linkRules = useMemo(() => {
-    const raw = (track as any)?.submissionRuleDescription || (track as any)?.SubmissionRuleDescription || track.description;
-    return parseLinkRules(raw);
-  }, [track]);
-
-  const deliverables: DeliverableItem[] = useMemo(() => {
-    const list: DeliverableItem[] = [];
-    if (linkRules.github !== "none") {
-      list.push({
-        id: "github",
-        type: "github",
-        label: "Mã nguồn GitHub / GitLab",
-        placeholder: "https://github.com/org/repo",
-        required: linkRules.github === "required",
-        trackId: track.id,
-      });
-    }
-    if (linkRules.demo !== "none") {
-      list.push({
-        id: "deployed_url",
-        type: "demo_video",
-        label: "Video Demo / Live Demo",
-        placeholder: "https://youtube.com/watch?v=... hoặc https://demo.com",
-        required: linkRules.demo === "required",
-        trackId: track.id,
-      });
-    }
-    if (linkRules.slides !== "none") {
-      list.push({
-        id: "slides",
-        type: "slides",
-        label: "Slide Thuyết Trình",
-        placeholder: "https://docs.google.com/presentation/... hoặc Canva",
-        required: linkRules.slides === "required",
-        trackId: track.id,
-      });
-    }
-    if (linkRules.figma !== "none") {
-      list.push({
-        id: "figma",
-        type: "figma",
-        label: "Thiết Kế UI/UX Figma / XD",
-        placeholder: "https://figma.com/file/...",
-        required: linkRules.figma === "required",
-        trackId: track.id,
-      });
-    }
-    if (linkRules.docs !== "none") {
-      list.push({
-        id: "docs",
-        type: "report",
-        label: "Báo Cáo / Tài Liệu PDF",
-        placeholder: "https://docs.google.com/document/... hoặc Drive PDF",
-        required: linkRules.docs === "required",
-        trackId: track.id,
-      });
-    }
-    if (list.length === 0) {
-      list.push({
-        id: "github",
-        type: "github",
-        label: "Mã nguồn GitHub / GitLab",
-        placeholder: "https://github.com/org/repo",
-        required: true,
-        trackId: track.id,
-      });
-    }
-    return list;
-  }, [linkRules, track.id]);
+  const deliverables: DeliverableItem[] = [
+    { id: "github", type: "github", label: "GitHub / GitLab repo", placeholder: "https://github.com/org/repo", required: true, trackId: track.id },
+    { id: "deployed_url", type: "deployed_url", label: "Live demo", placeholder: "https://demo.example.com", required: true, trackId: track.id },
+    { id: "slides", type: "slides", label: "Slides", placeholder: "https://docs.google.com/presentation/...", required: true, trackId: track.id },
+  ];
   const createSubmission = useCreateSubmission();
   const updateSubmission = useUpdateSubmission();
 
@@ -142,23 +75,13 @@ function TrackSubmissionCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const sanitizeUrl = (url: string) => {
-    const trimmed = (url || "").trim();
-    if (!trimmed) return "";
-    if (!/^https?:\/\//i.test(trimmed)) {
-      return `https://${trimmed}`;
-    }
-    return trimmed;
-  };
-
   // Check completion
   const { filledCount, requiredFilled, requiredTotal } = useMemo(() => {
     let filled = 0;
     let reqFilled = 0;
     let reqTotal = 0;
     for (const d of deliverables) {
-      const rawVal = (linkValues[d.type] || linkValues[d.id] || "").trim();
-      const val = sanitizeUrl(rawVal);
+      const val = (linkValues[d.type] || linkValues[d.id] || "").trim();
       const valid = val.startsWith("http://") || val.startsWith("https://");
       if (valid) filled++;
       if (d.required) {
@@ -178,70 +101,65 @@ function TrackSubmissionCard({
 
   const handleCardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!allRequiredDone) {
-      setFormError("Vui lòng hoàn thành tất cả các đường link bài nộp bắt buộc.");
-      return;
-    }
+    if (!allRequiredDone) return;
 
     setIsSubmitting(true);
-    setFormError("");
-
-    const sanitizedLinkValues: Record<string, string> = {};
-    for (const [k, v] of Object.entries(linkValues)) {
-      sanitizedLinkValues[k] = sanitizeUrl(v);
-    }
-
     const primaryDeliverable = deliverables.find((d) => d.required);
     const primaryUrl = primaryDeliverable
-      ? (sanitizedLinkValues[primaryDeliverable.type] || sanitizedLinkValues[primaryDeliverable.id] || "").trim()
-      : Object.values(sanitizedLinkValues).find((v) => v.trim().length > 0) || "";
+      ? (linkValues[primaryDeliverable.type] || linkValues[primaryDeliverable.id] || "").trim()
+      : Object.values(linkValues).find((v) => v.trim().length > 0) || "";
 
     const allLinks = deliverables.map((d) => ({
       type: d.type,
       label: d.label,
-      url: (sanitizedLinkValues[d.type] || sanitizedLinkValues[d.id] || "").trim(),
+      url: (linkValues[d.type] || linkValues[d.id] || "").trim(),
       required: d.required,
     }));
-
-    const finalRoundId = track.roundId || roundId || "";
 
     const payload = {
       TeamId: teamId,
       TrackId: track.id,
-      RoundId: finalRoundId,
-      RepoUrl: (sanitizedLinkValues.github || "").trim(),
-      DemoUrl: (sanitizedLinkValues.deployed_url || sanitizedLinkValues.demo_video || "").trim(),
-      SlideUrl: (sanitizedLinkValues.slides || "").trim(),
-      SubmissionUrl: (sanitizedLinkValues.github || primaryUrl).trim(),
-      Description: JSON.stringify({ links: allLinks, notes: notes.trim() }),
+      RoundId: roundId,
+      RepoUrl: (linkValues.github || "").trim(),
+      DemoUrl: (linkValues.deployed_url || "").trim(),
+      SlideUrl: (linkValues.slides || "").trim(),
+      SubmissionUrl: (linkValues.github || primaryUrl).trim(),
+      Description: JSON.stringify({ links: allLinks, notes }),
     };
 
     try {
       const created = existingSubmission?.id
-        ? await updateSubmission.mutateAsync({ id: existingSubmission.id, data: payload } as any)
-        : await createSubmission.mutateAsync(payload as any);
+        ? await updateSubmission.mutateAsync({ id: existingSubmission.id, data: payload as Partial<SubmitResultRequest> })
+        : await createSubmission.mutateAsync(payload as SubmitResultRequest);
       const updatedItem: SubmissionItem = {
         id: (created as { id?: string })?.id || existingSubmission?.id || `sub-${Date.now()}`,
         teamId,
-        roundId: finalRoundId,
+        roundId,
         roundName: "Vòng hiện tại",
         trackId: track.id,
         trackName: track.trackName,
         submissionUrl: primaryUrl,
-        description: JSON.stringify({ links: allLinks, notes: notes.trim() }),
+        description: JSON.stringify({ links: allLinks, notes }),
         teamName: "",
         createdTime: new Date().toISOString(),
         isActive: true,
+        isEliminated: false,
       };
       setIsSaved(true);
       setFormError("");
-      const okMsg = `🎉 Nộp bài thành công cho hạng mục "${track.trackName}"! Hệ thống đã ghi nhận bài thi và gửi email xác nhận biên nhận nộp bài tới các thành viên trong đội.`;
-      toast.success(okMsg);
+      pushSystemNotification({
+        title: "Nộp bài thi thành công",
+        message: `Đội thi đã nộp bài thành công cho Hạng mục "${track.trackName}". Hệ thống đã gửi bài đến Ban Giám Khảo & Cố vấn!`,
+        type: "success",
+      });
+      pushSystemNotification({
+        title: "Bài nộp mới cần chấm điểm",
+        message: `Có bài nộp mới từ Đội thi cho Hạng mục "${track.trackName}". Hãy kiểm tra bàn chấm điểm!`,
+        type: "info",
+      });
       onSubmitSuccess(track.id, updatedItem);
     } catch (err) {
-      const errMsg = readApiError(err);
-      setFormError(errMsg);
-      toast.error(errMsg);
+      setFormError(readApiError(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -401,13 +319,21 @@ function TrackSubmissionCard({
 
         {/* Card Footer Actions */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[var(--border-muted)]/60">
-          <div className="font-mono text-xs text-[var(--text-muted)]">
+          <div className="font-mono text-xs text-[var(--text-muted)] flex items-center gap-3">
             {formError ? (
               <span role="alert" className="text-[color:var(--color-danger)]">{formError}</span>
             ) : isSaved ? (
-              <span className="text-[var(--color-success)] font-semibold">
-                Đã lưu bài nộp cho hạng mục {track.trackName}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[var(--color-success)] font-semibold flex items-center gap-1">
+                  ✓ Đã lưu bài nộp cho hạng mục {track.trackName}
+                </span>
+                <Link
+                  href="/my-submissions"
+                  className="text-[var(--accent-team)] hover:underline font-bold text-[11px] ml-2 flex items-center gap-0.5"
+                >
+                  [ Xem danh sách bài nộp → ]
+                </Link>
+              </div>
             ) : (
               <span>Vui lòng kiểm tra kỹ các đường link trước khi xác nhận.</span>
             )}
@@ -416,7 +342,7 @@ function TrackSubmissionCard({
           <button
             type="submit"
             disabled={!allRequiredDone || isSubmitting}
-            className={`hud-clipped px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-wider transition-all focus:outline-none ${
+            className={`hud-clipped px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-wider transition-all focus:outline-none cursor-pointer ${
               isSaved
                 ? "bg-transparent border border-[var(--accent-team)] text-[var(--accent-team)] hover:bg-[var(--accent-team)]/10"
                 : allRequiredDone
@@ -450,9 +376,10 @@ export function NewSubmissionView() {
   const teamTrackId = (team as any)?.TrackId || (team as any)?.trackId || "";
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
   const { data: rounds = [] } = useEventRounds(eventId);
-  const { data: existingSubs = [] } = useMySubmissions(teamId || undefined);
-  const currentOrLastRound = rounds.find((r: any) => r.isCurrentRound || r.status === "Active" || r.status === "InProgress") || rounds[rounds.length - 1] || rounds[0];
-  const roundId = currentOrLastRound?.id || currentOrLastRound?.Id || "";
+  const { data: existingSubs = [] } = useMySubmissions();
+  const roundId = rounds.length
+    ? (rounds[rounds.length - 1].id || rounds[rounds.length - 1].Id || "")
+    : "";
 
   const availableTracks: TrackItem[] = (tracks as any[])
     .filter((t) => !teamTrackId || (t.id || t.Id) === teamTrackId)
@@ -460,8 +387,7 @@ export function NewSubmissionView() {
       id: t.id || t.Id,
       trackName: t.trackName || t.TrackName || "",
       description: t.description || t.Description || "",
-      submissionRuleDescription: t.submissionRuleDescription || t.SubmissionRuleDescription || "",
-      roundId: t.roundId || t.RoundId || roundId,
+      roundId,
       templateId: t.templateId || t.TemplateId || null,
     }));
 
@@ -478,7 +404,7 @@ export function NewSubmissionView() {
       map[trackId] = {
         id: raw.id || raw.Id || "",
         teamId: raw.teamId || raw.TeamId || "",
-        roundId: raw.roundId || raw.RoundId || roundId,
+        roundId: "",
         roundName: "Vòng hiện tại",
         trackId,
         trackName: raw.trackName || raw.TrackName || "",
@@ -494,10 +420,11 @@ export function NewSubmissionView() {
         teamName: raw.teamName || raw.TeamName || "",
         createdTime: raw.createdTime || raw.CreatedTime || "",
         isActive: raw.isActive !== false && raw.IsActive !== false,
+        isEliminated: false,
       };
     }
     return map;
-  }, [existingSubs, roundId]);
+  }, [existingSubs]);
 
   const [localOverrides, setLocalOverrides] = useState<Record<string, SubmissionItem>>({});
   const submissions = { ...submissionsFromServer, ...localOverrides };
@@ -511,16 +438,12 @@ export function NewSubmissionView() {
 
   const teamStatus = String((team as { status?: string; Status?: string } | undefined)?.status
     || (team as { Status?: string } | undefined)?.Status || "");
-  const canSubmit = teamStatus === "Registered" || teamStatus === "Approved";
+  const canSubmit = teamStatus === "Registered";
 
   // Guard: chưa có đội hoặc đội chưa được duyệt
   if (!isLoading && (!team || !canSubmit)) {
     return (
       <div className="hud-lattice min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-4 space-y-4">
-        <ApiMissingDataBadge
-          title="Bạn chưa có đội thi để nộp bài"
-          message="Vui lòng tạo hoặc tham gia một Đội thi chính thức trước khi thực hiện nộp bài."
-        />
         <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--color-warning)]/40 hud-clipped p-8 text-center">
           <div className="font-mono text-[10px] text-[var(--color-warning)] tracking-widest uppercase mb-3">
             CHƯA ĐỦ ĐIỀU KIỆN NỘP BÀI
@@ -583,10 +506,20 @@ export function NewSubmissionView() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <Link href={`/events/${(team as any)?.eventId || (team as any)?.EventId || ""}/leaderboard`}>
+              <button className="hud-clipped px-4 py-2.5 border border-[var(--accent-judge)]/40 bg-[var(--accent-judge)]/10 text-[var(--accent-judge)] font-mono text-xs font-bold tracking-wider uppercase hover:bg-[var(--accent-judge)]/20 transition-colors">
+                🏆 BẢNG XẾP HẠNG
+              </button>
+            </Link>
+            <Link href="/my-team">
+              <button className="hud-clipped px-4 py-2.5 border border-[var(--accent-team)]/40 bg-[var(--accent-team)]/10 text-[var(--accent-team)] font-mono text-xs font-bold tracking-wider uppercase hover:bg-[var(--accent-team)]/20 transition-colors">
+                👥 ĐỘI THI
+              </button>
+            </Link>
             <Link href="/my-submissions">
-              <button className="hud-clipped px-5 py-2.5 border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs tracking-wider uppercase hover:border-[var(--accent-team)] hover:text-[var(--accent-team)] transition-colors">
-                XEM QUẢN LÝ BÀI NỘP
+              <button className="hud-clipped px-5 py-2.5 border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs font-bold tracking-wider uppercase hover:border-[var(--accent-team)] hover:text-[var(--accent-team)] transition-colors">
+                📄 QUẢN LÝ BÀI NỘP
               </button>
             </Link>
           </div>
@@ -606,8 +539,8 @@ export function NewSubmissionView() {
 
           {availableTracks.length === 0 ? (
             <ApiMissingDataBadge
-              title="Chưa có hạng mục nộp bài"
-              message="Chưa có Hạng mục thi đấu nào được khởi tạo hoặc mở cổng nộp bài."
+              title="CHƯA MỞ CỔNG NỘP BÀI"
+              message="Chưa có Hạng mục thi đấu nào được mở cổng nộp bài cho sự kiện này."
             />
           ) : (
             availableTracks.map((track) => (

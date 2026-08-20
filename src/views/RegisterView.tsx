@@ -8,6 +8,7 @@ import { Link, useRouter } from "@/i18n/routing";
 import { Mail, Lock, User, Eye, EyeOff, CheckCircle2, ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/providers/AuthProvider";
+import { useSearchParams } from "next/navigation";
 import { AlreadyLoggedInNotice } from "@/components/domain/AlreadyLoggedInNotice";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 
@@ -15,6 +16,10 @@ type RegisterStep = "form" | "success";
 
 export function RegisterView() {
   const { user: currentUser, loginWithGoogleCredential } = useAuth();
+  const searchParams = useSearchParams();
+  const initialEmail = searchParams.get("email") || "";
+  const returnUrl = searchParams.get("returnUrl") || searchParams.get("redirect") || "";
+
   const router = useRouter();
   const toast = useToast();
   const [step, setStep] = useState<RegisterStep>("form");
@@ -24,7 +29,7 @@ export function RegisterView() {
   }
 
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -100,7 +105,7 @@ export function RegisterView() {
     try {
       const targetPath = await loginWithGoogleCredential(response.credential);
       toast.success("Đăng ký / Đăng nhập Google thành công!");
-      router.push(targetPath);
+      router.push(returnUrl ? decodeURIComponent(returnUrl) : targetPath);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data
@@ -116,6 +121,7 @@ export function RegisterView() {
   };
 
   if (step === "success") {
+    const loginTarget = `/login?email=${encodeURIComponent(email)}${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ""}`;
     return (
       <AuthLayout
         title="Tài khoản đã được tạo"
@@ -136,7 +142,7 @@ export function RegisterView() {
           <li>3. Sau khi đăng nhập: hoàn thiện hồ sơ sinh viên hoặc tham gia đội thi.</li>
         </ul>
         <div className="flex flex-col gap-3">
-          <Link href={`/login?email=${encodeURIComponent(email)}`}>
+          <Link href={loginTarget}>
             <Button className="w-full">
               <ArrowRight className="mr-2 h-4 w-4" />
               Đăng nhập ngay
@@ -170,6 +176,8 @@ export function RegisterView() {
     );
   }
 
+  const footerLoginUrl = `/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`;
+
   return (
     <AuthLayout
       title="Tạo tài khoản"
@@ -177,7 +185,7 @@ export function RegisterView() {
       footer={
         <>
           Đã có tài khoản?{" "}
-          <Link href="/login" className="font-medium text-[var(--accent-primary)] hover:underline">
+          <Link href={footerLoginUrl} className="font-medium text-[var(--accent-primary)] hover:underline">
             Đăng nhập
           </Link>
         </>
