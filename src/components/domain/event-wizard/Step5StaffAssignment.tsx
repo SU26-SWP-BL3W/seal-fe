@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button, Input, Card, Badge } from "@/components/ui";
 import { StaffInviteFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
-import { Users, Mail, UserPlus, Trash2, ArrowLeft, CheckCircle2, ShieldCheck, Clock, AlertCircle } from "lucide-react";
+import { Users, Mail, UserPlus, Trash2, ArrowLeft, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { checkEmailInSystem } from "@/views/CoordinatorStaffView";
 import { useGetUsers } from "@/repositories/usersRepository";
 

@@ -7,7 +7,7 @@ import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useLeaderboard } from "@/repositories/leaderboardRepository";
 import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
-import { Trophy, Target, Download, FileSpreadsheet, ArrowLeft, SlidersHorizontal } from "lucide-react";
+import { Trophy, Target, FileSpreadsheet, SlidersHorizontal } from "lucide-react";
 
 interface TableTeam {
   rank: number;
@@ -315,8 +315,8 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
-                {filteredResults.map((row) => (
-                  <tr key={row.teamCode} className="hover:bg-zinc-800/40 transition-colors">
+                {filteredResults.map((row, idx) => (
+                  <tr key={`${row.teamCode}-${row.roundName}-${idx}`} className="hover:bg-zinc-800/40 transition-colors">
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center justify-center w-7 h-7 font-bold text-xs rounded border ${
                         row.rank === 1 ? "bg-amber-500/20 border-amber-400 text-amber-300 font-extrabold" :

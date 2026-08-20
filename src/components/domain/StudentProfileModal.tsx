@@ -5,8 +5,6 @@ import {
   X,
   IdCard,
   GraduationCap,
-  Mail,
-  Users,
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,

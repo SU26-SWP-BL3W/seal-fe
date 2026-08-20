@@ -6,7 +6,7 @@ import { staffRepository, useGetEventRoles } from "@/repositories/staffRepositor
 import { useGetUsers } from "@/repositories/usersRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Info } from "lucide-react";
+import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Calendar, Info } from "lucide-react";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
 import { Button, Card, Badge, Input } from "@/components/ui";
@@ -34,11 +34,11 @@ export const CoordinatorStaffView: React.FC = () => {
   const { data: myEvents = [] } = useMyEvents();
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId || "");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (queryEventId && queryEventId !== selectedEventId) {
       setSelectedEventId(queryEventId);
     }
-  }, [queryEventId]);
+  }, [queryEventId, selectedEventId]);
 
   const { data: eventRoles = [], refetch: refetchRoles } = useGetEventRoles(selectedEventId);
   const { data: tracks = [] } = useGetTracksByEvent(selectedEventId);
@@ -230,7 +230,7 @@ export const CoordinatorStaffView: React.FC = () => {
   };
 
   const handleRemoveRole = async (roleId: string, email?: string) => {
-    if (!confirm(`Bạn có chắc chắn muốn gỡ vai trò nhân sự này khỏi sự kiện?`)) return;
+    if (!confirm(`Bạn có chắc chắn muốn gỡ vai trò nhân sự ${email ? `(${email}) ` : ""}này khỏi sự kiện?`)) return;
     try {
       await staffRepository.removeEventRole(roleId);
       await refetchRoles();

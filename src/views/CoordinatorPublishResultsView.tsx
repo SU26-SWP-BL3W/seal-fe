@@ -21,8 +21,6 @@ import {
   Download,
   Mail,
   Send,
-  FileSpreadsheet,
-  AlertTriangle,
   X,
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
@@ -30,7 +28,7 @@ import { Link } from "@/i18n/routing";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
   const toast = useToast();
-  const params = useParams();
+  const _params = useParams();
   const { user: currentUser } = useAuth();
 
   const { data: myEvents = [] } = useMyEvents();
@@ -87,7 +85,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   const assignPrizeMutation = useAssignPrize();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [topN, setTopN] = useState<number>(10);
+  const [topN] = useState<number>(10);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPublishedState, setIsPublishedState] = useState(false);

@@ -538,7 +538,7 @@ export function useCreateEventWizardViewModel() {
       setIsDirty(false);
       setSuccessMessage("Đã lưu bản nháp tiến trình thành công! Bạn có thể thoát và quay lại làm tiếp bất cứ lúc nào.");
       setTimeout(() => setSuccessMessage(null), 4000);
-    } catch (err: any) {
+    } catch {
       setIsSubmitting(false);
       setErrorMessage("Bản nháp tiến trình đã được sao lưu vào bộ nhớ tạm trình duyệt.");
     }

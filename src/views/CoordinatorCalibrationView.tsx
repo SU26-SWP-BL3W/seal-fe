@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useMyEvents } from "@/repositories/eventsRepository";
-import { Download, AlertTriangle, ChevronLeft, ChevronRight, Activity, Filter, ChevronDown } from "lucide-react";
+import { Download, ChevronLeft, ChevronRight, Activity, Filter, ChevronDown } from "lucide-react";
 
 export const CoordinatorCalibrationView: React.FC = () => {
   const { data: eventsList = [] } = useMyEvents();
