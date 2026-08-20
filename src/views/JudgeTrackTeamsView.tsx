@@ -15,10 +15,12 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Lock,
   ExternalLink,
   ChevronRight,
 } from "lucide-react";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Badge, Button, Card, EmptyState, Table, TableHeader, TableRow, TableHead, TableCell } from "@/components/ui";
 
 export function JudgeTrackTeamsView() {
   const params = useParams();
@@ -28,7 +30,7 @@ export function JudgeTrackTeamsView() {
 
   const { data: tracks = [] } = useGetTracksByEvent(eventId || undefined);
   const currentTrack = tracks.find((t) => (t.id || t.Id) === trackId);
-  const trackName = currentTrack?.trackName || (currentTrack as any)?.TrackName || "Hạng Mục Chuyên Môn";
+  const trackName = currentTrack?.trackName || (currentTrack as { TrackName?: string })?.TrackName || "Hạng mục chuyên môn";
 
   const { data: rawSubmissions = [], isLoading: isLoadingSubs } = useGetSubmitResultsByTrack(trackId, eventId);
   const submissions = useMemo(() => {
@@ -36,128 +38,125 @@ export function JudgeTrackTeamsView() {
   }, [rawSubmissions]);
   const eventRoleId = activeRole?.id || activeRole?.eventRoleId || "";
 
-  // "Đã chốt điểm" thật = có phiếu chấm (Score) với isSubmitted=true cho bài này,
-  // không có field isEvaluated/IsGraded nào trên SubmitResult (BE không trả field đó).
   const { data: myScores = [] } = useGetScoresByEventRole(eventRoleId || undefined);
   const submittedIds = useMemo(
     () => new Set(myScores.filter((s) => s.isSubmitted).map((s) => s.submitResultId)),
     [myScores],
   );
 
+  const evaluatedCount = submissions.filter((s: { id?: string; Id?: string }) =>
+    submittedIds.has(s.id || s.Id || ""),
+  ).length;
+  const pendingCount = submissions.length - evaluatedCount;
+
   if (!user) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#0c1214] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#080e10] border border-amber-500/40 p-8 text-center glow-box-amber relative space-y-4">
-          <div className="corner-accent-tl text-amber-400/60" />
-          <div className="corner-accent-tr text-amber-400/60" />
-          <div className="corner-accent-bl text-amber-400/60" />
-          <div className="corner-accent-br text-amber-400/60" />
-          <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto text-amber-400">
-            <Scale className="w-6 h-6" />
-          </div>
-          <h2 className="font-display text-xl font-bold uppercase text-amber-300">
-            YÊU CẦU QUYỀN GIÁM KHẢO
-          </h2>
-          <p className="font-mono text-xs text-zinc-400 leading-relaxed">
-            Vui lòng đăng nhập với tài khoản Giám khảo để tiếp tục.
-          </p>
-          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <Link href="/login" className="w-full">
-              <button className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all">
-                Đến trang đăng nhập
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Card className="w-full max-w-md text-center">
+          <EmptyState
+            icon={Scale}
+            title="Yêu cầu quyền giám khảo"
+            description="Vui lòng đăng nhập với tài khoản Giám khảo để tiếp tục."
+            action={
+              <Link href="/login">
+                <Button accent="judge">Đến trang đăng nhập</Button>
+              </Link>
+            }
+          />
+        </Card>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0c1214] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-amber-500/30 selection:text-amber-200">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Back Link & Title */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-800 pb-4 gap-4">
-          <div>
-            <Link
-              href="/judge/tracks"
-              className="inline-flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-amber-300 mb-2 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" /> TRỞ VỀ DANH SÁCH HẠNG MỤC
-            </Link>
-            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider flex items-center gap-2">
-              <Scale className="w-3.5 h-3.5" />
-              <span>HẠNG MỤC / {trackName}</span>
-            </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
-              DANH SÁCH BÀI DỰ THI
-            </h1>
-          </div>
+    <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
+      <PageHeader
+        breadcrumb={
+          <Link
+            href="/judge/tracks"
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--accent-judge)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Trở về danh sách hạng mục
+          </Link>
+        }
+        title="Danh sách bài dự thi"
+        description={`Hạng mục: ${trackName}`}
+        actions={
+          <>
+            <Badge tone="neutral">
+              Tổng bài nộp: <span className="font-semibold">{submissions.length}</span>
+            </Badge>
+            {submissions.length > 0 && (
+              <Badge tone="judge">
+                Chờ đánh giá: <span className="font-semibold">{pendingCount}</span>
+              </Badge>
+            )}
+          </>
+        }
+      />
 
-          <div className="flex items-center gap-3 font-mono text-xs">
-            <div className="bg-[#12191c] border border-zinc-800 px-3 py-1.5 text-zinc-300 rounded">
-              TỔNG BÀI NỘP: <span className="text-amber-300 font-bold">{submissions.length}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Security Notice Banner */}
-        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 p-4 font-mono text-xs flex items-center justify-between rounded">
-          <div className="flex items-center gap-3">
-            <ShieldAlert className="w-5 h-5 shrink-0 text-amber-400" />
-            <div>
-              <span className="font-bold uppercase tracking-wider block">
-                CHẾ ĐỘ CHẤM ĐIỂM ẨN DANH
-              </span>
-              <span className="text-[11px] text-zinc-300 opacity-90">
-                Theo quy chế thi đấu, thông tin tên đội thi, thành viên và trường học được ẩn danh để đảm bảo tính khách quan và công bằng tuyệt đối.
-              </span>
-            </div>
+      <Card className="border-[var(--accent-judge)]/30 bg-[var(--accent-judge)]/5 p-4">
+        <div className="flex items-start gap-3">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent-judge)]" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              Chế độ chấm điểm ẩn danh
+            </p>
+            <p className="text-sm text-[var(--text-muted)]">
+              Theo quy chế thi đấu, thông tin tên đội thi, thành viên và trường học được ẩn danh để đảm bảo tính khách quan và công bằng tuyệt đối.
+            </p>
           </div>
         </div>
+      </Card>
 
-        {/* Submissions Table */}
-        <div className="bg-[#0e1518] border border-zinc-800 relative shadow-sm overflow-hidden rounded">
-          <div className="corner-accent-tl text-amber-400/40" />
-          <div className="corner-accent-tr text-amber-400/40" />
-          <div className="corner-accent-bl text-amber-400/40" />
-          <div className="corner-accent-br text-amber-400/40" />
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
+            Bài làm cần đánh giá
+          </h2>
+          <span className="text-xs text-[var(--text-muted)]">
+            {evaluatedCount} / {submissions.length} đã chấm
+          </span>
+        </div>
 
-          <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-[#12191c]/80">
-            <span className="font-mono text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 bg-amber-400/80 inline-block" />
-              <span>DANH SÁCH BÀI LÀM CẦN ĐÁNH GIÁ</span>
-            </span>
-            <span className="font-mono text-[11px] text-zinc-400">
-              CẬP NHẬT THỜI GIAN THỰC
-            </span>
-          </div>
-
-          {isLoadingSubs ? (
-            <div className="p-12 text-center font-mono text-xs text-zinc-500 animate-pulse">
-              ĐANG TẢI BÀI NỘP ẨN DANH...
-            </div>
-          ) : submissions.length === 0 ? (
-            <div className="p-12 text-center space-y-3 font-mono text-xs text-zinc-500">
-              <AlertTriangle className="w-8 h-8 text-amber-400/50 mx-auto" />
-              <p>Chưa có bài nộp nào được ghi nhận trong Hạng mục này.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left font-mono text-xs">
-                <thead className="bg-[#12191c] border-b border-zinc-800 text-zinc-400 uppercase text-[11px]">
-                  <tr>
-                    <th className="py-3 px-4">#</th>
-                    <th className="py-3 px-4">MÃ BÀI NỘP</th>
-                    <th className="py-3 px-4">VÒNG THI</th>
-                    <th className="py-3 px-4">THỜI GIAN NỘP</th>
-                    <th className="py-3 px-4">BÀI NỘP</th>
-                    <th className="py-3 px-4 text-center">TRẠNG THÁI</th>
-                    <th className="py-3 px-4 text-right">THAO TÁC</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800">
-                  {submissions.map((sub: any, idx: number) => {
+        {isLoadingSubs ? (
+          <Card className="py-12 text-center">
+            <p className="animate-pulse text-sm text-[var(--text-muted)]">
+              Đang tải bài nộp ẩn danh…
+            </p>
+          </Card>
+        ) : submissions.length === 0 ? (
+          <EmptyState
+            icon={AlertTriangle}
+            title="Chưa có bài nộp"
+            description="Chưa có bài nộp nào được ghi nhận trong hạng mục này."
+          />
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>Mã bài nộp</TableHead>
+                    <TableHead>Vòng thi</TableHead>
+                    <TableHead>Thời gian nộp</TableHead>
+                    <TableHead>Bài nộp</TableHead>
+                    <TableHead align="center">Trạng thái</TableHead>
+                    <TableHead align="right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <tbody>
+                  {submissions.map((sub: {
+                    id?: string;
+                    Id?: string;
+                    submissionUrl?: string;
+                    SubmissionUrl?: string;
+                    createdTime?: string;
+                    CreatedTime?: string;
+                  }, idx: number) => {
                     const subId = sub.id || sub.Id || "";
                     const code = `SUB-${subId.slice(0, 8).toUpperCase()}`;
                     const submissionUrl = sub.submissionUrl || sub.SubmissionUrl || "";
@@ -165,61 +164,129 @@ export function JudgeTrackTeamsView() {
                     const isEvaluated = submittedIds.has(subId);
 
                     return (
-                      <tr
-                        key={subId}
-                        className="hover:bg-[#141e22] transition-colors group"
-                      >
-                        <td className="py-3 px-4 text-zinc-500">{idx + 1}</td>
-                        <td className="py-3 px-4 font-bold text-white tracking-wider flex items-center gap-2">
-                          <span className="text-amber-300">{code}</span>
-                        </td>
-                        <td className="py-3 px-4 text-zinc-300">Vòng Đánh Giá</td>
-                        <td className="py-3 px-4 text-zinc-500">
+                      <TableRow key={subId}>
+                        <TableCell className="text-[var(--text-muted)]">{idx + 1}</TableCell>
+                        <TableCell>
+                          <span className="font-medium text-[var(--accent-judge)]">{code}</span>
+                        </TableCell>
+                        <TableCell className="text-[var(--text-muted)]">Vòng đánh giá</TableCell>
+                        <TableCell className="text-[var(--text-muted)]">
                           {submitTime ? new Date(submitTime).toLocaleString("vi-VN") : "N/A"}
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell>
                           {submissionUrl ? (
                             <a
                               href={submissionUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-2 py-0.5 bg-[#12191c] border border-zinc-700 text-cyan-400 hover:border-cyan-400 transition-colors inline-flex items-center gap-1 text-[10px]"
+                              className="inline-flex items-center gap-1 text-xs text-[var(--accent-primary)] hover:underline"
                             >
-                              Xem bài nộp <ExternalLink className="w-2.5 h-2.5" />
+                              Xem bài nộp
+                              <ExternalLink className="h-3 w-3" />
                             </a>
                           ) : (
-                            <span className="text-zinc-600 text-[10px]">Chưa có link</span>
+                            <span className="text-xs text-[var(--text-muted)]">Chưa có link</span>
                           )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
+                        </TableCell>
+                        <TableCell align="center">
                           {isEvaluated ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold text-[10px] uppercase">
-                              <CheckCircle2 className="w-3 h-3" /> ĐÃ CHỐT ĐIỂM
-                            </span>
+                            <Badge tone="success" className="gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Đã chốt điểm
+                            </Badge>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 text-amber-300 border border-amber-500/30 font-bold text-[10px] uppercase">
-                              <Clock className="w-3 h-3" /> CHỜ ĐÁNH GIÁ
-                            </span>
+                            <Badge tone="warning" className="gap-1">
+                              <Clock className="h-3 w-3" />
+                              Chờ đánh giá
+                            </Badge>
                           )}
-                        </td>
-                        <td className="py-3 px-4 text-right">
+                        </TableCell>
+                        <TableCell align="right">
                           <Link href={`/judge/scoring?subId=${subId}`}>
-                            <button className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-600/20 text-amber-300 border border-amber-500/40 font-bold text-xs uppercase hover:bg-amber-500 hover:text-black transition-all inline-flex items-center gap-1 cursor-pointer shadow-sm">
-                              <FileCheck2 className="w-3.5 h-3.5" />
-                              <span>CHẤM ĐIỂM &gt;</span>
-                            </button>
+                            <Button accent="judge" className="text-xs">
+                              <FileCheck2 className="h-3.5 w-3.5" />
+                              Chấm điểm
+                            </Button>
                           </Link>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
                 </tbody>
-              </table>
+              </Table>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
+
+            {/* Mobile cards */}
+            <div className="space-y-3 md:hidden">
+              {submissions.map((sub: {
+                id?: string;
+                Id?: string;
+                submissionUrl?: string;
+                SubmissionUrl?: string;
+                createdTime?: string;
+                CreatedTime?: string;
+              }, idx: number) => {
+                const subId = sub.id || sub.Id || "";
+                const code = `SUB-${subId.slice(0, 8).toUpperCase()}`;
+                const submissionUrl = sub.submissionUrl || sub.SubmissionUrl || "";
+                const submitTime = sub.createdTime || sub.CreatedTime;
+                const isEvaluated = submittedIds.has(subId);
+
+                return (
+                  <Card key={subId} className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-xs text-[var(--text-muted)]">#{idx + 1}</span>
+                        <p className="font-medium text-[var(--accent-judge)]">{code}</p>
+                      </div>
+                      {isEvaluated ? (
+                        <Badge tone="success" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Đã chốt
+                        </Badge>
+                      ) : (
+                        <Badge tone="warning" className="gap-1">
+                          <Clock className="h-3 w-3" />
+                          Chờ chấm
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="space-y-1 text-xs text-[var(--text-muted)]">
+                      <p>
+                        Thời gian nộp:{" "}
+                        <span className="text-[var(--text-primary)]">
+                          {submitTime ? new Date(submitTime).toLocaleString("vi-VN") : "N/A"}
+                        </span>
+                      </p>
+                      {submissionUrl ? (
+                        <a
+                          href={submissionUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[var(--accent-primary)] hover:underline"
+                        >
+                          Xem bài nộp
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span>Chưa có link bài nộp</span>
+                      )}
+                    </div>
+
+                    <Link href={`/judge/scoring?subId=${subId}`}>
+                      <Button accent="judge" className="w-full">
+                        Chấm điểm
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </section>
+    </PageShell>
   );
 }
-

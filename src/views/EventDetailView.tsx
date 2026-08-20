@@ -11,6 +11,9 @@ import { useGetEventRolesByUser } from "@/repositories/events/eventRolesReposito
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 import { AvailableTeamsList } from "@/components/domain/team";
+import { PageShell } from "@/components/layout/PageShell";
+import { Badge, Button, Card, EmptyState, HexagonLoader, StatCard } from "@/components/ui";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 
 function formatVnd(value: number): string {
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
@@ -42,6 +45,14 @@ function formatDateTime(iso?: string): string {
 }
 
 const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
+
+const DETAIL_TABS = [
+  { id: "timeline" as const, label: "Lịch trình" },
+  { id: "tracks" as const, label: "Hạng mục" },
+  { id: "prizes" as const, label: "Giải thưởng" },
+  { id: "rules" as const, label: "Thể lệ" },
+  { id: "teams" as const, label: "Đội thi" },
+];
 
 export function EventDetailView({ eventId: propEventId }: { eventId?: string }) {
   const params = useParams();
@@ -146,229 +157,201 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#080d10] flex items-center justify-center p-6 text-zinc-400 font-mono text-xs animate-pulse">
-        [ ĐANG TẢI DỮ LIỆU SỰ KIỆN... ]
-      </div>
+      <PageShell className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center">
+        <HexagonLoader />
+        <p className="mt-4 text-sm text-[var(--text-muted)]">Đang tải thông tin sự kiện...</p>
+      </PageShell>
     );
   }
 
   if (notFound || !event) {
     return (
-      <div className="min-h-screen bg-[#080d10] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-[#10171a] border border-red-500/40 p-6 font-mono text-xs text-center space-y-4 hud-clipped">
-          <div className="text-red-400 font-bold uppercase text-sm">
-            [ LỖI KẾT NỐI SỰ KIỆN ]
-          </div>
-          <p className="text-zinc-300">
-            Không tìm thấy thông tin sự kiện hoặc bạn không có quyền truy cập sự kiện này.
-          </p>
-          <Link href="/events">
-            <button className="px-4 py-2 bg-zinc-800 text-white hover:bg-white hover:text-black font-bold uppercase transition-colors hud-clipped cursor-pointer">
-              [ QUAY LẠI DANH SÁCH SỰ KIỆN ]
-            </button>
-          </Link>
-        </div>
-      </div>
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <EmptyState
+          title="Không tìm thấy sự kiện"
+          description="Sự kiện không tồn tại hoặc bạn không có quyền truy cập."
+          action={
+            <Link href="/events">
+              <Button variant="secondary">Quay lại danh sách sự kiện</Button>
+            </Link>
+          }
+        />
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Breadcrumb Navigation */}
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-3 font-mono text-xs text-zinc-400">
-          <div className="flex items-center gap-2">
-            <Link href="/events" className="hover:text-cyan-400 transition-colors uppercase">
-              [ &lt; KHÁM PHÁ SỰ KIỆN ]
+    <>
+    <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
+        {/* Breadcrumb */}
+        <nav className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-muted)] pb-4">
+          <div className="flex min-w-0 items-center gap-2 text-sm text-[var(--text-muted)]">
+            <Link href="/events" className="shrink-0 transition-colors hover:text-[var(--accent-primary)]">
+              Khám phá sự kiện
             </Link>
-            <span>/</span>
-            <span className="text-white font-bold uppercase">{eventName || "Chi Tiết Sự Kiện"}</span>
-          </div>
-
-          <div className="flex items-center gap-2 font-mono">
-            <span className="px-2.5 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold uppercase">
-              {season} • {year}
+            <ChevronRight className="h-4 w-4 shrink-0 opacity-50" />
+            <span className="truncate font-medium text-[var(--text-primary)]">
+              {eventName || "Chi tiết sự kiện"}
             </span>
           </div>
-        </div>
+          {(season || year) && (
+            <Badge tone="info">
+              {season}{year ? ` · ${year}` : ""}
+            </Badge>
+          )}
+        </nav>
 
-        {/* Unverified Student Alert Banner */}
+        {/* Unverified student alert */}
         {roleName === "Student" && !user?.isApproved && (
-          <div className="bg-amber-500/10 border border-amber-500/30 p-4 font-mono text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm hud-clipped">
-            <div className="text-amber-300 space-y-1">
-              <span className="font-bold uppercase tracking-wider text-amber-200 block">
-                [ THÔNG BÁO: HỒ SƠ SINH VIÊN CHƯA ĐƯỢC DUYỆT ]
-              </span>
-              <span className="text-zinc-300">
-                Bạn có thể xem chi tiết thể lệ, lịch trình và giải thưởng. Để đăng ký tạo đội hoặc nộp bài, bạn cần hoàn thiện hồ sơ sinh viên.
-              </span>
+          <div className="flex flex-col gap-3 rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-warning)]" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-[var(--text-primary)]">
+                  Hồ sơ sinh viên chưa được duyệt
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Bạn có thể xem thể lệ, lịch trình và giải thưởng. Để đăng ký đội hoặc nộp bài, hãy hoàn thiện hồ sơ sinh viên.
+                </p>
+              </div>
             </div>
-            <Link
-              href="/onboarding/profile"
-              className="shrink-0 px-4 py-2 bg-amber-500 text-black hover:bg-white font-bold uppercase tracking-wider text-[11px] transition-colors hud-clipped"
-            >
-              [ CẬP NHẬT HỒ SƠ &gt; ]
+            <Link href="/onboarding/profile" className="shrink-0">
+              <Button variant="secondary" accent="primary" className="border-[var(--color-warning)]/40">
+                Cập nhật hồ sơ
+              </Button>
             </Link>
           </div>
         )}
 
-        {/* Hero Event Banner */}
-        <div className="bg-[#10171a] border border-zinc-800 p-6 md:p-8 space-y-6 shadow-sm hud-clipped">
-          <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-            <div className="space-y-3 max-w-3xl">
-              <div className="flex items-center gap-2 font-mono text-xs">
+        {/* Hero */}
+        <Card className="space-y-6 p-6 md:p-8">
+          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
+            <div className="max-w-3xl space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {isEventEnded ? (
-                  <span className="px-2.5 py-0.5 bg-zinc-800 text-zinc-400 border border-zinc-700 font-bold uppercase">
-                    [■ ĐÃ KẾT THÚC]
-                  </span>
+                  <Badge tone="neutral">Đã kết thúc</Badge>
                 ) : (
-                  <span className="px-2.5 py-0.5 bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 font-bold uppercase">
-                    [● ĐANG MỞ]
-                  </span>
+                  <Badge tone="success">Đang mở</Badge>
                 )}
-                <span className="text-zinc-400">
-                  {teamCount}/{maxTeams} Đội thi đã đăng ký
+                <span className="text-xs text-[var(--text-muted)]">
+                  {teamCount}/{maxTeams} đội đã đăng ký
                 </span>
               </div>
 
-              <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-white uppercase tracking-tight">
+              <h1 className="font-display text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl md:text-4xl">
                 {eventName}
               </h1>
 
               {tagline && tagline.trim() !== description?.trim() && (
-                <p className="font-mono text-sm text-cyan-400">{tagline}</p>
+                <p className="text-sm text-[var(--accent-primary)]">{tagline}</p>
               )}
-              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans">
-                {description || "Đấu trường công nghệ quy mô lớn dành cho sinh viên toàn quốc do Ban Quản Trị SEAL phê duyệt."}
+              <p className="text-sm leading-relaxed text-[var(--text-muted)]">
+                {description || "Đấu trường công nghệ quy mô lớn dành cho sinh viên toàn quốc do Ban quản trị SEAL phê duyệt."}
               </p>
             </div>
 
-            {/* Right-side Countdown Widget */}
             {deadline && (
-              <div className="bg-[#0b1013] border border-zinc-800 p-4 space-y-2 shrink-0 lg:w-72 font-mono hud-clipped">
-                <div className="text-xs text-cyan-300 font-bold uppercase">
-                  [ {deadlineRoundName || "HẠN CHÓT GIAI ĐOẠN"} ]
-                </div>
-                <div className="text-xl font-bold text-white tracking-wider">
+              <div className="shrink-0 space-y-2 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] p-4 lg:w-72">
+                <p className="text-xs font-medium text-[var(--accent-primary)]">
+                  {deadlineRoundName || "Hạn chót giai đoạn"}
+                </p>
+                <p className="font-display text-xl font-semibold tabular-nums text-[var(--text-primary)]">
                   {countdown.isPast || isEventEnded
-                    ? "ĐÃ KẾT THÚC"
+                    ? "Đã kết thúc"
                     : `${countdown.days} ngày ${countdown.hours} giờ ${countdown.minutes} phút`}
-                </div>
-                <div className="text-[11px] text-zinc-500">
+                </p>
+                <p className="text-xs text-[var(--text-muted)]">
                   Hạn chót: {formatShortDate(deadline)}
-                </div>
+                </p>
               </div>
             )}
           </div>
 
-          {/* 4 Summary Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-zinc-800/80 font-mono text-xs">
-            <div className="p-3 bg-[#0b1013] border border-zinc-800 space-y-0.5 hud-clipped">
-              <span className="text-zinc-500 text-[10px] uppercase block">Tổng Giải Thưởng</span>
-              <span className="text-emerald-400 font-bold text-base truncate block">
-                {totalPrizeVnd > 0 ? formatVnd(totalPrizeVnd) : prizes.length > 0 ? `${prizes.length} Hạng Mục Giải` : "Đang cập nhật"}
-              </span>
-            </div>
-            <div className="p-3 bg-[#0b1013] border border-zinc-800 space-y-0.5 hud-clipped">
-              <span className="text-zinc-500 text-[10px] uppercase block">Hạng Mục Dự Thi</span>
-              <span className="text-cyan-300 font-bold text-base">
-                {tracks.length === 1 ? "1 Bảng Đấu Trọng Tâm" : `${tracks.length} Chuyên Môn`}
-              </span>
-            </div>
-            <div className="p-3 bg-[#0b1013] border border-zinc-800 space-y-0.5 hud-clipped">
-              <span className="text-zinc-500 text-[10px] uppercase block">Đội Thi Ghi Danh</span>
-              <span className="text-emerald-300 font-bold text-base">{teamCount} / {maxTeams}</span>
-            </div>
-            <div className="p-3 bg-[#0b1013] border border-zinc-800 space-y-0.5 hud-clipped">
-              <span className="text-zinc-500 text-[10px] uppercase block">Tổng Số Vòng Thi</span>
-              <span className="text-purple-300 font-bold text-base">{rounds.length} Giai Đoạn</span>
-            </div>
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3 border-t border-[var(--border-muted)] pt-6 sm:grid-cols-4">
+            <StatCard
+              label="Tổng giải thưởng"
+              value={totalPrizeVnd > 0 ? formatVnd(totalPrizeVnd) : prizes.length > 0 ? `${prizes.length} hạng mục` : "Đang cập nhật"}
+              accent="var(--color-success)"
+            />
+            <StatCard
+              label="Hạng mục dự thi"
+              value={tracks.length === 1 ? "1 bảng đấu" : `${tracks.length} chuyên môn`}
+              accent="var(--accent-primary)"
+            />
+            <StatCard
+              label="Đội ghi danh"
+              value={`${teamCount} / ${maxTeams}`}
+              accent="var(--accent-team)"
+            />
+            <StatCard
+              label="Tổng số vòng thi"
+              value={`${rounds.length} giai đoạn`}
+              accent="var(--accent-coordinator)"
+            />
           </div>
 
-          {/* Hero Bottom Actions */}
-          <div className="pt-3 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
-            <div className="flex items-center gap-2 text-zinc-500">
-              <span className={`w-2 h-2 rounded-full ${isEventEnded ? "bg-zinc-500" : "bg-emerald-400"}`} />
-              <span className="text-zinc-400 font-bold uppercase tracking-wider">
-                {isEventEnded ? "[ SỰ KIỆN ĐÃ ĐÓNG VÀ NIÊM PHONG ]" : "[ SỰ KIỆN CHÍNH THỨC TRÊN HỆ THỐNG SEAL ]"}
-              </span>
-            </div>
+          {/* Actions */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-muted)] pt-4">
+            <p className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <span className={`h-2 w-2 rounded-full ${isEventEnded ? "bg-zinc-500" : "bg-emerald-400"}`} />
+              {isEventEnded ? "Sự kiện đã đóng" : "Sự kiện chính thức trên hệ thống SEAL"}
+            </p>
 
             <div className="flex flex-wrap items-center gap-2">
               {user?.isAdmin && (
                 <>
                   <Link href="/admin/dashboard">
-                    <button className="px-4 py-2 bg-red-600 hover:bg-white hover:text-black text-white font-bold uppercase transition-all cursor-pointer hud-clipped">
-                      [ BẢNG ĐIỀU HÀNH ADMIN ]
-                    </button>
+                    <Button variant="secondary" accent="primary" className="border-[var(--color-danger)]/40 text-[var(--color-danger)]">
+                      Bảng điều hành
+                    </Button>
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => setIsComprehensiveEditOpen(true)}
-                    className="px-4 py-2 bg-amber-950/60 text-amber-300 border border-amber-500/40 hover:bg-amber-900/80 font-bold uppercase transition-all cursor-pointer hud-clipped"
-                  >
-                    [ CHỈNH SỬA SỰ KIỆN ]
-                  </button>
+                  <Button type="button" variant="secondary" onClick={() => setIsComprehensiveEditOpen(true)}>
+                    Chỉnh sửa sự kiện
+                  </Button>
                 </>
               )}
 
               {roleName === "Coordinator" && (
                 <>
                   <Link href="/coordinator/dashboard">
-                    <button className="px-3.5 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-purple-400 hover:text-white font-bold uppercase transition-all cursor-pointer hud-clipped">
-                      [ QUẢN TRỊ BTC ]
-                    </button>
+                    <Button variant="secondary" accent="coordinator">Quản trị BTC</Button>
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => setIsComprehensiveEditOpen(true)}
-                    className="px-3.5 py-2 bg-purple-950/60 text-purple-300 border border-purple-500/40 hover:bg-purple-900/80 font-bold uppercase transition-all cursor-pointer hud-clipped"
-                  >
-                    [ CHỈNH SỬA SỰ KIỆN ]
-                  </button>
+                  <Button type="button" variant="secondary" accent="coordinator" onClick={() => setIsComprehensiveEditOpen(true)}>
+                    Chỉnh sửa sự kiện
+                  </Button>
                 </>
               )}
 
               {(roleName === "TeamLeader" || roleName === "TeamMember") && (
                 <Link href={`/my-team?eventId=${eventId}`}>
-                  <button className="px-4 py-2 bg-[#00d9ff] text-black hover:bg-white font-bold uppercase transition-all cursor-pointer hud-clipped">
-                    [ QUẢN LÝ ĐỘI THI / NỘP BÀI ]
-                  </button>
+                  <Button accent="team">Quản lý đội / nộp bài</Button>
                 </Link>
               )}
 
               {!hasJudgeRole && !hasMentorRole && roleName === "Guest" && user && !isEventEnded && (
                 <Link href={`/my-team?eventId=${eventId}`}>
-                  <button className="px-4 py-2 bg-[#00d9ff] text-black hover:bg-white font-extrabold uppercase transition-all cursor-pointer hud-clipped">
-                    [ ĐĂNG KÝ ĐỘI THI ]
-                  </button>
+                  <Button accent="team">Đăng ký đội thi</Button>
                 </Link>
               )}
 
               {!user && !isEventEnded && (
                 <>
                   <Link href="/register">
-                    <button className="px-4 py-2 bg-[#00d9ff] text-black hover:bg-white font-extrabold uppercase transition-all cursor-pointer hud-clipped">
-                      [ ĐĂNG KÝ TÀI KHOẢN ]
-                    </button>
+                    <Button>Đăng ký tài khoản</Button>
                   </Link>
                   <Link href="/login">
-                    <button className="px-4 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white font-bold uppercase transition-all cursor-pointer hud-clipped">
-                      [ ĐĂNG NHẬP ]
-                    </button>
+                    <Button variant="secondary">Đăng nhập</Button>
                   </Link>
                 </>
               )}
 
               <Link href={`/events/${eventId}/leaderboard`}>
-                <button className="px-4 py-2 bg-[#162228] border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white font-bold uppercase transition-all cursor-pointer hud-clipped">
-                  [ BẢNG XẾP HẠNG ]
-                </button>
+                <Button variant="secondary">Bảng xếp hạng</Button>
               </Link>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* ── BÀN LÀM VIỆC CHUYÊN MÔN CỦA BẠN (MISSION WORKSPACE DOCK - MẪU 1) ── */}
         {(hasJudgeRole || hasMentorRole) && (
@@ -484,63 +467,35 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           </div>
         )}
 
-        {/* Tab Navigation Controls */}
-        <div className="flex items-center gap-1 bg-[#10171a] p-1.5 border border-zinc-800 font-mono text-xs shadow-sm hud-clipped">
-          <button
-            type="button"
-            onClick={() => setActiveTab("timeline")}
-            className={`flex-1 py-2.5 font-bold uppercase transition-all cursor-pointer text-center hud-clipped ${
-              activeTab === "timeline"
-                ? "bg-zinc-800 text-white font-extrabold border border-zinc-700"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            Lịch Trình Vòng Thi ({rounds.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("tracks")}
-            className={`flex-1 py-2.5 font-bold uppercase transition-all cursor-pointer text-center hud-clipped ${
-              activeTab === "tracks"
-                ? "bg-zinc-800 text-white font-extrabold border border-zinc-700"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            Hạng Mục ({tracks.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("prizes")}
-            className={`flex-1 py-2.5 font-bold uppercase transition-all cursor-pointer text-center hud-clipped ${
-              activeTab === "prizes"
-                ? "bg-zinc-800 text-white font-extrabold border border-zinc-700"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            Giải Thưởng
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("rules")}
-            className={`flex-1 py-2.5 font-bold uppercase transition-all cursor-pointer text-center hud-clipped ${
-              activeTab === "rules"
-                ? "bg-zinc-800 text-white font-extrabold border border-zinc-700"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            Thể Lệ &amp; Quy Định
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("teams")}
-            className={`flex-1 py-2.5 font-bold uppercase transition-all cursor-pointer text-center hud-clipped ${
-              activeTab === "teams"
-                ? "bg-cyan-950/70 text-cyan-300 font-extrabold border border-cyan-500/40"
-                : "text-zinc-400 hover:text-cyan-300"
-            }`}
-          >
-            👥 Đội Thi &amp; Tuyển Quân ({teamCount})
-          </button>
+        {/* Tab bar */}
+        <div className="flex flex-wrap gap-1 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-1">
+          {DETAIL_TABS.map((tab) => {
+            const count =
+              tab.id === "timeline" ? rounds.length
+              : tab.id === "tracks" ? tracks.length
+              : tab.id === "teams" ? teamCount
+              : null;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 rounded-md px-3 py-2.5 text-center text-sm transition-colors ${
+                  isActive
+                    ? "bg-[var(--accent-primary)]/15 font-medium text-[var(--accent-primary)]"
+                    : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {tab.label}
+                {count != null && (
+                  <span className={`ml-1 text-xs ${isActive ? "opacity-80" : "opacity-60"}`}>
+                    ({count})
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -870,9 +825,9 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
 
               {user && !isEventEnded && (roleName === "Guest" || roleName === "TeamLeader" || roleName === "TeamMember") && (
                 <Link href={`/my-team?eventId=${eventId}`}>
-                  <button className="px-4 py-2 bg-[#00d9ff] text-black hover:bg-white font-bold uppercase text-xs transition-all cursor-pointer hud-clipped shadow-sm">
-                    [ + QUẢN LÝ / TẠO ĐỘI CỦA BẠN ]
-                  </button>
+                  <Button accent="team" className="text-xs">
+                    Quản lý / tạo đội
+                  </Button>
                 </Link>
               )}
             </div>
@@ -884,7 +839,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
             />
           </div>
         )}
-      </div>
+    </PageShell>
 
       {/* Modal Chỉnh Sửa Toàn Diện Sự Kiện & Lộ Trình Cho Admin / Coordinator */}
       {isComprehensiveEditOpen && (
@@ -902,6 +857,6 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
           onSuccess={() => refetch()}
         />
       )}
-    </div>
+    </>
   );
 }
