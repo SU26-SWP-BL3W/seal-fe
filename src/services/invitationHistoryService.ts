@@ -89,9 +89,17 @@ export const invitationHistoryService = {
     return newRecord;
   },
 
-  updateStatus(eventId: string, invitationId: string, status: RoleInvitationStatus, reason?: string): void {
+  updateStatus(eventId: string, targetIdOrEmail: string, status: RoleInvitationStatus, reason?: string): void {
     const list = this.getHistory(eventId);
-    const index = list.findIndex((item) => item.id === invitationId);
+    const target = (targetIdOrEmail || "").trim().toLowerCase();
+    
+    // Find by id or by email
+    const index = list.findIndex(
+      (item) =>
+        item.id === targetIdOrEmail ||
+        item.email.toLowerCase() === target
+    );
+
     if (index >= 0) {
       list[index].status = status;
       list[index].statusLabel = getStatusLabel(status);
@@ -111,7 +119,8 @@ export const invitationHistoryService = {
 
   /**
    * Đồng bộ lịch sử với danh sách EventRole chính thức từ Server.
-   * Nếu email đã có trong EventRoles thì đánh dấu là Active (Đã tham gia).
+   * - Nếu email có trong EventRoles -> Đánh dấu là Active (Đã tham gia / Kích hoạt).
+   * - Nếu trước đó là Active nhưng giờ KHÔNG CÒN trong EventRoles -> Đánh dấu là Revoked (Đã thu hồi).
    */
   syncWithEventRoles(eventId: string, activeRoles: any[]): RoleInvitationRecord[] {
     const list = this.getHistory(eventId);
@@ -131,10 +140,23 @@ export const invitationHistoryService = {
         return matchEmail && matchRole && matchTrack;
       });
 
-      if (isAssigned && record.status !== "Active") {
-        record.status = "Active";
-        record.statusLabel = getStatusLabel("Active");
-        changed = true;
+      if (isAssigned) {
+        if (record.status !== "Active") {
+          record.status = "Active";
+          record.statusLabel = getStatusLabel("Active");
+          changed = true;
+        }
+      } else {
+        // If it was Active, but server no longer has this user in active event roles -> mark as Revoked!
+        if (record.status === "Active") {
+          record.status = "Revoked";
+          record.statusLabel = getStatusLabel("Revoked");
+          record.respondedAt = new Date().toISOString();
+          if (!record.reason) {
+            record.reason = "Đã thu hồi vai trò khỏi sự kiện";
+          }
+          changed = true;
+        }
       }
     }
 

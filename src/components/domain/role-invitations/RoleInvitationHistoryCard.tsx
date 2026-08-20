@@ -79,12 +79,14 @@ export function RoleInvitationHistoryCard({
     let pending = 0;
     let active = 0;
     let revoked = 0;
+    let declined = 0;
     records.forEach((r) => {
       if (r.status === "Pending") pending++;
       else if (r.status === "Active") active++;
-      else if (r.status === "Revoked" || r.status === "Declined") revoked++;
+      else if (r.status === "Revoked") revoked++;
+      else if (r.status === "Declined") declined++;
     });
-    return { total: records.length, pending, active, revoked };
+    return { total: records.length, pending, active, revoked, declined };
   }, [records]);
 
   const handleResend = async (record: RoleInvitationRecord) => {
@@ -308,13 +310,28 @@ export function RoleInvitationHistoryCard({
             <button
               type="button"
               onClick={() => setStatusFilter("Revoked")}
-              className={`px-3 py-1 rounded transition-colors ${
+              className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
                 statusFilter === "Revoked"
                   ? "bg-zinc-700 text-white font-bold"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
+              <span className="size-1.5 rounded-full bg-zinc-400"></span>
               Đã thu hồi ({counts.revoked})
+            </button>
+          )}
+          {counts.declined > 0 && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter("Declined")}
+              className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                statusFilter === "Declined"
+                  ? "bg-red-950 text-red-300 font-bold border border-red-500/30"
+                  : "text-red-400/70 hover:text-red-300"
+              }`}
+            >
+              <span className="size-1.5 rounded-full bg-red-400"></span>
+              Đã từ chối ({counts.declined})
             </button>
           )}
         </div>

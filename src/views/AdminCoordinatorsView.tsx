@@ -170,7 +170,7 @@ export function AdminCoordinatorsView() {
     setActionError(null);
   };
 
-  const handleRemoveCoordinator = async (roleId: string, name: string, targetUserId?: string) => {
+  const handleRemoveCoordinator = async (roleId: string, name: string, targetUserId?: string, email?: string) => {
     const reason = window.prompt(
       `Nhập lý do thu hồi quyền Điều phối viên của "${name}" (hoặc để trống):`,
       "Thay đổi kế hoạch phân công nhân sự Ban tổ chức"
@@ -181,7 +181,7 @@ export function AdminCoordinatorsView() {
     setActionError(null);
     try {
       await staffRepository.removeEventRole(roleId);
-      invitationHistoryService.updateStatus(selectedEventId, roleId, "Revoked", reason.trim() || undefined);
+      invitationHistoryService.updateStatus(selectedEventId, email || roleId, "Revoked", reason.trim() || undefined);
       
       pushSystemNotification({
         title: "Thu hồi quyền Điều Phối Viên",
@@ -659,7 +659,7 @@ export function AdminCoordinatorsView() {
                         <Button
                           variant="ghost"
                           accent="primary"
-                          onClick={() => handleRemoveCoordinator(roleId, uName, coordUserId)}
+                          onClick={() => handleRemoveCoordinator(roleId, uName, coordUserId, uEmail)}
                           disabled={isRemoving}
                           className="h-8 px-2.5 text-xs"
                         >
