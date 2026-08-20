@@ -28,7 +28,7 @@ import { Link } from "@/i18n/routing";
 import { useEvents } from "@/repositories/eventsRepository";
 import { useGetUsers } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
-import { useGetAllEventsCoordinators } from "@/repositories/staffRepository";
+import { useGetAllEventsCoordinators } from "@/repositories/events/staffRepository";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 import { AdminCoordinatorModal } from "@/components/domain/AdminCoordinatorModal";
 

@@ -7,7 +7,8 @@ import { useGetSubmitResultsByTrack } from "@/repositories/submitResultsReposito
 import { useGetTemplate } from "@/repositories/templatesRepository";
 import { useSaveScore, useGetScoresByEventRole } from "@/repositories/scoresRepository";
 import { useMyAssignedJudgeTracks } from "@/viewModels/useMyAssignedJudgeTracks";
-import { useEvents, useEventRounds } from "@/repositories/eventsRepository";
+import { useEvents } from "@/repositories/eventsRepository";
+import { useEventRounds } from "@/repositories/events/eventsRepository";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
 import { PageShell } from "@/components/layout/PageShell";
