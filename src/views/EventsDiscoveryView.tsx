@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { getStaffRoleDisplayLabel } from "@/lib/eventRoles";
@@ -8,7 +7,6 @@ import { useMyTeam } from "@/repositories/teamsRepository";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import {
   STATUS_LABEL,
-  STATUS_DOT_VAR,
   computeEventStatus,
   type EventCardData,
 } from "@/viewModels/eventsMetadata";
@@ -17,6 +15,9 @@ import {
   type EventStatusFilter,
   type EventSortOption,
 } from "@/viewModels/useEventsDiscoveryViewModel";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Badge, Button, Input } from "@/components/ui";
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
 function formatVnd(value: number): string {
@@ -37,111 +38,76 @@ function daysLeft(endDate: string): number {
   return Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000);
 }
 
-// ─── Zero-Icon Tactical Event Card ────────────────────────────────────────────
 function EventCard({ event }: { event: EventCardData }) {
   const days = daysLeft(event.endDate);
   const isActive = event.status === "ongoing" || event.status === "registration_open";
   const isEnded = event.status === "ended" || days < 0;
-  const statusColor = STATUS_DOT_VAR[event.status] || "#2dd4bf";
 
   return (
     <Link
       href={`/events/${event.id}`}
-      className="group block bg-[#10171a] border border-zinc-800/90 hover:border-emerald-500/50 hud-clipped p-5 transition-all duration-200 shadow-sm relative overflow-hidden"
+      className="group block rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-5 transition-colors hover:border-[var(--accent-primary)]/40"
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-        
-        {/* Left / Main Info */}
-        <div className="flex-1 min-w-0 space-y-2.5">
-          {/* Header Row: Badges + Title */}
-          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-            <span
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 hud-clipped text-[10px] font-bold uppercase tracking-wider"
-              style={{
-                backgroundColor: `${statusColor}15`,
-                color: statusColor,
-                border: `1px solid ${statusColor}40`,
-              }}
-            >
-              [ {STATUS_LABEL[event.status] || "Sự kiện"} ]
-            </span>
-
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={event.status === "ongoing" ? "info" : event.status === "ended" ? "neutral" : "success"}>
+              {STATUS_LABEL[event.status] || "Sự kiện"}
+            </Badge>
             {event.season && (
-              <span className="px-2 py-0.5 hud-clipped text-[10px] font-bold bg-zinc-800/80 text-zinc-300 border border-zinc-700">
+              <span className="text-xs text-[var(--text-muted)]">
                 {event.season} {event.year || 2026}
               </span>
             )}
-
             {isActive && days > 0 && days <= 30 && (
-              <span className={`text-[10px] px-2 py-0.5 hud-clipped border font-bold uppercase ${
-                days <= 3
-                  ? "border-rose-500/40 text-rose-400 bg-rose-500/10 animate-pulse"
-                  : "border-amber-500/40 text-amber-300 bg-amber-500/10"
-              }`}>
-                {days <= 0 ? "[ HÔM NAY ]" : `[ CÒN ${days} NGÀY ]`}
+              <span className="text-xs text-[var(--color-warning)]">
+                {days <= 0 ? "Hôm nay" : `Còn ${days} ngày`}
               </span>
             )}
           </div>
 
-          {/* Event Title */}
-          <h3 className="font-display text-lg font-bold text-white group-hover:text-emerald-400 transition-colors truncate uppercase">
+          <h3 className="truncate font-display text-lg font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent-primary)]">
             {event.eventName}
           </h3>
 
-          {/* Tagline / Brief description */}
-          <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed font-sans">
-            {event.tagline || event.description || "Cuộc thi lập trình và phát triển sản phẩm công nghệ theo chuẩn RBL."}
+          <p className="line-clamp-2 text-sm leading-relaxed text-[var(--text-muted)]">
+            {event.tagline || event.description || "Cuộc thi lập trình và phát triển sản phẩm công nghệ."}
           </p>
 
-          {/* Tracks Tags */}
           {event.tracks && event.tracks.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap pt-1 font-mono text-xs">
-              <span className="text-zinc-500 text-[10px] uppercase font-bold">[ HẠNG MỤC: ]</span>
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {event.tracks.slice(0, 3).map((t) => (
                 <span
                   key={t}
-                  className="px-2 py-0.5 text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-300 hud-clipped"
+                  className="rounded-md border border-[var(--border-muted)] bg-[var(--bg-input)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
                 >
                   {t}
                 </span>
               ))}
               {event.tracks.length > 3 && (
-                <span className="text-[10px] text-zinc-500">
-                  +{event.tracks.length - 3} bảng khác
-                </span>
+                <span className="text-xs text-[var(--text-muted)]">+{event.tracks.length - 3}</span>
               )}
             </div>
           )}
         </div>
 
-        {/* Right Info: Prize, Dates, CTA */}
-        <div className="flex flex-row md:flex-col md:items-end justify-between md:justify-center border-t md:border-t-0 md:border-l border-zinc-800/80 pt-3 md:pt-0 md:pl-6 shrink-0 gap-2 min-w-[200px] font-mono text-xs">
-          {/* Prize */}
-          <div className="space-y-0.5 md:text-right">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">
-              TỔNG GIẢI THƯỞNG
-            </span>
-            <span className="text-base font-extrabold text-emerald-400 flex items-center md:justify-end gap-1">
+        <div className="flex shrink-0 flex-row items-end justify-between gap-4 border-t border-[var(--border-muted)] pt-3 md:min-w-[180px] md:flex-col md:items-end md:border-l md:border-t-0 md:pl-6 md:pt-0">
+          <div className="space-y-1 md:text-right">
+            <span className="block text-xs text-[var(--text-muted)]">Giải thưởng</span>
+            <span className="text-sm font-semibold text-[var(--accent-primary)]">
               {formatVnd(event.totalPrizeVnd ?? 0)}
             </span>
           </div>
-
-          {/* Dates */}
-          <div className="space-y-0.5 md:text-right text-right md:pt-1">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">
-              THỜI GIAN
-            </span>
-            <span className="text-xs text-zinc-300 flex items-center justify-end gap-1">
+          <div className="space-y-1 md:text-right">
+            <span className="block text-xs text-[var(--text-muted)]">Thời gian</span>
+            <span className="text-xs text-[var(--text-primary)]">
               {formatShortDate(event.startDate)} – {formatShortDate(event.endDate)}
             </span>
           </div>
-
-          {/* Action CTA */}
-          <div className="hidden md:flex items-center gap-1 text-xs text-emerald-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity pt-1">
-            <span>{isEnded ? "[ XEM BẢNG XẾP HẠNG > ]" : "[ CHI TIẾT SỰ KIỆN > ]"}</span>
-          </div>
+          <span className="hidden text-xs font-medium text-[var(--accent-primary)] md:block md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
+            {isEnded ? "Xem bảng xếp hạng →" : "Chi tiết sự kiện →"}
+          </span>
         </div>
-
       </div>
     </Link>
   );
@@ -149,12 +115,12 @@ function EventCard({ event }: { event: EventCardData }) {
 
 // ─── Zero-Icon Sidebar Filter ─────────────────────────────────────────────────
 const ALL_STATUS_OPTIONS: { value: EventStatusFilter | "my_event"; label: string; dot: string }[] = [
-  { value: "all",               label: "Tất cả sự kiện",   dot: "bg-zinc-400" },
-  { value: "my_event",          label: "Sự kiện của tôi",  dot: "bg-amber-400 animate-pulse" },
-  { value: "registration_open", label: "Đang mở đăng ký",  dot: "bg-emerald-400" },
-  { value: "ongoing",           label: "Đang diễn ra",     dot: "bg-cyan-400" },
-  { value: "upcoming",          label: "Sắp diễn ra",      dot: "bg-amber-400" },
-  { value: "ended",             label: "Đã kết thúc",      dot: "bg-zinc-600" },
+  { value: "all",               label: "Tất cả sự kiện",   dot: "bg-[var(--text-muted)]" },
+  { value: "my_event",          label: "Sự kiện của tôi",  dot: "bg-[var(--accent-judge)]" },
+  { value: "registration_open", label: "Đang mở đăng ký",  dot: "bg-[var(--color-success)]" },
+  { value: "ongoing",           label: "Đang diễn ra",     dot: "bg-[var(--accent-primary)]" },
+  { value: "upcoming",          label: "Sắp diễn ra",      dot: "bg-[var(--accent-team)]" },
+  { value: "ended",             label: "Đã kết thúc",      dot: "bg-[var(--border-muted)]" },
 ];
 
 function SidebarFilter({
@@ -180,82 +146,72 @@ function SidebarFilter({
   };
 
   return (
-    <aside className="bg-[#10171a] border border-zinc-800 p-4 hud-clipped space-y-4">
-      {/* Header & Clear Button */}
-      <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 font-mono text-xs">
-        <span className="font-bold text-white uppercase tracking-wider">
-          [ BỘ LỌC TÌM KIẾM ]
-        </span>
+    <aside className="space-y-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-4">
+      <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
+        <span className="text-sm font-medium text-[var(--text-primary)]">Bộ lọc</span>
         {activeCount > 0 && (
-          <button
-            onClick={onClear}
-            className="text-[11px] text-rose-400 hover:text-rose-300 transition-colors cursor-pointer font-bold uppercase"
-          >
-            [ XÓA LỌC ({activeCount}) ]
+          <button type="button" onClick={onClear} className="text-xs text-[var(--color-danger)] hover:underline">
+            Xóa lọc ({activeCount})
           </button>
         )}
       </div>
 
-      {/* Status section */}
-      <div className="space-y-2 font-mono text-xs">
-        <span className="text-[11px] text-zinc-400 uppercase tracking-wider block font-bold">
-          TRẠNG THÁI:
-        </span>
+      <div className="space-y-2">
+        <span className="block text-xs font-medium text-[var(--text-muted)]">Trạng thái</span>
         <div className="space-y-1">
           {statusOptions.map((opt) => {
             const isSelected = statusFilter === opt.value;
             return (
               <button
                 key={opt.value}
+                type="button"
                 onClick={() => setStatusFilter(opt.value)}
-                className={`w-full flex items-center justify-between px-3 py-2 text-left font-mono text-xs hud-clipped transition-all cursor-pointer ${
+                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
                   isSelected
-                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold shadow-sm"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent"
+                    ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                    : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${opt.dot}`} />
-                  <span>{opt.label}</span>
-                </div>
-                {isSelected && <span className="text-xs text-emerald-400 font-bold">[✓]</span>}
+                <span className={`h-2 w-2 rounded-full ${opt.dot}`} />
+                {opt.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Track section */}
       {topTracks.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-zinc-800/60 font-mono text-xs">
-          <span className="text-[11px] text-zinc-400 uppercase tracking-wider block font-bold">
-            HẠNG MỤC ({topTracks.length})
+        <div className="space-y-2 border-t border-[var(--border-muted)] pt-3">
+          <span className="block text-xs font-medium text-[var(--text-muted)]">
+            Hạng mục ({topTracks.length})
           </span>
           <div className="space-y-1">
             <button
+              type="button"
               onClick={() => setTrackFilter(null)}
-              className={`w-full flex items-center justify-between px-3 py-1.5 text-left font-mono text-xs hud-clipped transition-all cursor-pointer ${
+              className={`w-full rounded-md px-3 py-1.5 text-left text-sm ${
                 !trackFilter
-                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent"
+                  ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--bg-input)]"
               }`}
             >
-              <span>[ Tất cả bảng thi ]</span>
+              Tất cả hạng mục
             </button>
             {topTracks.map(({ track, eventCount }) => {
               const isSelected = trackFilter === track;
               return (
                 <button
                   key={track}
+                  type="button"
                   onClick={() => setTrackFilter(isSelected ? null : track)}
-                  className={`w-full flex items-center justify-between px-3 py-1.5 text-left font-mono text-xs hud-clipped transition-all cursor-pointer ${
+                  className={`flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm ${
                     isSelected
-                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold"
-                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/50 border border-transparent"
+                      ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                      : "text-[var(--text-muted)] hover:bg-[var(--bg-input)]"
                   }`}
                 >
                   <span className="truncate pr-1">{track}</span>
-                  <span className="text-[10px] text-zinc-500 font-mono shrink-0">({eventCount})</span>
+                  <span className="text-xs opacity-70">({eventCount})</span>
                 </button>
               );
             })}
@@ -289,7 +245,6 @@ export function EventsDiscoveryView() {
 
   const { data: teamResponse } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
-
   const {
     events, totalCount, topTracks,
     myEventIds,
@@ -308,8 +263,6 @@ export function EventsDiscoveryView() {
     "";
   const myAssignedCount = myEventIds.length;
   const { data: assignedEvent } = useEventDetail(myAssignedCount === 1 ? myEventId : "");
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleClear = () => {
     setStatusFilter("all");
@@ -355,108 +308,70 @@ export function EventsDiscoveryView() {
       : null;
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-6 px-4 md:px-8 flex flex-col">
-      <div className="max-w-7xl w-full mx-auto space-y-6 flex-1 flex flex-col">
+    <PageShell className="min-h-[calc(100vh-4rem)] flex flex-1 flex-col">
+      <PageHeader
+        title="Khám phá sự kiện"
+        description="Tra cứu các giải hackathon trên SEAL — chọn sự kiện để xem thể lệ và đăng ký."
+        actions={
+          <Input
+            type="search"
+            placeholder="Tìm kiếm sự kiện..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full md:w-72"
+          />
+        }
+      />
 
-        {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-5">
+      {user && roleName === "Admin" && (
+        <div className="mb-6 flex flex-col gap-4 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--bg-panel)] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="font-mono text-[11px] text-emerald-400 font-bold tracking-widest uppercase">
-              [ SEAL HACKATHON DIRECTORY ]
-            </div>
-            <h1 className="font-display font-bold text-2xl text-white uppercase tracking-wider mt-1">
-              Khám Phá &amp; Đăng Ký Sự Kiện
-            </h1>
-            <p className="font-mono text-xs text-zinc-400 mt-1">
-              Tra cứu toàn bộ các giải đấu lập trình RBL trên hệ thống SEAL — chọn sự kiện để xem thể lệ và đăng ký tham gia.
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              Quản trị {totalCount} sự kiện hệ thống
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Khởi tạo sự kiện, chỉ định coordinator và quản lý người dùng.
             </p>
           </div>
-
-          {/* Quick Search */}
-          <div className="relative w-full md:w-80 font-mono text-xs">
-            <input
-              type="text"
-              placeholder="Tìm kiếm sự kiện hoặc chủ đề..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[#10171a] border border-zinc-700 px-3.5 py-2.5 text-white font-mono text-xs hud-clipped placeholder:text-zinc-500 focus:border-emerald-400 outline-none transition-colors"
-            />
-          </div>
+          <Link href="/admin/dashboard">
+            <Button accent="primary" variant="secondary" className="border-[var(--color-danger)]/40 text-[var(--color-danger)]">
+              Bảng điều hành
+            </Button>
+          </Link>
         </div>
+      )}
 
-        {/* ── Admin Command Center Banner ── */}
-        {user && roleName === "Admin" && (
-          <div className="p-5 bg-[#10171a] border border-red-500/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-            <div className="space-y-1">
-              <div className="font-mono text-[11px] font-bold text-red-400 uppercase tracking-wider">
-                [ TRUNG TÂM ĐIỀU HÀNH QUẢN TRỊ VIÊN ]
-              </div>
-              <h2 className="font-display text-lg font-bold text-white uppercase">
-                Quản Trị Toàn Diện {totalCount} Sự Kiện Hệ Thống
-              </h2>
-              <p className="font-mono text-xs text-zinc-400">
-                Khởi tạo sự kiện mới, chỉ định Event Coordinator và quản lý tài khoản người dùng toàn hệ thống.
-              </p>
-            </div>
-
-            <Link href="/admin/dashboard" className="shrink-0">
-              <button className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-mono font-bold text-xs tracking-wider uppercase hud-clipped shadow-md transition-all cursor-pointer">
-                [ BẢNG ĐIỀU HÀNH ADMIN &gt; ]
-              </button>
+      {user && roleName !== "Guest" && roleName !== "Admin" && myAssignedCount > 0 && (
+        <div className="mb-6 flex flex-col gap-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs text-[var(--text-muted)]">
+              {myAssignedCount > 1
+                ? `${myAssignedCount} sự kiện được phân công`
+                : "Sự kiện được phân công"}
+            </p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              {myAssignedCount > 1
+                ? "Chọn sự kiện bên dưới để vào bàn làm việc"
+                : bannerName || "Sự kiện được phân công"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Vai trò: {roleName}
+              {bannerStatus ? ` · Trạng thái: ${STATUS_LABEL[bannerStatus]}` : ""}
+            </p>
+          </div>
+          {myAssignedCount === 1 && myEventId ? (
+            <Link href={`/events/${myEventId}`}>
+              <Button variant="secondary">Truy cập sự kiện</Button>
             </Link>
-          </div>
-        )}
+          ) : (
+            <Button type="button" variant="secondary" onClick={() => setStatusFilter("my_event")}>
+              Xem danh sách của tôi
+            </Button>
+          )}
+        </div>
+      )}
 
-        {/* ── User Assigned Event Banner ── */}
-        {user && roleName !== "Guest" && roleName !== "Admin" && myAssignedCount > 0 && (
-          <div className="p-5 bg-[#10171a] border border-cyan-500/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-            <div className="space-y-1">
-              <div className="font-mono text-[11px] font-bold text-cyan-400 uppercase tracking-wider">
-                {myAssignedCount > 1
-                  ? `[ ${myAssignedCount} SỰ KIỆN ĐƯỢC PHÂN CÔNG ]`
-                  : "[ SỰ KIỆN ĐƯỢC PHÂN CÔNG ]"}
-              </div>
-              <h2 className="font-display text-lg font-bold text-white uppercase">
-                {myAssignedCount > 1
-                  ? "Chọn sự kiện bên dưới để vào bàn làm việc"
-                  : bannerName || "Sự kiện được phân công"}
-              </h2>
-              <div className="flex items-center gap-3 font-mono text-xs text-zinc-400">
-                <span>
-                  Vai trò: <strong className="text-cyan-300">{roleName}</strong>
-                </span>
-                {bannerStatus && (
-                  <>
-                    <span>•</span>
-                    <span>
-                      Trạng thái:{" "}
-                      <strong className="text-emerald-400">{STATUS_LABEL[bannerStatus]}</strong>
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {myAssignedCount === 1 && myEventId ? (
-              <Link href={`/events/${myEventId}`} className="shrink-0">
-                <button className="px-4 py-2 bg-[#141f23] border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono font-bold text-xs uppercase hud-clipped transition-all cursor-pointer">
-                  [ TRUY CẬP SỰ KIỆN &gt; ]
-                </button>
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setStatusFilter("my_event")}
-                className="shrink-0 px-4 py-2 bg-[#141f23] border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 hover:text-white font-mono font-bold text-xs uppercase hud-clipped transition-all cursor-pointer"
-              >
-                [ XEM DANH SÁCH CỦA TÔI &gt; ]
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ── Main Content Grid (Sidebar + List) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 items-start">
+      <div className="grid flex-1 grid-cols-1 items-start gap-6 lg:grid-cols-4">
           
           {/* Left Column: Sidebar Filter */}
           <div className="lg:col-span-1">
@@ -466,53 +381,45 @@ export function EventsDiscoveryView() {
               trackFilter={trackFilter}
               setTrackFilter={setTrackFilter}
               topTracks={topTracks}
-              hasMyEvent={!!myEventId}
+              hasMyEvent={myAssignedCount > 0}
             />
           </div>
 
           {/* Right Column: Events List */}
           <div className="lg:col-span-3 space-y-4">
             
-            {/* Sort bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-[#10171a] border border-zinc-800 p-3 hud-clipped font-mono text-xs">
-              <span className="text-zinc-400">
-                HIỂN THỊ <strong className="text-white">{events.length}</strong> / {totalCount} SỰ KIỆN
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-3 text-sm">
+              <span className="text-[var(--text-muted)]">
+                Hiển thị <strong className="text-[var(--text-primary)]">{events.length}</strong> / {totalCount} sự kiện
               </span>
-
-              <div className="flex items-center gap-2">
-                <span className="text-zinc-500 uppercase text-[11px]">Sắp xếp:</span>
-                <div className="flex flex-wrap gap-1">
-                  {SORT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setSort(opt.value)}
-                      className={`px-2.5 py-1 text-[11px] font-bold uppercase transition-all cursor-pointer hud-clipped ${
-                        sort === opt.value
-                          ? "bg-emerald-500 text-black font-extrabold shadow-sm"
-                          : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:text-white"
-                      }`}
-                    >
-                      [ {opt.label} ]
-                    </button>
-                  ))}
-                </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-[var(--text-muted)]">Sắp xếp:</span>
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSort(opt.value)}
+                    className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+                      sort === opt.value
+                        ? "bg-[var(--accent-primary)] text-[var(--bg-base)]"
+                        : "text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* List */}
             {events.length === 0 ? (
-              <div className="bg-[#10171a] border border-zinc-800 p-12 text-center font-mono text-xs text-zinc-400 hud-clipped space-y-3">
-                <span className="text-white font-bold uppercase block">[ KHÔNG TÌM THẤY SỰ KIỆN NÀO PHÙ HỢP ]</span>
-                <p className="text-zinc-500 max-w-md mx-auto">
-                  Hãy thử thay đổi từ khóa tìm kiếm hoặc chọn bộ lọc trạng thái khác để khám phá các giải đấu.
+              <div className="rounded-lg border border-dashed border-[var(--border-muted)] bg-[var(--bg-panel)] p-12 text-center">
+                <p className="font-medium text-[var(--text-primary)]">Không tìm thấy sự kiện phù hợp</p>
+                <p className="mt-2 text-sm text-[var(--text-muted)]">
+                  Thử đổi từ khóa hoặc bộ lọc trạng thái.
                 </p>
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold uppercase hud-clipped cursor-pointer transition-colors"
-                >
-                  [ ĐẶT LẠI BỘ LỌC ]
-                </button>
+                <Button type="button" variant="secondary" className="mt-4" onClick={handleClear}>
+                  Đặt lại bộ lọc
+                </Button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -525,8 +432,6 @@ export function EventsDiscoveryView() {
           </div>
 
         </div>
-
-      </div>
-    </main>
+    </PageShell>
   );
 }

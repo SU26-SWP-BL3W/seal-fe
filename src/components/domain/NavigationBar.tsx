@@ -956,24 +956,22 @@ export function NavigationBar() {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // CHẾ ĐỘ 2: NAVBAR NGANG (HORIZONTAL TOPBAR) - MỌI VAI TRÒ Ở TRANG NGOÀI
+  // CHẾ ĐỘ 2: NAVBAR NGANG — trang public / workspace ngoài sidebar
   // ─────────────────────────────────────────────────────────────
   return (
-    <nav className="w-full h-16 border-b border-[var(--border-muted)] bg-[var(--bg-panel)] flex items-center justify-between px-6 shrink-0 z-30 shadow-sm">
-      
-      {/* Left: Brand & Main Navigation Links */}
+    <nav className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center justify-between border-b border-[var(--border-muted)] bg-[var(--bg-panel)]/95 px-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center gap-6 md:gap-8">
-        <Link href="/" className="font-display font-bold text-lg text-[var(--accent-primary)] tracking-widest uppercase hover:opacity-80 flex items-center gap-2">
-          <SealShield className="h-6 w-6 text-[var(--accent-primary)]" />
+        <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold text-[var(--text-primary)] hover:opacity-90">
+          <SealShield className="h-5 w-5 text-[var(--accent-primary)]" />
           <span>SEAL</span>
         </Link>
 
-        <div className="hidden md:flex gap-5 items-center font-mono text-xs">
+        <div className="hidden items-center gap-5 md:flex">
           <Link
             href="/"
-            className={`transition-colors uppercase font-bold ${
+            className={`text-sm font-medium transition-colors ${
               pathname === "/" || pathname.endsWith("/vi") || pathname.endsWith("/en")
-                ? "text-[var(--accent-primary)] font-bold"
+                ? "text-[var(--accent-primary)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
@@ -982,68 +980,71 @@ export function NavigationBar() {
 
           <Link
             href="/events"
-            className={`transition-colors uppercase font-bold ${
+            className={`text-sm font-medium transition-colors ${
               pathname.includes("/events")
-                ? "text-[var(--accent-primary)] font-bold"
+                ? "text-[var(--accent-primary)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
-            Khám phá Sự kiện
+            Khám phá sự kiện
           </Link>
 
-          {/* Single Workspace Access Link for System Admin only */}
           {user && (user.isAdmin || user.IsAdmin || roleName === "Admin") && (
             <Link
               href="/admin/dashboard"
-              className="text-[var(--color-danger)] font-bold hover:underline bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 px-3 py-1 hud-clipped text-xs uppercase"
+              className="rounded-md border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-2.5 py-1 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15"
             >
-              [ BẢNG ĐIỀU HÀNH ADMIN ]
+              Quản trị
             </Link>
           )}
         </div>
       </div>
-      
-      {/* Right: Notification & Role Switcher */}
-      <div className="flex items-center gap-4">
+
+      <div className="flex items-center gap-3">
         <NotificationBell align="right" />
 
-
         {user ? (
-          <div className="flex items-center gap-3 font-mono text-xs">
+          <div className="flex items-center gap-2 text-sm">
             {user.isStudent && !user.isApproved && roleName !== "Coordinator" && roleName !== "Admin" && roleName !== "Judge" && roleName !== "Mentor" && (
               <Link
                 href="/profile"
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[var(--color-warning)]/10 text-[var(--color-warning)] border border-[var(--color-warning)]/40 font-bold hover:bg-[var(--color-warning)] hover:text-black transition-all hud-clipped uppercase"
-                title="Hồ sơ chưa duyệt — Cập nhật thẻ sinh viên"
+                className="hidden rounded-md border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 px-2 py-1 text-xs font-medium text-[var(--color-warning)] sm:inline-block"
               >
-                [ CHƯA DUYỆT THẺ SV &gt; ]
+                Chưa duyệt hồ sơ
               </Link>
             )}
 
             <Link
               href="/profile"
-              className="text-[var(--text-primary)] hover:text-[var(--accent-primary)] font-bold border border-[var(--border-muted)] px-2.5 py-1 bg-[var(--bg-input)] hud-clipped uppercase"
+              className="rounded-md border border-[var(--border-muted)] px-2.5 py-1.5 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-input)]"
             >
-              [ HỒ SƠ CÁ NHÂN ]
+              Hồ sơ
             </Link>
 
             <button
+              type="button"
               onClick={logout}
-              className="text-[var(--color-danger)] hover:underline border border-[var(--color-danger)]/30 px-2.5 py-1 hud-clipped cursor-pointer uppercase font-bold"
+              className="rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--color-danger)]"
             >
-              [ ĐĂNG XUẤT ]
+              Đăng xuất
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-3 font-mono text-xs">
+          <div className="flex items-center gap-2">
             <Link href="/login">
-              <button className="hud-clipped px-3.5 py-1.5 border border-[var(--accent-primary)]/40 text-[var(--accent-primary)] font-bold uppercase tracking-wider hover:bg-[var(--accent-primary)]/10 transition-all cursor-pointer">
-                ĐĂNG NHẬP
+              <button
+                type="button"
+                className="rounded-lg border border-[var(--border-muted)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-input)]"
+              >
+                Đăng nhập
               </button>
             </Link>
             <Link href="/register">
-              <button className="hud-clipped px-3.5 py-1.5 bg-[var(--accent-primary)] text-[var(--bg-base)] font-bold uppercase tracking-wider hover:bg-white transition-all shadow-sm cursor-pointer">
-                ĐĂNG KÝ
+              <button
+                type="button"
+                className="rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-sm font-medium text-[var(--bg-base)] hover:brightness-110"
+              >
+                Đăng ký
               </button>
             </Link>
           </div>

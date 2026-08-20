@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { KeyRound, RefreshCw, AlertTriangle, XCircle, CheckCircle2 } from "lucide-react";
 import { useResetPassword } from "@/repositories/authRepository";
-import { Button, Card } from "@/components/ui";
+import { Button, Input, Field } from "@/components/ui";
 import { Link } from "@/i18n/routing";
+import { AuthLayout } from "@/components/layout/AuthLayout";
 
 export function ResetPasswordView() {
   const searchParams = useSearchParams();
@@ -19,20 +20,22 @@ export function ResetPasswordView() {
 
   if (!token) {
     return (
-      <div className="hud-lattice min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md p-8 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-4 text-center">
-          <XCircle className="w-10 h-10 text-[var(--color-danger)] mx-auto" />
-          <h1 className="font-display text-xl font-extrabold uppercase tracking-wide text-[var(--text-primary)]">
-            Liên Kết Không Hợp Lệ
-          </h1>
-          <p className="font-mono text-xs text-[var(--text-muted)]">
-            Không tìm thấy mã đặt lại mật khẩu trong đường dẫn. Vui lòng kiểm tra lại liên kết từ email.
-          </p>
-          <Link href="/forgot-password" className="w-full flex justify-center">
-            <Button variant="primary" className="w-full justify-center">Yêu Cầu Liên Kết Mới</Button>
+      <AuthLayout
+        title="Liên kết không hợp lệ"
+        description="Không tìm thấy mã đặt lại mật khẩu trong đường dẫn. Vui lòng kiểm tra lại liên kết từ email."
+        footer={
+          <Link href="/login" className="text-[var(--accent-primary)] hover:underline">
+            Về trang đăng nhập
           </Link>
-        </Card>
-      </div>
+        }
+      >
+        <div className="flex flex-col items-center gap-4 text-center">
+          <XCircle className="h-10 w-10 text-[var(--color-danger)]" />
+          <Link href="/forgot-password" className="w-full">
+            <Button className="w-full justify-center">Yêu cầu liên kết mới</Button>
+          </Link>
+        </div>
+      </AuthLayout>
     );
   }
 
@@ -54,86 +57,83 @@ export function ResetPasswordView() {
       setDone(true);
     } catch (err: any) {
       setError(
-        err?.response?.data?.message || err?.message || "Liên kết không hợp lệ hoặc đã hết hạn (24 giờ). Vui lòng yêu cầu lại."
+        err?.response?.data?.message || err?.message || "Liên kết không hợp lệ hoặc đã hết hạn (24 giờ). Vui lòng yêu cầu lại.",
       );
     }
   };
 
+  if (done) {
+    return (
+      <AuthLayout
+        title="Đặt lại mật khẩu thành công"
+        description="Mật khẩu của bạn đã được cập nhật. Đăng nhập lại bằng mật khẩu mới."
+        footer={
+          <Link href="/login" className="text-[var(--accent-primary)] hover:underline">
+            Về trang đăng nhập
+          </Link>
+        }
+      >
+        <div className="flex flex-col items-center gap-4 text-center">
+          <CheckCircle2 className="h-10 w-10 text-[var(--color-success)]" />
+          <Link href="/login" className="w-full">
+            <Button className="w-full justify-center">Đăng nhập</Button>
+          </Link>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
-    <div className="hud-lattice min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
-      <Card className="w-full max-w-md p-8 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped space-y-6">
-        {done ? (
-          <div className="text-center space-y-4">
-            <CheckCircle2 className="w-10 h-10 text-[var(--color-success)] mx-auto" />
-            <h1 className="font-display text-xl font-extrabold uppercase tracking-wide text-[var(--text-primary)]">
-              Đặt Lại Mật Khẩu Thành Công
-            </h1>
-            <p className="font-mono text-xs text-[var(--text-muted)]">
-              Mật khẩu của bạn đã được cập nhật. Đăng nhập lại bằng mật khẩu mới.
-            </p>
-            <Link href="/login" className="w-full flex justify-center">
-              <Button variant="primary" className="w-full justify-center">Về Trang Đăng Nhập</Button>
-            </Link>
+    <AuthLayout
+      title="Đặt lại mật khẩu"
+      description="Nhập mật khẩu mới cho tài khoản của bạn."
+      footer={
+        <Link href="/login" className="text-[var(--accent-primary)] hover:underline">
+          Về trang đăng nhập
+        </Link>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="flex items-center gap-2 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
           </div>
-        ) : (
-          <>
-            <div className="text-center space-y-2">
-              <KeyRound className="w-10 h-10 text-[var(--accent-primary)] mx-auto" />
-              <h1 className="font-display text-xl font-extrabold uppercase tracking-wide text-[var(--text-primary)]">
-                Đặt Lại Mật Khẩu
-              </h1>
-              <p className="font-mono text-xs text-[var(--text-muted)]">Nhập mật khẩu mới cho tài khoản của bạn.</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="p-3 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 text-xs font-mono text-[var(--color-danger)] flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                  {error}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-mono text-[var(--text-muted)] mb-1 uppercase">Mật khẩu mới</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="•••••••• (Tối thiểu 6 ký tự)"
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-primary)]"
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-[var(--text-muted)] mb-1 uppercase">
-                  Xác nhận mật khẩu mới
-                </label>
-                <input
-                  type="password"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs hud-clipped focus:outline-none focus:border-[var(--accent-primary)]"
-                  required
-                />
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={isPending}
-                className="w-full justify-center flex items-center gap-2"
-              >
-                {isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                XÁC NHẬN ĐẶT LẠI
-              </Button>
-            </form>
-          </>
         )}
-      </Card>
-    </div>
+
+        <Field label="Mật khẩu mới" required>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Tối thiểu 6 ký tự"
+              required
+              autoFocus
+            />
+          )}
+        </Field>
+
+        <Field label="Xác nhận mật khẩu mới" required>
+          {({ id }) => (
+            <Input
+              id={id}
+              type="password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              placeholder="Nhập lại mật khẩu"
+              required
+            />
+          )}
+        </Field>
+
+        <Button type="submit" disabled={isPending} className="w-full justify-center">
+          {isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+          Xác nhận đặt lại
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }
 
