@@ -50,12 +50,16 @@ export const staffRepository = {
   /**
    * Mời Điều phối viên (Event Coordinator) qua Email (POST /api/EventCoordinators/invite)
    */
-  async inviteCoordinator(payload: InviteCoordinatorPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/EventCoordinators/invite", {
+  async inviteCoordinator(payload: InviteCoordinatorPayload): Promise<any> {
+    const res = await apiClient.post<any>("/EventCoordinators/invite", {
       eventId: payload.eventId,
       coordinatorEmail: payload.email,
       coordinatorFullName: payload.fullName || payload.email.split("@")[0],
       notes: payload.notes,
+      EventId: payload.eventId,
+      CoordinatorEmail: payload.email,
+      CoordinatorFullName: payload.fullName || payload.email.split("@")[0],
+      Notes: payload.notes,
     });
     return res.data;
   },
@@ -63,11 +67,13 @@ export const staffRepository = {
   /**
    * Mời Giám khảo (Judge) tham gia 1 Track qua Email (POST /api/Judges/invite).
    * Tự động tạo tài khoản tạm nếu chưa có + gửi email xác thực kèm token 24h.
-   * InviteJudgeToTrackRequestModel yêu cầu JudgeEmail/JudgeFullName (không phải email/fullName trần) —
-   * gửi sai tên field khiến validator luôn báo "không được để trống" dù người dùng đã điền.
    */
-  async inviteJudge(payload: InviteStaffPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Judges/invite", {
+  async inviteJudge(payload: InviteStaffPayload): Promise<any> {
+    const res = await apiClient.post<any>("/Judges/invite", {
+      eventId: payload.eventId,
+      trackId: payload.trackId,
+      judgeEmail: payload.email,
+      judgeFullName: payload.fullName,
       EventId: payload.eventId,
       TrackId: payload.trackId,
       JudgeEmail: payload.email,
@@ -78,10 +84,13 @@ export const staffRepository = {
 
   /**
    * Mời Cố vấn (Mentor) tham gia 1 Track qua Email (POST /api/Mentors/invite).
-   * InviteMentorToTrackRequestModel yêu cầu MentorEmail/MentorFullName — xem ghi chú ở inviteJudge.
    */
-  async inviteMentor(payload: InviteStaffPayload): Promise<BaseResponse<EventRoleInvitationEntity>> {
-    const res = await apiClient.post<BaseResponse<EventRoleInvitationEntity>>("/Mentors/invite", {
+  async inviteMentor(payload: InviteStaffPayload): Promise<any> {
+    const res = await apiClient.post<any>("/Mentors/invite", {
+      eventId: payload.eventId,
+      trackId: payload.trackId,
+      mentorEmail: payload.email,
+      mentorFullName: payload.fullName,
       EventId: payload.eventId,
       TrackId: payload.trackId,
       MentorEmail: payload.email,

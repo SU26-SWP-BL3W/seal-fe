@@ -5,8 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { staffRepository, useGetEventRoles } from "@/repositories/staffRepository";
 import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
-import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar } from "lucide-react";
+import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar, Sparkles } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
+import { RoleInvitationHistoryCard } from "@/components/domain/role-invitations/RoleInvitationHistoryCard";
+import {
+  invitationHistoryService,
+  RoleInvitationRecord,
+} from "@/services/invitationHistoryService";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 export const SYSTEM_ACCOUNTS = [
   { email: "ec.co-organizer@fpt.edu.vn", fullName: "Nguyễn Văn Điều Phối (Coordinator)" },
@@ -49,13 +55,29 @@ export const CoordinatorStaffView: React.FC = () => {
   const [coordinatorEmail, setCoordinatorEmail] = useState("");
   const [coordinatorFullName, setCoordinatorFullName] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
-  
+  const [historyRecords, setHistoryRecords] = useState<RoleInvitationRecord[]>([]);
+
+  const loadHistory = () => {
+    if (!selectedEventId) {
+      setHistoryRecords([]);
+      return;
+    }
+    const synced = invitationHistoryService.syncWithEventRoles(selectedEventId, eventRoles);
+    setHistoryRecords([...synced]);
+  };
+
+  React.useEffect(() => {
+    loadHistory();
+  }, [selectedEventId, eventRoles]);
+
   const [judgeMessage, setJudgeMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [mentorMessage, setMentorMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [coordinatorMessage, setCoordinatorMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [isSubmittingJudge, setIsSubmittingJudge] = useState(false);
   const [isSubmittingMentor, setIsSubmittingMentor] = useState(false);
   const [isSubmittingCoordinator, setIsSubmittingCoordinator] = useState(false);
+
+  const selectedEventObj = myEvents.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId);
 
   const handleInviteCoordinator = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,28 +90,44 @@ export const CoordinatorStaffView: React.FC = () => {
       const res = await staffRepository.inviteCoordinator({
         eventId: selectedEventId,
         email: coordinatorEmail.trim(),
-        fullName: coordinatorFullName.trim() || undefined,
+        fullName: coordinatorFullName.trim(),
       });
-
       setIsSubmittingCoordinator(false);
 
-      if (res.success) {
+      if (res && res.success !== false) {
+        invitationHistoryService.addInvitation({
+          eventId: selectedEventId,
+          eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
+          email: coordinatorEmail.trim(),
+          fullName: coordinatorFullName.trim() || coordinatorEmail.trim().split("@")[0],
+          roleName: "EventCoordinator",
+          status: "Pending",
+          notes: "Cấp tài khoản tạm / Chờ kích hoạt qua email",
+        });
+
+        pushSystemNotification({
+          title: "Gửi thư mời & Cấp tài khoản tạm Điều Phối Viên",
+          message: `Đã gửi thư mời kèm liên kết kích hoạt cấp tài khoản tạm cho ${coordinatorEmail.trim()} làm Điều Phối Viên sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}".`,
+          type: "info",
+        });
+
         setCoordinatorMessage({
-          text: res.message || `Đã gửi email mời Điều phối viên (${coordinatorEmail}) thành công!`,
+          text: res.message || `Đã gửi email mời & cấp tài khoản tạm cho Điều phối viên (${coordinatorEmail}) thành công!`,
           isError: false,
         });
         setCoordinatorEmail("");
         setCoordinatorFullName("");
         await refetchRoles();
+        loadHistory();
       } else {
         setCoordinatorMessage({
-          text: res.message || "Gửi lời mời Điều phối viên thất bại.",
+          text: res?.message || "Gửi lời mời Điều phối viên thất bại.",
           isError: true,
         });
       }
     } catch (err: any) {
       setIsSubmittingCoordinator(false);
-      const msg = err.response?.data?.message || err.message || "Gửi lời mời thất bại. Bạn phải là Event Coordinator của sự kiện này.";
+      const msg = err.response?.data?.message || err.response?.data?.detail || err.message || "Gửi lời mời thất bại. Bạn phải là Event Coordinator của sự kiện này.";
       setCoordinatorMessage({
         text: msg,
         isError: true,
@@ -120,6 +158,8 @@ export const CoordinatorStaffView: React.FC = () => {
     setIsSubmittingJudge(true);
     setJudgeMessage(null);
 
+    const chosenTrack = tracks.find((t: any) => (t.id || t.Id) === judgeTrackId);
+
     try {
       const res = await staffRepository.inviteJudge({
         eventId: selectedEventId,
@@ -128,20 +168,40 @@ export const CoordinatorStaffView: React.FC = () => {
         trackId: judgeTrackId,
       });
 
-      if (res.success) {
+      if (res && res.success !== false) {
+        invitationHistoryService.addInvitation({
+          eventId: selectedEventId,
+          eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
+          email: judgeEmail.trim(),
+          fullName: judgeFullName.trim(),
+          roleName: "Judge",
+          trackId: judgeTrackId,
+          trackName: chosenTrack?.trackName || chosenTrack?.TrackName,
+          status: "Pending",
+          notes: "Cấp tài khoản tạm / Chờ kích hoạt qua email",
+        });
+
+        pushSystemNotification({
+          title: "Gửi thư mời & Cấp tài khoản tạm Giám khảo",
+          message: `Đã gửi thư mời kèm liên kết kích hoạt cấp tài khoản tạm cho ${judgeEmail.trim()} làm Giám khảo Hạng mục "${chosenTrack?.trackName || chosenTrack?.TrackName || 'Hạng mục'}" sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}".`,
+          type: "info",
+        });
+
         setJudgeMessage({
-          text: res.message || `Đã gửi email mời Giám khảo (${judgeEmail}) thành công!`,
+          text: res.message || `Đã gửi email mời & cấp tài khoản tạm cho Giám khảo (${judgeEmail}) thành công!`,
           isError: false,
         });
         setJudgeEmail("");
         setJudgeFullName("");
         await refetchRoles();
+        loadHistory();
       } else {
-        setJudgeMessage({ text: res.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
+        setJudgeMessage({ text: res?.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
       }
     } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || "Gửi lời mời thất bại, vui lòng thử lại.";
       setJudgeMessage({
-        text: err?.response?.data?.message || err?.message || "Gửi lời mời thất bại, vui lòng thử lại.",
+        text: msg,
         isError: true,
       });
     } finally {
@@ -172,6 +232,8 @@ export const CoordinatorStaffView: React.FC = () => {
     setIsSubmittingMentor(true);
     setMentorMessage(null);
 
+    const chosenTrack = tracks.find((t: any) => (t.id || t.Id) === mentorTrackId);
+
     try {
       const res = await staffRepository.inviteMentor({
         eventId: selectedEventId,
@@ -180,20 +242,40 @@ export const CoordinatorStaffView: React.FC = () => {
         trackId: mentorTrackId,
       });
 
-      if (res.success) {
+      if (res && res.success !== false) {
+        invitationHistoryService.addInvitation({
+          eventId: selectedEventId,
+          eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
+          email: mentorEmail.trim(),
+          fullName: mentorFullName.trim(),
+          roleName: "Mentor",
+          trackId: mentorTrackId,
+          trackName: chosenTrack?.trackName || chosenTrack?.TrackName,
+          status: "Pending",
+          notes: "Cấp tài khoản tạm / Chờ kích hoạt qua email",
+        });
+
+        pushSystemNotification({
+          title: "Gửi thư mời & Cấp tài khoản tạm Cố vấn",
+          message: `Đã gửi thư mời kèm liên kết kích hoạt cấp tài khoản tạm cho ${mentorEmail.trim()} làm Cố vấn Hạng mục "${chosenTrack?.trackName || chosenTrack?.TrackName || 'Hạng mục'}" sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}".`,
+          type: "info",
+        });
+
         setMentorMessage({
-          text: res.message || `Đã gửi email mời Cố vấn (${mentorEmail}) thành công!`,
+          text: res.message || `Đã gửi email mời & cấp tài khoản tạm cho Cố vấn (${mentorEmail}) thành công!`,
           isError: false,
         });
         setMentorEmail("");
         setMentorFullName("");
         await refetchRoles();
+        loadHistory();
       } else {
-        setMentorMessage({ text: res.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
+        setMentorMessage({ text: res?.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
       }
     } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || "Gửi lời mời thất bại, vui lòng thử lại.";
       setMentorMessage({
-        text: err?.response?.data?.message || err?.message || "Gửi lời mời thất bại, vui lòng thử lại.",
+        text: msg,
         isError: true,
       });
     } finally {
@@ -202,13 +284,88 @@ export const CoordinatorStaffView: React.FC = () => {
   };
 
   const handleRemoveRole = async (roleId: string, email?: string) => {
-    if (!confirm(`Bạn có chắc chắn muốn gỡ vai trò nhân sự này khỏi sự kiện?`)) return;
+    const roleItem: any = eventRoles.find((r: any) => (r.id || r.Id || r.roleId || r.RoleId) === roleId);
+    const rName = roleItem?.user?.fullName || roleItem?.User?.FullName || roleItem?.fullName || email || "nhân sự";
+    const rRole = roleItem?.roleName || roleItem?.RoleName || "Nhân sự";
+
+    const reason = window.prompt(
+      `Nhập lý do thu hồi vai trò ${rRole} của "${rName}" (hoặc để trống):`,
+      "Thay đổi kế hoạch phân công hội đồng chuyên môn"
+    );
+    if (reason === null) return; // Cancelled
+
     try {
       await staffRepository.removeEventRole(roleId);
+      invitationHistoryService.updateStatus(selectedEventId, roleId, "Revoked", reason.trim() || undefined);
+      
+      pushSystemNotification({
+        title: `Thu hồi vai trò ${rRole}`,
+        message: `Vai trò ${rRole} của ${rName} trong sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}" đã bị thu hồi. Lý do: ${reason.trim() || 'Theo quyết định của Ban tổ chức'}.`,
+        type: "warning",
+      });
+
       await refetchRoles();
+      loadHistory();
     } catch {
       alert("Gỡ vai trò thất bại.");
     }
+  };
+
+  const handleResendStaffInvitation = async (record: RoleInvitationRecord) => {
+    if (!selectedEventId) return;
+    if (record.roleName === "Judge" && record.trackId) {
+      await staffRepository.inviteJudge({
+        eventId: selectedEventId,
+        email: record.email,
+        fullName: record.fullName,
+        trackId: record.trackId,
+      });
+    } else if (record.roleName === "Mentor" && record.trackId) {
+      await staffRepository.inviteMentor({
+        eventId: selectedEventId,
+        email: record.email,
+        fullName: record.fullName,
+        trackId: record.trackId,
+      });
+    } else {
+      await staffRepository.inviteCoordinator({
+        eventId: selectedEventId,
+        email: record.email,
+        fullName: record.fullName,
+      });
+    }
+    invitationHistoryService.addInvitation({
+      ...record,
+      status: "Pending",
+    });
+    pushSystemNotification({
+      title: `Gửi lại lời mời ${record.roleName}`,
+      message: `Đã gửi lại email mời ${record.fullName || record.email} đảm nhiệm vai trò ${record.roleName} cho sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName}".`,
+      type: "info",
+    });
+    loadHistory();
+  };
+
+  const handleRevokeStaffInvitation = async (record: RoleInvitationRecord) => {
+    const reason = window.prompt(
+      `Nhập lý do thu hồi lời mời ${record.roleName} của "${record.fullName || record.email}" (hoặc để trống):`,
+      "Hủy thư mời theo quyết định của Ban tổ chức"
+    );
+    if (reason === null) return;
+
+    if (record.id && !record.id.startsWith("inv-") && !record.id.startsWith("role-inv-")) {
+      await staffRepository.removeEventRole(record.id);
+      await refetchRoles();
+    }
+    invitationHistoryService.updateStatus(selectedEventId, record.id, "Revoked", reason.trim() || undefined);
+    
+    pushSystemNotification({
+      title: `Thu hồi lời mời ${record.roleName}`,
+      message: `Lời mời vai trò ${record.roleName} của ${record.fullName || record.email} trong sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}" đã bị thu hồi. Lý do: ${reason.trim() || 'Theo quyết định của Ban tổ chức'}.`,
+      type: "warning",
+    });
+    
+    loadHistory();
   };
 
   const filteredRoles = eventRoles.filter((er: any) => {
@@ -329,9 +486,9 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-coordinator)]"
                   />
                   {coordinatorEmail.trim() && !checkEmailInSystem(coordinatorEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>Email chưa có tài khoản: Hệ thống sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt.</span>
                     </p>
                   )}
                 </div>
@@ -355,7 +512,13 @@ export const CoordinatorStaffView: React.FC = () => {
                   className="w-full py-2.5 bg-[var(--accent-coordinator)] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{isSubmittingCoordinator ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Điều Phối Viên"}</span>
+                  <span>
+                    {isSubmittingCoordinator
+                      ? "Đang Gửi Lời Mời..."
+                      : !checkEmailInSystem(coordinatorEmail) && coordinatorEmail.trim()
+                      ? "⚡ GỬI MỜI & CẤP TK TẠM ĐIỀU PHỐI VIÊN"
+                      : "GỬI LỜI MỜI ĐIỀU PHỐI VIÊN"}
+                  </span>
                 </button>
               </form>
             </div>
@@ -392,9 +555,9 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
                   />
                   {judgeEmail.trim() && !checkEmailInSystem(judgeEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>Email chưa có tài khoản: Hệ thống sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt.</span>
                     </p>
                   )}
                 </div>
@@ -451,7 +614,13 @@ export const CoordinatorStaffView: React.FC = () => {
                   className="w-full py-2.5 bg-[var(--accent-judge)] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{isSubmittingJudge ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Giám Khảo"}</span>
+                  <span>
+                    {isSubmittingJudge
+                      ? "Đang Gửi Lời Mời..."
+                      : !checkEmailInSystem(judgeEmail) && judgeEmail.trim()
+                      ? "⚡ GỬI MỜI & CẤP TK TẠM GIÁM KHẢO"
+                      : "GỬI LỜI MỜI GIÁM KHẢO"}
+                  </span>
                 </button>
               </form>
             </div>
@@ -489,9 +658,9 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-2 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[#2dd4bf]"
                   />
                   {mentorEmail.trim() && !checkEmailInSystem(mentorEmail) && (
-                    <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>Email này chưa tồn tại trong hệ thống</span>
+                    <p className="text-[11px] font-mono text-cyan-400 mt-1 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>Email chưa có tài khoản: Hệ thống sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt.</span>
                     </p>
                   )}
                 </div>
@@ -548,7 +717,13 @@ export const CoordinatorStaffView: React.FC = () => {
                   className="w-full py-2.5 bg-[#2dd4bf] text-black font-mono text-xs font-bold uppercase tracking-wider hud-clipped flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{isSubmittingMentor ? "Đang Gửi Lời Mời..." : "Gửi Lời Mời Cố Vấn"}</span>
+                  <span>
+                    {isSubmittingMentor
+                      ? "Đang Gửi Lời Mời..."
+                      : !checkEmailInSystem(mentorEmail) && mentorEmail.trim()
+                      ? "⚡ GỬI MỜI & CẤP TK TẠM CỐ VẤN"
+                      : "GỬI LỜI MỜI CỐ VẤN"}
+                  </span>
                 </button>
               </form>
             </div>
@@ -631,6 +806,19 @@ export const CoordinatorStaffView: React.FC = () => {
             </div>
           )}
         </Card>
+
+        {/* Section 3: Role Invitation History & Status Tracking */}
+        {selectedEventId && (
+          <RoleInvitationHistoryCard
+            eventId={selectedEventId}
+            eventName={selectedEventObj?.eventName || selectedEventObj?.EventName || "Sự kiện"}
+            records={historyRecords}
+            onRefresh={loadHistory}
+            onResend={handleResendStaffInvitation}
+            onRevoke={handleRevokeStaffInvitation}
+            onDeleteHistory={() => loadHistory()}
+          />
+        )}
 
         {/* Global Datalist for System Accounts Auto-Feed */}
         <datalist id="system-staff-accounts">

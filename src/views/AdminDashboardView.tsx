@@ -9,6 +9,8 @@ import Link from "next/link";
 
 import { useEvents } from "@/repositories/eventsRepository";
 import { usersRepository } from "@/repositories/usersRepository";
+import { useSetupDemoEvents, useSetupDemoAppealEvent, useSetupFullEventDemo } from "@/repositories/shared/demoRepository";
+import { Sparkles } from "lucide-react";
 
 import { ApiMissingDataBadge } from "@/components/ui";
 
@@ -41,6 +43,38 @@ export const AdminDashboardView: React.FC = () => {
   const [ecEmail, setEcEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignSuccessMessage, setAssignSuccessMessage] = useState<string | null>(null);
+
+  const { mutateAsync: setupDemoEvents, isPending: isSettingUpDemoEvents } = useSetupDemoEvents();
+  const { mutateAsync: setupDemoAppealEvent, isPending: isSettingUpAppealDemo } = useSetupDemoAppealEvent();
+  const { mutateAsync: setupFullEventDemo, isPending: isSettingUpFullDemo } = useSetupFullEventDemo();
+  const [demoToolMessage, setDemoToolMessage] = useState<string | null>(null);
+
+  const handleSetupDemoEvents = async () => {
+    try {
+      await setupDemoEvents(new Date().toISOString());
+      setDemoToolMessage("Đã tạo 2 sự kiện demo (Nộp bài + Chấm điểm) quanh ngày hôm nay.");
+    } catch (err: any) {
+      setDemoToolMessage(err?.response?.data?.message || "Tạo sự kiện demo thất bại.");
+    }
+  };
+
+  const handleSetupDemoAppealEvent = async () => {
+    try {
+      await setupDemoAppealEvent(new Date().toISOString());
+      setDemoToolMessage("Đã tạo 1 sự kiện demo ở giai đoạn Phúc khảo.");
+    } catch (err: any) {
+      setDemoToolMessage(err?.response?.data?.message || "Tạo sự kiện demo phúc khảo thất bại.");
+    }
+  };
+
+  const handleSetupFullEventDemo = async () => {
+    try {
+      await setupFullEventDemo(undefined);
+      setDemoToolMessage("Đã tạo trọn vẹn 1 sự kiện demo đầy đủ (giải thưởng, vòng thi, tài khoản, bài nộp, điểm, xếp hạng, phúc khảo).");
+    } catch (err: any) {
+      setDemoToolMessage(err?.response?.data?.message || "Tạo sự kiện demo đầy đủ thất bại.");
+    }
+  };
 
   const handleOpenAssignModal = (ev: EventItem) => {
     setSelectedEvent(ev);
@@ -171,6 +205,53 @@ export const AdminDashboardView: React.FC = () => {
             </span>
           </Card>
         </div>
+
+        {/* Demo Data Tools */}
+        <Card className="p-6 space-y-4 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
+          <SectionTitle>CÔNG CỤ SINH DỮ LIỆU DEMO / QA</SectionTitle>
+          <p className="font-mono text-xs text-[var(--text-muted)]">
+            Sinh nhanh dữ liệu mẫu để test thay vì tạo thủ công từng bước. Chỉ dùng cho môi trường demo/QA.
+          </p>
+
+          {demoToolMessage && (
+            <div className="p-3 bg-[rgba(139,92,246,0.1)] border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs">
+              {demoToolMessage}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button
+              variant="ghost"
+              onClick={handleSetupDemoEvents}
+              disabled={isSettingUpDemoEvents}
+              className="font-mono text-xs flex flex-col items-start gap-1 p-4 h-auto text-left"
+            >
+              <span className="flex items-center gap-1.5 font-bold"><Sparkles className="w-3.5 h-3.5" /> 2 Sự Kiện Demo</span>
+              <span className="text-[var(--text-muted)] font-normal">Nộp bài + Chấm điểm quanh ngày hôm nay</span>
+              {isSettingUpDemoEvents && <span className="text-[var(--accent-primary)]">Đang tạo...</span>}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleSetupDemoAppealEvent}
+              disabled={isSettingUpAppealDemo}
+              className="font-mono text-xs flex flex-col items-start gap-1 p-4 h-auto text-left"
+            >
+              <span className="flex items-center gap-1.5 font-bold"><Sparkles className="w-3.5 h-3.5" /> Sự Kiện Phúc Khảo</span>
+              <span className="text-[var(--text-muted)] font-normal">Đã có bài nộp + điểm, sẵn sàng phúc khảo</span>
+              {isSettingUpAppealDemo && <span className="text-[var(--accent-primary)]">Đang tạo...</span>}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSetupFullEventDemo}
+              disabled={isSettingUpFullDemo}
+              className="font-mono text-xs flex flex-col items-start gap-1 p-4 h-auto text-left bg-[#8b5cf6] hover:bg-purple-600 text-white"
+            >
+              <span className="flex items-center gap-1.5 font-bold"><Sparkles className="w-3.5 h-3.5" /> Sự Kiện Đầy Đủ 100%</span>
+              <span className="text-white/80 font-normal">Giải thưởng, vòng thi, 5 đội, bài nộp, điểm, xếp hạng, phúc khảo</span>
+              {isSettingUpFullDemo && <span className="text-white">Đang tạo (có thể mất vài giây)...</span>}
+            </Button>
+          </div>
+        </Card>
 
         {/* All Events Admin Table */}
         <Card className="p-6 space-y-4 bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
