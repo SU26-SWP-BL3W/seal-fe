@@ -10,7 +10,6 @@ import {
   useMentorFeedbacks,
   useCreateMentorFeedback,
   useDeleteMentorFeedback,
-  type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
 import { useGetTeamsByEvent, useGetTeamById, type TeamListItem } from "@/repositories/teamsRepository";
 

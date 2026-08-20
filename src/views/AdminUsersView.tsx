@@ -4,25 +4,14 @@ import React, { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetUsers, useApproveUser, useRejectUser, useDeleteUser } from "@/repositories/usersRepository";
 import {
-  Users,
   Search,
-  Filter,
-  ShieldCheck,
-  ShieldAlert,
-  UserCheck,
   UserX,
   Lock,
-  Plus,
   RefreshCw,
   CheckCircle2,
-  X,
-  Building2,
-  Calendar,
   Eye,
-  FileText,
   AlertTriangle,
   Trash2,
-  Edit,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";

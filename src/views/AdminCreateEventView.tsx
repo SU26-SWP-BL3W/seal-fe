@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Input, Card, CalendarRangeField } from "@/components/ui";
+import { Button, Input, CalendarRangeField } from "@/components/ui";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { usersRepository } from "@/repositories/usersRepository";

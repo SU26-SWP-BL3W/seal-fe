@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
+import { ApiMissingDataBadge } from "@/components/ui";
 import { useEvents } from "@/repositories/eventsRepository";
-import { Link, useRouter } from "@/i18n/routing";
+import { Link } from "@/i18n/routing";
 import { ComprehensiveEventEditModal } from "@/components/domain/ComprehensiveEventEditModal";
 import { RevokeDraftConfirmModal } from "@/components/domain/RevokeDraftConfirmModal";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -13,9 +13,11 @@ function pickId(ev: any): string {
 }
 
 export function AdminEventsView() {
-  const router = useRouter();
   const { data: rawEvents = [], isLoading, refetch } = useEvents();
-  const eventsList: any[] = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
+  const eventsList: any[] = useMemo(
+    () => (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? []),
+    [rawEvents]
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");

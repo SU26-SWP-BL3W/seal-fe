@@ -34,7 +34,7 @@ export function JudgeScoringView() {
   const prefillTrackId = searchParams?.get("trackId") || "";
 
   const { user } = useAuth();
-  const userId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
+  const _userId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
 
   // Lấy danh sách sự kiện để xác định trạng thái mở / đóng niêm phong
   const { data: rawEvents } = useEvents();
