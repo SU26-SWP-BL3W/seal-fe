@@ -15,6 +15,7 @@ export interface RoleInvitationRecord {
   statusLabel: string;
   invitedBy?: string;
   notes?: string;
+  reason?: string;
 }
 
 const STORAGE_PREFIX = "seal_role_invitation_history_";
@@ -88,13 +89,16 @@ export const invitationHistoryService = {
     return newRecord;
   },
 
-  updateStatus(eventId: string, invitationId: string, status: RoleInvitationStatus): void {
+  updateStatus(eventId: string, invitationId: string, status: RoleInvitationStatus, reason?: string): void {
     const list = this.getHistory(eventId);
     const index = list.findIndex((item) => item.id === invitationId);
     if (index >= 0) {
       list[index].status = status;
       list[index].statusLabel = getStatusLabel(status);
       list[index].respondedAt = new Date().toISOString();
+      if (reason) {
+        list[index].reason = reason;
+      }
       this.saveHistory(eventId, list);
     }
   },

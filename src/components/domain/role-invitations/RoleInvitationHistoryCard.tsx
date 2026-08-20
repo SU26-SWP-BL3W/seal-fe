@@ -111,8 +111,11 @@ export function RoleInvitationHistoryCard({
   };
 
   const handleRevoke = async (record: RoleInvitationRecord) => {
-    const ok = window.confirm(`Bạn có chắc muốn thu hồi lời mời / quyền của ${record.fullName} (${record.email})?`);
-    if (!ok) return;
+    const reason = window.prompt(
+      `Nhập lý do thu hồi vai trò của "${record.fullName || record.email}" (hoặc để trống):`,
+      "Theo quyết định của Ban tổ chức"
+    );
+    if (reason === null) return;
 
     setRevokingId(record.id);
     setToastMessage(null);
@@ -120,7 +123,7 @@ export function RoleInvitationHistoryCard({
       if (onRevoke) {
         await onRevoke(record);
       }
-      invitationHistoryService.updateStatus(eventId, record.id, "Revoked");
+      invitationHistoryService.updateStatus(eventId, record.id, "Revoked", reason.trim() || undefined);
       setToastMessage({ text: `Đã thu hồi quyền của ${record.email}.` });
       if (onRefresh) onRefresh();
       setTimeout(() => setToastMessage(null), 3500);
@@ -379,7 +382,14 @@ export function RoleInvitationHistoryCard({
                       </div>
                     </td>
 
-                    <td className="p-3">{renderStatusBadge(rec.status)}</td>
+                    <td className="p-3">
+                      {renderStatusBadge(rec.status)}
+                      {rec.reason && (
+                        <div className="text-[10px] text-red-400 mt-1 max-w-[200px] leading-tight" title={rec.reason}>
+                          ⚠️ Lý do: {rec.reason}
+                        </div>
+                      )}
+                    </td>
 
                     <td className="p-3 text-[11px] text-zinc-400">
                       <div className="flex items-center gap-1">

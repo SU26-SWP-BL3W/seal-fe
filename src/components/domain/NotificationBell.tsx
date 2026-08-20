@@ -196,7 +196,51 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
-  // 6. Lời mời bị từ chối / không tham gia
+  // Thu hồi vai trò nhân sự (Có lý do đính kèm)
+  if (
+    tLower.includes("thu hồi") ||
+    mLower.includes("thu hồi vai trò") ||
+    mLower.includes("bị thu hồi") ||
+    mLower.includes("quyết định thu hồi")
+  ) {
+    return {
+      title: "⚠️ Quyết định: Thu hồi vai trò sự kiện",
+      message: rawMessage,
+      badgeText: "THU HỒI VAI TRÒ",
+      badgeClass: "bg-red-950/60 text-red-300 border-red-500/50 shadow-[0_0_8px_rgba(239,68,68,0.3)]",
+    };
+  }
+
+  // Mời đảm nhiệm vai trò
+  if (
+    tLower.includes("mời làm") ||
+    tLower.includes("phân công vai trò") ||
+    mLower.includes("mời bạn làm") ||
+    mLower.includes("được mời làm")
+  ) {
+    return {
+      title: "🎖️ Lời mời đảm nhận vai trò sự kiện",
+      message: rawMessage,
+      badgeText: "MỜI VAI TRÒ",
+      badgeClass: "bg-cyan-950/40 text-cyan-300 border-cyan-500/30",
+    };
+  }
+
+  // Nhân sự đã đồng ý nhận vai trò
+  if (
+    tLower.includes("nhận vai trò") ||
+    tLower.includes("đồng ý nhận vai trò") ||
+    mLower.includes("đã đồng ý nhận vai trò") ||
+    mLower.includes("chính thức đảm nhiệm vai trò")
+  ) {
+    return {
+      title: "🎉 Nhân sự đã đồng ý nhận vai trò",
+      message: rawMessage,
+      badgeText: "ĐÃ NHẬN VAI TRÒ",
+      badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+    };
+  }
+
   if (
     tLower.includes("từ chối") ||
     tLower.includes("declined") ||
@@ -275,16 +319,26 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
   const { mutateAsync: respondEventRole, isPending: isRespondingEventRole } = useRespondEventRoleInvitation();
   const isResponding = isRespondingTeam || isRespondingEventRole;
 
-  // Close dropdown on click outside
+  // Close dropdown on click outside & listen for local notification events
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
+    const handleNotifUpdate = () => {
+      refetchNotifs();
+      refetch();
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    window.addEventListener("seal-notification-updated", handleNotifUpdate);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("seal-notification-updated", handleNotifUpdate);
+    };
+  }, [refetch, refetchNotifs]);
 
   const handleRespond = async (inv: MyInvitationItem | any, isAccepted: boolean) => {
     const invId = inv.invitationId || inv.InvitationId || inv.id || inv.Id;

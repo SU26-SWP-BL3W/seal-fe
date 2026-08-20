@@ -31,6 +31,7 @@ import {
   invitationHistoryService,
   RoleInvitationRecord,
 } from "@/services/invitationHistoryService";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 function pickEventId(ev: any): string {
   return ev?.id || ev?.Id || ev?.eventId || ev?.EventId || "";
@@ -170,14 +171,24 @@ export function AdminCoordinatorsView() {
   };
 
   const handleRemoveCoordinator = async (roleId: string, name: string, targetUserId?: string) => {
-    const ok = window.confirm(`Bạn có chắc chắn muốn thu hồi quyền Điều phối viên của "${name}" khỏi sự kiện này không?`);
-    if (!ok) return;
+    const reason = window.prompt(
+      `Nhập lý do thu hồi quyền Điều phối viên của "${name}" (hoặc để trống):`,
+      "Thay đổi kế hoạch phân công nhân sự Ban tổ chức"
+    );
+    if (reason === null) return; // Cancelled
 
     setRemovingRoleId(roleId);
     setActionError(null);
     try {
       await staffRepository.removeEventRole(roleId);
-      invitationHistoryService.updateStatus(selectedEventId, roleId, "Revoked");
+      invitationHistoryService.updateStatus(selectedEventId, roleId, "Revoked", reason.trim() || undefined);
+      
+      pushSystemNotification({
+        title: "Thu hồi quyền Điều Phối Viên",
+        message: `Quyền Điều Phối Viên của ${name} trong sự kiện "${selectedEvent?.eventName || selectedEvent?.EventName || 'Sự kiện'}" đã bị thu hồi. Lý do: ${reason.trim() || 'Theo quyết định của Ban tổ chức'}.`,
+        type: "warning",
+      });
+
       setActionSuccess(`Đã thu hồi quyền Điều phối viên của ${name} thành công!`);
       await refetchRoles();
       loadHistory();
@@ -203,16 +214,34 @@ export function AdminCoordinatorsView() {
       ...record,
       status: "Pending",
     });
+    pushSystemNotification({
+      title: "Gửi lại lời mời Điều Phối Viên",
+      message: `Đã gửi lại email mời ${record.fullName || record.email} làm Điều Phối Viên sự kiện "${selectedEvent?.eventName || selectedEvent?.EventName}".`,
+      type: "info",
+    });
     loadHistory();
   };
 
   const handleRevokeCoordinatorInvitation = async (record: RoleInvitationRecord) => {
+    const reason = window.prompt(
+      `Nhập lý do thu hồi lời mời Điều phối viên của "${record.fullName || record.email}" (hoặc để trống):`,
+      "Hủy thư mời theo quyết định của Ban tổ chức"
+    );
+    if (reason === null) return;
+
     // If it has an active role ID from server, remove it
     if (record.id && !record.id.startsWith("inv-") && !record.id.startsWith("role-inv-")) {
       await staffRepository.removeEventRole(record.id);
       await refetchRoles();
     }
-    invitationHistoryService.updateStatus(selectedEventId, record.id, "Revoked");
+    invitationHistoryService.updateStatus(selectedEventId, record.id, "Revoked", reason.trim() || undefined);
+    
+    pushSystemNotification({
+      title: "Thu hồi lời mời Điều Phối Viên",
+      message: `Lời mời Điều Phối Viên của ${record.fullName || record.email} trong sự kiện "${selectedEvent?.eventName || selectedEvent?.EventName || 'Sự kiện'}" đã bị thu hồi. Lý do: ${reason.trim() || 'Theo quyết định của Ban tổ chức'}.`,
+      type: "warning",
+    });
+    
     loadHistory();
   };
 

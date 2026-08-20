@@ -12,6 +12,7 @@ import {
   invitationHistoryService,
   RoleInvitationRecord,
 } from "@/services/invitationHistoryService";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 export const SYSTEM_ACCOUNTS = [
   { email: "ec.co-organizer@fpt.edu.vn", fullName: "Nguyễn Văn Điều Phối (Coordinator)" },
@@ -258,10 +259,26 @@ export const CoordinatorStaffView: React.FC = () => {
   };
 
   const handleRemoveRole = async (roleId: string, email?: string) => {
-    if (!confirm(`Bạn có chắc chắn muốn gỡ vai trò nhân sự này khỏi sự kiện?`)) return;
+    const roleItem: any = eventRoles.find((r: any) => (r.id || r.Id || r.roleId || r.RoleId) === roleId);
+    const rName = roleItem?.user?.fullName || roleItem?.User?.FullName || roleItem?.fullName || email || "nhân sự";
+    const rRole = roleItem?.roleName || roleItem?.RoleName || "Nhân sự";
+
+    const reason = window.prompt(
+      `Nhập lý do thu hồi vai trò ${rRole} của "${rName}" (hoặc để trống):`,
+      "Thay đổi kế hoạch phân công hội đồng chuyên môn"
+    );
+    if (reason === null) return; // Cancelled
+
     try {
       await staffRepository.removeEventRole(roleId);
-      invitationHistoryService.updateStatus(selectedEventId, roleId, "Revoked");
+      invitationHistoryService.updateStatus(selectedEventId, roleId, "Revoked", reason.trim() || undefined);
+      
+      pushSystemNotification({
+        title: `Thu hồi vai trò ${rRole}`,
+        message: `Vai trò ${rRole} của ${rName} trong sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}" đã bị thu hồi. Lý do: ${reason.trim() || 'Theo quyết định của Ban tổ chức'}.`,
+        type: "warning",
+      });
+
       await refetchRoles();
       loadHistory();
     } catch {
@@ -296,15 +313,33 @@ export const CoordinatorStaffView: React.FC = () => {
       ...record,
       status: "Pending",
     });
+    pushSystemNotification({
+      title: `Gửi lại lời mời ${record.roleName}`,
+      message: `Đã gửi lại email mời ${record.fullName || record.email} đảm nhiệm vai trò ${record.roleName} cho sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName}".`,
+      type: "info",
+    });
     loadHistory();
   };
 
   const handleRevokeStaffInvitation = async (record: RoleInvitationRecord) => {
+    const reason = window.prompt(
+      `Nhập lý do thu hồi lời mời ${record.roleName} của "${record.fullName || record.email}" (hoặc để trống):`,
+      "Hủy thư mời theo quyết định của Ban tổ chức"
+    );
+    if (reason === null) return;
+
     if (record.id && !record.id.startsWith("inv-") && !record.id.startsWith("role-inv-")) {
       await staffRepository.removeEventRole(record.id);
       await refetchRoles();
     }
-    invitationHistoryService.updateStatus(selectedEventId, record.id, "Revoked");
+    invitationHistoryService.updateStatus(selectedEventId, record.id, "Revoked", reason.trim() || undefined);
+    
+    pushSystemNotification({
+      title: `Thu hồi lời mời ${record.roleName}`,
+      message: `Lời mời vai trò ${record.roleName} của ${record.fullName || record.email} trong sự kiện "${selectedEventObj?.eventName || selectedEventObj?.EventName || 'Sự kiện'}" đã bị thu hồi. Lý do: ${reason.trim() || 'Theo quyết định của Ban tổ chức'}.`,
+      type: "warning",
+    });
+    
     loadHistory();
   };
 
