@@ -23,6 +23,8 @@ import {
   AlertTriangle,
   Trash2,
   Edit,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import type { User } from "@/models/entities";
@@ -39,6 +41,10 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState(isCoordinator ? "student" : "all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   // Modals state
   const [detailUserModal, setDetailUserModal] = useState<User | null>(null);
@@ -58,6 +64,21 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
   const { mutateAsync: approveUser } = useApproveUser();
   const { mutateAsync: rejectUser } = useRejectUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleRoleFilterChange = (role: string) => {
+    setRoleFilter(role);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
 
   // LOI_12: Check if user has card submission (studentCode OR photoStudentCardUrl)
   const hasCardSubmission = (u: User) => {
@@ -110,6 +131,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
       return matchesSearch && matchesRole && matchesStatus && matchesCardSubmission;
     });
   }, [usersList, searchTerm, roleFilter, statusFilter, isCoordinator]);
+
+  // Pagination computations
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredUsers.slice(start, start + PAGE_SIZE);
+  }, [filteredUsers, safePage, PAGE_SIZE]);
 
   const handleApprove = async (userId: string) => {
     setActionError(null);
@@ -270,7 +300,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Tìm kiếm Họ tên, Email, Mã SV..."
                 className="w-full bg-[#0b1013] border border-zinc-700 pl-9 pr-3.5 py-2 text-white font-mono text-xs rounded placeholder:text-zinc-500 focus:border-amber-400 outline-none"
               />
@@ -289,7 +319,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               <span className="text-zinc-400 font-bold mr-1">TRẠNG THÁI:</span>
               <button
                 type="button"
-                onClick={() => setStatusFilter("all")}
+                onClick={() => handleStatusFilterChange("all")}
                 className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "all"
                     ? "bg-amber-500 text-black font-extrabold"
@@ -300,7 +330,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               </button>
               <button
                 type="button"
-                onClick={() => setStatusFilter("approved")}
+                onClick={() => handleStatusFilterChange("approved")}
                 className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "approved"
                     ? "bg-emerald-500 text-black font-extrabold"
@@ -311,7 +341,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               </button>
               <button
                 type="button"
-                onClick={() => setStatusFilter("pending")}
+                onClick={() => handleStatusFilterChange("pending")}
                 className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "pending"
                     ? "bg-amber-400 text-black font-extrabold"
@@ -322,7 +352,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               </button>
               <button
                 type="button"
-                onClick={() => setStatusFilter("locked")}
+                onClick={() => handleStatusFilterChange("locked")}
                 className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "locked"
                     ? "bg-rose-500 text-white font-extrabold"
@@ -338,7 +368,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               <span className="text-zinc-400 font-bold mr-1">VAI TRÒ:</span>
               <button
                 type="button"
-                onClick={() => setRoleFilter("all")}
+                onClick={() => handleRoleFilterChange("all")}
                 className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   roleFilter === "all"
                     ? "bg-cyan-500 text-black font-extrabold"
@@ -349,7 +379,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               </button>
               <button
                 type="button"
-                onClick={() => setRoleFilter("student")}
+                onClick={() => handleRoleFilterChange("student")}
                 className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   roleFilter === "student"
                     ? "bg-cyan-400 text-black font-extrabold"
@@ -360,7 +390,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               </button>
               <button
                 type="button"
-                onClick={() => setRoleFilter("judge")}
+                onClick={() => handleRoleFilterChange("judge")}
                 className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   roleFilter === "judge"
                     ? "bg-amber-400 text-black font-extrabold"
@@ -371,7 +401,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               </button>
               <button
                 type="button"
-                onClick={() => setRoleFilter("mentor")}
+                onClick={() => handleRoleFilterChange("mentor")}
                 className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   roleFilter === "mentor"
                     ? "bg-teal-400 text-black font-extrabold"
@@ -382,7 +412,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
               </button>
               <button
                 type="button"
-                onClick={() => setRoleFilter("coordinator")}
+                onClick={() => handleRoleFilterChange("coordinator")}
                 className={`px-2.5 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
                   roleFilter === "coordinator"
                     ? "bg-purple-400 text-black font-extrabold"
@@ -413,20 +443,20 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left font-mono text-xs">
+              <table className="w-full text-left font-mono text-xs border-collapse">
                 <thead className="bg-[#0e1619] border-b border-zinc-800 text-zinc-400 uppercase text-[11px]">
                   <tr>
-                    <th className="py-3 px-4 w-12 text-center">#</th>
-                    <th className="py-3 px-4">HỌ VÀ TÊN</th>
-                    <th className="py-3 px-4">EMAIL</th>
-                    <th className="py-3 px-4">TRƯỜNG</th>
-                    <th className="py-3 px-4 text-center">VAI TRÒ</th>
-                    <th className="py-3 px-4 text-center">HỒ SƠ SV</th>
-                    <th className="py-3 px-4 text-right">THAO TÁC</th>
+                    <th className="py-3 px-3 w-10 text-center">#</th>
+                    <th className="py-3 px-3 w-[22%]">HỌ VÀ TÊN</th>
+                    <th className="py-3 px-3 w-[24%]">EMAIL</th>
+                    <th className="py-3 px-3 w-[18%]">TRƯỜNG</th>
+                    <th className="py-3 px-2 w-[10%] text-center">VAI TRÒ</th>
+                    <th className="py-3 px-2 w-[12%] text-center">HỒ SƠ SV</th>
+                    <th className="py-3 px-3 w-[14%] text-right">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/60">
-                  {filteredUsers.map((u, idx) => {
+                  {paginatedUsers.map((u, idx) => {
                     const userId = u.id || (u as any).Id || u.userId || "";
                     const emailLower = (u.email || "").toLowerCase();
                     const isAdm = !!u.isAdmin || !!u.IsAdmin || emailLower.includes("admin");
@@ -442,18 +472,21 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
 
                     return (
                       <tr key={userId || idx} className="hover:bg-[#141e22] transition-colors">
-                        <td className="py-3.5 px-4 text-zinc-500 text-center">{idx + 1}</td>
-                        <td className="py-3.5 px-4 font-bold text-white tracking-wider">
+                        <td className="py-3.5 px-3 text-zinc-500 text-center">
+                          {(safePage - 1) * PAGE_SIZE + idx + 1}
+                        </td>
+                        <td className="py-3.5 px-3 font-bold text-white tracking-wider">
                           <button
                             onClick={() => setDetailUserModal(u)}
-                            className="hover:text-amber-300 transition-colors text-left cursor-pointer"
+                            className="hover:text-amber-300 transition-colors text-left cursor-pointer truncate max-w-full block"
+                            title={u.fullName || "Chưa cập nhật"}
                           >
                             {u.fullName || "Chưa cập nhật"}
                           </button>
                         </td>
-                        <td className="py-3.5 px-4 text-zinc-300">{u.email}</td>
-                        <td className="py-3.5 px-4 text-zinc-400">{u.schoolName || (u.isFpt ? "FPT University" : "N/A")}</td>
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3.5 px-3 text-zinc-300 truncate" title={u.email}>{u.email}</td>
+                        <td className="py-3.5 px-3 text-zinc-400 truncate" title={u.schoolName || (u.isFpt ? "FPT University" : "N/A")}>{u.schoolName || (u.isFpt ? "FPT University" : "N/A")}</td>
+                        <td className="py-3.5 px-2 text-center">
                           {isAdm ? (
                             <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
                               ADMIN
@@ -476,7 +509,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3.5 px-2 text-center">
                           {isStaff ? (
                             <span className="text-zinc-500 font-mono text-[11px] italic">— (Cán bộ / Chuyên gia)</span>
                           ) : isLocked ? (
@@ -497,20 +530,20 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="py-3.5 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                             {!isApproved && !isStaff && (
                               <>
                                 <button
                                   onClick={() => handleApprove(userId)}
-                                  className="px-2.5 py-1 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black font-bold text-[11px] rounded transition-all cursor-pointer"
+                                  className="px-2 py-1 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black font-bold text-[11px] rounded transition-all cursor-pointer"
                                   title="Duyệt thẻ SV"
                                 >
                                   Duyệt
                                 </button>
                                 <button
                                   onClick={() => setRejectUserModal({ userId, fullName: u.fullName || u.email || "Sinh viên" })}
-                                  className="px-2.5 py-1 bg-rose-950/40 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white font-bold text-[11px] rounded transition-all cursor-pointer"
+                                  className="px-2 py-1 bg-rose-950/40 text-rose-300 border border-rose-500/30 hover:bg-rose-500 hover:text-white font-bold text-[11px] rounded transition-all cursor-pointer"
                                   title="Từ chối thẻ SV"
                                 >
                                   Từ chối
@@ -519,7 +552,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                             )}
                             <button
                               onClick={() => setDetailUserModal(u)}
-                              className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-300 font-mono text-xs rounded transition-all cursor-pointer"
+                              className="px-2 py-1 bg-[#141f23] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-300 font-mono text-xs rounded transition-all cursor-pointer"
                               title="Xem chi tiết"
                             >
                               <Eye className="w-3.5 h-3.5 inline" />
@@ -527,7 +560,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                             {!isAdm && (currentUser?.isAdmin || currentUser?.IsAdmin) && (
                               <button
                                 onClick={() => setDeleteUserModal(u)}
-                                className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 text-rose-400 hover:bg-rose-500 hover:text-white font-mono text-xs rounded transition-all cursor-pointer"
+                                className="px-2 py-1 bg-[#141f23] border border-zinc-700 text-rose-400 hover:bg-rose-500 hover:text-white font-mono text-xs rounded transition-all cursor-pointer"
                                 title="Xóa người dùng"
                               >
                                 <Trash2 className="w-3.5 h-3.5 inline" />
@@ -540,6 +573,85 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination Deck */}
+          {filteredUsers.length > 0 && (
+            <div className="p-4 bg-[#131d21] border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs">
+              <div className="text-zinc-400">
+                Hiển thị{" "}
+                <span className="text-white font-bold">
+                  {(safePage - 1) * PAGE_SIZE + 1}
+                </span>
+                {" - "}
+                <span className="text-white font-bold">
+                  {Math.min(safePage * PAGE_SIZE, filteredUsers.length)}
+                </span>
+                {" / "}
+                <span className="text-amber-400 font-bold">
+                  {filteredUsers.length}
+                </span>{" "}
+                người dùng (Tối đa {PAGE_SIZE}/trang)
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    className="h-8 px-2.5 text-xs font-mono border border-zinc-700 text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 cursor-pointer flex items-center gap-1 rounded bg-[#0b1013]"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Trước</span>
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    if (
+                      totalPages > 7 &&
+                      p !== 1 &&
+                      p !== totalPages &&
+                      Math.abs(p - safePage) > 1
+                    ) {
+                      if (p === 2 || p === totalPages - 1) {
+                        return (
+                          <span key={p} className="px-1 text-zinc-600 select-none">
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    }
+
+                    const isActive = p === safePage;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setCurrentPage(p)}
+                        className={`h-8 w-8 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
+                          isActive
+                            ? "bg-amber-400 text-black font-extrabold shadow-md shadow-amber-950/50 border border-amber-400"
+                            : "bg-[#0b1013] text-zinc-400 hover:text-white hover:border-zinc-500 border border-zinc-700"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    className="h-8 px-2.5 text-xs font-mono border border-zinc-700 text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 cursor-pointer flex items-center gap-1 rounded bg-[#0b1013]"
+                  >
+                    <span>Sau</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -21,6 +21,8 @@ import {
   Lock,
   Edit2,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
@@ -28,6 +30,10 @@ export const AdminSchoolsView: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
+
   // State Tạo Mới
   const [showAddModal, setShowAddModal] = useState(false);
   const [newSchoolName, setNewSchoolName] = useState("");
@@ -53,6 +59,11 @@ export const AdminSchoolsView: React.FC = () => {
   const { mutateAsync: updateSchool, isPending: isUpdating } = useUpdateSchool();
   const { mutateAsync: deleteSchool, isPending: isDeleting } = useDeleteSchool();
 
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
   const filteredSchools = useMemo(() => {
     return schoolsList.filter((sch: any) => {
       const sName = sch.schoolName || sch.name || "";
@@ -66,6 +77,15 @@ export const AdminSchoolsView: React.FC = () => {
       );
     });
   }, [schoolsList, searchTerm]);
+
+  // Pagination computations
+  const totalPages = Math.max(1, Math.ceil(filteredSchools.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedSchools = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredSchools.slice(start, start + PAGE_SIZE);
+  }, [filteredSchools, safePage, PAGE_SIZE]);
 
   // Xử lý tạo mới
   const handleCreateSchool = async (e: React.FormEvent) => {
@@ -229,7 +249,7 @@ export const AdminSchoolsView: React.FC = () => {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Tìm kiếm Mã trường, Tên trường, Địa chỉ..."
               className="w-full bg-[#161d1f] border border-[#3c494d] pl-9 pr-3.5 py-2 text-white font-mono placeholder:text-[#859398] focus:border-[#ef4444] outline-none"
             />
@@ -259,18 +279,18 @@ export const AdminSchoolsView: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left font-mono text-xs">
+              <table className="w-full text-left font-mono text-xs border-collapse">
                 <thead className="bg-[#161d1f] border-b border-[#3c494d] text-[#859398] uppercase text-[11px]">
                   <tr>
-                    <th className="py-3 px-4 w-12 text-center">#</th>
-                    <th className="py-3 px-4 w-28">MÃ TRƯỜNG</th>
-                    <th className="py-3 px-4">TÊN TRƯỜNG ĐẠI HỌC</th>
-                    <th className="py-3 px-4">ĐỊA CHỈ / TỈNH THÀNH</th>
-                    <th className="py-3 px-4 text-center w-36">THAO TÁC</th>
+                    <th className="py-3 px-3 w-10 text-center">#</th>
+                    <th className="py-3 px-3 w-[15%]">MÃ TRƯỜNG</th>
+                    <th className="py-3 px-3 w-[38%]">TÊN TRƯỜNG ĐẠI HỌC</th>
+                    <th className="py-3 px-3 w-[30%]">ĐỊA CHỈ / TỈNH THÀNH</th>
+                    <th className="py-3 px-3 text-center w-[17%]">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#3c494d]/40">
-                  {filteredSchools.map((sch: any, idx: number) => {
+                  {paginatedSchools.map((sch: any, idx: number) => {
                     const schId = sch.id || sch.Id || sch.schoolId;
                     const code = sch.code || sch.schoolCode || "UNIV";
                     const name = sch.schoolName || sch.name || "Trường Đại Học";
@@ -278,12 +298,14 @@ export const AdminSchoolsView: React.FC = () => {
 
                     return (
                       <tr key={schId || idx} className="hover:bg-[#161d1f]/70 transition-colors">
-                        <td className="py-3 px-4 text-center text-[#859398]">{idx + 1}</td>
-                        <td className="py-3 px-4 font-bold text-[#ef4444]">{code}</td>
-                        <td className="py-3 px-4 font-bold text-white tracking-wider">{name}</td>
-                        <td className="py-3 px-4 text-[#bbc9ce]">{address}</td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="py-3.5 px-3 text-center text-[#859398]">
+                          {(safePage - 1) * PAGE_SIZE + idx + 1}
+                        </td>
+                        <td className="py-3.5 px-3 font-bold text-[#ef4444]">{code}</td>
+                        <td className="py-3.5 px-3 font-bold text-white tracking-wider truncate max-w-xs" title={name}>{name}</td>
+                        <td className="py-3.5 px-3 text-[#bbc9ce] truncate max-w-xs" title={address}>{address}</td>
+                        <td className="py-3.5 px-3 text-center">
+                          <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                             <button
                               onClick={() => handleOpenEdit(sch)}
                               className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 text-[11px] font-bold rounded flex items-center gap-1 transition-colors cursor-pointer"
@@ -308,6 +330,85 @@ export const AdminSchoolsView: React.FC = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination Deck */}
+          {filteredSchools.length > 0 && (
+            <div className="p-4 bg-[#161d1f]/60 border-t border-[#3c494d] flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs">
+              <div className="text-[#859398]">
+                Hiển thị{" "}
+                <span className="text-white font-bold">
+                  {(safePage - 1) * PAGE_SIZE + 1}
+                </span>
+                {" - "}
+                <span className="text-white font-bold">
+                  {Math.min(safePage * PAGE_SIZE, filteredSchools.length)}
+                </span>
+                {" / "}
+                <span className="text-[#ef4444] font-bold">
+                  {filteredSchools.length}
+                </span>{" "}
+                trường đại học (Tối đa {PAGE_SIZE}/trang)
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    className="h-8 px-2.5 text-xs font-mono border border-[#3c494d] text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 cursor-pointer flex items-center gap-1 rounded bg-[#080f11]"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Trước</span>
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    if (
+                      totalPages > 7 &&
+                      p !== 1 &&
+                      p !== totalPages &&
+                      Math.abs(p - safePage) > 1
+                    ) {
+                      if (p === 2 || p === totalPages - 1) {
+                        return (
+                          <span key={p} className="px-1 text-zinc-600 select-none">
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    }
+
+                    const isActive = p === safePage;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setCurrentPage(p)}
+                        className={`h-8 w-8 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
+                          isActive
+                            ? "bg-[#ef4444] text-white shadow-md shadow-red-950/50 border border-[#ef4444]"
+                            : "bg-[#080f11] text-zinc-400 hover:text-white hover:border-zinc-500 border border-[#3c494d]"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    className="h-8 px-2.5 text-xs font-mono border border-[#3c494d] text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/5 cursor-pointer flex items-center gap-1 rounded bg-[#080f11]"
+                  >
+                    <span>Sau</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
