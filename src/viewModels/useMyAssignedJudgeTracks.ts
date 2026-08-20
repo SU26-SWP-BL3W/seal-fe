@@ -40,8 +40,10 @@ export function useMyAssignedJudgeTracks() {
   const userId = user?.id || (user as any)?.userId || "";
   const isAdmin = Boolean(user?.isAdmin || user?.IsAdmin);
 
-  const events = (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data) || [];
-  const eventsList = Array.isArray(events) ? events : [];
+  const eventsList = useMemo(() => {
+    const events = (Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data) || [];
+    return Array.isArray(events) ? events : [];
+  }, [rawEvents]);
 
   // Toàn bộ EventRole thật của user này — nguồn để suy ra eventRoleId ĐÚNG theo từng track.
   const { data: myEventRoles = [], isLoading: loadingRoles } = useGetMyEventRoles(userId || undefined);

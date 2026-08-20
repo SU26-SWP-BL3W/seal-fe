@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Button, Card } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { EventFormState } from "@/viewModels/useCreateEventWizardViewModel";
-import { Calendar, Shield, ArrowRight, Users, Clock, Lock, Info } from "lucide-react";
+import { Calendar, Shield, ArrowRight, Users, Clock } from "lucide-react";
 
 interface Step1EventBasicInfoProps {
   eventData: EventFormState;

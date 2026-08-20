@@ -1,20 +1,17 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Card, Badge } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { roundsRepository } from "@/repositories/roundsRepository";
 import { tracksRepository } from "@/repositories/tracksRepository";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle2,
   AlertTriangle,
-  Calendar,
   Layers,
   Target,
   Sliders,
   Users,
-  Eye,
   EyeOff,
   ArrowLeft,
   Sparkles,
@@ -94,7 +91,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
               scoringStartDate: rnd.scoringStartDate,
               scoringEndDate: rnd.scoringEndDate,
             });
-          } catch (e) {
+          } catch {
             // Ignore API network error
           }
         }
@@ -119,7 +116,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
                 description: trk.description,
               });
             }
-          } catch (e) {
+          } catch {
             // Ignore API network error
           }
         }
@@ -130,7 +127,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
       setTimeout(() => {
         router.push("/coordinator/dashboard");
       }, 1500);
-    } catch (err: any) {
+    } catch {
       setIsPublishing(false);
       setPublishSuccess(true);
       setTimeout(() => {

@@ -6,7 +6,7 @@ import { User, EventRole } from "@/models/entities";
 import apiClient from "@/models/apiClient";
 
 // Trang đích sau khi đăng nhập cho từng vai trò
-const REDIRECT_BY_ROLE: Record<string, string> = {
+const _REDIRECT_BY_ROLE: Record<string, string> = {
   EventCoordinator: "/coordinator/dashboard",
   Coordinator: "/coordinator/dashboard",
   Judge: "/judge/events",

@@ -44,7 +44,10 @@ export function useMentorWorkspaceViewModel() {
   const { data: tracksData, isLoading: isLoadingTracks, refetch: refetchTracks } = useGetTracksByEvent(
     resolvedEventId || undefined
   );
-  const allTracks: TrackWithStaffModel[] = Array.isArray(tracksData) ? tracksData : [];
+  const allTracks: TrackWithStaffModel[] = useMemo(
+    () => (Array.isArray(tracksData) ? tracksData : []),
+    [tracksData]
+  );
 
   // Filter tracks assigned to current mentor (cả qua EventRoles DB và qua Staff mapping)
   const myTracks = useMemo(() => {
