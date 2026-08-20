@@ -3,207 +3,16 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
-import { Badge } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
-import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
-import { MessageSquare, ChevronDown, ChevronUp, GitBranch, Globe, Presentation, FileText, CheckCircle2, AlertTriangle, Sparkles, Scale, Trash2, Edit3, ArrowRight, Trophy, Plus, Users } from "lucide-react";
-import type { SubmissionItem, DeliverableItem } from "@/viewModels/teamTypes";
-
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ sub }: { sub: SubmissionItem }) {
-  if (sub.isEliminated)
-    return (
-      <span className="font-mono text-[9px] px-2 py-0.5 border bg-[var(--color-danger)]/10 text-[var(--color-danger)] border-[var(--color-danger)]/30 tracking-widest uppercase">
-        ✗ BỊ LOẠI
-      </span>
-    );
-  if (!sub.isActive)
-    return (
-      <span className="font-mono text-[9px] px-2 py-0.5 border bg-[var(--text-muted)]/10 text-[var(--text-muted)] border-[var(--border-muted)] tracking-widest uppercase">
-        ĐÃ HỦY
-      </span>
-    );
-  return (
-    <span className="font-mono text-[9px] px-2 py-0.5 border bg-[var(--color-success)]/10 text-[var(--color-success)] border-[var(--color-success)]/30 tracking-widest uppercase">
-      ✓ ĐÃ NỘP
-    </span>
-  );
-}
-
-// ─── Edit Modal ───────────────────────────────────────────────────────────────
-function parseExistingSub(sub: SubmissionItem) {
-  let repo = sub.submissionUrl || "";
-  let demo = "";
-  let slide = "";
-  let notes = "";
-
-  try {
-    const parsed = JSON.parse(sub.description);
-    if (parsed?.links && Array.isArray(parsed.links)) {
-      for (const l of parsed.links) {
-        if (l.type === "github" || l.type?.includes("repo")) repo = l.url || repo;
-        if (l.type === "deployed_url" || l.type?.includes("demo")) demo = l.url || demo;
-        if (l.type === "slides" || l.type?.includes("slide")) slide = l.url || slide;
-      }
-    }
-    notes = parsed?.notes || "";
-  } catch {
-    const lines = (sub.description || "").split("\n");
-    for (const line of lines) {
-      if (line.toLowerCase().startsWith("repo:")) repo = line.substring(5).trim();
-      else if (line.toLowerCase().startsWith("demo:")) demo = line.substring(5).trim();
-      else if (line.toLowerCase().startsWith("slide:")) slide = line.substring(6).trim();
-      else notes += (notes ? "\n" : "") + line;
-    }
-  }
-
-  return { repo, demo, slide, notes };
-}
-
-function EditModal({
-  sub,
-  onClose,
-  onSave,
-}: {
-  sub: SubmissionItem;
-  onClose: () => void;
-  onSave: (id: string, payload: { repoUrl: string; demoUrl: string; slideUrl: string; submissionUrl: string; description: string }) => void;
-}) {
-  const initial = parseExistingSub(sub);
-  const [repoUrl, setRepoUrl] = useState(initial.repo);
-  const [demoUrl, setDemoUrl] = useState(initial.demo);
-  const [slideUrl, setSlideUrl] = useState(initial.slide);
-  const [notes, setNotes] = useState(initial.notes);
-
-  const handleSave = () => {
-    const primaryUrl = repoUrl.trim() || demoUrl.trim() || slideUrl.trim();
-    const allLinks = [
-      { type: "github", label: "GitHub / GitLab repo", url: repoUrl.trim(), required: true },
-      { type: "deployed_url", label: "Live demo", url: demoUrl.trim(), required: true },
-      { type: "slides", label: "Slides", url: slideUrl.trim(), required: true },
-    ];
-    const descJson = JSON.stringify({ links: allLinks, notes: notes.trim() });
-    
-    onSave(sub.id, {
-      repoUrl: repoUrl.trim(),
-      demoUrl: demoUrl.trim(),
-      slideUrl: slideUrl.trim(),
-      submissionUrl: primaryUrl,
-      description: descJson,
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-[var(--bg-base)]/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-lg bg-[var(--bg-panel)] border border-[var(--accent-team)]/40 hud-clipped shadow-[0_0_40px_rgba(56,189,248,0.1)]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-muted)]">
-          <div>
-            <div className="font-mono text-[10px] text-[var(--accent-team)] tracking-widest uppercase opacity-70">
-              {"// CHỈNH SỬA BÀI NỘP"}
-            </div>
-            <div className="font-mono text-sm font-bold text-[var(--text-primary)] mt-0.5">
-              {sub.roundName || "Vòng thi"} · {sub.trackName || "Hạng mục"}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="font-mono text-[var(--text-muted)] hover:text-white transition-colors text-lg leading-none focus:outline-none cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
-          <div>
-            <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-              GitHub / GitLab Repository URL <span className="text-[var(--color-danger)]">*</span>
-            </label>
-            <input
-              type="url"
-              value={repoUrl}
-              placeholder="https://github.com/your-org/your-repo"
-              onChange={(e) => setRepoUrl(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)]"
-            />
-          </div>
-
-          <div>
-            <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-              Live Demo / Website URL <span className="text-[var(--color-danger)]">*</span>
-            </label>
-            <input
-              type="url"
-              value={demoUrl}
-              placeholder="https://your-demo.vercel.app"
-              onChange={(e) => setDemoUrl(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)]"
-            />
-          </div>
-
-          <div>
-            <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-              Slides Thuyết Trình URL <span className="text-[var(--color-danger)]">*</span>
-            </label>
-            <input
-              type="url"
-              value={slideUrl}
-              placeholder="https://docs.google.com/presentation/d/..."
-              onChange={(e) => setSlideUrl(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)]"
-            />
-          </div>
-
-          <div>
-            <label className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-              Ghi Chú &amp; Hướng Dẫn Chấm
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              placeholder="Ghi chú thêm thông tin tài khoản demo, hướng dẫn chạy dự án..."
-              className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-sm focus:outline-none transition-all text-[var(--text-primary)] resize-none"
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex gap-3 px-5 py-4 border-t border-[var(--border-muted)]">
-          <button
-            id="save-edit-btn"
-            onClick={handleSave}
-            className="flex-1 hud-clipped px-4 py-2.5 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold text-xs tracking-wider uppercase transition-all hover:bg-white focus:outline-none cursor-pointer"
-          >
-            LƯU THAY ĐỔI
-          </button>
-          <button
-            onClick={onClose}
-            className="hud-clipped px-4 py-2.5 border border-[var(--border-muted)] text-[var(--text-muted)] font-mono text-xs tracking-wider uppercase hover:border-[var(--accent-primary)] hover:text-white transition-colors focus:outline-none cursor-pointer"
-          >
-            HỦY
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+import { useQueryClient } from "@tanstack/react-query";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import {
   useMySubmissions,
-  useUpdateSubmission,
   useDeleteSubmission,
+  useUpdateSubmission,
   useMentorFeedbacks,
   readApiError,
+  parseMentorFeedbackComment,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
 import { usePagination } from "@/hooks/usePagination";
@@ -229,7 +38,6 @@ import {
   X,
 } from "lucide-react";
 
-// ─── Main View ────────────────────────────────────────────────────────────────
 export function MySubmissionsView() {
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -298,180 +106,117 @@ export function MySubmissionsView() {
     }
 
     try {
-      await updateSub.mutateAsync({
-        id,
+      await updateMutation.mutateAsync({
+        id: subId,
         data: {
-          RepoUrl: payload.repoUrl,
-          DemoUrl: payload.demoUrl,
-          SlideUrl: payload.slideUrl,
-          SubmissionUrl: payload.submissionUrl,
-          Description: payload.description,
+          RepoUrl: repoFormatted,
+          DemoUrl: demoFormatted,
+          SlideUrl: slideFormatted,
+          SubmissionUrl: repoFormatted || demoFormatted || slideFormatted,
+          Description: editDesc.trim(),
         },
       });
-      toast.success("🎉 Đã cập nhật nội dung bài nộp thành công!");
-      pushSystemNotification({
-        title: "Cập nhật bài nộp thành công",
-        message: "Đội thi đã cập nhật thông tin bài nộp. Hệ thống đã đồng bộ tới Ban Giám Khảo & Cố vấn!",
-        type: "success",
-      });
       setEditingSub(null);
+      toast.success("Cập nhật bài nộp thành công!");
+      queryClient.invalidateQueries({ queryKey: ["submitResults"] });
+      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
+      refetch();
     } catch (err) {
       const msg = readApiError(err);
-      setActionError(msg);
+      setEditError(msg);
       toast.error(msg);
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setActionError("");
+  const handleDelete = async (sub: SubmitResultListItem) => {
+    const subId = sub.id || sub.Id || "";
+    if (!window.confirm("Bạn có chắc chắn muốn xóa bài nộp này không?")) return;
     try {
-      await deleteSub.mutateAsync(deleteTarget.id);
-      toast.info("Đã xóa bài nộp thành công.");
-      pushSystemNotification({
-        title: "Đã xóa bài nộp",
-        message: "Bài nộp đã được hủy bỏ và gỡ khỏi danh sách chấm điểm.",
-        type: "warning",
-      });
-      setDeleteTarget(null);
+      await deleteMutation.mutateAsync(subId);
+      toast.success("Đã xóa bài nộp thành công.");
+      queryClient.invalidateQueries({ queryKey: ["submitResults"] });
+      queryClient.invalidateQueries({ queryKey: ["my-submissions"] });
+      refetch();
     } catch (err) {
       const msg = readApiError(err);
-      setActionError(msg);
-      toast.error(msg);
+      toast.error("Không thể xóa bài nộp: " + msg);
     }
   };
 
-  return (
-    <div className="hud-lattice min-h-[calc(100vh-4rem)]">
-      {/* Edit Modal */}
-      {editingSub && (
-        <EditModal
-          sub={editingSub}
-          onClose={() => { setEditingSub(null); setActionError(""); }}
-          onSave={handleSave}
-        />
-      )}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Xóa bài nộp?"
-        description="Hành động này gửi lệnh xóa lên máy chủ, không hoàn tác được."
-        confirmLabel="Xóa bài"
-        destructive
-        pending={deleteSub.isPending}
-        error={actionError}
-        onConfirm={handleDelete}
-        onCancel={() => { setDeleteTarget(null); setActionError(""); }}
-      />
-
-      <div className="max-w-[var(--container-max)] mx-auto px-6 py-8">
-
-        {/* ── Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <span className="font-mono text-[10px] text-[var(--accent-team)] tracking-[0.25em] uppercase font-bold">
-              SUBMISSION MANAGEMENT
-            </span>
-            <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)] mt-1">
-              Bài Nộp Của Đội
-            </h1>
-            {team && (
-              <p className="font-mono text-xs text-[var(--text-muted)] mt-1 flex flex-wrap items-center gap-2">
-                <span>Đội: <span className="text-[var(--accent-team)] font-bold">{pick(team, "name", "Name", "teamName", "TeamName") || "Đội thi"}</span></span>
-                <span>·</span>
-                <span>Sự kiện:</span>
-                <Link
-                  href={`/events/${pick(team, "eventId", "EventId")}`}
-                  className="text-[var(--accent-primary)] hover:underline flex items-center gap-1 border border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 px-2 py-0.5 rounded-none font-bold"
-                >
-                  <span>{pick(team, "eventName", "EventName") || "Sự kiện"}</span>
-                  <span className="text-[10px]">↗ XEM CHI TIẾT</span>
-                </Link>
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href={`/events/${pick(team, "eventId", "EventId")}/leaderboard`}>
-              <button className="hud-clipped px-4 py-3 border border-[var(--accent-judge)]/40 bg-[var(--accent-judge)]/10 text-[var(--accent-judge)] font-mono text-xs font-bold tracking-wider uppercase hover:bg-[var(--accent-judge)]/20 transition-all focus:outline-none whitespace-nowrap">
-                🏆 BẢNG XẾP HẠNG
+  if (!user) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#080f11] border border-[#00d9ff] p-8 text-center glow-box space-y-4">
+          <div className="corner-accent-tl" />
+          <div className="corner-accent-tr" />
+          <div className="corner-accent-bl" />
+          <div className="corner-accent-br" />
+          <h2 className="font-display text-xl font-bold uppercase text-[#00d9ff]">DANH SÁCH BÀI NỘP ĐỘI THI</h2>
+          <p className="font-mono text-xs text-[#bbc9ce] leading-relaxed">
+            Vui lòng đăng nhập để xem danh sách bài nộp của đội.
+          </p>
+          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
+            <Link href="/login" className="w-full">
+              <button className="w-full bg-[#00d9ff] text-[#080f11] font-bold py-2.5 uppercase hover:bg-white transition-colors">
+                Đến Trang Đăng Nhập
               </button>
             </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-            {isRegistered ? (
-              <Link href="/submissions/new">
-                <button
-                  id="new-submission-btn"
-                  className="hud-clipped px-6 py-3 bg-[var(--accent-team)] text-[var(--bg-base)] font-mono font-bold tracking-wider uppercase text-sm transition-all duration-200 hover:bg-white hover:shadow-[0_0_20px_rgba(56,189,248,0.5)] focus:outline-none whitespace-nowrap"
-                >
-                  + NỘP BÀI MỚI
-                </button>
-              </Link>
-            ) : (
-              <div
-                className="hud-clipped px-6 py-3 bg-[var(--bg-panel)] border border-[var(--border-muted)] font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase cursor-not-allowed"
-                title={!team ? "Bạn chưa có đội thi" : "Đội cần được BTC xác nhận trước khi nộp bài"}
-              >
-                {!team ? "CHƯA CÓ ĐỘI" : `TRẠNG THÁI: ${teamStatus.toUpperCase()}`}
+  return (
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-[#00d9ff] selection:text-[#003641]">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Header Panel (Stitch T5) */}
+            <div className="bg-[#1a2123] relative p-6 border-t-2 border-[#00d9ff] shadow-[inset_0_0_20px_rgba(0,217,255,0.05)] border border-white/5 glow-box">
+              <div className="corner-accent-tl" />
+              <div className="corner-accent-br" />
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="font-mono text-[11px] text-[#859398] mb-1 uppercase tracking-wider">
+                    QUẢN LÝ BÀI DỰ THI
+                  </div>
+                  <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase flex items-center gap-3">
+                    <FolderOpen className="w-8 h-8 text-[#00d9ff]" />
+                    Danh Sách Bài Nộp Theo Vòng Thi
+                  </h1>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => refetch()}
+                    className="font-mono text-xs text-[#bbc9ce] hover:text-[#00d9ff] border border-[#3c494d] bg-[#080f11] px-3 py-2 flex items-center gap-1.5 transition-colors uppercase"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" /> Làm mới
+                  </button>
+
+                  <Link href="/submissions/new">
+                    <button className="bg-[#00d9ff] text-[#080f11] font-display text-sm font-bold px-5 py-2 rounded-[12px] rounded-br-none hover:bg-white transition-all flex items-center gap-1.5 uppercase shadow-[0_0_15px_rgba(0,217,255,0.3)]">
+                      <Plus className="w-4 h-4" /> Nộp bài mới
+                    </button>
+                  </Link>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* ── Stats Summary Grid ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] block">TỔNG SỐ BÀI NỘP</span>
-            <span className="font-display text-2xl font-bold text-[var(--text-primary)]">{visibleSubs.length}</span>
-          </div>
-          <div className="p-4 bg-[var(--bg-panel)] border border-[var(--color-success)]/30 hud-clipped">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-success)] block">ĐÃ NỘP HỢP LỆ</span>
-            <span className="font-display text-2xl font-bold text-[var(--color-success)]">
-              {visibleSubs.filter(s => s.isActive && !s.isEliminated).length}
-            </span>
-          </div>
-          <div className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-mentor)]/30 hud-clipped">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--accent-mentor)] block">CỐ VẤN / FEEDBACK</span>
-            <span className="font-display text-2xl font-bold text-[var(--accent-mentor)]">Sẵn sàng</span>
-          </div>
-          <div className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-team)]/30 hud-clipped">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--accent-team)] block">TRẠNG THÁI ĐỘI</span>
-            <span className="font-display text-lg font-bold text-[var(--accent-team)] truncate">
-              {teamStatus ? teamStatus.toUpperCase() : "CHƯA CÓ ĐỘI"}
-            </span>
-          </div>
-        </div>
-
-        {/* ── Warning banners ── */}
-        {team && !isRegistered && (
-          <div className="mb-6 p-4 bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 hud-clipped">
-            <p className="font-mono text-xs text-[var(--color-warning)]">
-              ⚠ Chỉ có thể nộp bài sau khi đội được BTC <strong>phê duyệt đăng ký</strong>.
-              Trạng thái hiện tại: <span className="font-bold uppercase">{teamStatus || "Pending"}</span>
-            </p>
-          </div>
-        )}
-        {!team && (
-          <div className="mb-6 p-4 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 hud-clipped">
-            <p className="font-mono text-xs text-[var(--color-danger)]">
-              ✗ Bạn chưa có đội thi.{" "}
-              <Link href="/my-team" className="underline hover:text-white">Tạo hoặc tham gia đội</Link>.
-            </p>
-          </div>
-        )}
-
-        {actionError && (
-          <p role="alert" className="mb-4 font-mono text-xs text-[color:var(--color-danger)]">
-            {actionError}
-          </p>
-        )}
-
-        {/* ── Table ── */}
-        {isLoading ? (
-          <p className="font-mono text-xs text-[color:var(--text-muted)] py-10 text-center">Đang tải bài nộp...</p>
-        ) : visibleSubs.length === 0 ? (
-          <div className="p-8 bg-[var(--bg-panel)] border border-dashed border-zinc-700 text-center space-y-4 hud-clipped">
-            <div className="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
-              <FileText className="w-6 h-6" />
+              {/* Team & Track Badges */}
+              <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-[#3c494d]/40 font-mono text-xs">
+                <div className="bg-[#0e1417] border border-[#3c494d] px-3.5 py-1.5 flex items-center gap-2">
+                  <span className="text-[#859398]">ĐỘI:</span>
+                  <span className="text-[#38bdf8] font-bold">{team?.name || team?.Name || "Chưa có đội"}</span>
+                </div>
+                <div className="bg-[#0e1417] border border-[#3c494d] px-3.5 py-1.5 flex items-center gap-2">
+                  <span className="text-[#859398]">VAI TRÒ:</span>
+                  <span className="text-[#ffdea9] font-bold">{isLeader ? "Trưởng Nhóm (Leader)" : "Thành Viên (Member)"}</span>
+                </div>
+                <div className="bg-[#0e1417] border border-[#3c494d] px-3.5 py-1.5 flex items-center gap-2">
+                  <span className="text-[#859398]">TRẠNG THÁI:</span>
+                  <span className="text-[#34d399] font-bold">{team?.status || "Active"}</span>
+                </div>
+              </div>
             </div>
 
             {/* Command Grid Table Panel (Stitch T5) */}
@@ -635,229 +380,160 @@ export function MySubmissionsView() {
                 </div>
               )}
             </div>
-            {isRegistered && (
-              <div className="pt-2">
-                <Link href="/submissions/new">
-                  <button className="px-6 py-2.5 bg-[var(--accent-team)] text-black font-mono font-bold text-xs uppercase tracking-wider hover:bg-white transition-all">
-                    + NỘP BÀI THI CHO HẠNG MỤC NGAY
-                  </button>
-                </Link>
+
+            {/* Mentor Feedbacks Section for Team */}
+            {submissions.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="font-display text-lg font-bold text-[#34d399] uppercase tracking-wider flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  GÓP Ý &amp; ĐÁNH GIÁ CHUYÊN MÔN TỪ CỐ VẤN (MENTOR FEEDBACK)
+                </h2>
+                <div className="grid grid-cols-1 gap-4">
+                  {submissions.map((sub, idx) => (
+                    <TeamSubmissionFeedbackDrawer key={sub.id || sub.Id || idx} submitResultId={sub.id || sub.Id || ""} />
+                  ))}
+                </div>
               </div>
             )}
           </div>
-        ) : (
-          <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped overflow-hidden">
-            {/* Header row */}
-            <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
-              {[
-                { label: "VÒNG THI",   col: "col-span-2" },
-                { label: "HẠNG MỤC",  col: "col-span-2" },
-                { label: "SẢN PHẨM / LINK NỘP", col: "col-span-4" },
-                { label: "TRẠNG THÁI",col: "col-span-2" },
-                { label: "THAO TÁC",  col: "col-span-2" },
-              ].map(h => (
-                <div key={h.label} className={`font-mono text-[10px] text-[var(--text-muted)] tracking-widest uppercase ${h.col}`}>
-                  {h.label}
+
+          {/* Edit Submission Modal */}
+          {editingSub && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-[#080f11] border border-[#00d9ff] p-6 max-w-xl w-full glow-box relative space-y-4">
+                <div className="corner-accent-tl" />
+                <div className="corner-accent-tr" />
+                <div className="corner-accent-bl" />
+                <div className="corner-accent-br" />
+
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <h3 className="font-display text-lg font-bold text-[#00d9ff] uppercase">
+                    CHỈNH SỬA BÀI NỘP
+                  </h3>
+                  <button onClick={() => setEditingSub(null)} className="text-[#859398] hover:text-white font-mono cursor-pointer">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-              ))}
+
+                <form onSubmit={handleSaveEdit} className="space-y-4 font-mono text-xs">
+                  <div>
+                    <label className="block text-white mb-1">Repo URL *</label>
+                    <input
+                      type="url"
+                      required
+                      value={editRepo}
+                      onChange={(e) => setEditRepo(e.target.value)}
+                      className="w-full input-cyber p-2.5 bg-[#152238] text-white border-b border-[#3c494d] focus:border-[#00d9ff]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-white mb-1">Demo Video / Live App URL *</label>
+                    <input
+                      type="url"
+                      required
+                      value={editDemo}
+                      onChange={(e) => setEditDemo(e.target.value)}
+                      className="w-full input-cyber p-2.5 bg-[#152238] text-white border-b border-[#3c494d] focus:border-[#00d9ff]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-white mb-1">Slide Thuyết Trình URL *</label>
+                    <input
+                      type="url"
+                      required
+                      value={editSlide}
+                      onChange={(e) => setEditSlide(e.target.value)}
+                      className="w-full input-cyber p-2.5 bg-[#152238] text-white border-b border-[#3c494d] focus:border-[#00d9ff]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[#859398] mb-1">Ghi chú cập nhật</label>
+                    <textarea
+                      rows={2}
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      className="w-full input-cyber p-2.5 bg-[#152238] text-white border-b border-[#3c494d] focus:border-[#00d9ff]"
+                    />
+                  </div>
+
+                  {editError && (
+                    <p className="text-[#ffb4ab] text-[11px]">{editError}</p>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setEditingSub(null)}
+                      className="px-4 py-2 border border-[#3c494d] text-[#bbc9ce] hover:text-white"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={updateMutation.isPending}
+                      className="px-5 py-2 bg-[#00d9ff] text-[#080f11] font-bold uppercase hover:bg-white"
+                    >
+                      {updateMutation.isPending ? "Đang lưu..." : "Cập Nhật"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
+          )}
+        </div>
+      );
+    }
 
-            {visibleSubs.map(sub => {
-              const parsed = parseExistingSub(sub);
-              return (
-                <div key={sub.id} className="border-b border-[var(--border-muted)] last:border-0">
-                  <div className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-[rgba(56,189,248,0.02)] transition-colors items-center">
-                    {/* Vòng */}
-                    <div className="col-span-2 font-mono text-xs text-[var(--text-primary)] font-semibold">
-                      {sub.roundName}
-                    </div>
+    function TeamSubmissionFeedbackDrawer({ submitResultId }: { submitResultId: string }) {
+      const { data: feedbacks = [] } = useMentorFeedbacks(submitResultId);
+      const [isOpen, setIsOpen] = useState(false);
 
-                    {/* Track */}
-                    <div className="col-span-2 font-mono text-xs text-[var(--text-muted)]">
-                      {sub.trackName}
-                    </div>
+      if (feedbacks.length === 0) return null;
 
-                    {/* URL Deliverables */}
-                    <div className="col-span-4 min-w-0 space-y-1.5">
-                      <div className="flex flex-wrap gap-1.5 items-center">
-                        {parsed.repo && (
-                          <a
-                            href={parsed.repo}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2 py-0.5 bg-black/60 border border-zinc-700 hover:border-cyan-400 text-cyan-300 font-mono text-[10px] flex items-center gap-1 transition-colors"
-                          >
-                            <GitBranch className="w-3 h-3" />
-                            <span>Repo ↗</span>
-                          </a>
-                        )}
-                        {parsed.demo && (
-                          <a
-                            href={parsed.demo}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2 py-0.5 bg-black/60 border border-zinc-700 hover:border-emerald-400 text-emerald-300 font-mono text-[10px] flex items-center gap-1 transition-colors"
-                          >
-                            <Globe className="w-3 h-3" />
-                            <span>Demo ↗</span>
-                          </a>
-                        )}
-                        {parsed.slide && (
-                          <a
-                            href={parsed.slide}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2 py-0.5 bg-black/60 border border-zinc-700 hover:border-amber-400 text-amber-300 font-mono text-[10px] flex items-center gap-1 transition-colors"
-                          >
-                            <Presentation className="w-3 h-3" />
-                            <span>Slides ↗</span>
-                          </a>
-                        )}
-                      </div>
-                      {parsed.notes && (
-                        <p className="font-mono text-[10px] text-zinc-400 line-clamp-1 italic">
-                          📝 {parsed.notes}
-                        </p>
+      return (
+        <div className="bg-[#1a2123] border border-[#34d399]/30 p-4 glow-box font-mono text-xs">
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex items-center justify-between w-full text-[#34d399] hover:text-white transition-colors"
+          >
+            <span className="flex items-center gap-2 font-bold uppercase">
+              <MessageSquare className="w-4 h-4" />
+              Nhận Xét Chuyên Môn Cố Vấn ({feedbacks.length} Lời Khuyên)
+            </span>
+            <span className="flex items-center gap-1 text-[11px] text-[#859398]">
+              {isOpen ? "Thu gọn ▲" : "Xem chi tiết ▼"}
+            </span>
+          </button>
+
+          {isOpen && (
+            <div className="mt-3 pt-3 border-t border-[#3c494d]/50 space-y-3">
+              {feedbacks.map((fb) => {
+                const parsed = parseMentorFeedbackComment(fb.comment);
+                return (
+                  <div key={fb.id} className="p-3 bg-[#0e1417] border border-[#34d399]/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#34d399] font-bold">Mentor: {fb.mentorName || "Cố vấn"}</span>
+                      {parsed.suggestedScore !== undefined && (
+                        <span className="text-[#fbbf24] font-bold">Điểm gợi ý: {parsed.suggestedScore}/100</span>
                       )}
                     </div>
-
-                  {/* Status */}
-                  <div className="col-span-2">
-                    <StatusBadge sub={sub} />
-                    {sub.isEliminated && sub.eliminatedReason && (
-                      <p className="font-mono text-[9px] text-[var(--color-danger)]/70 mt-1">{sub.eliminatedReason}</p>
+                    <p className="font-sans text-white text-xs leading-relaxed">"{parsed.text}"</p>
+                    {parsed.technicalAdvice && (
+                      <div className="p-2 bg-[#152238] border border-[#34d399]/20 text-[#34d399] text-[11px]">
+                        Lời khuyên kỹ thuật: {parsed.technicalAdvice}
+                      </div>
                     )}
                   </div>
-
-                  {/* Actions */}
-                  <div className="col-span-2 flex flex-wrap gap-1.5 items-center">
-                    {sub.isActive && !sub.isEliminated && (
-                      <button
-                        id={`edit-sub-${sub.id}`}
-                        onClick={() => setEditingSub(sub)}
-                        disabled={!isRegistered || !isLeader}
-                        title={
-                          !isRegistered
-                            ? "Đội thi cần được BTC duyệt đăng ký mới được phép sửa bài"
-                            : !isLeader
-                            ? "Chỉ Trưởng đội thi mới có quyền chỉnh sửa bài nộp"
-                            : "Chỉnh sửa nội dung bài nộp"
-                        }
-                        className={`font-mono text-[10px] px-2 py-1 border transition-colors uppercase flex items-center gap-1 ${
-                          isRegistered && isLeader
-                            ? "border-[var(--accent-team)]/40 text-[var(--accent-team)] hover:bg-[var(--accent-team)]/10 cursor-pointer"
-                            : "border-[var(--border-muted)] text-[var(--text-muted)] opacity-40 cursor-not-allowed"
-                        }`}
-                      >
-                        ✏ SỬA BÀI
-                      </button>
-                    )}
-                      <button
-                        type="button"
-                        onClick={() => { setActionError(""); setDeleteTarget(sub); }}
-                        disabled={!isRegistered || !isLeader}
-                        className={`font-mono text-[10px] px-2 py-1 border uppercase ${
-                          isRegistered && isLeader
-                            ? "border-[var(--color-danger)]/40 text-[color:var(--color-danger)]"
-                            : "border-[var(--border-muted)] text-[var(--text-muted)] opacity-40 cursor-not-allowed"
-                        }`}
-                      >
-                        Xóa
-                      </button>
-                      <Link href={`/appeals?subId=${sub.id}`}>
-                        <button
-                          className="font-mono text-[10px] px-2 py-1 border border-[var(--accent-coordinator)]/40 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/10 transition-colors uppercase"
-                          title="Nộp đơn phúc khảo cho bài nộp này"
-                        >
-                          Phúc khảo
-                        </button>
-                      </Link>
-                  </div>
-                </div>
-
-                {/* Mentor Feedback Sub-Section */}
-                <SubmissionMentorFeedbackSection submitResultId={sub.id} />
-              </div>
-            );
-          })}
-          </div>
-        )}
-
-        {/* Footer */}
-        {visibleSubs.length > 0 && (
-          <div className="mt-4 flex items-center justify-between font-mono text-xs text-[var(--text-muted)]">
-            <span>
-              Tổng: <span className="text-[var(--text-primary)] font-bold">{visibleSubs.length}</span> bài nộp
-            </span>
-            <Link href="/my-team" className="hover:text-[var(--accent-team)] transition-colors">
-              ← Về trang đội thi
-            </Link>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Mentor Feedback Section For Teams ──────────────────────────────────────
-function SubmissionMentorFeedbackSection({ submitResultId }: { submitResultId: string }) {
-  const { data: feedbacks = [] } = useMentorFeedbacks(submitResultId);
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (feedbacks.length === 0) return null;
-
-  return (
-    <div className="border-t border-[var(--border-muted)]/50 bg-[var(--bg-base)]/50 px-5 py-2.5">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full font-mono text-xs text-[var(--accent-mentor)] hover:text-white transition-colors"
-      >
-        <span className="flex items-center gap-2 font-bold">
-          <MessageSquare className="w-3.5 h-3.5" />
-          Nhận xét của Cố vấn ({feedbacks.length})
-        </span>
-        <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-          {isOpen ? "Thu gọn" : "Xem chi tiết"}
-          {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-        </span>
-      </button>
-
-      {isOpen && (
-        <div className="space-y-3 pt-3 mt-2 border-t border-[var(--border-muted)]/40">
-          {feedbacks.map((fb: any) => (
-            <div
-              key={fb.id}
-              className="p-3 bg-[var(--bg-input)] border border-[var(--accent-mentor)]/30 hud-clipped space-y-1.5"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge tone="mentor">Mentor: {fb.mentorName || "Cố vấn"}</Badge>
-                  {fb.suggestedScore !== undefined && fb.suggestedScore !== null && (
-                    <span className="font-mono text-xs text-[var(--accent-judge)] font-bold">
-                      Điểm gợi ý: {fb.suggestedScore}/100
-                    </span>
-                  )}
-                </div>
-                <span className="font-mono text-[10px] text-[var(--text-muted)]">
-                  {new Date(fb.createdTime).toLocaleString("vi-VN")}
-                </span>
-              </div>
-
-              <p className="font-sans text-xs text-[var(--text-primary)] leading-relaxed">
-                "{fb.feedbackContent}"
-              </p>
-
-              {fb.technicalAdvice && (
-                <div className="p-2 bg-[var(--bg-base)] border border-[var(--accent-mentor)]/20 font-mono text-[11px] text-[var(--accent-mentor)]">
-                  💡 Lời khuyên kỹ thuật: {fb.technicalAdvice}
-                </div>
-              )}
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
-      )}
-    </div>
-  );
-}
+      );
+    }
+
 

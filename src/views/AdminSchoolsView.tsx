@@ -2,9 +2,8 @@
 
 import React, { useState } from "react";
 import { useGetSchoolsWithUserCount, useCreateSchool } from "@/repositories/schoolsRepository";
-import { Button, Card, Badge, Table, Input } from "@/components/ui";
+import { Button, Card, Badge, Table, Input, Pagination } from "@/components/ui";
 import {
-  School as SchoolIcon,
   Plus,
   Search,
   Building2,
@@ -12,15 +11,14 @@ import {
   RefreshCw,
   CheckCircle2,
   X,
-  ShieldAlert,
+  Shield,
 } from "lucide-react";
-import { Link } from "@/i18n/routing";
-import { PageShell } from "@/components/layout/PageShell";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { Button, Badge, Card, Input, EmptyState, Pagination } from "@/components/ui";
+
+const PAGE_SIZE = 8;
 
 export const AdminSchoolsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newSchoolName, setNewSchoolName] = useState("");
   const [newSchoolCode, setNewSchoolCode] = useState("");
@@ -36,6 +34,11 @@ export const AdminSchoolsView: React.FC = () => {
     const searchLower = searchTerm.toLowerCase().trim();
     return sName.toLowerCase().includes(searchLower) || sCode.toLowerCase().includes(searchLower);
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredSchools.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const paginatedSchools = filteredSchools.slice(startIndex, startIndex + PAGE_SIZE);
 
   const handleCreateSchool = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +70,10 @@ export const AdminSchoolsView: React.FC = () => {
         {/* Admin Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-muted)] pb-6">
           <div>
-            <HudLabel>DANH MỤC TRƯỜNG HỌC DỰ ÁN</HudLabel>
+            <div className="font-mono text-[10px] text-[var(--color-danger)] uppercase font-bold tracking-widest flex items-center gap-1.5 mb-1">
+              <Shield className="w-3.5 h-3.5" />
+              <span>DANH MỤC TRƯỜNG HỌC DỰ ÁN</span>
+            </div>
             <h1 className="font-display font-bold text-3xl text-[var(--color-danger)] uppercase tracking-wider mt-1">
               Danh Mục Trường Đại Học Đối Tác
             </h1>
@@ -102,22 +108,10 @@ export const AdminSchoolsView: React.FC = () => {
               className="pl-9 w-full text-xs font-mono"
             />
           </div>
-        )}
+        </Card>
 
-        {filteredSchools.length > 0 && (
-          <div className="p-4 border-t border-[var(--border-muted)]">
-            <Pagination
-              currentPage={safePage}
-              totalPages={totalPages}
-              totalItems={filteredSchools.length}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
-              itemLabel="trường học"
-            />
-          </div>
-        )}
-      </Card>
-
+        {/* School List Table Card */}
+        <Card className="p-4 bg-[var(--bg-panel)] border-[var(--border-muted)] hud-clipped space-y-4">
           {isLoading ? (
             <div className="flex justify-center py-20">
               <RefreshCw className="w-8 h-8 animate-spin text-[var(--color-danger)]" />
@@ -139,7 +133,7 @@ export const AdminSchoolsView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSchools.map((sch, idx) => {
+                  {paginatedSchools.map((sch, idx) => {
                     const name = sch.schoolName || (sch as any).name || "Trường Đại Học";
                     const code = sch.schoolCode || (sch as any).code || `SCH-${idx + 1}`;
                     const isFpt = code.includes("FPT") || name.includes("FPT");
@@ -177,6 +171,19 @@ export const AdminSchoolsView: React.FC = () => {
                   })}
                 </tbody>
               </Table>
+            </div>
+          )}
+
+          {filteredSchools.length > 0 && (
+            <div className="p-4 border-t border-[var(--border-muted)]">
+              <Pagination
+                currentPage={safePage}
+                totalPages={totalPages}
+                totalItems={filteredSchools.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setCurrentPage}
+                itemLabel="trường học"
+              />
             </div>
           )}
         </Card>

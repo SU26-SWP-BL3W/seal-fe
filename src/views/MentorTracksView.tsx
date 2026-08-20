@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useMentorWorkspaceViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -9,7 +9,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { FolderOpen, RefreshCw, Users } from "lucide-react";
 
 export function MentorTracksView() {
-  const { myTracks, totalTeamsCount, totalSubmissionsCount, trackStatsMap, isLoading, refetchAll } =
+  const { myTracks, totalTeamsCount, totalSubmissionsCount, trackStatsMap, isLoading, refetchAll, eventId } =
     useMentorWorkspaceViewModel();
 
   const {
@@ -41,9 +41,31 @@ export function MentorTracksView() {
   );
 
   return (
-    <div className="bg-[#0d1b1f] text-on-surface font-sans min-h-screen p-6 relative overflow-hidden scan-lines">
-      {/* Background Ambient Glow */}
-      <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-[#2dd4bf]/5 blur-[120px] rounded-full pointer-events-none" />
+    <PageShell className="min-h-[calc(100vh-4rem)] flex flex-1 flex-col">
+      <PageHeader
+        breadcrumb={breadcrumb}
+        title={`Hạng mục đang hỗ trợ (${myTracks.length})`}
+        description="Theo dõi các hạng mục bạn được phân công cố vấn và truy cập không gian hỗ trợ đội thi."
+        actions={
+          <Button variant="ghost" accent="mentor" onClick={() => refetchAll()} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Làm mới
+          </Button>
+        }
+      />
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatCard
+          label="Tổng đội phụ trách"
+          value={totalTeamsCount}
+          accent="var(--accent-mentor)"
+        />
+        <StatCard
+          label="Bài nộp gần đây"
+          value={totalSubmissionsCount}
+          accent="var(--accent-primary)"
+        />
+      </div>
 
       {isLoading ? (
         <EmptyState

@@ -7,7 +7,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge, Button, Card, EmptyState, Pagination } from "@/components/ui";
 import { usePagination } from "@/hooks/usePagination";
-import { ChevronRight, RefreshCw, Users } from "lucide-react";
+import { ChevronRight, RefreshCw, Users, Info, Eye } from "lucide-react";
 
 export function MentorTeamsView() {
   const searchParams = useSearchParams();
