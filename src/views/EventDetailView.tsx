@@ -453,7 +453,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                       <span className="text-xs text-[var(--text-muted)]">
                         {isEventEnded ? "Trạng thái: Đã khép lại" : "Nhiệm vụ: Hỗ trợ & cố vấn"}
                       </span>
-                      <Link href={`/mentor/teams?trackId=${trackId}`}>
+                      <Link href={`/mentor/teams?eventId=${targetEventId}&trackId=${trackId}`}>
                         <Button
                           accent="mentor"
                           variant={isEventEnded ? "secondary" : "primary"}
@@ -701,7 +701,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                         {isMentorThisTrack && (
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge tone="mentor">Bạn là cố vấn chuyên môn</Badge>
-                            <Link href={`/mentor/teams?trackId=${track.id}`}>
+                            <Link href={`/mentor/teams?eventId=${targetEventId}&trackId=${track.id}`}>
                               <Button accent="mentor" className="text-xs">
                                 Vào không gian hỗ trợ
                               </Button>

@@ -48,7 +48,7 @@ export function useMyAssignedJudgeTracks() {
   const eventRoleIdByTrack = useMemo(() => {
     const map = new Map<string, string>();
     myEventRoles.forEach((r) => {
-      if (r.trackId) map.set(r.trackId, r.id);
+      if (r.roleName === "Judge" && r.trackId) map.set(r.trackId, r.id);
     });
     return map;
   }, [myEventRoles]);
@@ -69,7 +69,10 @@ export function useMyAssignedJudgeTracks() {
   const candidateEventIds = useMemo(() => {
     if (!user) return [];
     if (isAdmin) return eventsList.map((e: any) => e.id || e.Id).filter(Boolean);
-    const ids = myEventRoles.map((r) => r.eventId).filter(Boolean);
+    const ids = myEventRoles
+      .filter((r) => r.roleName === "Judge")
+      .map((r) => r.eventId)
+      .filter(Boolean);
     const single = activeRole?.eventId || (activeRole as any)?.EventId;
     if (single) ids.push(single);
     return [...new Set(ids)];
@@ -111,7 +114,7 @@ export function useMyAssignedJudgeTracks() {
             return rn === "Judge" && rTId === normTrackId;
           });
 
-          if (!isRealAssigned && !isFallbackAssigned && !isDirectRoleAssigned) return;
+          if (!isDirectRoleAssigned && !isRealAssigned) return;
         }
 
         list.push({

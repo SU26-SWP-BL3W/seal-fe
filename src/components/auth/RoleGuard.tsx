@@ -4,6 +4,7 @@ import React, { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { getRoleName } from "@/lib/permissions";
+import { getStaffRoleDisplayLabel, resolveStaffLandingPath, type NormalizedEventRole } from "@/lib/eventRoles";
 import { HexagonLoader, Button, Card } from "@/components/ui";
 import { ShieldAlert, Lock } from "lucide-react";
 import { Link } from "@/i18n/routing";
@@ -27,11 +28,16 @@ interface RoleGuardProps {
 function getRoleDashboardUrl(
   user: { isAdmin?: boolean; IsAdmin?: boolean; isStudent?: boolean; IsStudent?: boolean } | null,
   activeRole: { roleName?: string; RoleName?: string; eventId?: string; EventId?: string } | null,
+  allEventRoles: NormalizedEventRole[] = [],
 ): string {
+  if (user?.isAdmin || user?.IsAdmin) return "/admin/dashboard";
+
+  const staffPath = resolveStaffLandingPath(allEventRoles);
+  if (staffPath) return staffPath;
+
   const roleName = getRoleName(activeRole);
   const eventId = activeRole?.eventId || activeRole?.EventId;
 
-  if (user?.isAdmin || user?.IsAdmin) return "/admin/dashboard";
   if (roleName === "EventCoordinator" || roleName === "Coordinator") {
     return eventId ? `/coordinator/dashboard?eventId=${eventId}` : "/coordinator/dashboard";
   }
@@ -93,7 +99,7 @@ function AccessDeniedScreen({ redirectUrl, isUserAdmin, userRoleDisplay }: Acces
 }
 
 export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) => {
-  const { user, activeRole, isInitialized } = useAuth();
+  const { user, activeRole, allEventRoles, isInitialized } = useAuth();
 
   if (!isInitialized) {
     return (
@@ -138,23 +144,22 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
 
   const isUserAdmin = user.isAdmin;
   const userRoleName = getRoleName(activeRole);
-
-  // Map API roleName to display role
   const userRoleDisplay = userRoleName === "EventCoordinator" ? "Coordinator" : userRoleName;
+  const staffRoleLabel = getStaffRoleDisplayLabel(allEventRoles);
 
   const hasAccess =
     (allowedRoles.includes("Admin") && isUserAdmin) ||
     (userRoleDisplay && allowedRoles.includes(userRoleDisplay as AllowedRole)) ||
-    (allowedRoles.includes("Student") && user.isStudent);
+    (allowedRoles.includes("Student") && user.isStudent) ||
+    allEventRoles.some((role) => allowedRoles.includes(role.roleName as AllowedRole));
 
-  // Không có quyền -> render AccessDeniedScreen có useEffect riêng
   if (!hasAccess) {
-    const redirectUrl = getRoleDashboardUrl(user, activeRole);
+    const redirectUrl = getRoleDashboardUrl(user, activeRole, allEventRoles);
     return (
       <AccessDeniedScreen
         redirectUrl={redirectUrl}
         isUserAdmin={isUserAdmin}
-        userRoleDisplay={userRoleDisplay}
+        userRoleDisplay={staffRoleLabel || userRoleDisplay}
       />
     );
   }

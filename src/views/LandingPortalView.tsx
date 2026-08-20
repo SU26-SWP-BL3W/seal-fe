@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { Badge, Button } from "@/components/ui";
 import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
+import { resolveStaffLandingPath } from "@/lib/eventRoles";
 import { SealShield } from "@/components/domain/SealShield";
 import { useCountdown } from "@/lib/useCountdown";
 import {
@@ -27,28 +28,42 @@ import { formatShortId } from "@/lib/formatId";
 
 export function LandingPortalView() {
   const { latestEvent, featuredEvents } = useLandingPreviewViewModel();
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, allEventRoles } = useAuth();
   const router = useRouter();
 
+  // Tự động chuyển hướng Cán bộ / BTC / Giám khảo / Cố vấn về đúng workspace khi đã đăng nhập
   useEffect(() => {
-    if (user) {
-      const rawRole = activeRole?.roleName || activeRole?.RoleName;
-      const userEmail = (user.email || user.Email || "").toLowerCase();
-      const isAdm = !!user.isAdmin || !!user.IsAdmin || userEmail.includes("admin");
-      const isCoord =
-        rawRole === "Coordinator" ||
-        rawRole === "EventCoordinator" ||
-        userEmail.includes("ec.") ||
-        userEmail.includes("coordinator");
-      const isJudge = rawRole === "Judge" || userEmail.includes("judge");
-      const isMentor = rawRole === "Mentor" || userEmail.includes("mentor");
+    if (!user) return;
 
-      if (isAdm) router.replace("/admin/dashboard");
-      else if (isCoord) router.replace("/coordinator/dashboard");
-      else if (isJudge) router.replace("/judge/events");
-      else if (isMentor) router.replace("/events");
+    const rawRole = activeRole?.roleName || activeRole?.RoleName;
+    const userEmail = (user.email || user.Email || "").toLowerCase();
+    const isAdm = !!user.isAdmin || !!user.IsAdmin || userEmail.includes("admin");
+    const isCoord =
+      rawRole === "Coordinator" ||
+      rawRole === "EventCoordinator" ||
+      userEmail.includes("ec.") ||
+      userEmail.includes("coordinator");
+
+    if (isAdm) {
+      router.replace("/admin/dashboard");
+      return;
     }
-  }, [user, activeRole, router]);
+    if (isCoord) {
+      router.replace("/coordinator/dashboard");
+      return;
+    }
+
+    const staffPath = resolveStaffLandingPath(allEventRoles);
+    if (staffPath) {
+      router.replace(staffPath);
+      return;
+    }
+
+    const isJudge = rawRole === "Judge" || userEmail.includes("judge");
+    const isMentor = rawRole === "Mentor" || userEmail.includes("mentor");
+    if (isJudge) router.replace("/judge/events");
+    else if (isMentor) router.replace("/events");
+  }, [user, activeRole, allEventRoles, router]);
 
   return (
     <main className="landing-root flex flex-1 flex-col overflow-x-clip">

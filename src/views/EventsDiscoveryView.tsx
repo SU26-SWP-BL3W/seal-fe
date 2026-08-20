@@ -2,6 +2,7 @@
 
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
+import { getStaffRoleDisplayLabel } from "@/lib/eventRoles";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import {
@@ -231,10 +232,12 @@ const SORT_OPTIONS: { value: EventSortOption; label: string }[] = [
 
 // ─── Main View ─────────────────────────────────────────────────────────────────
 export function EventsDiscoveryView() {
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, allEventRoles } = useAuth();
   let roleName = "";
   if (user?.isAdmin || user?.IsAdmin) {
     roleName = "Admin";
+  } else if (allEventRoles.length > 0) {
+    roleName = getStaffRoleDisplayLabel(allEventRoles);
   } else {
     roleName = activeRole?.roleName || activeRole?.RoleName || "Guest";
     if (roleName === "EventCoordinator") roleName = "Coordinator";
@@ -243,6 +246,7 @@ export function EventsDiscoveryView() {
   const { data: teamResponse } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
   const myEventId =
+    allEventRoles[0]?.eventId ||
     activeRole?.eventId ||
     activeRole?.EventId ||
     team?.EventId ||

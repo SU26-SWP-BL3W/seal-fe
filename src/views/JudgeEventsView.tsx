@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useEvents } from "@/repositories/eventsRepository";
 import { Link } from "@/i18n/routing";
+import { getAssignedEventIdsFromRoles } from "@/lib/eventRoles";
 import {
   Scale,
   Calendar,
@@ -32,7 +33,7 @@ function eventStatus(now: Date, start: Date | null, end: Date | null) {
 }
 
 export function JudgeEventsView() {
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, allEventRoles } = useAuth();
   const { data: rawEvents = [], isLoading } = useEvents();
   const [activeTab, setActiveTab] = useState<EventTab>("all");
 
@@ -45,24 +46,17 @@ export function JudgeEventsView() {
     if (!user) return [];
     if (user.isAdmin || user.IsAdmin) return events;
 
-    const assignedIds: string[] = [];
-    if (Array.isArray((activeRole as any)?.assignedEventIds)) {
-      assignedIds.push(...(activeRole as any).assignedEventIds);
-    }
-    const singleEventId = activeRole?.eventId || (activeRole as any)?.EventId;
-    if (singleEventId && !assignedIds.includes(singleEventId)) {
-      assignedIds.push(singleEventId);
-    }
-
-    const userEventRoles = (user as any)?.eventRoles || (user as any)?.EventRoles || [];
-    if (Array.isArray(userEventRoles)) {
-      userEventRoles.forEach((er: any) => {
-        const rName = er.roleName || er.RoleName;
-        const eId = er.eventId || er.EventId;
-        if (rName === "Judge" && eId && !assignedIds.includes(eId)) {
-          assignedIds.push(eId);
-        }
-      });
+    const assignedIds: string[] = getAssignedEventIdsFromRoles(
+      allEventRoles.filter((r) => r.roleName === "Judge"),
+    );
+    if (assignedIds.length === 0) {
+      if (Array.isArray((activeRole as any)?.assignedEventIds)) {
+        assignedIds.push(...(activeRole as any).assignedEventIds);
+      }
+      const singleEventId = activeRole?.eventId || (activeRole as any)?.EventId;
+      if (singleEventId && !assignedIds.includes(singleEventId)) {
+        assignedIds.push(singleEventId);
+      }
     }
 
     if (assignedIds.length > 0) {
@@ -70,7 +64,7 @@ export function JudgeEventsView() {
     }
 
     return [];
-  }, [events, user, activeRole]);
+  }, [events, user, activeRole, allEventRoles]);
 
   const categorizedEvents = useMemo(() => {
     const now = new Date();
