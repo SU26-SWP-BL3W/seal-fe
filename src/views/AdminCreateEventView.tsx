@@ -1,18 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Input, Card, CalendarRangeField } from "@/components/ui";
-import { PageShell } from "@/components/layout/PageShell";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { Button, Input, Card } from "@/components/ui";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { usersRepository } from "@/repositories/usersRepository";
-import { Calendar, Clock, Info, CheckCircle2, UserCheck, AlertCircle } from "lucide-react";
-import { useToast } from "@/providers/ToastProvider";
-import { Link } from "@/i18n/routing";
+import { Shield, Calendar, Info, ArrowLeft, CheckCircle2, UserCheck } from "lucide-react";
+import Link from "next/link";
 
 export const AdminCreateEventView: React.FC = () => {
-  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successEventId, setSuccessEventId] = useState<string | null>(null);
@@ -21,19 +17,15 @@ export const AdminCreateEventView: React.FC = () => {
     eventName: "SEAL Hackathon 2026",
     season: "Mùa Hè",
     year: 2026,
-    startDate: "2026-07-15T08:00",
-    endDate: "2026-09-20T17:00",
-    registrationStartDate: "2026-06-01T08:00",
-    registrationEndDate: "2026-07-10T23:59",
+    startDate: "2026-07-15",
+    endDate: "2026-09-20",
+    registrationStartDate: "2026-06-01",
+    registrationEndDate: "2026-07-10",
     description: "Đấu trường công nghệ quy mô lớn dành cho sinh viên toàn quốc do Ban Quản Trị SEAL phê duyệt.",
     coordinatorEmail: "ec.coordinator@seal.edu.vn",
     minTeamSize: 3,
     maxTeamSize: 5,
     maxTeams: 50,
-    round1Name: "Vòng 1",
-    round1StartDate: "2026-07-15T08:00",
-    round1EndDate: "2026-09-20T17:00",
-    track1Name: "Bảng Đấu Phần Mềm Ứng Dụng (General Software)",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,27 +33,11 @@ export const AdminCreateEventView: React.FC = () => {
     setErrorMessage(null);
 
     if (!form.eventName.trim()) {
-      const msg = "Vui lòng nhập tên sự kiện!";
-      setErrorMessage(msg);
-      toast.error(msg);
+      setErrorMessage("Vui lòng nhập tên sự kiện!");
       return;
     }
     if (new Date(form.startDate) > new Date(form.endDate)) {
-      const msg = "Ngày bắt đầu sự kiện phải diễn ra trước ngày kết thúc!";
-      setErrorMessage(msg);
-      toast.error(msg);
-      return;
-    }
-    if (!form.round1Name.trim() || !form.round1StartDate || !form.round1EndDate) {
-      const msg = "Vui lòng nhập đủ tên và thời gian Vòng 1 — hệ thống bắt buộc mỗi sự kiện phải có ít nhất một vòng thi.";
-      setErrorMessage(msg);
-      toast.error(msg);
-      return;
-    }
-    if (!form.track1Name.trim()) {
-      const msg = "Vui lòng nhập tên Hạng mục (Track) đầu tiên — mỗi vòng thi bắt buộc phải có ít nhất một hạng mục.";
-      setErrorMessage(msg);
-      toast.error(msg);
+      setErrorMessage("Ngày bắt đầu sự kiện phải diễn ra trước ngày kết thúc!");
       return;
     }
 
@@ -79,15 +55,7 @@ export const AdminCreateEventView: React.FC = () => {
         description: form.description,
         maxTeams: Number(form.maxTeams),
         status: true,
-        rounds: [
-          {
-            roundName: form.round1Name,
-            roundNumber: 1,
-            startDate: new Date(form.round1StartDate).toISOString(),
-            endDate: new Date(form.round1EndDate).toISOString(),
-            tracks: [{ trackName: form.track1Name }],
-          },
-        ],
+        rounds: [],
       };
 
       const res = await eventsRepository.createEvent(payload);
@@ -113,265 +81,242 @@ export const AdminCreateEventView: React.FC = () => {
           }
         }
         setSuccessEventId(eventId);
-        toast.success("Khởi tạo sự kiện cuộc thi thành công!");
       } else {
-        const msg = res?.message || "Tạo sự kiện thất bại. Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.";
-        setErrorMessage(msg);
-        toast.error(msg);
+        setErrorMessage(res?.message || "Tạo sự kiện thất bại. Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.");
       }
     } catch (err: any) {
       console.error("Lỗi tạo sự kiện:", err);
-      const details = err?.response?.data?.details;
-      const detailMsg = Array.isArray(details) ? details.map((d: any) => d?.value?.join?.(" ") || d?.value).filter(Boolean).join(" ") : null;
-      const apiMsg = detailMsg || err?.response?.data?.message || err?.message || "Tạo sự kiện thất bại. Vui lòng kiểm tra dữ liệu và thử lại.";
+      const apiMsg = err?.response?.data?.message || err?.message || "Tạo sự kiện thất bại. Vui lòng kiểm tra kết nối mạng và thử lại.";
       setErrorMessage(apiMsg);
-      toast.error(apiMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
-      <PageHeader
-        title="Khởi tạo sự kiện mới"
-        description="Tạo khung sự kiện chính, thiết lập thời gian và chỉ định event coordinator phụ trách điều phối giải đấu."
-        breadcrumb={
-          <nav className="text-xs text-[var(--text-muted)]">
-            <Link href="/admin/dashboard" className="hover:text-[var(--accent-primary)]">
-              Admin
-            </Link>
-            <span className="mx-1.5">/</span>
-            <span className="text-[var(--text-primary)]">Tạo sự kiện</span>
-          </nav>
-        }
-      />
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
+      <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-4 py-8 space-y-6">
+        <div className="flex items-center gap-2 font-mono text-xs text-[var(--text-muted)] border-b border-[var(--border-muted)] pb-4">
+          <Link href="/admin/dashboard" className="hover:text-[var(--color-danger)] flex items-center gap-1">
+            <ArrowLeft className="w-3.5 h-3.5" /> Bảng Điều Hành Admin
+          </Link>
+          <span>/</span>
+          <span className="text-[var(--color-danger)] font-bold">STT #1: Khởi Tạo Sự Kiện (Admin Only)</span>
+        </div>
 
-      <Card className="space-y-6 p-6">
-        {errorMessage && (
-          <div className="rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 p-4 text-sm text-[var(--color-danger)]">
-            {errorMessage}
-          </div>
-        )}
-
-        {successEventId ? (
-          <div className="space-y-4 rounded-lg border border-[var(--color-success)] bg-[var(--color-success)]/10 p-6 text-center">
-            <div className="flex justify-center">
-              <CheckCircle2 className="h-12 w-12 text-[var(--color-success)]" />
+        <Card className="hud-glow-cyan p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
+            <div>
+              <h2 className="font-display font-bold text-xl text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                <Shield className="w-6 h-6 text-[var(--color-danger)]" />
+                Admin Khởi Tạo Sự Kiện Mới (POST /api/Events)
+              </h2>
+              <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
+                Tạo Khung Sự Kiện Chính và chỉ định Event Coordinator (Trưởng Ban Tổ Chức) phụ trách điều phối sự kiện.
+              </p>
             </div>
-            <h3 className="font-display text-lg font-semibold text-[var(--color-success)]">
-              Khởi tạo sự kiện thành công
-            </h3>
-            <p className="text-sm text-[var(--text-primary)]">
-              Mã sự kiện: <span className="font-semibold text-[var(--accent-primary)]">#{successEventId}</span>
-              {form.coordinatorEmail && (
-                <span className="mt-1 block text-[var(--accent-coordinator)]">
-                  Đã phân công EC: {form.coordinatorEmail}
-                </span>
-              )}
-            </p>
-            <div className="flex flex-wrap justify-center gap-4 pt-2">
-              <Link href="/admin/dashboard">
-                <Button variant="primary" accent="primary">
-                  Về bảng điều hành
-                </Button>
-              </Link>
-              <Link href="/coordinator/dashboard">
-                <Button variant="secondary" accent="coordinator">
-                  Sang EC dashboard
-                </Button>
-              </Link>
-            </div>
+            <span className="px-3 py-1 font-mono text-xs bg-[rgba(239,68,68,0.1)] text-[var(--color-danger)] border border-[var(--color-danger)]/30 hud-clipped font-bold">
+              [ADM-ACTION ONLY]
+            </span>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-medium text-[var(--text-muted)]">
-                  Tên sự kiện <span className="text-[var(--color-danger)]">*</span>
-                </label>
-                <Input
-                  type="text"
-                  value={form.eventName}
-                  onChange={(e) => setForm({ ...form, eventName: e.target.value })}
-                  required
-                />
-              </div>
 
-              <div className="space-y-4 rounded-lg border border-[var(--accent-coordinator)]/30 bg-[var(--bg-input)] p-4 md:col-span-2">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--accent-coordinator)]">
-                  <UserCheck className="h-4 w-4" />
-                  Chỉ định event coordinator phụ trách
-                </label>
-                <Input
-                  type="email"
-                  placeholder="e.g. ec.coordinator@seal.edu.vn"
-                  value={form.coordinatorEmail}
-                  onChange={(e) => setForm({ ...form, coordinatorEmail: e.target.value })}
-                />
-                <p className="text-xs text-[var(--text-muted)]">
-                  Admin có thể gán ngay tài khoản EC hoặc bỏ trống để gán sau trên Admin Dashboard.
-                </p>
-              </div>
+          {errorMessage && (
+            <div className="p-4 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)] text-[var(--color-danger)] font-mono text-xs hud-clipped">
+              ⚠️ {errorMessage}
+            </div>
+          )}
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--text-muted)]">Mùa giải *</label>
-                <select
-                  value={form.season}
-                  onChange={(e) => setForm({ ...form, season: e.target.value })}
-                  className="h-10 w-full rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
-                >
-                  <option value="Mùa Xuân">Mùa Xuân (Spring)</option>
-                  <option value="Mùa Hè">Mùa Hè (Summer)</option>
-                  <option value="Mùa Thu">Mùa Thu (Autumn)</option>
-                  <option value="Mùa Đông">Mùa Đông (Winter)</option>
-                </select>
+          {successEventId ? (
+            <div className="p-6 bg-[rgba(16,185,129,0.1)] border border-[var(--color-success)] hud-clipped space-y-4 text-center">
+              <div className="flex justify-center">
+                <CheckCircle2 className="w-12 h-12 text-[var(--color-success)]" />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--text-muted)]">Năm *</label>
-                <Input
-                  type="number"
-                  value={form.year}
-                  onChange={(e) => setForm({ ...form, year: Number(e.target.value) })}
-                  required
-                />
+              <h3 className="font-mono font-bold text-lg text-[var(--color-success)] uppercase">
+                Khởi Tạo Sự Kiện Thành Công!
+              </h3>
+              <p className="font-mono text-xs text-[var(--text-primary)]">
+                Mã Sự Kiện vừa tạo: <span className="text-[var(--accent-primary)] font-bold">#{successEventId}</span>
+                {form.coordinatorEmail && (
+                  <span className="block text-[var(--accent-coordinator)] font-mono text-xs mt-1">
+                    Đã phân công Event Coordinator: {form.coordinatorEmail}
+                  </span>
+                )}
+              </p>
+              <div className="pt-2 flex flex-wrap justify-center gap-4">
+                <Link href="/admin/dashboard">
+                  <Button variant="primary" className="font-mono text-xs bg-[var(--color-danger)]">
+                    Về Bảng Điều Hành Admin Tổng &gt;
+                  </Button>
+                </Link>
+                <Link href="/coordinator/dashboard">
+                  <Button variant="secondary" className="font-mono text-xs border-[var(--accent-coordinator)] text-[var(--accent-coordinator)]">
+                    Sang Bảng EC Dashboard &gt;
+                  </Button>
+                </Link>
               </div>
-
-              <div className="md:col-span-2">
-                <CalendarRangeField
-                  title="Thời gian diễn ra sự kiện *"
-                  icon={<Calendar className="h-4 w-4 text-[var(--accent-primary)]" />}
-                  startValue={form.startDate}
-                  endValue={form.endDate}
-                  onStartChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
-                  onEndChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
-                  startLabel="Khai mạc"
-                  endLabel="Bế mạc"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <CalendarRangeField
-                  title="Thời gian mở / đóng cổng đăng ký"
-                  icon={<Clock className="h-4 w-4 text-[var(--color-warning)]" />}
-                  startValue={form.registrationStartDate}
-                  endValue={form.registrationEndDate}
-                  onStartChange={(v) => setForm((prev) => ({ ...prev, registrationStartDate: v }))}
-                  onEndChange={(v) => setForm((prev) => ({ ...prev, registrationEndDate: v }))}
-                  startLabel="Mở cổng"
-                  endLabel="Đóng cổng"
-                  hint="Cân đối mốc đăng ký so với thời gian diễn ra sự kiện đã chọn ở trên."
-                  referenceRange={{
-                    start: form.startDate,
-                    end: form.endDate,
-                    label: "Sự kiện diễn ra",
-                  }}
-                />
-              </div>
-
-              <div className="space-y-4 rounded-lg border border-[var(--accent-primary)]/30 bg-[var(--bg-input)] p-4 md:col-span-2">
-                <p className="text-xs font-medium text-[var(--accent-primary)]">
-                  Vòng thi & hạng mục khởi tạo (bắt buộc — có thể thêm/sửa sau ở trang EC)
-                </p>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-[var(--text-muted)]">Tên vòng thi *</label>
-                    <Input
-                      type="text"
-                      value={form.round1Name}
-                      onChange={(e) => setForm({ ...form, round1Name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-[var(--text-muted)]">Tên hạng mục *</label>
-                    <Input
-                      type="text"
-                      placeholder="Ví dụ: Lập trình Web"
-                      value={form.track1Name}
-                      onChange={(e) => setForm({ ...form, track1Name: e.target.value })}
-                      required
-                    />
-                  </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                    Tên Sự Kiện <span className="text-[var(--color-danger)]">*</span>
+                  </label>
+                  <Input
+                    type="text"
+                    value={form.eventName}
+                    onChange={(e) => setForm({ ...form, eventName: e.target.value })}
+                    required
+                  />
                 </div>
-                <CalendarRangeField
-                  title="Thời gian nộp bài vòng 1"
-                  icon={<Calendar className="h-4 w-4 text-[var(--accent-primary)]" />}
-                  startValue={form.round1StartDate}
-                  endValue={form.round1EndDate}
-                  minDate={form.startDate}
-                  maxDate={form.endDate}
-                  onStartChange={(v) => setForm((prev) => ({ ...prev, round1StartDate: v }))}
-                  onEndChange={(v) => setForm((prev) => ({ ...prev, round1EndDate: v }))}
-                  startLabel="Mở nộp bài"
-                  endLabel="Hạn chót"
-                  hint="Phải nằm trong khoảng khai mạc – bế mạc sự kiện ở trên."
-                  referenceRange={{
-                    start: form.startDate,
-                    end: form.endDate,
-                    label: "Sự kiện diễn ra",
-                  }}
-                />
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--accent-team)]">Số thành viên tối thiểu / đội *</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={form.maxTeamSize}
-                  value={form.minTeamSize}
-                  onChange={(e) => setForm({ ...form, minTeamSize: Number(e.target.value) })}
-                  required
-                />
-              </div>
+                {/* Chỉ định Event Coordinator */}
+                <div className="md:col-span-2 space-y-1.5 p-4 bg-[var(--bg-input)] border border-[var(--accent-coordinator)]/30 hud-clipped">
+                  <label className="text-xs font-mono tracking-widest text-[var(--accent-coordinator)] uppercase flex items-center gap-1.5 font-bold">
+                    <UserCheck className="w-4 h-4 text-[var(--accent-coordinator)]" />
+                    Chỉ Định Event Coordinator (EC) Phụ Trách Quản Lý
+                  </label>
+                  <Input
+                    type="email"
+                    placeholder="e.g. ec.coordinator@seal.edu.vn"
+                    value={form.coordinatorEmail}
+                    onChange={(e) => setForm({ ...form, coordinatorEmail: e.target.value })}
+                    className="w-full"
+                  />
+                  <p className="text-[10px] font-mono text-[var(--text-muted)] mt-1">
+                    Admin có thể gán ngay tài khoản EC hoặc bỏ trống để gán sau trên Admin Dashboard. Tài khoản EC này sẽ phụ trách tạo Vòng thi (Rounds), Hạng mục (Tracks) & Tiêu chí.
+                  </p>
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[var(--accent-team)]">Số thành viên tối đa / đội *</label>
-                <Input
-                  type="number"
-                  min={form.minTeamSize}
-                  max={20}
-                  value={form.maxTeamSize}
-                  onChange={(e) => setForm({ ...form, maxTeamSize: Number(e.target.value) })}
-                  required
-                />
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                    Mùa Giải (Season) *
+                  </label>
+                  <select
+                    value={form.season}
+                    onChange={(e) => setForm({ ...form, season: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-sm hud-clipped"
+                  >
+                    <option value="Mùa Xuân">Mùa Xuân (Spring)</option>
+                    <option value="Mùa Hè">Mùa Hè (Summer)</option>
+                    <option value="Mùa Thu">Mùa Thu (Autumn)</option>
+                    <option value="Mùa Đông">Mùa Đông (Winter)</option>
+                  </select>
+                </div>
 
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-medium text-[var(--text-muted)]">Mô tả tổng quan sự kiện</label>
-                <textarea
-                  rows={4}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] p-4 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
-                />
-              </div>
-            </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                    Năm (Year) *
+                  </label>
+                  <Input
+                    type="number"
+                    value={form.year}
+                    onChange={(e) => setForm({ ...form, year: Number(e.target.value) })}
+                    required
+                  />
+                </div>
 
-            {errorMessage && (
-              <div className="flex items-center gap-3 rounded-lg border border-[var(--color-danger)]/80 bg-[var(--color-danger)]/10 p-4 text-sm text-[var(--color-danger)]">
-                <AlertCircle className="h-5 w-5 shrink-0" />
-                <div>
-                  <strong className="block text-xs font-semibold">Chưa thể khởi tạo sự kiện</strong>
-                  <span>{errorMessage}</span>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                    Ngày Bắt Đầu Sự Kiện *
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.startDate}
+                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                    Ngày Kết Thúc Sự Kiện *
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.endDate}
+                    onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                    Ngày Mở Cổng Đăng Ký
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.registrationStartDate}
+                    onChange={(e) => setForm({ ...form, registrationStartDate: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                    Ngày Đóng Cổng Đăng Ký
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.registrationEndDate}
+                    onChange={(e) => setForm({ ...form, registrationEndDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--accent-team)] uppercase font-bold">
+                    Số Thành Viên Tối Thiểu / Đội *
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={form.maxTeamSize}
+                    value={form.minTeamSize}
+                    onChange={(e) => setForm({ ...form, minTeamSize: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--accent-team)] uppercase font-bold">
+                    Số Thành Viên Tối Đa / Đội *
+                  </label>
+                  <Input
+                    type="number"
+                    min={form.minTeamSize}
+                    max={20}
+                    value={form.maxTeamSize}
+                    onChange={(e) => setForm({ ...form, maxTeamSize: Number(e.target.value) })}
+                    required
+                  />
+                </div>
+
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                    Mô Tả Tổng Quan Sự Kiện
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    className="w-full p-4 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-sm hud-clipped"
+                  />
                 </div>
               </div>
-            )}
 
-            <div className="flex items-center justify-between border-t border-[var(--border-muted)] pt-4">
-              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                <Info className="h-4 w-4 text-[var(--color-warning)]" />
-                <span>Dành riêng cho quản trị viên khởi tạo giải đấu.</span>
+              <div className="flex items-center justify-between pt-4 border-t border-[var(--border-muted)]">
+                <div className="flex items-center gap-2 text-xs font-mono text-[var(--text-muted)]">
+                  <Info className="w-4 h-4 text-[var(--color-danger)]" />
+                  <span>Chỉ System Admin mới có nút bấm khởi tạo này.</span>
+                </div>
+                <Button variant="primary" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Đang tạo event & gán EC..." : "Xác Nhận Tạo Sự Kiện"}
+                </Button>
               </div>
-              <Button variant="primary" accent="primary" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Đang khởi tạo..." : "Xác nhận tạo sự kiện"}
-              </Button>
-            </div>
-          </form>
-        )}
-      </Card>
-    </PageShell>
+            </form>
+          )}
+        </Card>
+      </main>
+    </div>
   );
 };
