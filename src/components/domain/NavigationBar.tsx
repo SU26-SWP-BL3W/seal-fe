@@ -6,7 +6,7 @@ import { Link } from "@/i18n/routing";
 import { SealShield } from "./SealShield";
 import { NotificationBell } from "./NotificationBell";
 import { hasEventPermission, hasEventRolePermission, hasTrackRolePermission } from "@/lib/permissions";
-import { getStaffRoleDisplayLabel, getRolesForEvent, resolveMentorContext, resolveJudgeContext, filterRolesByName } from "@/lib/eventRoles";
+import { resolveMentorContext, resolveJudgeContext, filterRolesByName } from "@/lib/eventRoles";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import {
   Globe,
@@ -475,19 +475,19 @@ export function NavigationBar() {
   // CHẾ ĐỘ 1B: NAVBAR DỌC DÀNH RIÊNG CHO MENTOR CỐ VẤN
   // ─────────────────────────────────────────────────────────────
   if (showMentorSidebar) {
-    const mentorContext = resolveMentorContext(allEventRoles, {
+    const mentorRolesOnly = filterRolesByName(allEventRoles, "Mentor");
+    const mentorContext = resolveMentorContext(mentorRolesOnly, {
       eventId: currentEventId,
       trackId: queryTrackId,
     });
     const activeViewEventId = mentorContext?.eventId || currentEventId;
     const isAuthorizedMentor = Boolean(
       mentorContext ||
-      allEventRoles.some((r) => r.roleName === "Mentor") ||
-      (queryTrackId && hasTrackRolePermission(user, allEventRoles, queryTrackId, "Mentor")) ||
-      (currentEventId && hasEventRolePermission(user, allEventRoles, currentEventId, "Mentor")),
+      mentorRolesOnly.length > 0 ||
+      (queryTrackId && hasTrackRolePermission(user, mentorRolesOnly, queryTrackId, "Mentor")) ||
+      (currentEventId && hasEventRolePermission(user, mentorRolesOnly, currentEventId, "Mentor")),
     );
     const mentorTrackLabel = mentorContext?.trackName || "Hạng mục được phân công";
-    const hasJudgeRole = allEventRoles.some((r) => r.roleName === "Judge");
     const mentorQuery = (() => {
       const params = new URLSearchParams();
       if (activeViewEventId) params.set("eventId", activeViewEventId);
@@ -619,18 +619,9 @@ export function NavigationBar() {
           <div className="flex items-center justify-between font-mono text-xs">
             <span className="text-[var(--text-muted)]">Vai trò:</span>
             <span className="text-[#2dd4bf] font-bold">
-              {isAuthorizedMentor ? getStaffRoleDisplayLabel(getRolesForEvent(allEventRoles, activeViewEventId)) : "User (Chưa Phân Công Cố Vấn)"}
+              {isAuthorizedMentor ? "Mentor" : "User (Chưa Phân Công Cố Vấn)"}
             </span>
           </div>
-
-          {hasJudgeRole && (
-            <Link
-              href="/judge/events"
-              className="w-full py-2 bg-[var(--accent-judge)]/10 border border-[var(--accent-judge)]/40 text-[var(--accent-judge)] font-mono text-[10px] font-bold uppercase hover:bg-[var(--accent-judge)] hover:text-black transition-all hud-clipped text-center"
-            >
-              Chuyển sang Judge Panel
-            </Link>
-          )}
 
           <button
             type="button"
