@@ -6,7 +6,7 @@ import { Link } from "@/i18n/routing";
 import { SealShield } from "./SealShield";
 import { NotificationBell } from "./NotificationBell";
 import { hasEventPermission, hasEventRolePermission, hasTrackRolePermission } from "@/lib/permissions";
-import { getStaffRoleDisplayLabel, getRolesForEvent, resolveMentorContext, resolveJudgeContext } from "@/lib/eventRoles";
+import { getStaffRoleDisplayLabel, getRolesForEvent, resolveMentorContext, resolveJudgeContext, filterRolesByName } from "@/lib/eventRoles";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import {
   Globe,
@@ -648,19 +648,19 @@ export function NavigationBar() {
   // CHẾ ĐỘ 1C: NAVBAR DỌC DÀNH RIÊNG CHO GIÁM KHẢO (JUDGE)
   // ─────────────────────────────────────────────────────────────
   if (showJudgeSidebar) {
-    const judgeContext = resolveJudgeContext(allEventRoles, {
+    const judgeRolesOnly = filterRolesByName(allEventRoles, "Judge");
+    const judgeContext = resolveJudgeContext(judgeRolesOnly, {
       eventId: currentEventId,
       trackId: queryTrackId,
     });
     const activeViewEventId = judgeContext?.eventId || currentEventId;
     const isAuthorizedJudge = Boolean(
       judgeContext ||
-      allEventRoles.some((r) => r.roleName === "Judge") ||
-      (queryTrackId && hasTrackRolePermission(user, allEventRoles, queryTrackId, "Judge")) ||
-      (currentEventId && hasEventRolePermission(user, allEventRoles, currentEventId, "Judge")),
+      judgeRolesOnly.length > 0 ||
+      (queryTrackId && hasTrackRolePermission(user, judgeRolesOnly, queryTrackId, "Judge")) ||
+      (currentEventId && hasEventRolePermission(user, judgeRolesOnly, currentEventId, "Judge")),
     );
     const judgeTrackLabel = judgeContext?.trackName || "Hạng mục được phân công";
-    const hasMentorRole = allEventRoles.some((r) => r.roleName === "Mentor");
 
     return (
       <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--accent-judge)]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
@@ -784,18 +784,10 @@ export function NavigationBar() {
           <div className="flex items-center justify-between font-mono text-xs">
             <span className="text-[var(--text-muted)]">Vai trò:</span>
             <span className="text-[var(--accent-judge)] font-bold">
-              {isAuthorizedJudge ? getStaffRoleDisplayLabel(getRolesForEvent(allEventRoles, activeViewEventId)) : "User (Chưa Phân Công Giám Khảo)"}
+              {isAuthorizedJudge ? "Judge" : "User (Chưa Phân Công Giám Khảo)"}
             </span>
           </div>
 
-          {hasMentorRole && (
-            <Link
-              href="/mentor/tracks"
-              className="w-full py-2 bg-[#2dd4bf]/10 border border-[#2dd4bf]/40 text-[#2dd4bf] font-mono text-[10px] font-bold uppercase hover:bg-[#2dd4bf] hover:text-black transition-all hud-clipped text-center"
-            >
-              Chuyển sang Mentor Panel
-            </Link>
-          )}
           <button
             type="button"
             onClick={logout}

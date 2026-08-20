@@ -79,6 +79,13 @@ export function getAssignedEventIdsFromRoles(
   ];
 }
 
+export function filterRolesByName(
+  roles: NormalizedEventRole[],
+  roleName: string,
+): NormalizedEventRole[] {
+  return roles.filter((r) => r.roleName === roleName);
+}
+
 export function getRolesForEvent(
   roles: NormalizedEventRole[],
   eventId: string,
