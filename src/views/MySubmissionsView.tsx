@@ -369,6 +369,7 @@ export function MySubmissionsView() {
                 </div>
               </div>
             )}
+
           </div>
 
           {/* Edit Submission Modal */}
@@ -509,5 +510,3 @@ export function MySubmissionsView() {
         </div>
       );
     }
-
-

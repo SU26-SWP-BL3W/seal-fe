@@ -190,33 +190,35 @@ export function OnboardingProfileView() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Button
-            variant="secondary"
-            disabled={isUnblocking || requestUnblockSuccess}
-            onClick={async () => {
-              if (!user?.email) return;
-              try {
-                await requestUnblock(user.email).catch(console.warn);
-                setRequestUnblockSuccess(true);
-              } catch {
-                // ignored
-              }
-            }}
-            className="w-full justify-center border-[var(--color-danger)]/40 text-[var(--color-danger)]"
-          >
-            {requestUnblockSuccess ? (
-              "Đã gửi yêu cầu mở khóa"
-            ) : isUnblocking ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin" /> Đang gửi yêu cầu...
-              </>
-            ) : (
-              <>
-                Yêu cầu mở khóa tài khoản <ArrowRight className="h-4 w-4" />
-              </>
+          <div className="space-y-3">
+            {submitError && (
+              <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
+                ⚠ {submitError}
+              </div>
             )}
-          </Button>
+            <Button
+              variant="secondary"
+              disabled={isUnblocking || requestUnblockSuccess}
+              onClick={async () => {
+                if (!user?.email) return;
+                setSubmitError("");
+                try {
+                  await requestUnblock(user.email);
+                  setRequestUnblockSuccess(true);
+                } catch (err: any) {
+                  setSubmitError(err?.response?.data?.message || "Không thể gửi yêu cầu mở khóa. Vui lòng thử lại.");
+                }
+              }}
+              className="w-full justify-center flex items-center gap-2 border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[rgba(239,68,68,0.1)]"
+            >
+              {requestUnblockSuccess ? (
+                <>✓ ĐÃ GỬI YÊU CẦU MỞ KHÓA</>
+              ) : isUnblocking ? (
+                <><RefreshCw className="w-4 h-4 animate-spin" /> Đang gửi yêu cầu...</>
+              ) : (
+                <>YÊU CẦU MỞ KHÓA TÀI KHOẢN <ArrowRight className="w-4 h-4" /></>
+              )}
+            </Button>
 
           <Button variant="ghost" onClick={() => logout()} className="w-full justify-center">
             Đăng xuất
