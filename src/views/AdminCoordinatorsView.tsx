@@ -26,6 +26,12 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+import { RoleInvitationHistoryCard } from "@/components/domain/role-invitations/RoleInvitationHistoryCard";
+import {
+  invitationHistoryService,
+  RoleInvitationRecord,
+} from "@/services/invitationHistoryService";
+
 function pickEventId(ev: any): string {
   return ev?.id || ev?.Id || ev?.eventId || ev?.EventId || "";
 }
@@ -91,6 +97,20 @@ export function AdminCoordinatorsView() {
   const [removingRoleId, setRemovingRoleId] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [historyRecords, setHistoryRecords] = useState<RoleInvitationRecord[]>([]);
+
+  const loadHistory = () => {
+    if (!selectedEventId) {
+      setHistoryRecords([]);
+      return;
+    }
+    const synced = invitationHistoryService.syncWithEventRoles(selectedEventId, currentCoordinators);
+    setHistoryRecords([...synced]);
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, [selectedEventId, currentCoordinators]);
 
   const searchMatches = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -157,8 +177,10 @@ export function AdminCoordinatorsView() {
     setActionError(null);
     try {
       await staffRepository.removeEventRole(roleId);
+      invitationHistoryService.updateStatus(selectedEventId, roleId, "Revoked");
       setActionSuccess(`Đã thu hồi quyền Điều phối viên của ${name} thành công!`);
       await refetchRoles();
+      loadHistory();
       if (targetUserId && targetUserId === currentUserId) {
         await refreshRoles();
       }
@@ -168,6 +190,30 @@ export function AdminCoordinatorsView() {
     } finally {
       setRemovingRoleId(null);
     }
+  };
+
+  const handleResendCoordinatorInvitation = async (record: RoleInvitationRecord) => {
+    if (!selectedEventId) return;
+    await staffRepository.inviteCoordinator({
+      eventId: selectedEventId,
+      email: record.email,
+      fullName: record.fullName,
+    });
+    invitationHistoryService.addInvitation({
+      ...record,
+      status: "Pending",
+    });
+    loadHistory();
+  };
+
+  const handleRevokeCoordinatorInvitation = async (record: RoleInvitationRecord) => {
+    // If it has an active role ID from server, remove it
+    if (record.id && !record.id.startsWith("inv-") && !record.id.startsWith("role-inv-")) {
+      await staffRepository.removeEventRole(record.id);
+      await refetchRoles();
+    }
+    invitationHistoryService.updateStatus(selectedEventId, record.id, "Revoked");
+    loadHistory();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -222,11 +268,20 @@ export function AdminCoordinatorsView() {
         setIsSubmitting(false);
 
         if (res && res.success !== false) {
+          invitationHistoryService.addInvitation({
+            eventId: selectedEventId,
+            eventName: selectedEvent?.eventName || selectedEvent?.EventName,
+            email: matchedUser.email || emailToUse,
+            fullName: matchedUser.fullName || (matchedUser as any).FullName || emailToUse.split("@")[0],
+            roleName: "EventCoordinator",
+            status: "Active",
+          });
           setActionSuccess(
             `Đã phân công ${matchedUser.fullName || matchedUser.email} làm Điều Phối Viên cho sự kiện thành công!`
           );
           handleClearSelection();
           await refetchRoles();
+          loadHistory();
           setTimeout(() => setActionSuccess(null), 3000);
         } else {
           setActionError("Phân công vai trò thất bại. Vui lòng kiểm tra lại quyền.");
@@ -247,9 +302,18 @@ export function AdminCoordinatorsView() {
       setIsSubmitting(false);
 
       if (res) {
+        invitationHistoryService.addInvitation({
+          eventId: selectedEventId,
+          eventName: selectedEvent?.eventName || selectedEvent?.EventName,
+          email: emailToUse,
+          fullName: customFullName.trim() || emailToUse.split("@")[0],
+          roleName: "EventCoordinator",
+          status: "Pending",
+        });
         setActionSuccess(`Đã gửi thư mời và gán quyền Điều Phối Viên cho ${emailToUse} thành công!`);
         handleClearSelection();
         await refetchRoles();
+        loadHistory();
         setTimeout(() => setActionSuccess(null), 3000);
       } else {
         setActionError("Không thể gửi thư mời điều phối viên.");
@@ -586,6 +650,20 @@ export function AdminCoordinatorsView() {
           </Card>
         </div>
       </div>
+
+      {/* Role Invitation History & Status Tracker Section */}
+      {selectedEventId && (
+        <RoleInvitationHistoryCard
+          eventId={selectedEventId}
+          eventName={selectedEvent?.eventName || selectedEvent?.EventName || "Sự kiện"}
+          roleFilter="EventCoordinator"
+          records={historyRecords}
+          onRefresh={loadHistory}
+          onResend={handleResendCoordinatorInvitation}
+          onRevoke={handleRevokeCoordinatorInvitation}
+          onDeleteHistory={() => loadHistory()}
+        />
+      )}
     </PageShell>
   );
 }

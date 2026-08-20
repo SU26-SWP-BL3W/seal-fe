@@ -7,6 +7,11 @@ import { useMyEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { UserCheck, UserPlus, Send, AlertCircle, CheckCircle2, Shield, Trash2, Search, Filter, Calendar } from "lucide-react";
 import { Button, Card, Badge, Input } from "@/components/ui";
+import { RoleInvitationHistoryCard } from "@/components/domain/role-invitations/RoleInvitationHistoryCard";
+import {
+  invitationHistoryService,
+  RoleInvitationRecord,
+} from "@/services/invitationHistoryService";
 
 export const SYSTEM_ACCOUNTS = [
   { email: "ec.co-organizer@fpt.edu.vn", fullName: "Nguyễn Văn Điều Phối (Coordinator)" },
@@ -49,13 +54,29 @@ export const CoordinatorStaffView: React.FC = () => {
   const [coordinatorEmail, setCoordinatorEmail] = useState("");
   const [coordinatorFullName, setCoordinatorFullName] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
-  
+  const [historyRecords, setHistoryRecords] = useState<RoleInvitationRecord[]>([]);
+
+  const loadHistory = () => {
+    if (!selectedEventId) {
+      setHistoryRecords([]);
+      return;
+    }
+    const synced = invitationHistoryService.syncWithEventRoles(selectedEventId, eventRoles);
+    setHistoryRecords([...synced]);
+  };
+
+  React.useEffect(() => {
+    loadHistory();
+  }, [selectedEventId, eventRoles]);
+
   const [judgeMessage, setJudgeMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [mentorMessage, setMentorMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [coordinatorMessage, setCoordinatorMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [isSubmittingJudge, setIsSubmittingJudge] = useState(false);
   const [isSubmittingMentor, setIsSubmittingMentor] = useState(false);
   const [isSubmittingCoordinator, setIsSubmittingCoordinator] = useState(false);
+
+  const selectedEventObj = myEvents.find((e: any) => (e.id || e.Id || e.eventId || e.EventId) === selectedEventId);
 
   const handleInviteCoordinator = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +95,14 @@ export const CoordinatorStaffView: React.FC = () => {
       setIsSubmittingCoordinator(false);
 
       if (res.success) {
+        invitationHistoryService.addInvitation({
+          eventId: selectedEventId,
+          eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
+          email: coordinatorEmail.trim(),
+          fullName: coordinatorFullName.trim() || coordinatorEmail.trim().split("@")[0],
+          roleName: "EventCoordinator",
+          status: "Pending",
+        });
         setCoordinatorMessage({
           text: res.message || `Đã gửi email mời Điều phối viên (${coordinatorEmail}) thành công!`,
           isError: false,
@@ -81,6 +110,7 @@ export const CoordinatorStaffView: React.FC = () => {
         setCoordinatorEmail("");
         setCoordinatorFullName("");
         await refetchRoles();
+        loadHistory();
       } else {
         setCoordinatorMessage({
           text: res.message || "Gửi lời mời Điều phối viên thất bại.",
@@ -120,6 +150,8 @@ export const CoordinatorStaffView: React.FC = () => {
     setIsSubmittingJudge(true);
     setJudgeMessage(null);
 
+    const chosenTrack = tracks.find((t: any) => (t.id || t.Id) === judgeTrackId);
+
     try {
       const res = await staffRepository.inviteJudge({
         eventId: selectedEventId,
@@ -129,6 +161,16 @@ export const CoordinatorStaffView: React.FC = () => {
       });
 
       if (res.success) {
+        invitationHistoryService.addInvitation({
+          eventId: selectedEventId,
+          eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
+          email: judgeEmail.trim(),
+          fullName: judgeFullName.trim(),
+          roleName: "Judge",
+          trackId: judgeTrackId,
+          trackName: chosenTrack?.trackName || chosenTrack?.TrackName,
+          status: "Pending",
+        });
         setJudgeMessage({
           text: res.message || `Đã gửi email mời Giám khảo (${judgeEmail}) thành công!`,
           isError: false,
@@ -136,6 +178,7 @@ export const CoordinatorStaffView: React.FC = () => {
         setJudgeEmail("");
         setJudgeFullName("");
         await refetchRoles();
+        loadHistory();
       } else {
         setJudgeMessage({ text: res.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
       }
@@ -172,6 +215,8 @@ export const CoordinatorStaffView: React.FC = () => {
     setIsSubmittingMentor(true);
     setMentorMessage(null);
 
+    const chosenTrack = tracks.find((t: any) => (t.id || t.Id) === mentorTrackId);
+
     try {
       const res = await staffRepository.inviteMentor({
         eventId: selectedEventId,
@@ -181,6 +226,16 @@ export const CoordinatorStaffView: React.FC = () => {
       });
 
       if (res.success) {
+        invitationHistoryService.addInvitation({
+          eventId: selectedEventId,
+          eventName: selectedEventObj?.eventName || selectedEventObj?.EventName,
+          email: mentorEmail.trim(),
+          fullName: mentorFullName.trim(),
+          roleName: "Mentor",
+          trackId: mentorTrackId,
+          trackName: chosenTrack?.trackName || chosenTrack?.TrackName,
+          status: "Pending",
+        });
         setMentorMessage({
           text: res.message || `Đã gửi email mời Cố vấn (${mentorEmail}) thành công!`,
           isError: false,
@@ -188,6 +243,7 @@ export const CoordinatorStaffView: React.FC = () => {
         setMentorEmail("");
         setMentorFullName("");
         await refetchRoles();
+        loadHistory();
       } else {
         setMentorMessage({ text: res.message || "Gửi lời mời thất bại, vui lòng thử lại.", isError: true });
       }
@@ -205,10 +261,51 @@ export const CoordinatorStaffView: React.FC = () => {
     if (!confirm(`Bạn có chắc chắn muốn gỡ vai trò nhân sự này khỏi sự kiện?`)) return;
     try {
       await staffRepository.removeEventRole(roleId);
+      invitationHistoryService.updateStatus(selectedEventId, roleId, "Revoked");
       await refetchRoles();
+      loadHistory();
     } catch {
       alert("Gỡ vai trò thất bại.");
     }
+  };
+
+  const handleResendStaffInvitation = async (record: RoleInvitationRecord) => {
+    if (!selectedEventId) return;
+    if (record.roleName === "Judge" && record.trackId) {
+      await staffRepository.inviteJudge({
+        eventId: selectedEventId,
+        email: record.email,
+        fullName: record.fullName,
+        trackId: record.trackId,
+      });
+    } else if (record.roleName === "Mentor" && record.trackId) {
+      await staffRepository.inviteMentor({
+        eventId: selectedEventId,
+        email: record.email,
+        fullName: record.fullName,
+        trackId: record.trackId,
+      });
+    } else {
+      await staffRepository.inviteCoordinator({
+        eventId: selectedEventId,
+        email: record.email,
+        fullName: record.fullName,
+      });
+    }
+    invitationHistoryService.addInvitation({
+      ...record,
+      status: "Pending",
+    });
+    loadHistory();
+  };
+
+  const handleRevokeStaffInvitation = async (record: RoleInvitationRecord) => {
+    if (record.id && !record.id.startsWith("inv-") && !record.id.startsWith("role-inv-")) {
+      await staffRepository.removeEventRole(record.id);
+      await refetchRoles();
+    }
+    invitationHistoryService.updateStatus(selectedEventId, record.id, "Revoked");
+    loadHistory();
   };
 
   const filteredRoles = eventRoles.filter((er: any) => {
@@ -631,6 +728,19 @@ export const CoordinatorStaffView: React.FC = () => {
             </div>
           )}
         </Card>
+
+        {/* Section 3: Role Invitation History & Status Tracking */}
+        {selectedEventId && (
+          <RoleInvitationHistoryCard
+            eventId={selectedEventId}
+            eventName={selectedEventObj?.eventName || selectedEventObj?.EventName || "Sự kiện"}
+            records={historyRecords}
+            onRefresh={loadHistory}
+            onResend={handleResendStaffInvitation}
+            onRevoke={handleRevokeStaffInvitation}
+            onDeleteHistory={() => loadHistory()}
+          />
+        )}
 
         {/* Global Datalist for System Accounts Auto-Feed */}
         <datalist id="system-staff-accounts">
