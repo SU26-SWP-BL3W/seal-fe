@@ -724,7 +724,7 @@ export function UserProfileView() {
                 <div className="flex justify-between items-center py-1">
                   <span className="text-zinc-400">NGÀY THAM GIA:</span>
                   <span className="text-zinc-300">
-                    {user?.createdTime ? new Date(user.createdTime).toLocaleDateString("vi-VN") : "18/07/2026"}
+                    {user?.createdTime ? new Date(user.createdTime).toLocaleDateString("vi-VN") : "Chưa rõ"}
                   </span>
                 </div>
               </div>
@@ -1223,7 +1223,10 @@ export function UserProfileView() {
                     const rEventId = r.eventId || r.EventId;
                     const rEventObj = eventsList.find((e: any) => normalizeId(e.id || e.Id) === normalizeId(rEventId));
                     const rEventName = rEventObj?.eventName || rEventObj?.EventName || eventNameMap.get(normalizeId(rEventId)) || "Sự kiện SEAL";
-                    const isEnded = rEventObj?.status === false || (rEventObj?.endDate && new Date(rEventObj.endDate).getTime() < Date.now());
+                    // Hết hiệu lực = role hết hạn (ExpiredAt) HOẶC sự kiện đã đóng — không chỉ dựa endDate.
+                    const rExpiredAt = r.expiredAt || r.ExpiredAt;
+                    const isRoleExpired = rExpiredAt ? new Date(rExpiredAt).getTime() < Date.now() : false;
+                    const isEnded = isRoleExpired || rEventObj?.status === false || (rEventObj?.endDate && new Date(rEventObj.endDate).getTime() < Date.now());
                     const rRoleName = r.roleName || r.RoleName || "Chuyên gia";
                     const rTrackId = r.trackId || r.TrackId;
                     const rTrackName = r.track?.trackName || r.Track?.TrackName || (rTrackId ? trackNameMap.get(normalizeId(rTrackId)) : null);
@@ -1232,11 +1235,12 @@ export function UserProfileView() {
                     let actionLabel = "[ VÀO SỰ KIỆN > ]";
 
                     if (rRoleName === "Judge") {
-                      targetUrl = `/judge/events?eventId=${rEventId}`;
+                      // Có trackId → vào thẳng bàn chấm hạng mục đó; chưa gán → panel Judge liệt kê.
+                      targetUrl = rTrackId ? `/judge/scoring?trackId=${rTrackId}` : `/judge/events?eventId=${rEventId}`;
                       actionLabel = isEnded ? "[ XEM BÀI ĐÃ CHẤM > ]" : "[ BÀN CHẤM ĐIỂM > ]";
                     } else if (rRoleName === "Mentor") {
-                      targetUrl = `/events/${rEventId}`;
-                      actionLabel = isEnded ? "[ XEM SỰ KIỆN > ]" : "[ VÀO SỰ KIỆN > ]";
+                      targetUrl = rTrackId ? `/mentor/teams?eventId=${rEventId}&trackId=${rTrackId}` : `/mentor?eventId=${rEventId}`;
+                      actionLabel = isEnded ? "[ XEM DANH SÁCH ĐỘI > ]" : "[ KHÔNG GIAN CỐ VẤN > ]";
                     } else if (rRoleName === "EventCoordinator" || rRoleName === "Coordinator") {
                       targetUrl = `/coordinator/dashboard?eventId=${rEventId}`;
                       actionLabel = "[ BÀN ĐIỀU PHỐI > ]";
@@ -1267,9 +1271,15 @@ export function UserProfileView() {
                               <span className="px-2 py-0.5 bg-zinc-900 text-zinc-400 border border-zinc-700 font-mono text-[10px] hud-clipped">
                                 TRACK: {String(rTrackId).substring(0, 8)}...
                               </span>
-                            ) : (
+                            ) : (rRoleName === "EventCoordinator" || rRoleName === "Coordinator") ? (
+                              // EC không gắn track là ĐÚNG nghĩa: điều phối toàn sự kiện.
                               <span className="px-2 py-0.5 bg-zinc-900 text-zinc-400 border border-zinc-700 font-mono text-[10px] hud-clipped">
                                 PHẠM VI: TOÀN SỰ KIỆN
+                              </span>
+                            ) : (
+                              // Judge/Mentor thiếu track = chưa được gán, KHÔNG phải "toàn sự kiện".
+                              <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300/80 border border-amber-700/40 font-mono text-[10px] hud-clipped">
+                                CHƯA GÁN HẠNG MỤC
                               </span>
                             )}
 

@@ -20,10 +20,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge, Button, Input } from "@/components/ui";
 
 // ─── Helper ────────────────────────────────────────────────────────────────────
-function formatVnd(value: number): string {
-  return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
-}
-
 function formatShortDate(iso: string): string {
   if (!iso) return "N/A";
   return new Date(iso).toLocaleDateString("vi-VN", {
@@ -95,7 +91,7 @@ function EventCard({ event }: { event: EventCardData }) {
           <div className="space-y-1 md:text-right">
             <span className="block text-xs text-[var(--text-muted)]">Giải thưởng</span>
             <span className="text-sm font-semibold text-[var(--accent-primary)]">
-              {formatVnd(event.totalPrizeVnd ?? 0)}
+              {event.prizes?.length ? `${event.prizes.length} hạng mục` : "Đang cập nhật"}
             </span>
           </div>
           <div className="space-y-1 md:text-right">

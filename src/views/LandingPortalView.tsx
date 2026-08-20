@@ -94,24 +94,18 @@ export function LandingPortalView() {
   const { user, activeRole } = useAuth();
   const router = useRouter();
 
+  // Chỉ auto-điều hướng Admin/EC về dashboard của họ. Judge/Mentor KHÔNG bị đá đi
+  // để nút "Quay lại trang chủ" hoạt động (họ vẫn xem được landing). Dùng role thật,
+  // không đoán theo chuỗi email.
   useEffect(() => {
     if (!user) return;
-
-    const rawRole = activeRole?.roleName || activeRole?.RoleName;
-    const userEmail = (user.email || user.Email || "").toLowerCase();
-    const isAdm = !!user.isAdmin || !!user.IsAdmin || userEmail.includes("admin");
-    const isCoord =
-      rawRole === "Coordinator" ||
-      rawRole === "EventCoordinator" ||
-      userEmail.includes("ec.") ||
-      userEmail.includes("coordinator");
-    const isJudge = rawRole === "Judge" || userEmail.includes("judge");
-    const isMentor = rawRole === "Mentor" || userEmail.includes("mentor");
-
-    if (isAdm) router.replace("/admin/dashboard");
-    else if (isCoord) router.replace("/coordinator/dashboard");
-    else if (isJudge) router.replace("/judge/events");
-    else if (isMentor) router.replace("/events");
+    const role = activeRole?.roleName || activeRole?.RoleName;
+    const eventId = activeRole?.eventId || activeRole?.EventId;
+    if (user.isAdmin || user.IsAdmin) {
+      router.replace("/admin/dashboard");
+    } else if (role === "EventCoordinator" || role === "Coordinator") {
+      router.replace(eventId ? `/coordinator/dashboard?eventId=${eventId}` : "/coordinator/dashboard");
+    }
   }, [user, activeRole, router]);
 
   const regOpen = useMemo(

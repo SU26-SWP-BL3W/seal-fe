@@ -42,7 +42,7 @@ function getRoleDashboardUrl(
     return eventId ? `/coordinator/dashboard?eventId=${eventId}` : "/coordinator/dashboard";
   }
   if (roleName === "Judge") return eventId ? `/judge/events?eventId=${eventId}` : "/judge/events";
-  if (roleName === "Mentor") return eventId ? `/events/${eventId}` : "/events";
+  if (roleName === "Mentor") return eventId ? `/mentor?eventId=${eventId}` : "/mentor";
   if (roleName === "TeamLeader" || roleName === "TeamMember") return "/my-team";
   if (user?.isStudent || user?.IsStudent) return "/events";
   return "/login";
