@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Link } from "@/i18n/routing";
-import { useEvents, useGetEventById, useEventRounds } from "@/repositories/eventsRepository";
+import { useEvents, useEventRounds } from "@/repositories/eventsRepository";
+import { useGetEventById } from "@/repositories/events/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useLeaderboard } from "@/repositories/leaderboardRepository";
