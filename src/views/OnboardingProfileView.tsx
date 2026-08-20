@@ -536,10 +536,13 @@ export function OnboardingProfileView() {
                   </div>
                 ) : (
                   <div
-                    className={`flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Tải lên ảnh thẻ sinh viên. Kéo thả hoặc nhấn Enter để chọn file."
+                    className={`flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)] ${
                       isDragging
-                        ? "border-[var(--accent-coordinator)] bg-[var(--accent-coordinator)]/5"
-                        : "border-[var(--border-muted)] hover:border-[var(--accent-coordinator)]/50"
+                        ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/5"
+                        : "border-[var(--border-muted)] hover:border-[var(--accent-primary)]/50"
                     }`}
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -553,10 +556,17 @@ export function OnboardingProfileView() {
                       if (f) handleFileDrop(f);
                     }}
                     onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                      }
+                    }}
                   >
                     <Upload className="mb-3 h-8 w-8 text-[var(--text-muted)]" />
                     <span className="mb-1 text-sm text-[var(--text-primary)]">
-                      Kéo & thả hoặc <span className="text-[var(--accent-coordinator)] underline">tải lên</span>
+                      Kéo & thả hoặc{" "}
+                      <span className="text-[var(--accent-primary)] underline">tải lên</span>
                     </span>
                     <span className="text-xs text-[var(--text-muted)]">PNG, JPG — tối đa 5MB</span>
                     <input

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyTeam } from "@/repositories/teamsRepository";
@@ -115,12 +114,12 @@ function EventCard({ event }: { event: EventCardData }) {
 
 // ─── Zero-Icon Sidebar Filter ─────────────────────────────────────────────────
 const ALL_STATUS_OPTIONS: { value: EventStatusFilter | "my_event"; label: string; dot: string }[] = [
-  { value: "all",               label: "Tất cả sự kiện",   dot: "bg-zinc-400" },
-  { value: "my_event",          label: "Sự kiện của tôi",  dot: "bg-amber-400 animate-pulse" },
-  { value: "registration_open", label: "Đang mở đăng ký",  dot: "bg-emerald-400" },
-  { value: "ongoing",           label: "Đang diễn ra",     dot: "bg-cyan-400" },
-  { value: "upcoming",          label: "Sắp diễn ra",      dot: "bg-amber-400" },
-  { value: "ended",             label: "Đã kết thúc",      dot: "bg-zinc-600" },
+  { value: "all",               label: "Tất cả sự kiện",   dot: "bg-[var(--text-muted)]" },
+  { value: "my_event",          label: "Sự kiện của tôi",  dot: "bg-[var(--accent-judge)]" },
+  { value: "registration_open", label: "Đang mở đăng ký",  dot: "bg-[var(--color-success)]" },
+  { value: "ongoing",           label: "Đang diễn ra",     dot: "bg-[var(--accent-primary)]" },
+  { value: "upcoming",          label: "Sắp diễn ra",      dot: "bg-[var(--accent-team)]" },
+  { value: "ended",             label: "Đã kết thúc",      dot: "bg-[var(--border-muted)]" },
 ];
 
 function SidebarFilter({
@@ -258,8 +257,6 @@ export function EventsDiscoveryView() {
     trackFilter, setTrackFilter,
     sort, setSort,
   } = useEventsDiscoveryViewModel();
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleClear = () => {
     setStatusFilter("all");
