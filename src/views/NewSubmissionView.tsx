@@ -14,6 +14,8 @@ import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import { ApiMissingDataBadge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
 
@@ -145,6 +147,16 @@ function TrackSubmissionCard({
       };
       setIsSaved(true);
       setFormError("");
+      pushSystemNotification({
+        title: "Nộp bài thi thành công",
+        message: `Đội thi đã nộp bài thành công cho Hạng mục "${track.trackName}". Hệ thống đã gửi bài đến Ban Giám Khảo & Cố vấn!`,
+        type: "success",
+      });
+      pushSystemNotification({
+        title: "Bài nộp mới cần chấm điểm",
+        message: `Có bài nộp mới từ Đội thi cho Hạng mục "${track.trackName}". Hãy kiểm tra bàn chấm điểm!`,
+        type: "info",
+      });
       onSubmitSuccess(track.id, updatedItem);
     } catch (err) {
       setFormError(readApiError(err));

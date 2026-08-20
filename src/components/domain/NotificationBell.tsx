@@ -275,7 +275,57 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
-  // 8. Lời mời mới vào đội
+  // 8. Giải thưởng & Thư chúc mừng
+  if (tLower.includes("giải thưởng") || tLower.includes("chúc mừng") || mLower.includes("đạt giải") || mLower.includes("thư chúc mừng")) {
+    return {
+      title: rawTitle || "🏆 Thư chúc mừng đạt giải thưởng",
+      message: rawMessage,
+      badgeText: "GIẢI THƯỞNG",
+      badgeClass: "bg-amber-950/60 text-amber-300 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.3)]",
+    };
+  }
+
+  // 9. Nộp bài thi
+  if (tLower.includes("nộp bài") || mLower.includes("nộp bài thành công") || mLower.includes("bài nộp mới")) {
+    return {
+      title: rawTitle || "📝 Bài nộp sự kiện",
+      message: rawMessage,
+      badgeText: "BÀI NỘP",
+      badgeClass: "bg-sky-950/40 text-sky-300 border-sky-500/30",
+    };
+  }
+
+  // 10. Chấm điểm bài thi
+  if (tLower.includes("chấm điểm") || mLower.includes("chấm điểm bài thi") || mLower.includes("bảng điểm")) {
+    return {
+      title: rawTitle || "⚖️ Chấm điểm bài thi",
+      message: rawMessage,
+      badgeText: "CHẤM ĐIỂM",
+      badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+    };
+  }
+
+  // 11. Phúc khảo bài thi
+  if (tLower.includes("phúc khảo") || mLower.includes("đơn phúc khảo")) {
+    return {
+      title: rawTitle || "⚖️ Đơn phúc khảo",
+      message: rawMessage,
+      badgeText: "PHÚC KHẢO",
+      badgeClass: "bg-cyan-950/40 text-cyan-300 border-cyan-500/30",
+    };
+  }
+
+  // 12. Lời khuyên & Nhận xét Cố vấn
+  if (tLower.includes("cố vấn") || mLower.includes("nhận xét bài thi") || mLower.includes("lời khuyên kỹ thuật")) {
+    return {
+      title: rawTitle || "💡 Nhận xét từ Cố vấn",
+      message: rawMessage,
+      badgeText: "CỐ VẤN",
+      badgeClass: "bg-teal-950/40 text-teal-300 border-teal-500/30",
+    };
+  }
+
+  // 13. Lời mời mới vào đội
   if (tLower.includes("lời mời") || mLower.includes("mời bạn tham gia")) {
     return {
       title: rawTitle || "📩 Lời mời tham gia đội thi",
@@ -285,7 +335,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     };
   }
 
-  // 9. Yêu cầu xin gia nhập đội
+  // 14. Yêu cầu xin gia nhập đội
   if (tLower.includes("yêu cầu") || mLower.includes("xin gia nhập") || mLower.includes("yêu cầu tham gia")) {
     return {
       title: "🙋 Yêu cầu xin gia nhập đội thi",

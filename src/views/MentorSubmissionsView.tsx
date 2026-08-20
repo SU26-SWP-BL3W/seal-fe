@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useMentorWorkspaceViewModel, useMentorSubmissionDetailViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
 import { Card, Button, Badge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import {
   ChevronRight,
   Code,
@@ -28,6 +30,7 @@ import {
 } from "lucide-react";
 
 export function MentorSubmissionsView() {
+  const toast = useToast();
   const searchParams = useSearchParams();
   const teamIdParam = searchParams.get("teamId") || "";
   const trackIdParam = searchParams.get("trackId") || "";
@@ -93,11 +96,19 @@ export function MentorSubmissionsView() {
           suggestedScore: typeof suggestedScore === "number" ? suggestedScore : undefined,
         },
       });
+      toast.success("🎉 Đã gửi nhận xét và lời khuyên cho đội thi thành công!");
+      pushSystemNotification({
+        title: "Cố vấn đã gửi nhận xét bài thi",
+        message: `Cố vấn chuyên môn đã gửi nhận xét và lời khuyên kỹ thuật cho bài thi của Đội "${activeTeamName}".`,
+        type: "info",
+      });
       setFeedbackContent("");
       setTechnicalAdvice("");
       setSuggestedScore("");
     } catch (err: any) {
-      setErrorMsg(err?.response?.data?.message || err?.message || "Gửi nhận xét thất bại.");
+      const msg = err?.response?.data?.message || err?.message || "Gửi nhận xét thất bại.";
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 

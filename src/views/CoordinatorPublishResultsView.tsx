@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
   const toast = useToast();
@@ -130,6 +131,14 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           : `Đã hủy gán giải thưởng cho Đội "${teamName}".`;
       setSuccessMessage(okMsg);
       toast.success(okMsg);
+
+      if (prizeId !== "none") {
+        pushSystemNotification({
+          title: "🏆 THƯ CHÚC MỪNG ĐẠT GIẢI THƯỞNG SỰ KIỆN",
+          message: `Nhiệt liệt chúc mừng Đội "${teamName}" đã xuất sắc đạt ${prizeObj?.name || 'Giải thưởng danh giá'} tại sự kiện "${currentEvent?.eventName || 'Sự kiện'}"! Ban Tổ Chức xin chúc mừng thành tích rực rỡ của toàn đội!`,
+          type: "success",
+        });
+      }
     } catch (err: any) {
       const errMsg = `Gán giải thưởng thất bại: ${err?.message}`;
       setErrorMessage(errMsg);
@@ -175,6 +184,14 @@ export const CoordinatorPublishResultsView: React.FC = () => {
         : "Đã ẩn bảng kết quả về chế độ bản nháp an toàn.";
       setSuccessMessage(okMsg);
       toast.success(okMsg);
+
+      if (nextStatus) {
+        pushSystemNotification({
+          title: "📢 Công bố kết quả chính thức!",
+          message: `Ban Tổ Chức đã chính thức công bố bảng điểm & xếp hạng cho Vòng thi "${currentRound?.name || 'Vòng thi'}" sự kiện "${currentEvent?.eventName || 'Sự kiện'}". Hãy kiểm tra Bảng xếp hạng ngay!`,
+          type: "success",
+        });
+      }
       await refetch();
     } catch (err: any) {
       const errMsg = `Đổi trạng thái thất bại: ${err?.response?.data?.message || err?.message}`;
