@@ -13,9 +13,7 @@ import {
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
-import { ApiMissingDataBadge, Badge, Button, Card, Input } from "@/components/ui";
-import { PageShell } from "@/components/layout/PageShell";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { ApiMissingDataBadge } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 
 import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
@@ -23,14 +21,14 @@ import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, Deliverable
 import { parseLinkRules } from "@/components/domain/event-wizard/Step3TrackConfig";
 
 // ─── Deliverable Icon Metadata ────────────────────────────────────────────────
-const DELIVERABLE_LABELS: Record<DeliverableType, string> = {
-  github: "GitHub repo",
-  slides: "Slides / PPT",
-  demo_video: "Demo video",
-  deployed_url: "Live demo",
-  report: "Báo cáo PDF",
-  figma: "Figma design",
-  other: "Link bổ sung",
+const DELIVERABLE_ICONS: Record<DeliverableType, { label: string; icon: string; badgeColor: string }> = {
+  github:       { label: "GITHUB REPO",     icon: "⌥", badgeColor: "text-[var(--text-primary)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
+  slides:       { label: "SLIDES / PPT",    icon: "▦", badgeColor: "text-[#fb923c] border-[#fb923c]/30 bg-[#fb923c]/10" },
+  demo_video:   { label: "DEMO VIDEO",      icon: "▶", badgeColor: "text-[#f87171] border-[#f87171]/30 bg-[#f87171]/10" },
+  deployed_url: { label: "LIVE DEMO URL",   icon: "⬡", badgeColor: "text-[var(--color-success)] border-[var(--color-success)]/30 bg-[var(--color-success)]/10" },
+  report:       { label: "BÁO CÁO PDF",     icon: "▤", badgeColor: "text-[#facc15] border-[#facc15]/30 bg-[#facc15]/10" },
+  figma:        { label: "FIGMA DESIGN",    icon: "◈", badgeColor: "text-[#c084fc] border-[#c084fc]/30 bg-[#c084fc]/10" },
+  other:        { label: "LINK BỔ SUNG",    icon: "⊕", badgeColor: "text-[var(--text-muted)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
 };
 
 // ─── Single Track Submission Card Component ──────────────────────────────────
@@ -237,7 +235,8 @@ function TrackSubmissionCard({
       };
       setIsSaved(true);
       setFormError("");
-      toast.success(`Nộp bài thành công cho hạng mục "${track.trackName}".`);
+      const okMsg = `🎉 Nộp bài thành công cho hạng mục "${track.trackName}"! Hệ thống đã ghi nhận bài thi và gửi email xác nhận biên nhận nộp bài tới các thành viên trong đội.`;
+      toast.success(okMsg);
       onSubmitSuccess(track.id, updatedItem);
     } catch (err) {
       const errMsg = readApiError(err);
@@ -251,47 +250,63 @@ function TrackSubmissionCard({
   return (
     <div
       id={`track-card-${track.id}`}
-      className={`overflow-hidden rounded-lg border bg-[var(--bg-panel)] transition-colors ${
+      className={`bg-[var(--bg-panel)] border hud-clipped transition-all duration-200 overflow-hidden ${
         isSaved
-          ? "border-[var(--color-success)]/40"
+          ? "border-[var(--color-success)]/40 shadow-[0_0_20px_rgba(52,211,153,0.06)]"
           : allRequiredDone
-          ? "border-[var(--accent-team)]/50"
+          ? "border-[var(--accent-team)]/50 shadow-[0_0_20px_rgba(103,200,240,0.06)]"
           : "border-[var(--border-muted)]"
       }`}
     >
-      <div className="flex flex-col justify-between gap-3 border-b border-[var(--border-muted)] bg-[var(--bg-base)]/50 px-6 py-4 sm:flex-row sm:items-center">
+      {/* ── Card Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 border-b border-[var(--border-muted)] bg-[var(--bg-base)]/50">
         <div>
-          <p className="text-xs text-[var(--text-muted)]">Hạng mục thi</p>
-          <h2 className="mt-0.5 font-display text-xl font-semibold text-[var(--text-primary)]">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-[var(--accent-team)] uppercase tracking-widest font-bold">
+              HẠNG MỤC THI THẤU
+            </span>
+            <span className="font-mono text-[10px] text-[var(--text-muted)]">·</span>
+            <span className="font-mono text-[10px] text-[var(--text-muted)]">#{track.id}</span>
+          </div>
+          <h2 className="font-display text-xl font-bold text-[var(--text-primary)] mt-0.5">
             {track.trackName}
           </h2>
-          {track.description && (
-            <p className="mt-1 max-w-xl text-sm text-[var(--text-muted)]">{track.description}</p>
-          )}
+          <p className="font-mono text-xs text-[var(--text-muted)] mt-1 max-w-xl">
+            {track.description}
+          </p>
         </div>
 
-        <div className="shrink-0">
-          {isSaved ? <Badge tone="success">Đã nộp</Badge> : <Badge tone="warning">Chưa nộp</Badge>}
+        {/* Status Indicator Badge */}
+        <div className="shrink-0 flex items-center gap-2">
+          {isSaved ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 border border-[var(--color-success)]/40 bg-[var(--color-success)]/10 font-mono text-xs font-bold text-[var(--color-success)] uppercase tracking-wider hud-clipped">
+              <span className="w-2 h-2 rounded-full bg-[var(--color-success)] animate-pulse" />
+              ĐÃ NỘP BÀI
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 border border-[var(--color-warning)]/40 bg-[var(--color-warning)]/10 font-mono text-xs font-bold text-[var(--color-warning)] uppercase tracking-wider hud-clipped">
+              <span className="w-2 h-2 rounded-full bg-[var(--color-warning)] animate-ping" />
+              CHƯA NỘP
+            </div>
+          )}
         </div>
       </div>
 
-      <form onSubmit={handleCardSubmit} className="flex flex-col gap-5 p-6">
+      {/* ── Deliverables Form ── */}
+      <form onSubmit={handleCardSubmit} className="p-6 flex flex-col gap-5">
         <div>
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-[var(--text-primary)]">
-              Tài liệu cần nộp ({filledCount}/{deliverables.length})
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+              DANH SÁCH TÀI LIỆU CẦN NỘP ({filledCount}/{deliverables.length})
             </span>
-            <span className="text-xs text-[var(--text-muted)]">
-              Bắt buộc:{" "}
-              <strong className={requiredFilled === requiredTotal ? "text-[var(--color-success)]" : "text-[var(--color-warning)]"}>
-                {requiredFilled}/{requiredTotal}
-              </strong>
+            <span className="font-mono text-[11px] text-[var(--text-muted)]">
+              Bắt buộc: <strong className={requiredFilled === requiredTotal ? "text-[var(--color-success)]" : "text-[var(--color-warning)]"}>{requiredFilled}/{requiredTotal}</strong>
             </span>
           </div>
 
           <div className="flex flex-col gap-3">
             {deliverables.map((dlv: any) => {
-              const typeLabel = DELIVERABLE_LABELS[dlv.type as DeliverableType] || DELIVERABLE_LABELS.other;
+              const meta = (DELIVERABLE_ICONS as any)[dlv.type] || DELIVERABLE_ICONS.other;
               const val = linkValues[dlv.type] || linkValues[dlv.id] || "";
               const isFilled = val.trim().length > 0;
               const isValidUrl = isFilled && (val.startsWith("http://") || val.startsWith("https://"));
@@ -299,47 +314,66 @@ function TrackSubmissionCard({
               return (
                 <div
                   key={dlv.id}
-                  className={`flex flex-col justify-between gap-3 rounded-lg border p-4 transition-colors md:flex-row md:items-center ${
+                  className={`p-4 border transition-all duration-150 flex flex-col md:flex-row md:items-center justify-between gap-3 ${
                     isValidUrl
-                      ? "border-[var(--color-success)]/40 bg-[var(--color-success)]/[0.03]"
+                      ? "border-[var(--color-success)]/40 bg-[var(--color-success)]/[0.02]"
                       : isFilled
-                      ? "border-[var(--color-danger)]/40 bg-[var(--color-danger)]/[0.03]"
-                      : "border-[var(--border-muted)] bg-[var(--bg-base)]/40"
+                      ? "border-[var(--color-danger)]/40 bg-[var(--color-danger)]/[0.02]"
+                      : "border-[var(--border-muted)] bg-[var(--bg-base)]/40 hover:border-[var(--border-muted)]/80"
                   }`}
                 >
-                  <div className="min-w-[200px]">
-                    <span className="inline-block rounded-md border border-[var(--border-muted)] bg-[var(--bg-input)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
-                      {typeLabel}
+                  {/* Left: Icon & Label */}
+                  <div className="flex items-center gap-3 min-w-[200px]">
+                    <span className={`px-2 py-1 font-mono text-[10px] font-bold border ${meta.badgeColor}`}>
+                      {meta.label}
                     </span>
-                    <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">{dlv.label}</p>
-                    <p className="text-xs text-[var(--text-muted)]">
-                      {dlv.required ? "Bắt buộc" : "Tùy chọn"}
-                    </p>
+                    <div className="flex flex-col">
+                      <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
+                        {dlv.label}
+                      </span>
+                      {dlv.required ? (
+                        <span className="font-mono text-[9px] text-[var(--color-danger)] uppercase font-semibold">
+                          * Bắt buộc
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[9px] text-[var(--text-muted)] uppercase">
+                          Tuỳ chọn
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <Input
+                  {/* Input field */}
+                  <div className="flex-1 min-w-0">
+                    <input
                       type="url"
                       placeholder={dlv.placeholder || "https://..."}
                       value={val}
                       onChange={(e) => handleLinkChange(dlv.type, e.target.value)}
-                      className={
+                      className={`w-full px-3 py-2 bg-[var(--bg-input)] border font-mono text-xs focus:outline-none transition-colors ${
                         isValidUrl
-                          ? "border-[var(--color-success)]/40"
+                          ? "border-[var(--color-success)]/40 focus:border-[var(--color-success)] text-[var(--text-primary)]"
                           : isFilled
-                          ? "border-[var(--color-danger)]/50"
-                          : ""
-                      }
+                          ? "border-[var(--color-danger)]/50 text-[var(--color-danger)]"
+                          : "border-[var(--border-muted)] focus:border-[var(--accent-team)] text-[var(--text-primary)]"
+                      }`}
                     />
                   </div>
 
-                  <div className="shrink-0">
+                  {/* Right Status */}
+                  <div className="shrink-0 flex items-center gap-2">
                     {isValidUrl ? (
-                      <Badge tone="success">Đã điền</Badge>
+                      <span className="font-mono text-[10px] font-bold text-[var(--color-success)] flex items-center gap-1 border border-[var(--color-success)]/30 px-2 py-1 bg-[var(--color-success)]/10">
+                        ĐÃ ĐIỀN
+                      </span>
                     ) : dlv.required ? (
-                      <Badge tone="danger">Chưa điền</Badge>
+                      <span className="font-mono text-[10px] font-bold text-[var(--color-danger)] flex items-center gap-1 border border-[var(--color-danger)]/30 px-2 py-1 bg-[var(--color-danger)]/10">
+                        CHƯA ĐIỀN
+                      </span>
                     ) : (
-                      <Badge tone="neutral">Tùy chọn</Badge>
+                      <span className="font-mono text-[10px] text-[var(--text-muted)] border border-[var(--border-muted)] px-2 py-1">
+                        TUỲ Ý
+                      </span>
                     )}
                   </div>
                 </div>
@@ -348,8 +382,11 @@ function TrackSubmissionCard({
           </div>
         </div>
 
-        <div className="mt-1 flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-[var(--text-primary)]">Ghi chú thêm</label>
+        {/* Note Area */}
+        <div className="flex flex-col gap-1.5 mt-1">
+          <label className="font-mono text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
+            GHI CHÚ THÊM BÀI NỘP HẠNG MỤC NÀY
+          </label>
           <textarea
             value={notes}
             onChange={(e) => {
@@ -357,30 +394,42 @@ function TrackSubmissionCard({
               setIsSaved(false);
             }}
             rows={2}
-            placeholder="Ghi chú về giải pháp, tài khoản demo, v.v."
-            className="w-full resize-none rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] p-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/60 focus:border-[var(--accent-team)] focus:outline-none"
+            placeholder="Ghi chú chi tiết về giải pháp, tài khoản demo, v.v..."
+            className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] focus:border-[var(--accent-team)] font-mono text-xs text-[var(--text-primary)] focus:outline-none transition-colors resize-none placeholder:text-[var(--text-muted)]/40"
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border-muted)]/60 pt-4">
-          <div className="text-sm text-[var(--text-muted)]">
+        {/* Card Footer Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-[var(--border-muted)]/60">
+          <div className="font-mono text-xs text-[var(--text-muted)]">
             {formError ? (
               <span role="alert" className="text-[color:var(--color-danger)]">{formError}</span>
             ) : isSaved ? (
-              <span className="text-[var(--color-success)]">Đã lưu bài nộp cho hạng mục {track.trackName}</span>
+              <span className="text-[var(--color-success)] font-semibold">
+                Đã lưu bài nộp cho hạng mục {track.trackName}
+              </span>
             ) : (
-              <span>Kiểm tra kỹ các đường link trước khi xác nhận.</span>
+              <span>Vui lòng kiểm tra kỹ các đường link trước khi xác nhận.</span>
             )}
           </div>
 
-          <Button
+          <button
             type="submit"
-            accent="team"
             disabled={!allRequiredDone || isSubmitting}
-            variant={isSaved ? "ghost" : "primary"}
+            className={`hud-clipped px-6 py-2.5 font-mono text-xs font-bold uppercase tracking-wider transition-all focus:outline-none ${
+              isSaved
+                ? "bg-transparent border border-[var(--accent-team)] text-[var(--accent-team)] hover:bg-[var(--accent-team)]/10"
+                : allRequiredDone
+                ? "bg-[var(--accent-team)] text-[var(--bg-base)] hover:bg-white hover:shadow-[0_0_15px_rgba(103,200,240,0.4)]"
+                : "bg-[var(--bg-input)] text-[var(--text-muted)] border border-[var(--border-muted)] opacity-50 cursor-not-allowed"
+            }`}
           >
-            {isSubmitting ? "Đang xử lý..." : isSaved ? "Cập nhật bài nộp" : "Xác nhận nộp bài"}
-          </Button>
+            {isSubmitting
+              ? "ĐANG XỬ LÝ..."
+              : isSaved
+              ? "CẬP NHẬT BÀI NỘP"
+              : "XÁC NHẬN NỘP BÀI"}
+          </button>
         </div>
       </form>
     </div>
@@ -464,89 +513,117 @@ export function NewSubmissionView() {
     || (team as { Status?: string } | undefined)?.Status || "");
   const canSubmit = teamStatus === "Registered" || teamStatus === "Approved";
 
+  // Guard: chưa có đội hoặc đội chưa được duyệt
   if (!isLoading && (!team || !canSubmit)) {
     return (
-      <PageShell className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center">
+      <div className="hud-lattice min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-4 space-y-4">
         <ApiMissingDataBadge
           title="Bạn chưa có đội thi để nộp bài"
-          message="Vui lòng tạo hoặc tham gia một đội thi chính thức trước khi thực hiện nộp bài."
+          message="Vui lòng tạo hoặc tham gia một Đội thi chính thức trước khi thực hiện nộp bài."
         />
-        <Card className="mt-4 max-w-md w-full p-6 text-center">
-          <p className="text-sm text-[var(--text-primary)]">
-            {!team ? "Bạn chưa có đội thi." : "Trạng thái đội thi hiện tại: "}
-            {team && (
-              <span className="font-semibold text-[var(--color-warning)]">
-                {(team as any)?.status || (team as any)?.Status}
-              </span>
-            )}
+        <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--color-warning)]/40 hud-clipped p-8 text-center">
+          <div className="font-mono text-[10px] text-[var(--color-warning)] tracking-widest uppercase mb-3">
+            CHƯA ĐỦ ĐIỀU KIỆN NỘP BÀI
+          </div>
+          <p className="font-mono text-sm text-[var(--text-primary)] mb-4 leading-relaxed">
+            {!team ? "Bạn chưa có đội thi." : `Trạng thái đội thi hiện tại: `}
+            {team && <span className="font-bold text-[var(--color-warning)]">{(team as any)?.status || (team as any)?.Status}</span>}
+            <br />
+            <span className="text-xs text-[var(--text-muted)] mt-1 block">
+              Đội cần được BTC phê duyệt ghi danh trước khi thực hiện nộp bài.
+            </span>
           </p>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
-            Đội cần được BTC phê duyệt ghi danh trước khi thực hiện nộp bài.
-          </p>
-          <Link href="/my-team" className="mt-4 inline-block">
-            <Button variant="ghost" accent="team">
-              Về trang đội thi
-            </Button>
+          <Link href="/my-team">
+            <button className="hud-clipped px-5 py-2.5 border border-[var(--accent-team)] text-[var(--accent-team)] font-mono text-xs tracking-wider uppercase hover:bg-[var(--accent-team)]/10 transition-colors">
+              ← VỀ TRANG ĐỘI THI
+            </button>
           </Link>
-        </Card>
-      </PageShell>
+        </div>
+      </div>
     );
   }
 
-  const teamName =
-    (team as any)?.teamName || (team as any)?.TeamName || (team as any)?.name || (team as any)?.Name || "Đội thi";
-  const eventName = (team as any)?.eventName || (team as any)?.EventName || "Sự kiện";
-
   return (
-    <PageShell>
-      <nav className="mb-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-        <Link href="/my-team" className="hover:text-[var(--accent-team)]">
-          Đội thi
-        </Link>
-        <span>/</span>
-        <Link href="/my-submissions" className="hover:text-[var(--accent-team)]">
-          Danh sách bài nộp
-        </Link>
-        <span>/</span>
-        <span className="text-[var(--text-primary)]">Nộp bài</span>
-      </nav>
-
-      <PageHeader
-        title="Nộp bài thi"
-        description={`Đội: ${teamName} · Sự kiện: ${eventName}`}
-        actions={
-          <Link href="/my-submissions">
-            <Button variant="ghost">Xem quản lý bài nộp</Button>
+    <div className="hud-lattice min-h-[calc(100vh-4rem)] pb-16">
+      <div className="max-w-[var(--container-max)] mx-auto px-6 py-8">
+        
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--text-muted)] mb-6">
+          <Link href="/my-team" className="hover:text-[var(--accent-team)] transition-colors">
+            ĐỘI THI
           </Link>
-        }
-      />
-
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-            Hạng mục cần nộp ({availableTracks.length})
-          </h2>
-          <span className="text-xs text-[var(--text-muted)]">Cuộn xuống để nộp bài từng hạng mục</span>
+          <span>›</span>
+          <Link href="/my-submissions" className="hover:text-[var(--accent-team)] transition-colors">
+            DANH SÁCH BÀI NỘP
+          </Link>
+          <span>›</span>
+          <span className="text-[var(--accent-team)] font-bold">NỘP BÀI THEO HẠNG MỤC</span>
         </div>
 
-        {availableTracks.length === 0 ? (
-          <ApiMissingDataBadge
-            title="Chưa có hạng mục nộp bài"
-            message="Chưa có hạng mục thi đấu nào được khởi tạo hoặc mở cổng nộp bài."
-          />
-        ) : (
-          availableTracks.map((track) => (
-            <TrackSubmissionCard
-              key={track.id}
-              track={track}
-              existingSubmission={submissions[track.id]}
-              onSubmitSuccess={handleTrackSubmitSuccess}
-              teamId={teamId}
-              roundId={roundId || track.roundId}
+        {/* ── Page Header Banner ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 mb-8 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped shadow-sm">
+          <div>
+            <span className="font-mono text-[10px] text-[var(--accent-team)] tracking-[0.25em] uppercase font-bold">
+              CỔNG NỘP BÀI THI CHÍNH THỨC
+            </span>
+            <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)] mt-1">
+              Nộp Bài Thi Hackathon
+            </h1>
+            <div className="flex flex-wrap items-center gap-3 mt-2 font-mono text-xs text-[var(--text-muted)]">
+              <span>Đội: <strong className="text-[var(--accent-team)]">{(team as any)?.teamName || (team as any)?.TeamName || (team as any)?.name || (team as any)?.Name || "Đội Thi"}</strong></span>
+              <span>·</span>
+              <span>Sự kiện:</span>
+              <Link
+                href={`/events/${(team as any)?.eventId || (team as any)?.EventId || ""}`}
+                className="text-[var(--accent-primary)] hover:underline flex items-center gap-1 border border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 px-2 py-0.5 rounded-none font-bold"
+              >
+                <span>{(team as any)?.eventName || (team as any)?.EventName || "Sự kiện"}</span>
+                <span className="text-[10px]">↗ XEM CHI TIẾT SỰ KIỆN</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <Link href="/my-submissions">
+              <button className="hud-clipped px-5 py-2.5 border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs tracking-wider uppercase hover:border-[var(--accent-team)] hover:text-[var(--accent-team)] transition-colors">
+                XEM QUẢN LÝ BÀI NỘP
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Scrollable Track Submissions Section List ── */}
+        <div className="flex flex-col gap-8">
+          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
+            <h2 className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--text-primary)] flex items-center gap-2">
+              <span>HẠNG MỤC CẦN NỘP BÀI</span>
+              <span className="text-xs text-[var(--text-muted)] font-normal">({availableTracks.length} hạng mục)</span>
+            </h2>
+            <span className="font-mono text-xs text-[var(--text-muted)]">
+              Cuộn xuống để xem và nộp bài cho từng hạng mục
+            </span>
+          </div>
+
+          {availableTracks.length === 0 ? (
+            <ApiMissingDataBadge
+              title="Chưa có hạng mục nộp bài"
+              message="Chưa có Hạng mục thi đấu nào được khởi tạo hoặc mở cổng nộp bài."
             />
-          ))
-        )}
+          ) : (
+            availableTracks.map((track) => (
+              <TrackSubmissionCard
+                key={track.id}
+                track={track}
+                existingSubmission={submissions[track.id]}
+                onSubmitSuccess={handleTrackSubmitSuccess}
+                teamId={teamId}
+                roundId={roundId || track.roundId}
+              />
+            ))
+          )}
+        </div>
+
       </div>
-    </PageShell>
+    </div>
   );
 }

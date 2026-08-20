@@ -16,16 +16,17 @@ import {
   CheckCircle2,
   Award,
   ChevronDown,
+  Filter,
+  Layers,
   Download,
   Mail,
   Send,
+  FileSpreadsheet,
+  AlertTriangle,
   X,
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
-import { PageShell } from "@/components/layout/PageShell";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { Badge, Button, Card, Field, Input } from "@/components/ui";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
   const toast = useToast();
@@ -170,7 +171,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
       }
       setIsPublishedState(nextStatus);
       const okMsg = nextStatus
-        ? "Đã công bố kết quả và trao giải thưởng thành công."
+        ? "🎉 Đã công bố kết quả chung cuộc và trao giải thưởng thành công! Hệ thống đã gửi email chúc mừng tới các đội đạt giải và mở Bảng Vàng Vinh Danh."
         : "Đã ẩn bảng kết quả về chế độ bản nháp an toàn.";
       setSuccessMessage(okMsg);
       toast.success(okMsg);
@@ -279,48 +280,24 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   };
 
   return (
-    <PageShell className="max-w-[1600px]">
-      <PageHeader
-        title="Xét kết quả vòng thi"
-        description="Kiểm tra bảng điểm, gán giải thưởng, xuất báo cáo và gửi email thông báo."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" onClick={handleExportCSV} className="text-xs">
-              <Download className="h-3.5 w-3.5" /> Xuất CSV
-            </Button>
-            <Button variant="ghost" onClick={handleOpenEmailModal} className="text-xs">
-              <Mail className="h-3.5 w-3.5" /> Gửi email
-            </Button>
-            <Link href={`/coordinator/prizes?eventId=${selectedEventId}`}>
-              <Button variant="ghost" accent="coordinator" className="text-xs">
-                <Award className="h-3.5 w-3.5" /> Cơ cấu giải thưởng
-              </Button>
-            </Link>
-            <Button variant="ghost" disabled={isSubmitting} onClick={handleCalculate} className="text-xs">
-              <RefreshCw className="h-3.5 w-3.5" /> Tính điểm
-            </Button>
-            <Button
-              accent="coordinator"
-              disabled={isSubmitting}
-              onClick={handleTogglePublishStatus}
-              className="text-xs"
-            >
-              {isPublishedState ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              {isPublishedState ? "Ẩn về bản nháp" : "Công bố kết quả"}
-            </Button>
-          </div>
-        }
-      />
-
-      <Card className="mb-6 grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
-        <Field label="Sự kiện">
-          {({ id }) => (
+    <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
+      {/* Main Container */}
+      <div className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
+        
+        {/* Cascade Filter Bar: Event, Round & Track */}
+        <div className="bg-[#13191c] p-4 border border-[#263339] grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+          
+          {/* Filter 1: Event */}
+          <div className="space-y-1">
+            <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+              <Filter className="w-3.5 h-3.5 text-[#8b5cf6]" />
+              SỰ KIỆN PHỤ TRÁCH *
+            </label>
             <div className="relative">
               <select
-                id={id}
                 value={selectedEventId}
                 onChange={(e) => setSelectedEventId(e.target.value)}
-                className="w-full cursor-pointer appearance-none rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 pr-10 text-sm text-[var(--text-primary)] focus:border-[var(--accent-coordinator)] focus:outline-none"
+                className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#8b5cf6]"
               >
                 {eventsList.length > 0 ? (
                   eventsList.map((ev: any, idx: number) => (
@@ -329,210 +306,337 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                     </option>
                   ))
                 ) : (
-                  <option value="">Chưa có sự kiện</option>
+                  <option value="">Chưa có sự kiện nào trong hệ thống</option>
                 )}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+              <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
-          )}
-        </Field>
+          </div>
 
-        <Field label="Vòng thi">
-          {({ id }) => (
+          {/* Filter 2: Round */}
+          <div className="space-y-1">
+            <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+              <Layers className="w-3.5 h-3.5 text-[#8b5cf6]" />
+              VÒNG THI *
+            </label>
             <div className="relative">
               <select
-                id={id}
                 value={selectedRoundId}
                 onChange={(e) => setSelectedRoundId(e.target.value)}
-                className="w-full cursor-pointer appearance-none rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 pr-10 text-sm text-[var(--text-primary)] focus:border-[var(--accent-coordinator)] focus:outline-none"
+                className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#8b5cf6]"
               >
                 {roundsList.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+              <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
-          )}
-        </Field>
+          </div>
 
-        <Field label="Hạng mục">
-          {({ id }) => (
+          {/* Filter 3: Track */}
+          <div className="space-y-1">
+            <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+              <Award className="w-3.5 h-3.5 text-[#8b5cf6]" />
+              HẠNG MỤC THI ĐẤU *
+            </label>
             <div className="relative">
               <select
-                id={id}
                 value={selectedTrackId}
                 onChange={(e) => setSelectedTrackId(e.target.value)}
-                className="w-full cursor-pointer appearance-none rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 pr-10 text-sm text-[var(--text-primary)] focus:border-[var(--accent-coordinator)] focus:outline-none"
+                className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#00d9ff] font-semibold cursor-pointer appearance-none focus:outline-none focus:border-[#8b5cf6]"
               >
                 {tracksList.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+              <ChevronDown className="w-4 h-4 text-[#8a9ba8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
-          )}
-        </Field>
-      </Card>
+          </div>
 
-      {errorMessage && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 p-4 text-sm text-[var(--color-danger)]">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {errorMessage}
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 p-4 text-sm text-[var(--color-success)]">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          {successMessage}
-        </div>
-      )}
-
-      <Card className="overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-[var(--border-muted)] bg-[var(--bg-input)]/50 px-4 py-3">
-          <span className="text-sm font-medium text-[var(--text-primary)]">
-            Bảng xếp hạng{tracksList.find((t) => t.id === selectedTrackId)?.name ? ` — ${tracksList.find((t) => t.id === selectedTrackId)?.name}` : ""}
-          </span>
-          <Badge tone={isPublishedState ? "success" : "warning"}>
-            {isPublishedState ? "Đã công bố" : "Bản nháp"}
-          </Badge>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border-muted)] bg-[var(--bg-input)]/30 text-xs text-[var(--text-muted)]">
-                <th className="w-16 p-4 text-center font-medium">Hạng</th>
-                <th className="p-4 font-medium">Tên đội</th>
-                <th className="w-32 p-4 text-right font-medium">Tổng điểm</th>
-                <th className="w-32 p-4 text-center font-medium">Kết quả</th>
-                <th className="w-64 p-4 font-medium">Giải thưởng</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-muted)]">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-[var(--text-muted)]">
-                    Đang tải bảng điểm...
-                  </td>
+        {/* Title Header */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-[#263339] pb-4">
+          <div>
+            <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
+              XÉT KẾT QUẢ VÒNG THI &amp; HẠNG MỤC
+            </h1>
+            <p className="font-sans text-xs text-[#8a9ba8] mt-1 max-w-2xl">
+              Kiểm tra bảng điểm xếp hạng, gán Giải thưởng cho Đội thi đạt thứ hạng cao, xuất báo cáo và gửi email thông báo.
+            </p>
+          </div>
+
+          {/* Top Right Action Buttons */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* 6.2 Nút Xuất File CSV */}
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="px-3.5 py-2 bg-[#182024] border border-[#263339] text-[#e1e7ec] hover:border-white font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              title="Xuất bảng điểm kết quả thành file Excel / CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-400" />
+              <span>XUẤT CSV</span>
+            </button>
+
+            {/* 6.2 Nút Gửi Email Kết Quả */}
+            <button
+              type="button"
+              onClick={handleOpenEmailModal}
+              className="px-3.5 py-2 bg-[#182024] border border-[#263339] text-[#e1e7ec] hover:border-[#a855f7] font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              title="Gửi email thông báo kết quả cho thí sinh"
+            >
+              <Mail className="w-3.5 h-3.5 text-[#a855f7]" />
+              <span>GỬI EMAIL</span>
+            </button>
+
+            <Link href={`/coordinator/prizes?eventId=${selectedEventId}`}>
+              <button
+                type="button"
+                className="px-4 py-2 bg-amber-500/10 border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Award className="w-4 h-4 text-amber-400" />
+                <span>CƠ CẤU GIẢI THƯỞNG</span>
+              </button>
+            </Link>
+
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleCalculate}
+              className="px-4 py-2 border border-[#263339] text-[#e1e7ec] hover:border-[#8b5cf6] font-mono text-xs flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <RefreshCw className="w-4 h-4 text-[#8b5cf6]" />
+              <span>TÍNH ĐIỂM TỰ ĐỘNG</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleTogglePublishStatus}
+              className={`px-5 py-2 border font-mono text-xs flex items-center gap-2 cursor-pointer transition-colors ${
+                isPublishedState
+                  ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-bold"
+                  : "bg-[#13191c] border-[#263339] text-[#f59e0b] hover:border-[#f59e0b]"
+              }`}
+            >
+              {isPublishedState ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4 text-[#f59e0b]" />}
+              <span>{isPublishedState ? "ẨN VỀ BẢN NHÁP" : "CÔNG BỐ KẾT QUẢ"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Global Alert Messages */}
+        {errorMessage && (
+          <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs flex items-center gap-3">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-mono text-xs flex items-center gap-3">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        {/* Main Data Grid */}
+        <div className="bg-[#13191c] border border-[#263339]">
+          {/* Header */}
+          <div className="h-10 bg-[#182024] flex items-center justify-between px-4 border-b border-[#263339] font-mono text-xs text-[#8a9ba8] font-bold tracking-widest uppercase">
+            <span>
+              BẢNG XẾP HẠNG MA TRẬN ĐIỂM{tracksList.find((t) => t.id === selectedTrackId)?.name ? ` — [ ${tracksList.find((t) => t.id === selectedTrackId)?.name} ]` : ""}
+            </span>
+            <span className={isPublishedState ? "text-[#10b981]" : "text-[#f59e0b]"}>
+              {isPublishedState ? "ĐÃ CÔNG BỐ PUBLIC" : "CHẾ ĐỘ BẢN NHÁP"}
+            </span>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-mono text-xs">
+              <thead>
+                <tr className="border-b border-[#263339] text-[#8a9ba8] tracking-wider text-[11px] bg-[#0a0e10]">
+                  <th className="p-4 w-16 text-center">HẠNG</th>
+                  <th className="p-4">TÊN ĐỘI THI THẮNG GIẢI</th>
+                  <th className="p-4 w-32 text-right">TỔNG ĐIỂM</th>
+                  <th className="p-4 w-32 text-center">KẾT QUẢ</th>
+                  <th className="p-4 w-64">CƠ CHẾ GÁN GIẢI THƯỞNG (PRIZE)</th>
                 </tr>
-              ) : (
-                displayResults.map((r: any, idx: number) => {
-                  const rankStr = String(r.rank || idx + 1).padStart(2, "0");
-                  const name = teamNameById.get(r.teamId) || r.teamName || r.TeamName || r.teamId;
-                  const uid = `KQ-${(r.id || "").slice(0, 8).toUpperCase()}`;
-                  const score = Number(r.finalScore || r.totalScore || r.TotalScore || 0).toFixed(2);
-                  const isAdv = r.isAdvanced !== undefined ? Boolean(r.isAdvanced) : idx < 2;
-                  const assignedPrizeId = assignedPrizesMap[r.id] ?? r.prizeId ?? "none";
+              </thead>
+              <tbody className="divide-y divide-[#263339]">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-[#8a9ba8]">
+                      Đang tải ma trận điểm kết quả...
+                    </td>
+                  </tr>
+                ) : (
+                  displayResults.map((r: any, idx: number) => {
+                    const rankStr = String(r.rank || idx + 1).padStart(2, "0");
+                    const name = teamNameById.get(r.teamId) || r.teamName || r.TeamName || r.teamId;
+                    const uid = `KQ: ${(r.id || "").slice(0, 8).toUpperCase()}`;
+                    const score = Number(r.finalScore || r.totalScore || r.TotalScore || 0).toFixed(2);
+                    const isAdv = r.isAdvanced !== undefined ? Boolean(r.isAdvanced) : idx < 2;
 
-                  return (
-                    <tr key={r.id || idx} className="transition-colors hover:bg-[var(--bg-input)]/30">
-                      <td className="p-4 text-center font-semibold text-[var(--accent-coordinator)]">{rankStr}</td>
-                      <td className="p-4">
-                        <div className="font-medium text-[var(--text-primary)]">{name}</div>
-                        <div className="mt-0.5 font-mono text-xs text-[var(--text-muted)]">{uid}</div>
-                      </td>
-                      <td className="p-4 text-right font-semibold">{score}</td>
-                      <td className="p-4 text-center">
-                        <Badge tone={isAdv ? "success" : "danger"}>{isAdv ? "Thăng hạng" : "Bị loại"}</Badge>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1.5">
-                          <Award className="h-4 w-4 shrink-0 text-[var(--color-warning)]" />
-                          <select
-                            value={assignedPrizeId}
-                            onChange={(e) => handleAssignPrizeToTeam(r.id, e.target.value, name)}
-                            className="w-full cursor-pointer rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-2.5 py-1.5 text-xs focus:border-[var(--accent-coordinator)] focus:outline-none"
-                          >
-                            <option value="none">— Chưa gán giải —</option>
-                            {availablePrizesList.map((p) => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                    const assignedPrizeId = assignedPrizesMap[r.id] ?? r.prizeId ?? "none";
+
+                    return (
+                      <tr key={r.id || idx} className="hover:bg-[#182024] transition-colors">
+                        <td className="p-4 text-center font-bold text-base text-[#8b5cf6]">{rankStr}</td>
+                        <td className="p-4">
+                          <div className="font-sans font-bold text-sm text-[#e1e7ec]">{name}</div>
+                          <div className="text-[10px] text-[#8a9ba8] font-mono mt-0.5">{uid}</div>
+                        </td>
+                        <td className="p-4 text-right font-bold text-base text-[#e1e7ec]">{score}</td>
+                        <td className="p-4 text-center">
+                          {isAdv ? (
+                            <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold uppercase">
+                              [ THĂNG HẠNG ]
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/30 text-[10px] font-semibold uppercase">
+                              [ BỊ LOẠI ]
+                            </span>
+                          )}
+                        </td>
+                        
+                        {/* CƠ CHẾ GÁN GIẢI THƯỞNG DROPDOWN */}
+                        <td className="p-4">
+                          <div className="flex items-center gap-1.5">
+                            <Award className="w-4 h-4 text-[#f59e0b] shrink-0" />
+                            <select
+                              value={assignedPrizeId}
+                              onChange={(e) => handleAssignPrizeToTeam(r.id, e.target.value, name)}
+                              className="w-full px-2.5 py-1.5 bg-[#0a0e10] border border-[#263339] text-[#f59e0b] font-mono text-xs font-bold focus:outline-none focus:border-[#f59e0b] cursor-pointer"
+                            >
+                              <option value="none">— Chưa gán giải —</option>
+                              {availablePrizesList.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table Footer Pagination */}
+          <div className="p-3 bg-[#0a0e10] border-t border-[#263339] flex items-center justify-between font-mono text-xs text-[#8a9ba8]">
+            <div>TỔNG SỐ BẢN GHI: {String(displayResults.length).padStart(2, "0")}</div>
+            <div className="flex items-center gap-1">
+              <button className="px-2 py-0.5 border border-[#263339] hover:border-[#8b5cf6] text-xs">&lt;</button>
+              <button className="px-2 py-0.5 border border-[#263339] hover:border-[#8b5cf6] text-xs">&gt;</button>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-[var(--border-muted)] bg-[var(--bg-input)]/30 px-4 py-3 text-xs text-[var(--text-muted)]">
-          <span>Tổng: {displayResults.length} bản ghi</span>
-        </div>
-      </Card>
+      </div>
 
+      {/* 6.2 Modal Gửi Email Kết Quả */}
       {isEmailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <Card className="w-full max-w-xl space-y-5 p-6">
-            <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-3">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-                <Mail className="h-4 w-4" /> Gửi email thông báo kết quả
-              </h3>
-              <button type="button" onClick={() => setIsEmailModalOpen(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-                <X className="h-4 w-4" />
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#13191c] border border-[#263339] max-w-xl w-full p-6 space-y-5 font-mono text-xs shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#263339] pb-3">
+              <div className="flex items-center gap-2 text-[#a855f7] font-bold uppercase text-sm">
+                <Mail className="w-4 h-4" />
+                <span>GỬI EMAIL THÔNG BÁO KẾT QUẢ</span>
+              </div>
+              <button
+                onClick={() => setIsEmailModalOpen(false)}
+                className="text-[#8a9ba8] hover:text-white"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEmailRecipientType("all")}
-                  className={`rounded-lg border p-2.5 text-left text-xs transition-colors ${
-                    emailRecipientType === "all"
-                      ? "border-[var(--accent-coordinator)] bg-[var(--accent-coordinator)]/10 font-medium"
-                      : "border-[var(--border-muted)] text-[var(--text-muted)]"
-                  }`}
-                >
-                  <div>Toàn bộ đội thi</div>
-                  <div className="text-[var(--text-muted)]">{displayResults.length} đội</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEmailRecipientType("advanced")}
-                  className={`rounded-lg border p-2.5 text-left text-xs transition-colors ${
-                    emailRecipientType === "advanced"
-                      ? "border-[var(--accent-coordinator)] bg-[var(--accent-coordinator)]/10 font-medium"
-                      : "border-[var(--border-muted)] text-[var(--text-muted)]"
-                  }`}
-                >
-                  <div>Đội thăng hạng & có giải</div>
-                  <div className="text-[var(--text-muted)]">Chỉ top xuất sắc</div>
-                </button>
+              <div className="space-y-1.5">
+                <label className="text-[#8a9ba8] uppercase block text-[11px]">Đối tượng nhận mail:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEmailRecipientType("all")}
+                    className={`p-2.5 border text-left rounded ${
+                      emailRecipientType === "all"
+                        ? "bg-[#a855f7]/20 border-[#a855f7] text-white font-bold"
+                        : "bg-[#0a0e10] border-[#263339] text-[#8a9ba8]"
+                    }`}
+                  >
+                    <div>Toàn bộ đội thi</div>
+                    <div className="text-[10px] text-[#8a9ba8]">{displayResults.length} Đội trong vòng</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEmailRecipientType("advanced")}
+                    className={`p-2.5 border text-left rounded ${
+                      emailRecipientType === "advanced"
+                        ? "bg-[#a855f7]/20 border-[#a855f7] text-white font-bold"
+                        : "bg-[#0a0e10] border-[#263339] text-[#8a9ba8]"
+                    }`}
+                  >
+                    <div>Đội thăng hạng &amp; có giải</div>
+                    <div className="text-[10px] text-[#8a9ba8]">Chỉ Top xuất sắc</div>
+                  </button>
+                </div>
               </div>
 
-              <Field label="Tiêu đề email">
-                {({ id }) => (
-                  <Input id={id} type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} />
-                )}
-              </Field>
+              <div className="space-y-1.5">
+                <label className="text-[#8a9ba8] uppercase block text-[11px]">Tiêu đề thư (Subject):</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-bold focus:outline-none focus:border-[#a855f7]"
+                />
+              </div>
 
-              <Field label="Nội dung">
-                {({ id }) => (
-                  <textarea
-                    id={id}
-                    rows={6}
-                    value={emailCustomMessage}
-                    onChange={(e) => setEmailCustomMessage(e.target.value)}
-                    className="w-full resize-none rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] p-3 text-sm focus:border-[var(--accent-coordinator)] focus:outline-none"
-                  />
-                )}
-              </Field>
+              <div className="space-y-1.5">
+                <label className="text-[#8a9ba8] uppercase block text-[11px]">Nội dung thông điệp:</label>
+                <textarea
+                  rows={6}
+                  value={emailCustomMessage}
+                  onChange={(e) => setEmailCustomMessage(e.target.value)}
+                  className="w-full p-3 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans text-xs focus:outline-none focus:border-[#a855f7] leading-relaxed"
+                />
+              </div>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-[var(--border-muted)] pt-4">
-              <Button variant="ghost" onClick={() => setIsEmailModalOpen(false)}>Hủy</Button>
-              <Button accent="coordinator" disabled={isSendingEmail} onClick={handleSendEmailAnnouncement}>
-                <Send className="h-3.5 w-3.5" />
-                {isSendingEmail ? "Đang gửi..." : "Xác nhận gửi"}
-              </Button>
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#263339]">
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(false)}
+                className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-white"
+              >
+                Hủy bỏ
+              </button>
+
+              <button
+                type="button"
+                disabled={isSendingEmail}
+                onClick={handleSendEmailAnnouncement}
+                className="px-5 py-2 bg-[#a855f7] hover:bg-[#9333ea] text-white font-bold uppercase flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{isSendingEmail ? "Đang gửi email..." : "Xác Nhận Gửi Mail"}</span>
+              </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
-    </PageShell>
+
+    </div>
   );
 };

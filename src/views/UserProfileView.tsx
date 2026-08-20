@@ -18,8 +18,6 @@ import { useEvents } from "@/repositories/eventsRepository";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { uploadRepository } from "@/repositories/uploadRepository";
 import { Button, Input, Card, Badge } from "@/components/ui";
-import { PageShell } from "@/components/layout/PageShell";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { useToast } from "@/providers/ToastProvider";
 import type { FptStudentResponse } from "@/models/entities";
 
@@ -579,22 +577,37 @@ export function UserProfileView() {
   };
 
   return (
-    <PageShell className="max-w-6xl">
-      <PageHeader
-        title="Hồ sơ cá nhân"
-        description="Quản lý thông tin định danh, đơn vị công tác và bảo mật tài khoản."
-        actions={
-          <Button
-            type="button"
-            variant={isEditing ? "ghost" : "secondary"}
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            {isEditing ? "Hủy chỉnh sửa" : "Chỉnh sửa hồ sơ"}
-          </Button>
-        }
-      />
+    <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans py-8 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto space-y-6">
 
-      <div className="space-y-6">
+        {/* ── Top Header Title ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
+          <div>
+            <div className="font-mono text-xs text-amber-400 mb-1 uppercase tracking-wider">
+              [ HỒ SƠ TÀI KHOẢN HỆ THỐNG ]
+            </div>
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase tracking-wide">
+              HỒ SƠ CÁ NHÂN &amp; PHÂN CÔNG
+            </h1>
+            <p className="font-mono text-xs text-zinc-400 mt-1">
+              Quản lý thông tin định danh, đơn vị công tác và bảo mật tài khoản.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 font-mono text-xs">
+            <button
+              type="button"
+              onClick={() => setIsEditing(!isEditing)}
+              className={`px-4 py-2 border font-bold uppercase transition-all cursor-pointer hud-clipped ${
+                isEditing
+                  ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:text-white"
+                  : "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500 hover:text-black shadow-sm"
+              }`}
+            >
+              {isEditing ? "[ HỦY CHỈNH SỬA ]" : "[ CHỈNH SỬA HỒ SƠ ]"}
+            </button>
+          </div>
+        </div>
 
         {/* ── Two-Strike Warning Banner for Students ── */}
         {!isStaff && isBlocked && (
@@ -1431,6 +1444,6 @@ export function UserProfileView() {
         </div>
 
       </div>
-    </PageShell>
+    </div>
   );
 }
