@@ -95,3 +95,40 @@
     display: none !important;
   }
 }
+
+/* Landing portal — restrained motion (Refined Dark) */
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(-50%) rotate(0deg);
+  }
+  50% {
+    transform: translateY(calc(-50% - 12px)) rotate(2deg);
+  }
+}
+
+.landing-hero-copy {
+  animation: landing-rise 0.7s ease-out both;
+}
+
+.landing-hero-shield {
+  animation: landing-float 12s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-copy,
+  .landing-hero-shield {
+    animation: none;
+  }
+}
