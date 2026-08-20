@@ -75,12 +75,19 @@ export function MentorTracksView() {
             const trackName = track.trackName || track.TrackName || "Hạng mục";
             const description = track.description || track.Description || "";
             const mentors = track.mentors || track.Mentors || [];
-            const stats = trackStatsMap.get(trackId) || { totalTeams: 0, submissionCount: 0 };
-            const progressPct = Math.min(100, Math.max(25, (idx + 1) * 35));
+            const stats = trackStatsMap.get(trackId) || {
+              totalTeams: 0,
+              submissionCount: 0,
+              progressPct: 0,
+              mentorNames: [] as string[],
+            };
+            const progressPct = stats.progressPct;
             const mentorNames =
-              mentors.length > 0
-                ? mentors.map((m) => m.fullName || m.FullName).join(", ")
-                : "Chính bạn";
+              stats.mentorNames.length > 0
+                ? stats.mentorNames.join(", ")
+                : mentors.length > 0
+                  ? mentors.map((m) => m.fullName || m.FullName).join(", ")
+                  : "Chính bạn";
 
             return (
               <Card
@@ -118,7 +125,7 @@ export function MentorTracksView() {
 
                 <div className="flex w-full shrink-0 flex-col gap-3 lg:w-72">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[var(--text-muted)]">Tiến độ hỗ trợ</span>
+                    <span className="text-[var(--text-muted)]">Tiến độ đội đã nộp bài</span>
                     <span className="font-medium text-[var(--accent-mentor)]">{progressPct}%</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full border border-[var(--border-muted)] bg-[var(--bg-input)]">

@@ -245,22 +245,24 @@ export function EventsDiscoveryView() {
 
   const { data: teamResponse } = useMyTeam();
   const team = (teamResponse as any)?.team ?? teamResponse;
-  const myEventId =
-    allEventRoles[0]?.eventId ||
-    activeRole?.eventId ||
-    activeRole?.EventId ||
-    team?.EventId ||
-    (team as { eventId?: string })?.eventId ||
-    "";
-  const { data: assignedEvent } = useEventDetail(myEventId);
-
   const {
     events, totalCount, topTracks,
+    myEventIds,
     search, setSearch,
     statusFilter, setStatusFilter,
     trackFilter, setTrackFilter,
     sort, setSort,
   } = useEventsDiscoveryViewModel();
+
+  const myEventId =
+    myEventIds[0] ||
+    activeRole?.eventId ||
+    activeRole?.EventId ||
+    team?.EventId ||
+    (team as { eventId?: string })?.eventId ||
+    "";
+  const myAssignedCount = myEventIds.length;
+  const { data: assignedEvent } = useEventDetail(myAssignedCount === 1 ? myEventId : "");
 
   const handleClear = () => {
     setStatusFilter("all");
@@ -269,16 +271,19 @@ export function EventsDiscoveryView() {
 
   const listedMine = events.find((e) => e.id === myEventId);
   const bannerName =
-    listedMine?.eventName ||
-    assignedEvent?.eventName ||
-    assignedEvent?.EventName ||
-    assignedEvent?.name ||
-    (team as { eventName?: string; EventName?: string })?.eventName ||
-    (team as { EventName?: string })?.EventName ||
-    "";
-  const bannerStatus = listedMine
-    ? listedMine.status
-    : assignedEvent?.startDate && assignedEvent?.endDate
+    myAssignedCount === 1
+      ? listedMine?.eventName ||
+        assignedEvent?.eventName ||
+        assignedEvent?.EventName ||
+        assignedEvent?.name ||
+        (team as { eventName?: string; EventName?: string })?.eventName ||
+        (team as { EventName?: string })?.EventName ||
+        ""
+      : "";
+  const bannerStatus =
+    myAssignedCount === 1 && listedMine
+      ? listedMine.status
+      : myAssignedCount === 1 && assignedEvent?.startDate && assignedEvent?.endDate
       ? computeEventStatus(
           {
             id: myEventId,
@@ -336,23 +341,32 @@ export function EventsDiscoveryView() {
         </div>
       )}
 
-      {user && roleName !== "Guest" && roleName !== "Admin" && (
+      {user && roleName !== "Guest" && roleName !== "Admin" && myAssignedCount > 0 && (
         <div className="mb-6 flex flex-col gap-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs text-[var(--text-muted)]">Sự kiện của tôi · {roleName}</p>
-            <p className="text-sm font-medium text-[var(--text-primary)]">
-              {bannerName || "Sự kiện được phân công"}
+            <p className="text-xs text-[var(--text-muted)]">
+              {myAssignedCount > 1
+                ? `${myAssignedCount} sự kiện được phân công`
+                : "Sự kiện được phân công"}
             </p>
-            {bannerStatus && (
-              <p className="mt-1 text-xs text-[var(--text-muted)]">
-                Trạng thái: {STATUS_LABEL[bannerStatus]}
-              </p>
-            )}
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              {myAssignedCount > 1
+                ? "Chọn sự kiện bên dưới để vào bàn làm việc"
+                : bannerName || "Sự kiện được phân công"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Vai trò: {roleName}
+              {bannerStatus ? ` · Trạng thái: ${STATUS_LABEL[bannerStatus]}` : ""}
+            </p>
           </div>
-          {myEventId && (
+          {myAssignedCount === 1 && myEventId ? (
             <Link href={`/events/${myEventId}`}>
               <Button variant="secondary">Truy cập sự kiện</Button>
             </Link>
+          ) : (
+            <Button type="button" variant="secondary" onClick={() => setStatusFilter("my_event")}>
+              Xem danh sách của tôi
+            </Button>
           )}
         </div>
       )}
@@ -367,7 +381,7 @@ export function EventsDiscoveryView() {
               trackFilter={trackFilter}
               setTrackFilter={setTrackFilter}
               topTracks={topTracks}
-              hasMyEvent={!!myEventId}
+              hasMyEvent={myAssignedCount > 0}
             />
           </div>
 

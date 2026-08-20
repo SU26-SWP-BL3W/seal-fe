@@ -414,7 +414,7 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
                           variant={isEventEnded ? "secondary" : "primary"}
                           className="text-xs"
                         >
-                          {isEventEnded ? "Xem lại bài đã chấm" : "Vào chấm điểm track này"}
+                          {isEventEnded ? "Xem lại bài đã chấm" : "Vào chấm điểm hạng mục này"}
                         </Button>
                       </Link>
                     </div>

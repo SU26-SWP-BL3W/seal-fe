@@ -81,7 +81,7 @@ export function MentorTeamsView() {
 
       {myTracks.length > 0 && (
         <Card className="mb-6 p-4">
-          <p className="mb-3 text-xs font-medium text-[var(--text-muted)]">Chọn hạng mục</p>
+          <p className="mb-3 text-xs font-medium text-[var(--text-muted)]">Hạng mục được giao</p>
           <div className="flex flex-wrap gap-2">
             {myTracks.map((t) => {
               const tid = (t.id || t.Id) as string;

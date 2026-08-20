@@ -487,7 +487,10 @@ export function NavigationBar() {
       (queryTrackId && hasTrackRolePermission(user, mentorRolesOnly, queryTrackId, "Mentor")) ||
       (currentEventId && hasEventRolePermission(user, mentorRolesOnly, currentEventId, "Mentor")),
     );
-    const mentorTrackLabel = mentorContext?.trackName || "Hạng mục được phân công";
+    const mentorTrackLabel = mentorContext?.trackName || "";
+    const mentorAssignmentLine = mentorTrackLabel
+      ? `Hạng mục: ${mentorTrackLabel}`
+      : "Đã được phân công (mời / gắn)";
     const mentorQuery = (() => {
       const params = new URLSearchParams();
       if (activeViewEventId) params.set("eventId", activeViewEventId);
@@ -530,7 +533,7 @@ export function NavigationBar() {
               {user?.FullName || "Cố Vấn Chuyên Môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedMentor ? `Phân công: ${mentorTrackLabel}` : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedMentor ? mentorAssignmentLine : "Quyền hạn: Read-Only (Chỉ Xem)"}
             </span>
           </div>
 
@@ -651,7 +654,10 @@ export function NavigationBar() {
       (queryTrackId && hasTrackRolePermission(user, judgeRolesOnly, queryTrackId, "Judge")) ||
       (currentEventId && hasEventRolePermission(user, judgeRolesOnly, currentEventId, "Judge")),
     );
-    const judgeTrackLabel = judgeContext?.trackName || "Hạng mục được phân công";
+    const judgeTrackLabel = judgeContext?.trackName || "";
+    const judgeAssignmentLine = judgeTrackLabel
+      ? `Hạng mục: ${judgeTrackLabel}`
+      : "Đã được phân công (mời / gắn)";
 
     return (
       <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--accent-judge)]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
@@ -680,13 +686,13 @@ export function NavigationBar() {
             <span className={`font-mono text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${
               isAuthorizedJudge ? "text-[var(--accent-judge)]" : "text-[var(--color-warning)]"
             }`}>
-              <Scale className="w-3.5 h-3.5" /> {isAuthorizedJudge ? "GIÁM KHẢO CHẤM ĐIỂM" : "CHƯA PHÂN CÔNG GIÁM KHẢO"}
+              <Scale className="w-3.5 h-3.5" /> {isAuthorizedJudge ? "GIÁM KHẢO" : "CHƯA PHÂN CÔNG GIÁM KHẢO"}
             </span>
             <span className="font-display text-xs font-bold text-[var(--text-primary)] truncate">
               {user?.FullName || "Giám Khảo Chuyên Môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedJudge ? `Phân công: ${judgeTrackLabel}` : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedJudge ? judgeAssignmentLine : "Quyền hạn: Read-Only (Chỉ Xem)"}
             </span>
           </div>
 
