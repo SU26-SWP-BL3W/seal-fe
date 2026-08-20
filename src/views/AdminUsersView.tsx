@@ -12,6 +12,8 @@ import {
   Eye,
   AlertTriangle,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import type { User } from "@/models/entities";
@@ -56,6 +58,9 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
   const [roleFilter, setRoleFilter] = useState(isCoordinator ? "student" : "all");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
+
   const [detailUserModal, setDetailUserModal] = useState<User | null>(null);
   const [rejectUserModal, setRejectUserModal] = useState<{ userId: string; fullName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -73,6 +78,21 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
   const { mutateAsync: approveUser } = useApproveUser();
   const { mutateAsync: rejectUser } = useRejectUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleRoleFilterChange = (role: string) => {
+    setRoleFilter(role);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
 
   const hasCardSubmission = (u: User) => {
     const hasStudentCode = Boolean(u.studentCode && u.studentCode.trim() !== "");
@@ -120,6 +140,14 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
       return matchesSearch && matchesRole && matchesStatus && matchesCardSubmission;
     });
   }, [usersList, searchTerm, roleFilter, statusFilter, isCoordinator]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredUsers.slice(start, start + PAGE_SIZE);
+  }, [filteredUsers, safePage]);
 
   const handleApprove = async (userId: string) => {
     setActionError(null);
@@ -264,7 +292,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
             <Input
               type="search"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Tìm họ tên, email, mã SV..."
               className="pl-9"
             />
@@ -277,16 +305,16 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
         <div className="space-y-3 border-t border-[var(--border-muted)] pt-3">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="mr-1 text-xs font-medium text-[var(--text-muted)]">Trạng thái:</span>
-            <FilterPill active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
+            <FilterPill active={statusFilter === "all"} onClick={() => handleStatusFilterChange("all")}>
               Tất cả
             </FilterPill>
-            <FilterPill active={statusFilter === "approved"} onClick={() => setStatusFilter("approved")}>
+            <FilterPill active={statusFilter === "approved"} onClick={() => handleStatusFilterChange("approved")}>
               Đã duyệt
             </FilterPill>
-            <FilterPill active={statusFilter === "pending"} onClick={() => setStatusFilter("pending")}>
+            <FilterPill active={statusFilter === "pending"} onClick={() => handleStatusFilterChange("pending")}>
               Chờ phê duyệt
             </FilterPill>
-            <FilterPill active={statusFilter === "locked"} onClick={() => setStatusFilter("locked")}>
+            <FilterPill active={statusFilter === "locked"} onClick={() => handleStatusFilterChange("locked")}>
               Tạm khóa (≥2 lần)
             </FilterPill>
           </div>
@@ -294,19 +322,19 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
           {!isCoordinatorView && (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="mr-1 text-xs font-medium text-[var(--text-muted)]">Vai trò:</span>
-              <FilterPill active={roleFilter === "all"} onClick={() => setRoleFilter("all")}>
+              <FilterPill active={roleFilter === "all"} onClick={() => handleRoleFilterChange("all")}>
                 Tất cả
               </FilterPill>
-              <FilterPill active={roleFilter === "student"} onClick={() => setRoleFilter("student")}>
+              <FilterPill active={roleFilter === "student"} onClick={() => handleRoleFilterChange("student")}>
                 Sinh viên
               </FilterPill>
-              <FilterPill active={roleFilter === "judge"} onClick={() => setRoleFilter("judge")}>
+              <FilterPill active={roleFilter === "judge"} onClick={() => handleRoleFilterChange("judge")}>
                 Giám khảo
               </FilterPill>
-              <FilterPill active={roleFilter === "mentor"} onClick={() => setRoleFilter("mentor")}>
+              <FilterPill active={roleFilter === "mentor"} onClick={() => handleRoleFilterChange("mentor")}>
                 Cố vấn
               </FilterPill>
-              <FilterPill active={roleFilter === "coordinator"} onClick={() => setRoleFilter("coordinator")}>
+              <FilterPill active={roleFilter === "coordinator"} onClick={() => handleRoleFilterChange("coordinator")}>
                 Điều phối viên
               </FilterPill>
             </div>
@@ -335,20 +363,20 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[980px] table-fixed text-left text-sm">
               <thead className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
                 <tr>
                   <th className="w-12 px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">#</th>
-                  <th className="px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Họ và tên</th>
-                  <th className="px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Email</th>
-                  <th className="px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Trường</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Vai trò</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Hồ sơ SV</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)]">Thao tác</th>
+                  <th className="w-[22%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Họ và tên</th>
+                  <th className="w-[24%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Email</th>
+                  <th className="w-[18%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Trường</th>
+                  <th className="w-[10%] px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Vai trò</th>
+                  <th className="w-[12%] px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Hồ sơ SV</th>
+                  <th className="w-[14%] px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)]">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-muted)]/60">
-                {filteredUsers.map((u, idx) => {
+                {paginatedUsers.map((u, idx) => {
                   const userId = u.id || (u as any).Id || u.userId || "";
                   const emailLower = (u.email || "").toLowerCase();
                   const isAdm = !!u.isAdmin || !!u.IsAdmin || emailLower.includes("admin");
@@ -364,18 +392,23 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
 
                   return (
                     <tr key={userId || idx} className="transition-colors hover:bg-[var(--bg-input)]/50">
-                      <td className="px-4 py-3 text-center text-[var(--text-muted)]">{idx + 1}</td>
-                      <td className="px-4 py-3 font-medium text-[var(--text-primary)]">
+                      <td className="px-4 py-3 text-center text-[var(--text-muted)]">
+                        {(safePage - 1) * PAGE_SIZE + idx + 1}
+                      </td>
+                      <td className="truncate px-4 py-3 font-medium text-[var(--text-primary)]">
                         <button
                           type="button"
                           onClick={() => setDetailUserModal(u)}
-                          className="cursor-pointer text-left hover:text-[var(--accent-coordinator)]"
+                          className="cursor-pointer truncate text-left hover:text-[var(--accent-coordinator)]"
+                          title={u.fullName || "Chưa cập nhật"}
                         >
                           {u.fullName || "Chưa cập nhật"}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-[var(--text-muted)]">{u.email}</td>
-                      <td className="px-4 py-3 text-[var(--text-muted)]">
+                      <td className="truncate px-4 py-3 text-[var(--text-muted)]" title={u.email}>
+                        {u.email}
+                      </td>
+                      <td className="truncate px-4 py-3 text-[var(--text-muted)]">
                         {u.schoolName || (u.isFpt ? "FPT University" : "N/A")}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -405,7 +438,7 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap">
                           {!isApproved && !isStaff && (
                             <>
                               <Button
@@ -455,6 +488,83 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {filteredUsers.length > 0 && (
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border-muted)] px-4 py-4 text-xs text-[var(--text-muted)] sm:flex-row">
+            <div>
+              Hiển thị{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {(safePage - 1) * PAGE_SIZE + 1}
+              </span>
+              {" – "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {Math.min(safePage * PAGE_SIZE, filteredUsers.length)}
+              </span>
+              {" / "}
+              <span className="font-medium text-[var(--accent-coordinator)]">
+                {filteredUsers.length}
+              </span>{" "}
+              người dùng (tối đa {PAGE_SIZE}/trang)
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  accent="coordinator"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Trước
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  if (
+                    totalPages > 7 &&
+                    p !== 1 &&
+                    p !== totalPages &&
+                    Math.abs(p - safePage) > 1
+                  ) {
+                    if (p === 2 || p === totalPages - 1) {
+                      return (
+                        <span key={p} className="select-none px-1 text-[var(--text-muted)]">
+                          …
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+
+                  const isActivePage = p === safePage;
+                  return (
+                    <Button
+                      key={p}
+                      variant={isActivePage ? "primary" : "ghost"}
+                      accent="coordinator"
+                      onClick={() => setCurrentPage(p)}
+                      className="h-8 w-8 px-0 text-xs"
+                    >
+                      {p}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  variant="ghost"
+                  accent="coordinator"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  Sau
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

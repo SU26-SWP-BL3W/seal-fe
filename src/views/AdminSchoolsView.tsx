@@ -18,6 +18,8 @@ import {
   Lock,
   Edit2,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { PageShell } from "@/components/layout/PageShell";
@@ -27,6 +29,8 @@ import { Button, Badge, Card, Input, EmptyState } from "@/components/ui";
 export const AdminSchoolsView: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newSchoolName, setNewSchoolName] = useState("");
@@ -51,6 +55,11 @@ export const AdminSchoolsView: React.FC = () => {
   const { mutateAsync: updateSchool, isPending: isUpdating } = useUpdateSchool();
   const { mutateAsync: deleteSchool, isPending: isDeleting } = useDeleteSchool();
 
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
   const filteredSchools = useMemo(() => {
     return schoolsList.filter((sch: any) => {
       const sName = sch.schoolName || sch.name || "";
@@ -64,6 +73,14 @@ export const AdminSchoolsView: React.FC = () => {
       );
     });
   }, [schoolsList, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSchools.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedSchools = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredSchools.slice(start, start + PAGE_SIZE);
+  }, [filteredSchools, safePage]);
 
   const handleCreateSchool = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,7 +224,7 @@ export const AdminSchoolsView: React.FC = () => {
           <Input
             type="search"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Tìm mã, tên trường, địa chỉ..."
             className="pl-9"
           />
@@ -236,18 +253,18 @@ export const AdminSchoolsView: React.FC = () => {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full table-fixed text-left text-sm">
               <thead className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
                 <tr>
                   <th className="w-12 px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">#</th>
-                  <th className="w-28 px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Mã trường</th>
-                  <th className="px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Tên trường</th>
-                  <th className="px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Địa chỉ</th>
-                  <th className="w-36 px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Thao tác</th>
+                  <th className="w-[15%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Mã trường</th>
+                  <th className="w-[38%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Tên trường</th>
+                  <th className="w-[30%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Địa chỉ</th>
+                  <th className="w-[17%] px-4 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-muted)]/40">
-                {filteredSchools.map((sch: any, idx: number) => {
+                {paginatedSchools.map((sch: any, idx: number) => {
                   const schId = sch.id || sch.Id || sch.schoolId;
                   const code = sch.code || sch.schoolCode || "UNIV";
                   const name = sch.schoolName || sch.name || "Trường Đại Học";
@@ -255,12 +272,18 @@ export const AdminSchoolsView: React.FC = () => {
 
                   return (
                     <tr key={schId || idx} className="transition-colors hover:bg-[var(--bg-input)]/50">
-                      <td className="px-4 py-3 text-center text-[var(--text-muted)]">{idx + 1}</td>
+                      <td className="px-4 py-3 text-center text-[var(--text-muted)]">
+                        {(safePage - 1) * PAGE_SIZE + idx + 1}
+                      </td>
                       <td className="px-4 py-3 font-medium text-[var(--accent-primary)]">{code}</td>
-                      <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{name}</td>
-                      <td className="px-4 py-3 text-[var(--text-muted)]">{address}</td>
+                      <td className="truncate px-4 py-3 font-medium text-[var(--text-primary)]" title={name}>
+                        {name}
+                      </td>
+                      <td className="truncate px-4 py-3 text-[var(--text-muted)]" title={address}>
+                        {address}
+                      </td>
                       <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                           <Button
                             variant="ghost"
                             accent="primary"
@@ -287,6 +310,83 @@ export const AdminSchoolsView: React.FC = () => {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {filteredSchools.length > 0 && (
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border-muted)] px-4 py-4 text-xs text-[var(--text-muted)] sm:flex-row">
+            <div>
+              Hiển thị{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {(safePage - 1) * PAGE_SIZE + 1}
+              </span>
+              {" – "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {Math.min(safePage * PAGE_SIZE, filteredSchools.length)}
+              </span>
+              {" / "}
+              <span className="font-medium text-[var(--accent-primary)]">
+                {filteredSchools.length}
+              </span>{" "}
+              trường (tối đa {PAGE_SIZE}/trang)
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  accent="primary"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Trước
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  if (
+                    totalPages > 7 &&
+                    p !== 1 &&
+                    p !== totalPages &&
+                    Math.abs(p - safePage) > 1
+                  ) {
+                    if (p === 2 || p === totalPages - 1) {
+                      return (
+                        <span key={p} className="select-none px-1 text-[var(--text-muted)]">
+                          …
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+
+                  const isActivePage = p === safePage;
+                  return (
+                    <Button
+                      key={p}
+                      variant={isActivePage ? "primary" : "ghost"}
+                      accent="primary"
+                      onClick={() => setCurrentPage(p)}
+                      className="h-8 w-8 px-0 text-xs"
+                    >
+                      {p}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  variant="ghost"
+                  accent="primary"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  Sau
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

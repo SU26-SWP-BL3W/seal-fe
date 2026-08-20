@@ -32,6 +32,12 @@ function pickEventId(ev: any): string {
 
 export function AdminCoordinatorsView() {
   const { user: currentUser, refreshRoles } = useAuth();
+  const currentUserId =
+    currentUser?.id ||
+    (currentUser as any)?.userId ||
+    (currentUser as any)?.UserId ||
+    "";
+  const currentUserEmail = (currentUser?.email || (currentUser as any)?.Email || "").toLowerCase();
   const searchParams = useSearchParams();
   const initialEventId = searchParams.get("eventId") || "";
 
@@ -143,7 +149,7 @@ export function AdminCoordinatorsView() {
     setActionError(null);
   };
 
-  const handleRemoveCoordinator = async (roleId: string, name: string) => {
+  const handleRemoveCoordinator = async (roleId: string, name: string, targetUserId?: string) => {
     const ok = window.confirm(`Bạn có chắc chắn muốn thu hồi quyền Điều phối viên của "${name}" khỏi sự kiện này không?`);
     if (!ok) return;
 
@@ -153,7 +159,7 @@ export function AdminCoordinatorsView() {
       await staffRepository.removeEventRole(roleId);
       setActionSuccess(`Đã thu hồi quyền Điều phối viên của ${name} thành công!`);
       await refetchRoles();
-      if (currentUser?.email && name && (currentUser.email.toLowerCase() === name.toLowerCase() || currentUser.fullName?.toLowerCase() === name.toLowerCase())) {
+      if (targetUserId && targetUserId === currentUserId) {
         await refreshRoles();
       }
       setTimeout(() => setActionSuccess(null), 3000);
@@ -188,6 +194,19 @@ export function AdminCoordinatorsView() {
     if (isAlreadyEc) {
       setActionError("Người này đã là Điều phối viên phụ trách sự kiện này rồi!");
       return;
+    }
+
+    if (emailToUse === currentUserEmail) {
+      setActionError("Bạn không thể tự mời hoặc tự gán chính mình làm Điều phối viên.");
+      return;
+    }
+
+    if (matchedUser) {
+      const realUserId = matchedUser.id || (matchedUser as any).Id || matchedUser.userId || (matchedUser as any).UserId;
+      if (realUserId === currentUserId) {
+        setActionError("Bạn không thể tự mời hoặc tự gán chính mình làm Điều phối viên.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -520,6 +539,7 @@ export function AdminCoordinatorsView() {
               <div className="space-y-3">
                 {currentCoordinators.map((c: any, idx) => {
                   const roleId = c.id || c.Id || c.roleId || c.RoleId || `ec-${idx}`;
+                  const coordUserId = c.userId || c.UserId || c.user?.id || c.user?.userId || c.User?.Id;
                   const uName = c.fullName || c.FullName || c.userName || c.UserName || "Điều phối viên";
                   const uEmail = c.email || c.Email || "coordinator@seal.edu.vn";
                   const isRemoving = removingRoleId === roleId;
@@ -546,7 +566,7 @@ export function AdminCoordinatorsView() {
                         <Button
                           variant="ghost"
                           accent="primary"
-                          onClick={() => handleRemoveCoordinator(roleId, uName)}
+                          onClick={() => handleRemoveCoordinator(roleId, uName, coordUserId)}
                           disabled={isRemoving}
                           className="h-8 px-2.5 text-xs"
                         >

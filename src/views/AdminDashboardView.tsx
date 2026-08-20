@@ -20,6 +20,8 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
@@ -96,6 +98,8 @@ export const AdminDashboardView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | "has_ec" | "no_ec">("all");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
@@ -136,6 +140,24 @@ export const AdminDashboardView: React.FC = () => {
       return matchesSearch && matchesStatus;
     });
   }, [displayEvents, searchTerm, statusFilter, ecMap]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedEvents = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredEvents.slice(start, start + PAGE_SIZE);
+  }, [filteredEvents, safePage]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (filter: "all" | "has_ec" | "no_ec") => {
+    setStatusFilter(filter);
+    setCurrentPage(1);
+  };
 
   return (
     <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
@@ -270,13 +292,13 @@ export const AdminDashboardView: React.FC = () => {
                 type="text"
                 placeholder="Tìm sự kiện, mùa giải, EC..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9"
               />
               {searchTerm && (
                 <button
                   type="button"
-                  onClick={() => setSearchTerm("")}
+                  onClick={() => handleSearchChange("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -285,13 +307,13 @@ export const AdminDashboardView: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-base)] p-1">
-              <FilterPill active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
+              <FilterPill active={statusFilter === "all"} onClick={() => handleStatusFilterChange("all")}>
                 Tất cả ({displayEvents.length})
               </FilterPill>
-              <FilterPill active={statusFilter === "has_ec"} onClick={() => setStatusFilter("has_ec")}>
+              <FilterPill active={statusFilter === "has_ec"} onClick={() => handleStatusFilterChange("has_ec")}>
                 Đã gán EC
               </FilterPill>
-              <FilterPill active={statusFilter === "no_ec"} onClick={() => setStatusFilter("no_ec")}>
+              <FilterPill active={statusFilter === "no_ec"} onClick={() => handleStatusFilterChange("no_ec")}>
                 Chưa gán EC
               </FilterPill>
             </div>
@@ -346,8 +368,8 @@ export const AdminDashboardView: React.FC = () => {
               <Button
                 variant="secondary"
                 onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("all");
+                  handleSearchChange("");
+                  handleStatusFilterChange("all");
                 }}
               >
                 Xóa bộ lọc
@@ -356,19 +378,19 @@ export const AdminDashboardView: React.FC = () => {
           />
         ) : viewMode === "table" ? (
           <div className="overflow-x-auto rounded-lg border border-[var(--border-muted)]">
-            <table className="w-full min-w-[980px] table-fixed border-collapse text-left text-sm">
+            <table className="w-full min-w-[1060px] table-fixed border-collapse text-left text-sm">
               <thead className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
                 <tr>
-                  <th className="w-[26%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Tên sự kiện</th>
-                  <th className="w-[13%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Mùa giải</th>
-                  <th className="w-[12%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Vòng thi</th>
-                  <th className="w-[20%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Event coordinator</th>
-                  <th className="w-[10%] px-2 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Trạng thái</th>
-                  <th className="w-[19%] px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)]">Thao tác</th>
+                  <th className="w-[23%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Tên sự kiện</th>
+                  <th className="w-[12%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Mùa giải</th>
+                  <th className="w-[10%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Vòng thi</th>
+                  <th className="w-[18%] px-4 py-3 text-xs font-medium text-[var(--text-muted)]">Event coordinator</th>
+                  <th className="w-[12%] px-2 py-3 text-center text-xs font-medium text-[var(--text-muted)]">Trạng thái</th>
+                  <th className="w-[25%] px-4 py-3 text-right text-xs font-medium text-[var(--text-muted)]">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-muted)]/50">
-                {filteredEvents.map((ev: any, index: number) => {
+                {paginatedEvents.map((ev: any, index: number) => {
                   const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-admin-${index}`;
                   const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
                   const season = ev.season || ev.Season || "Mùa Hè";
@@ -470,7 +492,7 @@ export const AdminDashboardView: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredEvents.map((ev: any, index: number) => {
+            {paginatedEvents.map((ev: any, index: number) => {
               const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-grid-${index}`;
               const name = ev.eventName || ev.EventName || "Sự kiện Hackathon";
               const season = ev.season || ev.Season || "Mùa Hè";
@@ -553,6 +575,83 @@ export const AdminDashboardView: React.FC = () => {
                 </Card>
               );
             })}
+          </div>
+        )}
+
+        {filteredEvents.length > 0 && (
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border-muted)] pt-4 text-xs text-[var(--text-muted)] sm:flex-row">
+            <div>
+              Hiển thị{" "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {(safePage - 1) * PAGE_SIZE + 1}
+              </span>
+              {" – "}
+              <span className="font-medium text-[var(--text-primary)]">
+                {Math.min(safePage * PAGE_SIZE, filteredEvents.length)}
+              </span>
+              {" / "}
+              <span className="font-medium text-[var(--accent-primary)]">
+                {filteredEvents.length}
+              </span>{" "}
+              sự kiện (tối đa {PAGE_SIZE}/trang)
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  accent="primary"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Trước
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  if (
+                    totalPages > 7 &&
+                    p !== 1 &&
+                    p !== totalPages &&
+                    Math.abs(p - safePage) > 1
+                  ) {
+                    if (p === 2 || p === totalPages - 1) {
+                      return (
+                        <span key={p} className="select-none px-1 text-[var(--text-muted)]">
+                          …
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+
+                  const isActivePage = p === safePage;
+                  return (
+                    <Button
+                      key={p}
+                      variant={isActivePage ? "primary" : "ghost"}
+                      accent="primary"
+                      onClick={() => setCurrentPage(p)}
+                      className="h-8 w-8 px-0 text-xs"
+                    >
+                      {p}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  variant="ghost"
+                  accent="primary"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  Sau
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

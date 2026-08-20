@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useRegister, useResendVerification } from "@/repositories/authRepository";
 import { Button, Input, Field } from "@/components/ui";
-import { Link } from "@/i18n/routing";
-import { Mail, Lock, User, Eye, EyeOff, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Link, useRouter } from "@/i18n/routing";
+import { Mail, Lock, User, Eye, EyeOff, CheckCircle2, ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { AlreadyLoggedInNotice } from "@/components/domain/AlreadyLoggedInNotice";
@@ -13,7 +14,8 @@ import { AuthLayout } from "@/components/layout/AuthLayout";
 type RegisterStep = "form" | "success";
 
 export function RegisterView() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, loginWithGoogleCredential } = useAuth();
+  const router = useRouter();
   const toast = useToast();
   const [step, setStep] = useState<RegisterStep>("form");
 
@@ -28,6 +30,7 @@ export function RegisterView() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isAccountCreated, setIsAccountCreated] = useState(false);
 
   const { mutateAsync: registerApi, isPending } = useRegister();
   const { mutateAsync: resendApi, isPending: isResending } = useResendVerification();
@@ -54,54 +57,112 @@ export function RegisterView() {
     setErrors({});
     try {
       await registerApi({ email: email.trim(), password, fullName: fullName.trim() });
-      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực.");
+      toast.success("Đăng ký tài khoản thành công!");
       setStep("success");
-    } catch (err) {
-      const apiMessage = (err as { response?: { data?: { message?: string } }; message?: string })
-        ?.response?.data?.message;
-      const finalMsg = apiMessage || "Đăng ký thất bại. Vui lòng thử lại.";
+    } catch (err: unknown) {
+      const apiMessage =
+        (err as { response?: { data?: { message?: string }; message?: string }; message?: string })
+          ?.response?.data?.message ||
+        (err as { message?: string })?.message ||
+        "";
+
+      // Backend báo lỗi không gửi được email xác thực → tài khoản đã được tạo
+      if (
+        apiMessage.toLowerCase().includes("không gửi được email xác thực") ||
+        apiMessage.toLowerCase().includes("email xác thực")
+      ) {
+        toast.success("Tài khoản đã được tạo thành công trong hệ thống!");
+        setIsAccountCreated(true);
+        setStep("success");
+        return;
+      }
+
+      if (apiMessage.toLowerCase().includes("đã tồn tại")) {
+        setErrors({
+          submit: `Email "${email.trim()}" đã được đăng ký trước đó. Bạn có thể đăng nhập ngay hoặc sử dụng tính năng quên mật khẩu.`,
+        });
+        setIsAccountCreated(true);
+        toast.error(`Email "${email.trim()}" đã tồn tại trong hệ thống.`);
+        return;
+      }
+
+      const finalMsg = apiMessage || "Đăng ký thất bại. Vui lòng kiểm tra kết nối và thử lại.";
       setErrors({ submit: finalMsg });
       toast.error(finalMsg);
     }
   };
 
+  const handleGoogleSuccess = async (response: CredentialResponse) => {
+    if (!response.credential) {
+      toast.error("Không nhận được token xác thực từ Google.");
+      return;
+    }
+    try {
+      const targetPath = await loginWithGoogleCredential(response.credential);
+      toast.success("Đăng ký / Đăng nhập Google thành công!");
+      router.push(targetPath);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data
+          ?.message ||
+        (err as { message?: string })?.message ||
+        "Đăng nhập Google thất bại.";
+      toast.error(msg);
+    }
+  };
+
+  const handleGoogleError = () => {
+    toast.error("Đăng nhập với Google bị hủy hoặc gặp sự cố.");
+  };
+
   if (step === "success") {
     return (
-      <AuthLayout title="Xác thực email" description="Chúng tôi đã gửi liên kết xác thực tới email của bạn.">
+      <AuthLayout
+        title="Tài khoản đã được tạo"
+        description="Hệ thống đã lưu thông tin tài khoản. Kiểm tra email để kích hoạt nếu cần."
+      >
         <div className="mb-4 flex justify-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-success)]/10">
             <CheckCircle2 className="h-6 w-6 text-[var(--color-success)]" />
           </div>
         </div>
-        <p className="mb-2 text-center text-sm text-[var(--text-muted)]">Email đã gửi tới:</p>
+        <p className="mb-2 text-center text-sm text-[var(--text-muted)]">Email:</p>
         <p className="mb-6 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-input)] px-3 py-2 text-center text-sm text-[var(--accent-primary)]">
           {email}
         </p>
         <ul className="mb-6 space-y-2 text-sm text-[var(--text-muted)]">
-          <li>1. Mở email và nhấn link xác thực</li>
-          <li>2. Link có hiệu lực 24 giờ</li>
-          <li>3. Sau xác thực, hoàn thiện hồ sơ sinh viên</li>
+          <li>1. Kiểm tra hộp thư hoặc Spam để bấm liên kết kích hoạt.</li>
+          <li>2. Có thể đăng nhập ngay hoặc gửi lại email xác thực.</li>
+          <li>3. Sau khi đăng nhập: hoàn thiện hồ sơ sinh viên hoặc tham gia đội thi.</li>
         </ul>
         <div className="flex flex-col gap-3">
+          <Link href={`/login?email=${encodeURIComponent(email)}`}>
+            <Button className="w-full">
+              <ArrowRight className="mr-2 h-4 w-4" />
+              Đăng nhập ngay
+            </Button>
+          </Link>
           <Button
+            variant="ghost"
             disabled={isResending}
             className="w-full"
             onClick={async () => {
               try {
                 await resendApi(email);
-                setResendMsg("Đã gửi lại email xác thực.");
+                setResendMsg("Đã gửi lại yêu cầu xác thực tới hệ thống.");
+                toast.success("Đã gửi lại email xác thực thành công!");
               } catch {
-                setResendMsg("Không gửi lại được. Thử lại sau.");
+                setResendMsg("Không gửi lại được qua email. Bạn có thể thử đăng nhập trực tiếp.");
               }
             }}
           >
             {isResending ? "Đang gửi…" : "Gửi lại email xác thực"}
           </Button>
           {resendMsg && <p className="text-center text-xs text-[var(--text-muted)]">{resendMsg}</p>}
-          <Link href="/login">
+          <Link href="/register">
             <Button variant="ghost" className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Về trang đăng nhập
+              Đăng ký tài khoản khác
             </Button>
           </Link>
         </div>
@@ -122,6 +183,27 @@ export function RegisterView() {
         </>
       }
     >
+      <div className="mb-4 space-y-3">
+        <div className="flex w-full justify-center overflow-hidden py-0.5">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="filled_black"
+            shape="rectangular"
+            text="signup_with"
+            size="large"
+            width="100%"
+          />
+        </div>
+        <div className="relative flex items-center justify-center">
+          <div className="w-full border-t border-[var(--border-muted)]" />
+          <span className="shrink-0 bg-[var(--bg-panel)] px-3 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+            Hoặc đăng ký bằng email
+          </span>
+          <div className="w-full border-t border-[var(--border-muted)]" />
+        </div>
+      </div>
+
       <form onSubmit={handleRegister} className="space-y-4">
         <Field label="Họ và tên" required error={errors.fullName}>
           {({ id, ...aria }) => (
@@ -218,8 +300,16 @@ export function RegisterView() {
         </Field>
 
         {errors.submit && (
-          <div className="rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]">
-            {errors.submit}
+          <div className="space-y-2 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{errors.submit}</p>
+            </div>
+            {isAccountCreated && (
+              <Link href={`/login?email=${encodeURIComponent(email)}`} className="block">
+                <Button className="w-full text-xs">Đăng nhập ngay</Button>
+              </Link>
+            )}
           </div>
         )}
 
