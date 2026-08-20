@@ -40,6 +40,7 @@ export function TeamInvitationsView() {
   const queryEmail = searchParams.get("email") || "";
 
   const [showQuickRegister, setShowQuickRegister] = useState(false);
+  const [inputEmail, setInputEmail] = useState(queryEmail || "");
   const [quickFullName, setQuickFullName] = useState("");
   const [quickPassword, setQuickPassword] = useState("Seal@2026!");
   const [isQuickSubmitting, setIsQuickSubmitting] = useState(false);
@@ -217,9 +218,9 @@ export function TeamInvitationsView() {
 
   const handleQuickActivate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetEmail = (queryEmail || "").trim();
-    if (!targetEmail) {
-      toast.error("Vui lòng nhập email nhận lời mời.");
+    const targetEmail = (inputEmail || queryEmail || "").trim();
+    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      toast.error("Vui lòng nhập đúng định dạng email nhận lời mời.");
       return;
     }
     if (!quickFullName.trim()) {
@@ -244,20 +245,29 @@ export function TeamInvitationsView() {
       }
 
       await loginWithCredentials(targetEmail, quickPassword);
-      toast.success("Đã kích hoạt tài khoản thành công! Đang xử lý nhận vai trò...");
+      toast.success("🎉 Đã kích hoạt tài khoản tạm thành công! Đang chuyển hướng đổi mật khẩu...");
 
       if (queryInvitationId) {
         try {
           await respondEventRole({ invitationId: queryInvitationId, isAccepted: true });
-          toast.success("🎉 Đã nhận vai trò sự kiện thành công!");
         } catch {}
       }
 
-      await refreshRoles();
-      queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
-      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      pushSystemNotification({
+        title: "Cấp tài khoản tạm thời thành công",
+        message: `Tài khoản ${targetEmail} đã được kích hoạt. Hãy đổi mật khẩu để bảo vệ tài khoản chính thức.`,
+        type: "success",
+      });
+
+      if (typeof window !== "undefined") {
+        try {
+          const stored = JSON.parse(localStorage.getItem("currentUser") || "{}");
+          localStorage.setItem("currentUser", JSON.stringify({ ...stored, mustChangePassword: true }));
+        } catch {}
+        window.location.href = "/change-password";
+      }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Kích hoạt tài khoản thất bại. Vui lòng kiểm tra lại mật khẩu.";
+      const msg = err?.response?.data?.message || err?.message || "Kích hoạt tài khoản thất bại. Vui lòng kiểm tra lại.";
       toast.error(msg);
     } finally {
       setIsQuickSubmitting(false);
@@ -324,12 +334,16 @@ export function TeamInvitationsView() {
               </div>
 
               <div>
-                <label className="text-[10px] text-zinc-400 uppercase block mb-1">Email nhận lời mời</label>
+                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
+                  Email nhận lời mời <span className="text-red-400">*</span>
+                </label>
                 <input
                   type="email"
-                  value={queryEmail}
-                  readOnly={!!queryEmail}
-                  className="w-full px-3 py-2 bg-black/50 border border-zinc-700 text-xs text-zinc-300 font-mono focus:outline-none"
+                  required
+                  placeholder="nhap.email.nhan.loi.moi@fpt.edu.vn"
+                  value={inputEmail}
+                  onChange={(e) => setInputEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
                 />
               </div>
 

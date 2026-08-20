@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
-import { useMentorFeedbacks } from "@/repositories/submitResultsRepository";
 import { Badge } from "@/components/ui";
-import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, GitBranch, Globe, Presentation, FileText, CheckCircle2, AlertTriangle, Sparkles, Scale, Trash2, Edit3, ArrowRight, Trophy, Plus, Users } from "lucide-react";
 import type { SubmissionItem, DeliverableItem } from "@/viewModels/teamTypes";
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
@@ -201,6 +200,7 @@ import {
   useMySubmissions,
   useUpdateSubmission,
   useDeleteSubmission,
+  useMentorFeedbacks,
   readApiError,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
@@ -370,6 +370,30 @@ export function MySubmissionsView() {
           </div>
         </div>
 
+        {/* ── Stats Summary Grid ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] block">TỔNG SỐ BÀI NỘP</span>
+            <span className="font-display text-2xl font-bold text-[var(--text-primary)]">{visibleSubs.length}</span>
+          </div>
+          <div className="p-4 bg-[var(--bg-panel)] border border-[var(--color-success)]/30 hud-clipped">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-success)] block">ĐÃ NỘP HỢP LỆ</span>
+            <span className="font-display text-2xl font-bold text-[var(--color-success)]">
+              {visibleSubs.filter(s => s.isActive && !s.isEliminated).length}
+            </span>
+          </div>
+          <div className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-mentor)]/30 hud-clipped">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--accent-mentor)] block">CỐ VẤN / FEEDBACK</span>
+            <span className="font-display text-2xl font-bold text-[var(--accent-mentor)]">Sẵn sàng</span>
+          </div>
+          <div className="p-4 bg-[var(--bg-panel)] border border-[var(--accent-team)]/30 hud-clipped">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--accent-team)] block">TRẠNG THÁI ĐỘI</span>
+            <span className="font-display text-lg font-bold text-[var(--accent-team)] truncate">
+              {teamStatus ? teamStatus.toUpperCase() : "CHƯA CÓ ĐỘI"}
+            </span>
+          </div>
+        </div>
+
         {/* ── Warning banners ── */}
         {team && !isRegistered && (
           <div className="mb-6 p-4 bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 hud-clipped">
@@ -398,10 +422,28 @@ export function MySubmissionsView() {
         {isLoading ? (
           <p className="font-mono text-xs text-[color:var(--text-muted)] py-10 text-center">Đang tải bài nộp...</p>
         ) : visibleSubs.length === 0 ? (
-          <ApiMissingDataBadge
-            title="CHƯA CÓ BÀI NỘP"
-            message="Đội thi chưa có bài nộp nào cho các hạng mục."
-          />
+          <div className="p-8 bg-[var(--bg-panel)] border border-dashed border-zinc-700 text-center space-y-4 hud-clipped">
+            <div className="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-display text-lg font-bold text-white uppercase tracking-wider">
+                Chưa Có Bài Nộp Nào
+              </h3>
+              <p className="font-mono text-xs text-zinc-400 max-w-md mx-auto">
+                Đội của bạn chưa nộp sản phẩm thi cho các hạng mục. Hãy chuẩn bị mã nguồn GitHub, Live Demo và Slides thuyết trình để nộp bài!
+              </p>
+            </div>
+            {isRegistered && (
+              <div className="pt-2">
+                <Link href="/submissions/new">
+                  <button className="px-6 py-2.5 bg-[var(--accent-team)] text-black font-mono font-bold text-xs uppercase tracking-wider hover:bg-white transition-all">
+                    + NỘP BÀI THI CHO HẠNG MỤC NGAY
+                  </button>
+                </Link>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped overflow-hidden">
             {/* Header row */}
@@ -409,7 +451,7 @@ export function MySubmissionsView() {
               {[
                 { label: "VÒNG THI",   col: "col-span-2" },
                 { label: "HẠNG MỤC",  col: "col-span-2" },
-                { label: "LINK NỘP",  col: "col-span-4" },
+                { label: "SẢN PHẨM / LINK NỘP", col: "col-span-4" },
                 { label: "TRẠNG THÁI",col: "col-span-2" },
                 { label: "THAO TÁC",  col: "col-span-2" },
               ].map(h => (
@@ -419,47 +461,64 @@ export function MySubmissionsView() {
               ))}
             </div>
 
-            {visibleSubs.map(sub => (
-              <div key={sub.id} className="border-b border-[var(--border-muted)] last:border-0">
-                <div className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-[rgba(56,189,248,0.02)] transition-colors items-center">
-                  {/* Vòng */}
-                  <div className="col-span-2 font-mono text-xs text-[var(--text-primary)] font-semibold">
-                    {sub.roundName}
-                  </div>
+            {visibleSubs.map(sub => {
+              const parsed = parseExistingSub(sub);
+              return (
+                <div key={sub.id} className="border-b border-[var(--border-muted)] last:border-0">
+                  <div className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-[rgba(56,189,248,0.02)] transition-colors items-center">
+                    {/* Vòng */}
+                    <div className="col-span-2 font-mono text-xs text-[var(--text-primary)] font-semibold">
+                      {sub.roundName}
+                    </div>
 
-                  {/* Track */}
-                  <div className="col-span-2 font-mono text-xs text-[var(--text-muted)]">
-                    {sub.trackName}
-                  </div>
+                    {/* Track */}
+                    <div className="col-span-2 font-mono text-xs text-[var(--text-muted)]">
+                      {sub.trackName}
+                    </div>
 
-                  {/* URL */}
-                  <div className="col-span-4 min-w-0">
-                    <a
-                      href={sub.submissionUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-mono text-xs text-[var(--accent-primary)] hover:underline truncate block"
-                      title={sub.submissionUrl}
-                    >
-                      {sub.submissionUrl}
-                    </a>
-                    {sub.description && (() => {
-                      try {
-                        const parsed = JSON.parse(sub.description);
-                        const extras = parsed.links?.filter((l: { url: string }) => l.url).length ?? 0;
-                        if (extras > 1) return (
-                          <p className="font-mono text-[9px] text-[var(--text-muted)]/60 mt-0.5">
-                            +{extras - 1} link khác
-                          </p>
-                        );
-                      } catch { /* plain text */ }
-                      return sub.description ? (
-                        <p className="font-mono text-[10px] text-[var(--text-muted)]/70 mt-0.5 truncate">
-                          {sub.description}
+                    {/* URL Deliverables */}
+                    <div className="col-span-4 min-w-0 space-y-1.5">
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        {parsed.repo && (
+                          <a
+                            href={parsed.repo}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2 py-0.5 bg-black/60 border border-zinc-700 hover:border-cyan-400 text-cyan-300 font-mono text-[10px] flex items-center gap-1 transition-colors"
+                          >
+                            <GitBranch className="w-3 h-3" />
+                            <span>Repo ↗</span>
+                          </a>
+                        )}
+                        {parsed.demo && (
+                          <a
+                            href={parsed.demo}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2 py-0.5 bg-black/60 border border-zinc-700 hover:border-emerald-400 text-emerald-300 font-mono text-[10px] flex items-center gap-1 transition-colors"
+                          >
+                            <Globe className="w-3 h-3" />
+                            <span>Demo ↗</span>
+                          </a>
+                        )}
+                        {parsed.slide && (
+                          <a
+                            href={parsed.slide}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2 py-0.5 bg-black/60 border border-zinc-700 hover:border-amber-400 text-amber-300 font-mono text-[10px] flex items-center gap-1 transition-colors"
+                          >
+                            <Presentation className="w-3 h-3" />
+                            <span>Slides ↗</span>
+                          </a>
+                        )}
+                      </div>
+                      {parsed.notes && (
+                        <p className="font-mono text-[10px] text-zinc-400 line-clamp-1 italic">
+                          📝 {parsed.notes}
                         </p>
-                      ) : null;
-                    })()}
-                  </div>
+                      )}
+                    </div>
 
                   {/* Status */}
                   <div className="col-span-2">
@@ -518,7 +577,8 @@ export function MySubmissionsView() {
                 {/* Mentor Feedback Sub-Section */}
                 <SubmissionMentorFeedbackSection submitResultId={sub.id} />
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
 
@@ -564,7 +624,7 @@ function SubmissionMentorFeedbackSection({ submitResultId }: { submitResultId: s
 
       {isOpen && (
         <div className="space-y-3 pt-3 mt-2 border-t border-[var(--border-muted)]/40">
-          {feedbacks.map((fb) => (
+          {feedbacks.map((fb: any) => (
             <div
               key={fb.id}
               className="p-3 bg-[var(--bg-input)] border border-[var(--accent-mentor)]/30 hud-clipped space-y-1.5"
