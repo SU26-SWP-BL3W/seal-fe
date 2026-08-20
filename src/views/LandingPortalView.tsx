@@ -194,17 +194,37 @@ export function LandingPortalView() {
               {latestEvent ? (
                 <HeroLivePanel event={latestEvent} regOpen={regOpen} />
               ) : (
-                <div className="flex h-full flex-col justify-center gap-4">
-                  <SealShield className="h-10 w-10 text-[var(--accent-primary)]" />
-                  <p className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                    Arena status
-                  </p>
-                  <p className="font-display text-xl font-bold uppercase text-[var(--text-primary)]">
-                    {totalRealCount === 0 ? "Chưa có sự kiện mở" : "Đang tải sự kiện…"}
-                  </p>
-                  <Link href="/events">
-                    <Button variant="secondary">Danh sách sự kiện</Button>
-                  </Link>
+                <div className="relative flex h-full min-h-[280px] flex-col justify-between overflow-hidden">
+                  <SealShield
+                    aria-hidden
+                    className="hud-pulse pointer-events-none absolute -bottom-8 -right-6 h-40 w-40 text-[var(--accent-primary)] opacity-25 sm:h-52 sm:w-52"
+                  />
+                  <div className="relative z-10 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <SealShield className="h-10 w-10 text-[var(--accent-primary)]" />
+                      <p className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--accent-primary)]">
+                        Arena status
+                      </p>
+                    </div>
+                    <p className="font-display text-xl font-bold uppercase leading-tight text-[var(--text-primary)] sm:text-2xl">
+                      {totalRealCount === 0 ? "Chưa có sự kiện mở" : "Đang tải sự kiện…"}
+                    </p>
+                    <p className="max-w-sm text-sm text-[var(--text-muted)]">
+                      Khi sự kiện mở, countdown, sức chứa đội và cổng đăng ký hiện tại đây — panel
+                      Command Deck theo FE_Design_Spec.
+                    </p>
+                  </div>
+                  <div className="relative z-10 mt-8 space-y-3 border-t border-[var(--border-muted)] pt-4">
+                    <div className="flex justify-between font-mono text-[10px] uppercase text-[var(--text-muted)]">
+                      <span>Sự kiện trên hệ thống</span>
+                      <span className="text-[var(--accent-primary)]">{totalRealCount}</span>
+                    </div>
+                    <Link href="/events">
+                      <Button variant="secondary" className="w-full">
+                        Danh sách sự kiện
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
