@@ -96,6 +96,9 @@ export interface TrackCalibration {
   scores: CalibrationScoreRow[];
   criteriaStats: CalibrationCriteriaStat[];
   judgeStats: CalibrationJudgeStat[];
+  /** Alias PascalCase back-compat cho code cũ đọc trực tiếp — API thật luôn trả camelCase. */
+  Scores?: CalibrationScoreRow[];
+  JudgeStats?: CalibrationJudgeStat[];
 }
 
 /** GET /Scores/track/{trackId}/calibration — chỉ Admin/EC của sự kiện. */
@@ -136,6 +139,7 @@ export function useExportScoresCsv() {
       exportScoresCsv(payload.eventId, payload.anonymize ?? true),
   });
 }
+
 
 export interface CreateScorePayload {
   eventRoleId: string;

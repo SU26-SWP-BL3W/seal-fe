@@ -234,7 +234,7 @@ export function AppealsView() {
           ) : appeals.length === 0 ? (
             <ApiMissingDataBadge
               title="CHƯA CÓ ĐƠN PHÚC KHẢO"
-              message="Chưa có bản ghi đơn phúc khảo nào phù hợp."
+              message="Hiện chưa có đơn phúc khảo nào."
             />
           ) : (
             <Table>
