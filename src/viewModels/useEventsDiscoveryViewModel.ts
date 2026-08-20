@@ -11,6 +11,7 @@ import {
 
 import { usePublicEvents } from "@/repositories/eventsRepository";
 import { useAuth } from "@/providers/AuthProvider";
+import { getAssignedEventIdsFromRoles, getStaffRoleDisplayLabel } from "@/lib/eventRoles";
 
 export type { EventDisplayStatus, EventCardData };
 
@@ -23,14 +24,16 @@ export interface TrackSummary {
 }
 
 export function useEventsDiscoveryViewModel() {
-  const { activeRole } = useAuth();
+  const { activeRole, allEventRoles } = useAuth();
   const myEventIds = useMemo(() => {
+    const fromRoles = getAssignedEventIdsFromRoles(allEventRoles);
     const ids = [
+      ...fromRoles,
       ...(activeRole?.assignedEventIds ?? activeRole?.AssignedEventIds ?? []),
       activeRole?.eventId || activeRole?.EventId || "",
     ].filter(Boolean);
     return [...new Set(ids)];
-  }, [activeRole]);
+  }, [activeRole, allEventRoles]);
   const { data: realPublicEvents = [] } = usePublicEvents();
   const [now] = useState(() => Date.now());
   const [search, setSearch] = useState("");

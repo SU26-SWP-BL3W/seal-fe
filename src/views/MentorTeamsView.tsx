@@ -26,7 +26,10 @@ export function MentorTeamsView() {
 
   const handleTrackChange = (newTrackId: string) => {
     setSelectedTrackId(newTrackId);
-    router.push(`/mentor/teams?trackId=${newTrackId}`);
+    const params = new URLSearchParams();
+    params.set("trackId", newTrackId);
+    if (eventId) params.set("eventId", eventId);
+    router.push(`/mentor/teams?${params.toString()}`);
   };
 
   // Helper to check submission status for a team

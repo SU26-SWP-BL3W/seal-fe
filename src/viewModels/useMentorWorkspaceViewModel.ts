@@ -47,6 +47,7 @@ export function useMentorWorkspaceViewModel() {
     );
   }, [myEventRoles]);
 
+  // Determine active eventId: trackId in URL > searchParam eventId > mentor role event > activeRole
   const resolvedEventId = useMemo(() => {
     if (queryTrackId) {
       const mentorForTrack = mentorRoles.find((r: any) => {
