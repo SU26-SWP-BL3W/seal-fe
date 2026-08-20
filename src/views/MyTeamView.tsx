@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 import { AlertTriangle, Check, X, Mail, Sparkles, User, RefreshCw } from "lucide-react";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import {
   AvailableTeamsList,
   buildRequirements,
@@ -566,6 +567,16 @@ export function MyTeamView() {
             async () => {
               await confirmRegistration(team.id);
               toast.success("Gửi hồ sơ ghi danh với Ban Tổ Chức thành công! Hệ thống đã gửi email xác nhận và thông báo cho Ban Tổ Chức thẩm định.");
+              pushSystemNotification({
+                title: "Chốt danh sách & Ghi danh thành công",
+                message: `Đội trưởng đã chốt danh sách đội "${team.teamName}" và gửi hồ sơ ghi danh tham gia sự kiện "${team.eventName}" tới Ban Tổ Chức!`,
+                type: "success",
+              });
+              pushSystemNotification({
+                title: "Hồ sơ đội thi mới cần xét duyệt",
+                message: `Đội "${team.teamName}" đã chốt danh sách và nộp hồ sơ ghi danh sự kiện "${team.eventName}". Ban Tổ Chức vui lòng thẩm định!`,
+                type: "info",
+              });
             },
             "Không ghi danh được. Kiểm tra lại số thành viên và hồ sơ.",
           )

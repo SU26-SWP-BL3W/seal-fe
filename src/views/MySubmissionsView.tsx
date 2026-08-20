@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { Badge } from "@/components/ui";
+import { useToast } from "@/providers/ToastProvider";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import { MessageSquare, ChevronDown, ChevronUp, GitBranch, Globe, Presentation, FileText, CheckCircle2, AlertTriangle, Sparkles, Scale, Trash2, Edit3, ArrowRight, Trophy, Plus, Users } from "lucide-react";
 import type { SubmissionItem, DeliverableItem } from "@/viewModels/teamTypes";
 
@@ -240,6 +242,7 @@ function mapSubmission(raw: SubmitResultListItem): SubmissionItem {
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 export function MySubmissionsView() {
+  const toast = useToast();
   const { user, activeRole } = useAuth();
   const roleName = activeRole?.roleName || activeRole?.RoleName || (user?.IsAdmin ? "Admin" : "Guest");
   const isLeader = roleName === "TeamLeader";
@@ -277,9 +280,17 @@ export function MySubmissionsView() {
           Description: payload.description,
         },
       });
+      toast.success("🎉 Đã cập nhật nội dung bài nộp thành công!");
+      pushSystemNotification({
+        title: "Cập nhật bài nộp thành công",
+        message: "Đội thi đã cập nhật thông tin bài nộp. Hệ thống đã đồng bộ tới Ban Giám Khảo & Cố vấn!",
+        type: "success",
+      });
       setEditingSub(null);
     } catch (err) {
-      setActionError(readApiError(err));
+      const msg = readApiError(err);
+      setActionError(msg);
+      toast.error(msg);
     }
   };
 
@@ -288,9 +299,17 @@ export function MySubmissionsView() {
     setActionError("");
     try {
       await deleteSub.mutateAsync(deleteTarget.id);
+      toast.info("Đã xóa bài nộp thành công.");
+      pushSystemNotification({
+        title: "Đã xóa bài nộp",
+        message: "Bài nộp đã được hủy bỏ và gỡ khỏi danh sách chấm điểm.",
+        type: "warning",
+      });
       setDeleteTarget(null);
     } catch (err) {
-      setActionError(readApiError(err));
+      const msg = readApiError(err);
+      setActionError(msg);
+      toast.error(msg);
     }
   };
 
