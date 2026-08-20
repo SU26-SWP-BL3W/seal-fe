@@ -1,4 +1,9 @@
 import { User, EventRole } from "@/models/entities";
+import {
+  hasEventRole,
+  normalizeEventRoleRows,
+  type NormalizedEventRole,
+} from "@/lib/eventRoles";
 
 // EventRole/User khai cả 2 kiểu case (roleName/RoleName...) để "tương thích" —
 // dùng 1 hàm đọc duy nhất ở đây thay vì mỗi nơi tự viết lại `a.X || a.x` +
@@ -9,6 +14,23 @@ export function getRoleName(role: EventRole | null): string | undefined {
 
 function getAssignedEventIds(role: EventRole | null): string[] {
   return role?.assignedEventIds ?? role?.AssignedEventIds ?? [];
+}
+
+export function hasEventRolePermission(
+  user: User | null,
+  eventRoles: NormalizedEventRole[] | unknown[],
+  eventId: string,
+  requiredRoleName?: string,
+): boolean {
+  if (!user) return false;
+  if (user.isAdmin || user.IsAdmin) return true;
+  if (!eventId) return false;
+
+  const normalized = normalizeEventRoleRows(
+    Array.isArray(eventRoles) ? eventRoles : [],
+  );
+
+  return hasEventRole(normalized, eventId, requiredRoleName);
 }
 
 /**

@@ -5,7 +5,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Link } from "@/i18n/routing";
 import { SealShield } from "./SealShield";
 import { NotificationBell } from "./NotificationBell";
-import { hasEventPermission } from "@/lib/permissions";
+import { hasEventPermission, hasEventRolePermission } from "@/lib/permissions";
+import { getStaffRoleDisplayLabel, getRolesForEvent } from "@/lib/eventRoles";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import {
   Globe,
@@ -40,7 +41,7 @@ import {
 
 export function NavigationBar() {
   const pathname = usePathname() || "";
-  const { user, activeRole, logout } = useAuth();
+  const { user, activeRole, allEventRoles, logout } = useAuth();
   const rawRole = activeRole?.roleName || activeRole?.RoleName;
   const userEmail = (user?.email || user?.Email || "").toLowerCase();
   
@@ -111,7 +112,6 @@ export function NavigationBar() {
     !isAuthRoute &&
     roleName !== "Admin" &&
     roleName !== "Coordinator" &&
-    roleName !== "Mentor" &&
     !isAdminRoute &&
     !isCoordinatorRoute &&
     !isMentorRoute &&
@@ -473,7 +473,14 @@ export function NavigationBar() {
   // ─────────────────────────────────────────────────────────────
   if (showMentorSidebar) {
     const activeViewEventId = currentEventId;
-    const isAuthorizedMentor = hasEventPermission(user, activeRole, activeViewEventId);
+    const isAuthorizedMentor = activeViewEventId
+      ? hasEventRolePermission(user, allEventRoles, activeViewEventId, "Mentor")
+      : allEventRoles.some((r) => r.roleName === "Mentor");
+    const mentorRoles = allEventRoles.filter((r) => r.roleName === "Mentor");
+    const currentMentorRole =
+      mentorRoles.find((r) => r.eventId === activeViewEventId) || mentorRoles[0];
+    const mentorTrackLabel = currentMentorRole?.trackName || "Hạng mục được phân công";
+    const hasJudgeRole = allEventRoles.some((r) => r.roleName === "Judge");
 
     return (
       <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[#2dd4bf]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
@@ -508,7 +515,7 @@ export function NavigationBar() {
               {user?.FullName || "Cố Vấn Chuyên Môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedMentor ? "Phân công: AI & Machine Learning" : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedMentor ? `Phân công: ${mentorTrackLabel}` : "Quyền hạn: Read-Only (Chỉ Xem)"}
             </span>
           </div>
 
@@ -597,10 +604,18 @@ export function NavigationBar() {
           <div className="flex items-center justify-between font-mono text-xs">
             <span className="text-[var(--text-muted)]">Vai trò:</span>
             <span className="text-[#2dd4bf] font-bold">
-              {isAuthorizedMentor ? "Mentor" : "User (Chưa Phân Công Cố Vấn)"}
+              {isAuthorizedMentor ? getStaffRoleDisplayLabel(getRolesForEvent(allEventRoles, activeViewEventId)) : "User (Chưa Phân Công Cố Vấn)"}
             </span>
           </div>
 
+          {hasJudgeRole && (
+            <Link
+              href="/judge/events"
+              className="w-full py-2 bg-[var(--accent-judge)]/10 border border-[var(--accent-judge)]/40 text-[var(--accent-judge)] font-mono text-[10px] font-bold uppercase hover:bg-[var(--accent-judge)] hover:text-black transition-all hud-clipped text-center"
+            >
+              Chuyển sang Judge Panel
+            </Link>
+          )}
 
           <button
             type="button"
@@ -619,7 +634,14 @@ export function NavigationBar() {
   // ─────────────────────────────────────────────────────────────
   if (showJudgeSidebar) {
     const activeViewEventId = currentEventId;
-    const isAuthorizedJudge = hasEventPermission(user, activeRole, activeViewEventId);
+    const isAuthorizedJudge = activeViewEventId
+      ? hasEventRolePermission(user, allEventRoles, activeViewEventId, "Judge")
+      : allEventRoles.some((r) => r.roleName === "Judge");
+    const judgeRoles = allEventRoles.filter((r) => r.roleName === "Judge");
+    const currentJudgeRole =
+      judgeRoles.find((r) => r.eventId === activeViewEventId) || judgeRoles[0];
+    const judgeTrackLabel = currentJudgeRole?.trackName || "Hạng mục được phân công";
+    const hasMentorRole = allEventRoles.some((r) => r.roleName === "Mentor");
 
     return (
       <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--accent-judge)]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
@@ -654,7 +676,7 @@ export function NavigationBar() {
               {user?.FullName || "Giám Khảo Chuyên Môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedJudge ? "Hội đồng Chấm điểm RBL" : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedJudge ? `Phân công: ${judgeTrackLabel}` : "Quyền hạn: Read-Only (Chỉ Xem)"}
             </span>
           </div>
 
@@ -743,11 +765,18 @@ export function NavigationBar() {
           <div className="flex items-center justify-between font-mono text-xs">
             <span className="text-[var(--text-muted)]">Vai trò:</span>
             <span className="text-[var(--accent-judge)] font-bold">
-              {isAuthorizedJudge ? "Judge" : "User (Chưa Phân Công Giám Khảo)"}
+              {isAuthorizedJudge ? getStaffRoleDisplayLabel(getRolesForEvent(allEventRoles, activeViewEventId)) : "User (Chưa Phân Công Giám Khảo)"}
             </span>
           </div>
 
-
+          {hasMentorRole && (
+            <Link
+              href="/mentor/tracks"
+              className="w-full py-2 bg-[#2dd4bf]/10 border border-[#2dd4bf]/40 text-[#2dd4bf] font-mono text-[10px] font-bold uppercase hover:bg-[#2dd4bf] hover:text-black transition-all hud-clipped text-center"
+            >
+              Chuyển sang Mentor Panel
+            </Link>
+          )}
           <button
             type="button"
             onClick={logout}

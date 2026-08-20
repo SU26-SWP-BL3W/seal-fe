@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useEvents } from "@/repositories/eventsRepository";
 import { Link } from "@/i18n/routing";
+import { getAssignedEventIdsFromRoles } from "@/lib/eventRoles";
 import {
   Scale,
   Calendar,
@@ -20,7 +21,7 @@ import {
 } from "lucide-react";
 
 export function JudgeEventsView() {
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, allEventRoles } = useAuth();
   const { data: rawEvents = [], isLoading } = useEvents();
   const [activeTab, setActiveTab] = useState<"all" | "ongoing" | "upcoming" | "past">("all");
 
@@ -34,26 +35,17 @@ export function JudgeEventsView() {
     if (!user) return [];
     if (user.isAdmin || user.IsAdmin) return events;
 
-    // Lấy các eventId được phân công cho Judge
-    const assignedIds: string[] = [];
-    if (Array.isArray((activeRole as any)?.assignedEventIds)) {
-      assignedIds.push(...(activeRole as any).assignedEventIds);
-    }
-    const singleEventId = activeRole?.eventId || (activeRole as any)?.EventId;
-    if (singleEventId && !assignedIds.includes(singleEventId)) {
-      assignedIds.push(singleEventId);
-    }
-
-    // Kiểm tra trong danh sách eventRoles của user nếu có
-    const userEventRoles = (user as any)?.eventRoles || (user as any)?.EventRoles || [];
-    if (Array.isArray(userEventRoles)) {
-      userEventRoles.forEach((er: any) => {
-        const rName = er.roleName || er.RoleName;
-        const eId = er.eventId || er.EventId;
-        if (rName === "Judge" && eId && !assignedIds.includes(eId)) {
-          assignedIds.push(eId);
-        }
-      });
+    const assignedIds: string[] = getAssignedEventIdsFromRoles(
+      allEventRoles.filter((r) => r.roleName === "Judge"),
+    );
+    if (assignedIds.length === 0) {
+      if (Array.isArray((activeRole as any)?.assignedEventIds)) {
+        assignedIds.push(...(activeRole as any).assignedEventIds);
+      }
+      const singleEventId = activeRole?.eventId || (activeRole as any)?.EventId;
+      if (singleEventId && !assignedIds.includes(singleEventId)) {
+        assignedIds.push(singleEventId);
+      }
     }
 
     // Nếu có sự kiện được phân công cụ thể
@@ -63,7 +55,7 @@ export function JudgeEventsView() {
 
     // Chưa có phân công thật nào: trả về rỗng, không đoán qua email hay gán cứng event ID.
     return [];
-  }, [events, user, activeRole]);
+  }, [events, user, activeRole, allEventRoles]);
 
   // Phân loại sự kiện theo thời gian thực (Đang diễn ra, Sắp mở, Đã kết thúc)
   const categorizedEvents = useMemo(() => {
