@@ -532,25 +532,25 @@ export const AdminDashboardView: React.FC = () => {
             
             /* Table View Mode */
             <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-panel)] hud-clipped">
-              <table className="w-full table-fixed min-w-[980px] text-left border-collapse">
+              <table className="w-full table-fixed min-w-[1060px] text-left border-collapse">
                 <thead className="bg-[var(--bg-base)] border-b border-[var(--border-muted)]">
                   <tr>
-                    <th className="w-[26%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[23%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       TÊN SỰ KIỆN & MÃ ID
                     </th>
-                    <th className="w-[13%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[12%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       MÙA GIẢI
                     </th>
-                    <th className="w-[12%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[10%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       VÒNG THI
                     </th>
-                    <th className="w-[20%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[18%] px-4 py-3.5 text-left font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       EVENT COORDINATOR (EC)
                     </th>
-                    <th className="w-[10%] px-2 py-3.5 text-center font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[12%] px-3 py-3.5 text-center font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       TRẠNG THÁI
                     </th>
-                    <th className="w-[19%] px-4 py-3.5 text-right font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[25%] px-4 py-3.5 text-right font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider">
                       THAO TÁC
                     </th>
                   </tr>
@@ -634,9 +634,9 @@ export const AdminDashboardView: React.FC = () => {
                         </td>
 
                         {/* Status */}
-                        <td className="px-2 py-3.5 align-middle text-center">
-                          <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-[10px] font-mono font-bold bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border border-[var(--color-success)]/30 uppercase rounded whitespace-nowrap">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse shrink-0" />
+                        <td className="px-3 py-3.5 align-middle text-center">
+                          <span className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 text-[10px] font-mono font-bold bg-emerald-950/40 text-emerald-400 border border-emerald-500/40 uppercase rounded whitespace-nowrap">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                             ACTIVE
                           </span>
                         </td>
@@ -647,7 +647,7 @@ export const AdminDashboardView: React.FC = () => {
                             <Button
                               variant="ghost"
                               onClick={() => setEditingEvent(ev)}
-                              className="text-xs font-mono border border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
+                              className="text-xs font-mono border border-[var(--color-danger)]/60 text-[var(--color-danger)] hover:bg-[var(--color-danger)]/15 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1 shrink-0"
                               title="Chỉnh sửa toàn diện thông tin sự kiện & các vòng thi"
                             >
                               <Edit className="w-3.5 h-3.5" /> Sửa
@@ -656,13 +656,13 @@ export const AdminDashboardView: React.FC = () => {
                             <Button
                               variant="ghost"
                               onClick={() => setSelectedEvent(ev)}
-                              className="text-xs font-mono border border-[var(--accent-coordinator)]/60 text-[var(--accent-coordinator)] hover:bg-[var(--accent-coordinator)]/15 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1"
+                              className="text-xs font-mono border border-purple-500/60 text-purple-300 hover:bg-purple-500/15 px-2.5 py-0.5 h-7 font-bold cursor-pointer inline-flex items-center gap-1 shrink-0"
                               title="Quản lý & phân công Event Coordinator (EC)"
                             >
                               <UserCheck className="w-3.5 h-3.5" /> Quản lý EC
                             </Button>
 
-                            <Link href={`/events/${id}`}>
+                            <Link href={`/events/${id}`} className="shrink-0 inline-flex">
                               <Button
                                 variant="ghost"
                                 className="text-xs font-mono border border-[var(--border-muted)] text-[var(--text-muted)] hover:text-white hover:border-[var(--accent-primary)] px-2 py-0.5 h-7 w-7 flex items-center justify-center cursor-pointer"
