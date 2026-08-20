@@ -2,7 +2,7 @@
 
 /**
  * Hallmark · page: landing · genre: technical · macro: Narrative Workflow
- * Visual break from HUD: no SealShield/hexagon hero, typography-led arena.
+ * Brand-first hero with SEAL mark + live event panel (fills right column).
  * Logic: auth-aware CTAs, registration window, capacity, live countdown.
  */
 
@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Badge, Button } from "@/components/ui";
 import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
+import { SealShield } from "@/components/domain/SealShield";
 import { resolveStaffLandingPath } from "@/lib/eventRoles";
 import { useCountdown } from "@/lib/useCountdown";
 import {
@@ -138,16 +139,25 @@ export function LandingPortalView() {
 
   return (
     <main className="landing-root flex flex-1 flex-col overflow-x-clip bg-[var(--bg-base)]">
-      {/* Hero: typography + live event logic — no hexagon/HUD chrome */}
-      <section className="relative isolate border-b border-[var(--border-muted)]">
+      <section className="relative isolate min-h-[min(92vh,900px)] border-b border-[var(--border-muted)]">
         <div aria-hidden className="landing-hero-atmosphere pointer-events-none absolute inset-0 -z-10" />
+        <div aria-hidden className="landing-hero-grid pointer-events-none absolute inset-0 -z-10" />
 
-        <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-12 px-4 pb-16 pt-24 sm:px-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-end lg:gap-16 lg:pb-20 lg:pt-28">
+        <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-10 px-4 pb-16 pt-20 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.95fr)] lg:items-center lg:gap-10 lg:pb-24 lg:pt-24">
           <div className="landing-hero-copy min-w-0">
-            <p className="font-display text-sm font-semibold tracking-[0.18em] text-[var(--accent-primary)]">
-              SEAL HACKATHON
-            </p>
-            <h1 className="mt-4 font-display text-[clamp(2.75rem,8vw,5.5rem)] font-semibold leading-[0.95] text-[var(--text-primary)]">
+            <div className="flex items-center gap-3">
+              <SealShield className="h-11 w-11 shrink-0 text-[var(--accent-primary)] sm:h-12 sm:w-12" />
+              <div>
+                <p className="font-display text-2xl font-semibold tracking-[0.04em] text-[var(--text-primary)] sm:text-3xl">
+                  SEAL
+                </p>
+                <p className="text-xs text-[var(--text-muted)] sm:text-sm">
+                  Hackathon Arena · FPT & toàn quốc
+                </p>
+              </div>
+            </div>
+
+            <h1 className="mt-8 font-display text-[clamp(2.6rem,7.5vw,5rem)] font-semibold leading-[0.96] text-[var(--text-primary)]">
               Đấu trường
               <br />
               <span className="text-[var(--accent-primary)]">ý tưởng thật</span>
@@ -185,23 +195,37 @@ export function LandingPortalView() {
             )}
           </div>
 
-          {/* Live panel — real event logic in the first viewport */}
-          <div className="min-w-0 border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 sm:p-8">
-            {latestEvent ? (
-              <HeroLivePanel event={latestEvent} regOpen={regOpen} />
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm font-medium text-[var(--text-muted)]">Sự kiện công khai</p>
-                <p className="font-display text-2xl font-semibold text-[var(--text-primary)]">
-                  {totalRealCount === 0
-                    ? "Chưa có sự kiện mở trên hệ thống"
-                    : "Đang tải sự kiện…"}
-                </p>
-                <Link href="/events">
-                  <Button variant="secondary">Đi tới danh sách sự kiện</Button>
-                </Link>
-              </div>
-            )}
+          {/* Right column: brand mark backdrop + live event (never empty void) */}
+          <div className="landing-hero-stage relative min-h-[320px] min-w-0 sm:min-h-[380px]">
+            <div
+              aria-hidden
+              className="landing-hero-mark pointer-events-none absolute -right-6 -top-4 h-[220px] w-[220px] opacity-[0.22] sm:-right-10 sm:h-[280px] sm:w-[280px] lg:h-[320px] lg:w-[320px]"
+            >
+              <SealShield className="h-full w-full text-[var(--accent-primary)]" />
+            </div>
+            <div className="landing-hero-panel relative z-10 mt-10 border border-[var(--border-muted)] bg-[color-mix(in_srgb,var(--bg-panel)_92%,transparent)] p-6 backdrop-blur-[2px] sm:mt-16 sm:p-8">
+              {latestEvent ? (
+                <HeroLivePanel event={latestEvent} regOpen={regOpen} />
+              ) : (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <SealShield className="h-10 w-10 text-[var(--accent-primary)]" />
+                    <p className="text-sm font-medium text-[var(--text-muted)]">Arena đang chờ</p>
+                  </div>
+                  <p className="font-display text-2xl font-semibold text-[var(--text-primary)]">
+                    {totalRealCount === 0
+                      ? "Chưa có sự kiện mở trên hệ thống"
+                      : "Đang tải sự kiện…"}
+                  </p>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Khi sự kiện mở, countdown và sức chứa đội sẽ hiện tại đây.
+                  </p>
+                  <Link href="/events">
+                    <Button variant="secondary">Đi tới danh sách sự kiện</Button>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -229,11 +253,14 @@ function HeroLivePanel({ event, regOpen }: { event: EventCardData; regOpen: bool
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
-        <Badge tone={regOpen ? "success" : "neutral"}>
-          {regOpen ? "Cổng đăng ký mở" : "Ngoài cửa sổ đăng ký"}
-        </Badge>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
+          <Badge tone={regOpen ? "success" : "neutral"}>
+            {regOpen ? "Cổng đăng ký mở" : "Ngoài cửa sổ đăng ký"}
+          </Badge>
+        </div>
+        <SealShield className="h-8 w-8 shrink-0 text-[var(--accent-primary)] opacity-80" />
       </div>
 
       <p className="mt-4 text-xs text-[var(--text-muted)]">
@@ -244,8 +271,22 @@ function HeroLivePanel({ event, regOpen }: { event: EventCardData; regOpen: bool
       </h2>
       <p className="mt-2 line-clamp-2 text-sm text-[var(--text-muted)]">{event.tagline}</p>
 
+      {event.tracks.length > 0 && (
+        <ul className="mt-4 flex flex-wrap gap-x-3 gap-y-1.5">
+          {event.tracks.slice(0, 4).map((track) => {
+            const meta = TRACK_META[track] || DEFAULT_TRACK_META;
+            return (
+              <li key={track} className="flex items-center gap-1.5 text-xs text-[var(--text-primary)]">
+                <span className="h-1.5 w-1.5 shrink-0" style={{ backgroundColor: meta.accent }} />
+                {track}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       {!countdown.isPast && (
-        <div className="mt-8 border-t border-[var(--border-muted)] pt-6" suppressHydrationWarning>
+        <div className="mt-6 border-t border-[var(--border-muted)] pt-5" suppressHydrationWarning>
           <p className="text-xs font-medium text-[var(--text-muted)]">
             {event.status === "ongoing" ? "Hạn nộp còn" : "Đóng cổng đăng ký sau"}
           </p>
@@ -272,7 +313,7 @@ function HeroLivePanel({ event, regOpen }: { event: EventCardData; regOpen: bool
         </div>
       )}
 
-      <div className="mt-6 space-y-2">
+      <div className="mt-5 space-y-2">
         <div className="flex justify-between text-xs text-[var(--text-muted)]">
           <span>Sức chứa đội</span>
           <span className="tabular-nums text-[var(--text-primary)]">
@@ -287,7 +328,7 @@ function HeroLivePanel({ event, regOpen }: { event: EventCardData; regOpen: bool
         </div>
       </div>
 
-      <div className="mt-auto pt-8">
+      <div className="mt-auto pt-6">
         <Link href={`/events/${event.id}`} className="block">
           <Button className="w-full">{regOpen ? "Đăng ký sự kiện này" : "Xem chi tiết sự kiện"}</Button>
         </Link>
@@ -306,20 +347,26 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
   const regOpen = isRegistrationOpen(event);
 
   return (
-    <section id="spotlight" className="px-4 py-20 sm:px-6 md:py-28">
-      <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-16">
-        <div className="min-w-0">
-          <p className="landing-section-kicker text-sm font-medium text-[var(--accent-primary)]">
-            Sự kiện tiêu điểm
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
-            <Badge tone={regOpen ? "success" : "warning"}>
-              {regOpen ? "Đang nhận đội" : "Ngoài kỳ đăng ký"}
-            </Badge>
-            <span className="text-sm text-[var(--text-muted)]">
-              {event.season} {event.year}
-            </span>
+    <section id="spotlight" className="relative px-4 py-20 sm:px-6 md:py-28">
+      <div aria-hidden className="landing-spotlight-wash pointer-events-none absolute inset-0 -z-10" />
+      <div className="mx-auto grid w-full max-w-[var(--container-max)] gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-14 lg:items-stretch">
+        <div className="min-w-0 border border-[var(--border-muted)] bg-[var(--bg-panel)] p-6 sm:p-8 lg:p-10">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="landing-section-kicker text-sm font-medium text-[var(--accent-primary)]">
+                Sự kiện tiêu điểm
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Badge tone={STATUS_TONE[event.status]}>{STATUS_LABEL[event.status]}</Badge>
+                <Badge tone={regOpen ? "success" : "warning"}>
+                  {regOpen ? "Đang nhận đội" : "Ngoài kỳ đăng ký"}
+                </Badge>
+                <span className="text-sm text-[var(--text-muted)]">
+                  {event.season} {event.year}
+                </span>
+              </div>
+            </div>
+            <SealShield className="h-12 w-12 shrink-0 text-[var(--accent-primary)] opacity-90" />
           </div>
 
           <h2 className="mt-5 font-display text-3xl font-semibold leading-tight text-[var(--text-primary)] sm:text-4xl md:text-5xl">
@@ -354,9 +401,9 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
                 <span className="text-[var(--text-muted)]"> / {event.maxTeams}</span>
               </span>
             </div>
-            <div className="h-px w-full bg-[var(--border-muted)]">
+            <div className="h-1 w-full bg-[var(--bg-input)]">
               <div
-                className="h-px bg-[var(--accent-primary)] transition-[width] duration-500"
+                className="h-1 bg-[var(--accent-primary)] transition-[width] duration-500"
                 style={{ width: `${fillPercent}%` }}
               />
             </div>
@@ -386,63 +433,101 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
           </div>
         </div>
 
-        {!countdown.isPast && (
-          <aside className="flex flex-col justify-between border-t border-[var(--border-muted)] pt-8 lg:border-l lg:border-t-0 lg:pl-12 lg:pt-0">
-            <div>
-              <p className="text-sm font-medium text-[var(--text-muted)]">{countdownLabel}</p>
-              <div className="mt-6 grid grid-cols-4 gap-3" suppressHydrationWarning>
-                {[
-                  { value: countdown.days, label: "ngày" },
-                  { value: countdown.hours, label: "giờ" },
-                  { value: countdown.minutes, label: "phút" },
-                  { value: countdown.seconds, label: "giây" },
-                ].map((u) => (
-                  <div key={u.label} className="min-w-0" suppressHydrationWarning>
-                    <span
-                      className={`block font-display text-3xl font-semibold tabular-nums sm:text-4xl ${
-                        countdown.isUrgent
-                          ? "text-[var(--color-danger)]"
-                          : "text-[var(--text-primary)]"
-                      }`}
-                      suppressHydrationWarning
-                    >
-                      {String(u.value).padStart(2, "0")}
-                    </span>
-                    <span className="mt-1 block text-xs text-[var(--text-muted)]">{u.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* Right column always filled — countdown and/or schedule + brand */}
+        <aside className="relative flex min-h-[280px] flex-col justify-between overflow-hidden border border-[var(--border-muted)] bg-[var(--bg-base)] p-6 sm:p-8 lg:p-10">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-8 -right-8 h-40 w-40 opacity-[0.18] sm:h-52 sm:w-52"
+          >
+            <SealShield className="h-full w-full text-[var(--accent-primary)]" />
+          </div>
 
-            {event.rounds && event.rounds.length > 0 && (
-              <ol className="mt-12 space-y-0 border-t border-[var(--border-muted)] pt-8">
-                <li className="mb-4 text-sm font-medium text-[var(--text-muted)]">Lịch vòng thi</li>
-                {event.rounds.map((r) => {
-                  const isPast = new Date(r.startDate) < new Date();
-                  return (
-                    <li
-                      key={r.id}
-                      className="flex items-baseline justify-between gap-4 border-b border-[var(--border-muted)] py-3 text-sm last:border-b-0"
-                    >
+          <div className="relative z-10">
+            {!countdown.isPast ? (
+              <>
+                <p className="text-sm font-medium text-[var(--text-muted)]">{countdownLabel}</p>
+                <div className="mt-6 grid grid-cols-4 gap-3" suppressHydrationWarning>
+                  {[
+                    { value: countdown.days, label: "ngày" },
+                    { value: countdown.hours, label: "giờ" },
+                    { value: countdown.minutes, label: "phút" },
+                    { value: countdown.seconds, label: "giây" },
+                  ].map((u) => (
+                    <div key={u.label} className="min-w-0" suppressHydrationWarning>
                       <span
-                        className={
-                          isPast
-                            ? "text-[var(--text-muted)] line-through"
+                        className={`block font-display text-3xl font-semibold tabular-nums sm:text-4xl ${
+                          countdown.isUrgent
+                            ? "text-[var(--color-danger)]"
                             : "text-[var(--text-primary)]"
-                        }
+                        }`}
+                        suppressHydrationWarning
                       >
-                        {r.roundName}
+                        {String(u.value).padStart(2, "0")}
                       </span>
-                      <span className="shrink-0 tabular-nums text-[var(--text-muted)]">
-                        {formatShortDate(r.startDate)}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ol>
+                      <span className="mt-1 block text-xs text-[var(--text-muted)]">{u.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-[var(--text-muted)]">Mốc thời gian</p>
+                <dl className="mt-6 space-y-4">
+                  <div className="flex justify-between gap-4 border-b border-[var(--border-muted)] pb-3 text-sm">
+                    <dt className="text-[var(--text-muted)]">Đăng ký</dt>
+                    <dd className="tabular-nums text-[var(--text-primary)]">
+                      {formatShortDate(event.registrationStartDate)} –{" "}
+                      {formatShortDate(event.registrationEndDate)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4 border-b border-[var(--border-muted)] pb-3 text-sm">
+                    <dt className="text-[var(--text-muted)]">Diễn ra</dt>
+                    <dd className="tabular-nums text-[var(--text-primary)]">
+                      {formatShortDate(event.startDate)} – {formatShortDate(event.endDate)}
+                    </dd>
+                  </div>
+                </dl>
+              </>
             )}
-          </aside>
-        )}
+          </div>
+
+          {event.rounds && event.rounds.length > 0 ? (
+            <ol className="relative z-10 mt-10 space-y-0 border-t border-[var(--border-muted)] pt-6">
+              <li className="mb-3 text-sm font-medium text-[var(--text-muted)]">Lịch vòng thi</li>
+              {event.rounds.map((r) => {
+                const isPast = new Date(r.startDate) < new Date();
+                return (
+                  <li
+                    key={r.id}
+                    className="flex items-baseline justify-between gap-4 border-b border-[var(--border-muted)] py-3 text-sm last:border-b-0"
+                  >
+                    <span
+                      className={
+                        isPast
+                          ? "text-[var(--text-muted)] line-through"
+                          : "text-[var(--text-primary)]"
+                      }
+                    >
+                      {r.roundName}
+                    </span>
+                    <span className="shrink-0 tabular-nums text-[var(--text-muted)]">
+                      {formatShortDate(r.startDate)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <div className="relative z-10 mt-10 border-t border-[var(--border-muted)] pt-6">
+              <p className="font-display text-lg font-semibold text-[var(--text-primary)]">
+                SEAL Arena
+              </p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
+                Theo dõi vòng thi, nộp bài và bảng xếp hạng trên cùng một nền tảng.
+              </p>
+            </div>
+          )}
+        </aside>
       </div>
     </section>
   );

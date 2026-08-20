@@ -100,11 +100,29 @@
 .landing-hero-atmosphere {
   background:
     linear-gradient(
-      105deg,
+      115deg,
       var(--bg-base) 0%,
-      var(--bg-base) 48%,
-      color-mix(in srgb, var(--accent-primary) 12%, var(--bg-panel)) 100%
+      var(--bg-base) 42%,
+      color-mix(in srgb, var(--accent-primary) 14%, var(--bg-panel)) 72%,
+      color-mix(in srgb, var(--accent-team) 8%, var(--bg-base)) 100%
     );
+}
+
+.landing-hero-grid {
+  opacity: 0.35;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border-muted) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border-muted) 70%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 75% 65% at 70% 40%, black 20%, transparent 75%);
+}
+
+.landing-spotlight-wash {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-primary) 5%, var(--bg-base)) 0%,
+    var(--bg-base) 55%
+  );
 }
 
 @keyframes landing-rise {
@@ -121,10 +139,21 @@
 @keyframes landing-mark-drift {
   0%,
   100% {
-    transform: translateY(0) rotate(-2deg);
+    transform: translateY(0) rotate(-3deg);
   }
   50% {
-    transform: translateY(-14px) rotate(1deg);
+    transform: translateY(-12px) rotate(2deg);
+  }
+}
+
+@keyframes landing-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -136,13 +165,18 @@
   animation: landing-mark-drift 14s ease-in-out infinite;
 }
 
+.landing-hero-panel {
+  animation: landing-panel-in 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
 .landing-section-kicker {
   letter-spacing: 0.02em;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .landing-hero-copy,
-  .landing-hero-mark {
+  .landing-hero-mark,
+  .landing-hero-panel {
     animation: none;
   }
 }
