@@ -241,7 +241,7 @@ function EditModal({
   );
 }
 
-import { useMyTeam } from "@/repositories/teamsRepository";
+import { useMyTeam, useMyTeamSubmissions } from "@/repositories/teamsRepository";
 import {
   useMySubmissions,
   useUpdateSubmission,
@@ -271,14 +271,14 @@ function mapSubmission(raw: SubmitResultListItem): SubmissionItem {
     teamName: pick(raw, "teamName", "TeamName"),
     trackId: pick(raw, "trackId", "TrackId"),
     trackName: pick(raw, "trackId", "TrackId"),
-    roundId: "",
+    roundId: pick(raw, "roundId", "RoundId"),
     roundName: "Vòng hiện tại",
-    submissionUrl: repo,
+    submissionUrl: repo || demo || slide || "",
     description: [repo && `Repo: ${repo}`, demo && `Demo: ${demo}`, slide && `Slide: ${slide}`]
       .filter(Boolean)
       .join("\n"),
     isActive: raw.isActive !== false && raw.IsActive !== false,
-    isEliminated: false,
+    isEliminated: Boolean(raw.isTeamDisqualified || raw.IsTeamDisqualified),
     createdTime: pick(raw, "createdTime", "CreatedTime"),
   };
 }
@@ -287,16 +287,27 @@ function mapSubmission(raw: SubmitResultListItem): SubmissionItem {
 export function MySubmissionsView() {
   const { user, activeRole } = useAuth();
   const roleName = activeRole?.roleName || activeRole?.RoleName || (user?.IsAdmin ? "Admin" : "Guest");
-  const isLeader = roleName === "TeamLeader";
   const eventIdFromRole = pick(activeRole, "eventId", "EventId");
 
   const { data: realTeam } = useMyTeam(eventIdFromRole || undefined);
   const team = realTeam;
-  const teamStatus = pick(team, "status", "Status");
-  const isRegistered = teamStatus === "Registered";
+  const currentUserId = user?.id || (user as any)?.userId;
+  const isLeader =
+    roleName === "TeamLeader" ||
+    team?.leaderUserId === currentUserId ||
+    (team as any)?.LeaderUserId === currentUserId ||
+    (team as any)?.isLeader === true;
 
-  const { data: rawSubs = [], isLoading } = useMySubmissions();
-  const submissions = rawSubs.map(mapSubmission);
+  const teamStatus = pick(team, "status", "Status");
+  const isRegistered = teamStatus === "Registered" || teamStatus === "Approved" || teamStatus === "1";
+
+  const { data: rawSubsByTeam = [], isLoading: isLoadingByTeam } = useMySubmissions(team?.id);
+  const { data: rawDirectSubs = [], isLoading: isLoadingDirect } = useMyTeamSubmissions();
+  const rawSubs = (Array.isArray(rawSubsByTeam) && rawSubsByTeam.length > 0)
+    ? rawSubsByTeam
+    : (Array.isArray(rawDirectSubs) ? rawDirectSubs : []);
+  const submissions = (rawSubs as SubmitResultListItem[]).map(mapSubmission);
+  const isLoading = isLoadingByTeam && submissions.length === 0;
   const updateSub = useUpdateSubmission();
   const deleteSub = useDeleteSubmission();
 
@@ -308,6 +319,14 @@ export function MySubmissionsView() {
 
   const handleSave = async (id: string, url: string, desc: string) => {
     setActionError("");
+    if (!url.trim()) {
+      setActionError("Vui lòng nhập đường dẫn URL bài nộp hợp lệ.");
+      return;
+    }
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      setActionError("Đường dẫn URL phải bắt đầu bằng http:// hoặc https://");
+      return;
+    }
     try {
       await updateSub.mutateAsync({
         id,

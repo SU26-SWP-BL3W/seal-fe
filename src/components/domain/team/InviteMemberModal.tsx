@@ -50,6 +50,12 @@ export function InviteMemberModal({
     if (!value || isFull) return;
 
     setError("");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      setError("Vui lòng nhập địa chỉ email hợp lệ (ví dụ: student@fpt.edu.vn).");
+      return;
+    }
+
     setSuccessInfo(null);
     setIsPending(true);
 

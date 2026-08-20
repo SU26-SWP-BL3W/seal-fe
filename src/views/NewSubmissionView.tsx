@@ -10,7 +10,7 @@ import {
   readApiError,
   type SubmitResultRequest,
 } from "@/repositories/submitResultsRepository";
-import { useMyTeam } from "@/repositories/teamsRepository";
+import { useMyTeam, useMyTeamSubmissions } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import { ApiMissingDataBadge } from "@/components/ui";
@@ -42,13 +42,38 @@ function TrackSubmissionCard({
   teamId: string;
   roundId: string;
 }) {
-  const deliverables: DeliverableItem[] = [
-    { id: "github", type: "github", label: "GitHub / GitLab repo", placeholder: "https://github.com/org/repo", required: true, trackId: track.id },
-    { id: "deployed_url", type: "deployed_url", label: "Live demo", placeholder: "https://demo.example.com", required: true, trackId: track.id },
-    { id: "slides", type: "slides", label: "Slides", placeholder: "https://docs.google.com/presentation/...", required: true, trackId: track.id },
-  ];
+  const deliverables: DeliverableItem[] = useMemo(() => {
+    if ((track as any)?.submissionRuleDescription) {
+      try {
+        const rules = JSON.parse((track as any).submissionRuleDescription);
+        const list: DeliverableItem[] = [];
+        if (rules.github && rules.github !== "none") {
+          list.push({ id: "github", type: "github", label: "Mã nguồn GitHub / GitLab", placeholder: "https://github.com/...", required: rules.github === "required", trackId: track.id });
+        }
+        if (rules.demo && rules.demo !== "none") {
+          list.push({ id: "deployed_url", type: "deployed_url", label: "Live Demo / Video chạy thử", placeholder: "https://demo.example.com", required: rules.demo === "required", trackId: track.id });
+        }
+        if (rules.slides && rules.slides !== "none") {
+          list.push({ id: "slides", type: "slides", label: "Slide thuyết trình (Canva / Slides)", placeholder: "https://canva.com/design/...", required: rules.slides === "required", trackId: track.id });
+        }
+        if (rules.figma && rules.figma !== "none") {
+          list.push({ id: "figma", type: "figma", label: "Bản vẽ thiết kế Figma", placeholder: "https://figma.com/design/...", required: rules.figma === "required", trackId: track.id });
+        }
+        if (rules.docs && rules.docs !== "none") {
+          list.push({ id: "report", type: "report", label: "Tài liệu kỹ thuật / Báo cáo PDF", placeholder: "https://docs.google.com/...", required: rules.docs === "required", trackId: track.id });
+        }
+        if (list.length > 0) return list;
+      } catch {}
+    }
+    return [
+      { id: "github", type: "github", label: "Mã nguồn GitHub / GitLab", placeholder: "https://github.com/org/repo", required: true, trackId: track.id },
+      { id: "deployed_url", type: "deployed_url", label: "Live Demo sản phẩm", placeholder: "https://demo.example.com", required: true, trackId: track.id },
+      { id: "slides", type: "slides", label: "Slide thuyết trình", placeholder: "https://docs.google.com/presentation/...", required: true, trackId: track.id },
+    ];
+  }, [track]);
   const createSubmission = useCreateSubmission();
   const updateSubmission = useUpdateSubmission();
+
 
   // Parse existing submission links if available
   const parsedExisting = useMemo(() => {
@@ -356,7 +381,11 @@ export function NewSubmissionView() {
   const teamTrackId = (team as any)?.TrackId || (team as any)?.trackId || "";
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
   const { data: rounds = [] } = useEventRounds(eventId);
-  const { data: existingSubs = [] } = useMySubmissions();
+  const { data: rawSubsByTeam = [] } = useMySubmissions(teamId);
+  const { data: rawDirectSubs = [] } = useMyTeamSubmissions();
+  const existingSubs = (Array.isArray(rawSubsByTeam) && rawSubsByTeam.length > 0)
+    ? rawSubsByTeam
+    : (Array.isArray(rawDirectSubs) ? rawDirectSubs : []);
   const roundId = rounds.length
     ? (rounds[rounds.length - 1].id || rounds[rounds.length - 1].Id || "")
     : "";

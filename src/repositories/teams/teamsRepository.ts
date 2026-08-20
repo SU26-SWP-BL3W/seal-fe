@@ -501,6 +501,39 @@ export function useTeamInvitations(teamId?: string) {
   return useGetTeamInvitations(teamId);
 }
 
+/** GET /Teams/my-submissions – Lấy danh sách các bài nộp giải pháp của chính đội mà user đang tham gia */
+export function useMyTeamSubmissions() {
+  return useQuery({
+    queryKey: ["my-team-submissions"],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>("/Teams/my-submissions");
+        return Array.isArray(res.data) ? res.data : (res.data as any)?.data ?? [];
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Teams/my-submissions error:", err?.message);
+        return [];
+      }
+    },
+  });
+}
+
+/** GET /Teams/{teamId}/my-invitation – Lấy lời mời tham gia đội đang chờ phản hồi của user hiện tại */
+export function useGetMyPendingTeamInvitation(teamId: string | undefined) {
+  return useQuery({
+    queryKey: ["my-pending-team-invitation", teamId],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>(`/Teams/${teamId}/my-invitation`);
+        return res.data;
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Teams/{teamId}/my-invitation error:", err?.message);
+        return null;
+      }
+    },
+    enabled: !!teamId,
+  });
+}
+
 export const useConfirmRegistration = useConfirmTeamRegistration;
 export const useTransferLeadership = useTransferTeamLeader;
 export const useCancelInvitation = useCancelTeamInvitation;
@@ -508,3 +541,4 @@ export const useInviteMember = useInviteTeamMember;
 export const useAcceptOrDeclineInvitation = useRespondTeamInvitation;
 export const useRejectTeam = useRejectTeamRegistration;
 export const useApproveTeam = useApproveTeamRegistration;
+
