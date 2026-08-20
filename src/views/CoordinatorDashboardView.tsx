@@ -1,20 +1,33 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useMyEvents } from "@/repositories/eventsRepository";
+import apiClient from "@/models/apiClient";
+import { useMyEvents, eventsRepository, type MyEventModel } from "@/repositories/eventsRepository";
 import { useGetRoundsByEvent } from "@/repositories/events/roundsRepository";
 import { useGetPendingTeams } from "@/repositories/teamsRepository";
 import { useGetUsers } from "@/repositories/usersRepository";
 import {
   Layers,
   Users,
+  Award,
   FileCheck,
   ChevronDown,
+  Settings,
   ArrowRight,
+  ShieldCheck,
   Activity,
   AlertTriangle,
   FolderKanban,
+  FileText,
+  CheckCircle2,
+  Sliders,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Rocket,
   Calendar,
+  ArrowDown,
+  CornerDownLeft,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,10 +42,24 @@ function formatDateStr(dateStr?: string) {
   }
 }
 
+function getRoundStatus(r: any) {
+  const now = new Date();
+  const start = r.startDate || r.StartDate ? new Date(r.startDate || r.StartDate) : null;
+  const end = r.endDate || r.EndDate ? new Date(r.endDate || r.EndDate) : null;
+
+  if (start && now < start) {
+    return { label: "SẮP TỚI", badgeBg: "bg-[#263339] text-[#8a9ba8]" };
+  }
+  if (end && now > end) {
+    return { label: "ĐÃ HOÀN THÀNH", badgeBg: "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40" };
+  }
+  return { label: "ĐANG DIỄN RA", badgeBg: "bg-[#8b5cf6]/20 text-[#c084fc] border border-[#8b5cf6]/40" };
+}
+
 export const CoordinatorDashboardView: React.FC = () => {
-  const { data: eventsList = [], isLoading } = useMyEvents();
-  const { data: _pendingTeams = [] } = useGetPendingTeams();
-  const { data: _pendingUsersData } = useGetUsers({ isApproved: false });
+  const { data: eventsList = [], isLoading, refetch } = useMyEvents();
+  const { data: pendingTeams = [] } = useGetPendingTeams();
+  const { data: pendingUsersData } = useGetUsers({ isApproved: false });
   const appealsList: { status?: number | string; Status?: string }[] = [];
 
   // Deduplicated assigned events list

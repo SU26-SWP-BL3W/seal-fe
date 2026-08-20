@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, SkeletonRows } from "@/components/ui";
 import { Check, Copy, ExternalLink, Mail, Sparkles, User, X } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetTeamById } from "@/repositories/teamsRepository";
@@ -27,7 +27,7 @@ export function JoinRequestEmailModal({ open, team, onClose }: Props) {
   const [copiedEmail, setCopiedEmail] = useState(false);
 
   const teamId = team?.id;
-  const { data: teamDetail, isLoading: _isLoadingTeamDetail } = useGetTeamById(teamId);
+  const { data: teamDetail, isLoading: isLoadingTeamDetail } = useGetTeamById(teamId);
 
   if (!open || !team) return null;
 

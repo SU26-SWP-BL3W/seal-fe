@@ -26,7 +26,13 @@ import {
   Trash2,
   Scale,
   MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
   ExternalLink,
+  CheckCircle2,
+  Clock,
+  XCircle,
   X,
 } from "lucide-react";
 
@@ -43,11 +49,15 @@ export function MySubmissionsView() {
   );
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
+<<<<<<< HEAD
   const { data: directTeamSubs = [] } = useMyTeamSubmissions();
   const { data: submissionsByTeamId = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
   const submissions: SubmitResultListItem[] =
     submissionsByTeamId.length > 0 ? submissionsByTeamId : (directTeamSubs as any[]);
   const isLoading = isLoadingTeam || (isLoadingSubs && submissions.length === 0);
+=======
+  const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
+>>>>>>> parent of 384ee5c (merge: integrate full project audit, bugfixes and email workflows into dev)
 
   // Edit Modal State
   const [editingSub, setEditingSub] = useState<SubmitResultListItem | null>(null);
@@ -213,7 +223,7 @@ export function MySubmissionsView() {
                 <span className="text-[#38bdf8]/70 text-[10px]">SYNC: ACTIVE ({submissions.length} BÀI NỘP)</span>
               </div>
 
-              {isLoading ? (
+              {isLoadingSubs ? (
                 <div className="p-12 text-center font-mono text-xs text-[#00d9ff] animate-pulse">
                   [ SYSTEM_LOG: FETCHING_SUBMISSIONS... ]
                 </div>

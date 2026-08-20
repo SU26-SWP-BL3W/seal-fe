@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import type { Event as EntityEvent, Round } from "@/models/entities";
 import type { PagedResult } from "@/models/types";
+import type { Prize } from "../results/prizesRepository";
 
 export interface MyEventModel {
   id?: string;

@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
-import { Plus, CheckCircle2, Trash2, FolderGit2, Sparkles, Layers, Sliders, Edit3 } from "lucide-react";
+import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 export interface CriteriaInsideSet {
   id: string;
@@ -53,7 +54,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
       setCriteriaSets([]);
       setSelectedSetId("");
     }
-  }, [dbTemplates, selectedSetId]);
+  }, [dbTemplates.length]);
 
   const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
@@ -256,7 +257,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
           <button
             type="button"
-            onClick={handleOpenCreateModal}
+            onClick={() => setIsBuilderModalOpen(true)}
             className="px-5 py-2.5 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono text-xs font-bold uppercase flex items-center gap-2 cursor-pointer transition-colors shadow-lg shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[3]" />

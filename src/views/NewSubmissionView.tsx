@@ -8,6 +8,7 @@ import {
   useMySubmissions,
   useUpdateSubmission,
   readApiError,
+  type SubmitResultRequest,
 } from "@/repositories/submitResultsRepository";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
@@ -15,7 +16,7 @@ import { useEventRounds } from "@/repositories/eventsRepository";
 import { ApiMissingDataBadge } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
 
-import type { TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
+import type { RoundItem, TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/teamTypes";
 
 import { parseLinkRules } from "@/components/domain/event-wizard/Step3TrackConfig";
 
@@ -453,11 +454,8 @@ export function NewSubmissionView() {
   const currentOrLastRound = rounds.find((r: any) => r.isCurrentRound || r.status === "Active" || r.status === "InProgress") || rounds[rounds.length - 1] || rounds[0];
   const roundId = currentOrLastRound?.id || currentOrLastRound?.Id || "";
 
-  const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
-  const normTeamTrackId = normalizeId(teamTrackId);
-
   const availableTracks: TrackItem[] = (tracks as any[])
-    .filter((t) => !normTeamTrackId || normalizeId(t.id || t.Id) === normTeamTrackId)
+    .filter((t) => !teamTrackId || (t.id || t.Id) === teamTrackId)
     .map((t: any) => ({
       id: t.id || t.Id,
       trackName: t.trackName || t.TrackName || "",

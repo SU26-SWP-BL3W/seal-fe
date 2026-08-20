@@ -10,6 +10,10 @@ import { useMyAssignedJudgeTracks } from "@/viewModels/useMyAssignedJudgeTracks"
 import { useEvents, useEventRounds } from "@/repositories/eventsRepository";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Badge, Button, Card, EmptyState } from "@/components/ui";
+import { Scale, ChevronLeft, ChevronRight } from "lucide-react";
 
 const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
 
@@ -34,7 +38,7 @@ export function JudgeScoringView() {
   const prefillTrackId = searchParams?.get("trackId") || "";
 
   const { user } = useAuth();
-  const _userId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
+  const userId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
 
   // Lấy danh sách sự kiện để xác định trạng thái mở / đóng niêm phong
   const { data: rawEvents } = useEvents();
@@ -116,7 +120,7 @@ export function JudgeScoringView() {
     return assignedTracks.filter((t) => normalizeId(t.eventId) === currentEventNorm);
   }, [assignedTracks, eventId]);
 
-  const { data: rawSubmissions = [], isLoading: _loadingSubmissions } =
+  const { data: rawSubmissions = [], isLoading: loadingSubmissions } =
     useGetSubmitResultsByTrack(activeTrackId, eventId);
   const apiSubmissions = useMemo(() => {
     return Array.isArray(rawSubmissions) ? rawSubmissions : [];
@@ -273,24 +277,20 @@ export function JudgeScoringView() {
 
   if (!user) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#090e11] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#10171a] border border-amber-500/40 p-8 text-center space-y-4 hud-clipped shadow-xl">
-          <div className="font-mono text-xs text-amber-400 font-bold uppercase tracking-widest">
-            [ XÁC THỰC QUYỀN HẠN ]
-          </div>
-          <h2 className="font-display text-xl font-bold uppercase text-white">BÀN CHẤM ĐIỂM GIÁM KHẢO</h2>
-          <p className="font-sans text-xs text-zinc-400 leading-relaxed">
-            Vui lòng đăng nhập với tài khoản Giám khảo để mở bàn chấm điểm.
-          </p>
-          <div className="pt-2">
-            <Link href="/login" className="w-full">
-              <button className="w-full bg-amber-500 text-black font-mono font-bold text-xs py-2.5 uppercase hover:bg-white transition-all cursor-pointer hud-clipped shadow-md">
-                [ ĐẾN TRANG ĐĂNG NHẬP ]
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Card className="w-full max-w-md text-center">
+          <EmptyState
+            icon={Scale}
+            title="Bàn chấm điểm giám khảo"
+            description="Vui lòng đăng nhập với tài khoản Giám khảo để mở bàn chấm điểm."
+            action={
+              <Link href="/login">
+                <Button accent="judge">Đến trang đăng nhập</Button>
+              </Link>
+            }
+          />
+        </Card>
+      </PageShell>
     );
   }
 
@@ -302,85 +302,86 @@ export function JudgeScoringView() {
 
   if (loadingTracks && assignedTracks.length === 0) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-[#090e11] text-center p-6 text-zinc-500 font-mono text-xs animate-pulse">
-        [ ĐANG KẾT NỐI HẠNG MỤC PHÂN CÔNG CHẤM THI... ]
-      </div>
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Card className="py-12 text-center">
+          <p className="animate-pulse text-sm text-[var(--text-muted)]">
+            Đang kết nối hạng mục phân công chấm thi…
+          </p>
+        </Card>
+      </PageShell>
     );
   }
 
   if (!loadingTracks && assignedTracks.length === 0) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-[#090e11] text-center p-6">
-        <div className="max-w-md space-y-3 bg-[#10171a] border border-zinc-800 p-8 hud-clipped">
-          <div className="font-mono text-xs text-amber-400 font-bold uppercase">[ CHƯA CÓ PHÂN CÔNG ]</div>
-          <h2 className="font-display text-lg font-bold text-white uppercase">Chưa được phân công Hạng mục nào</h2>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            Vui lòng liên hệ Ban Tổ Chức (Event Coordinator) để được cấp quyền chấm điểm trong sự kiện.
-          </p>
-          <div className="pt-2">
-            <Link href="/events">
-              <button className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-mono text-xs uppercase hud-clipped">
-                [ QUAY LẠI DANH SÁCH SỰ KIỆN ]
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Card className="w-full max-w-md text-center">
+          <EmptyState
+            icon={Scale}
+            title="Chưa được phân công hạng mục nào"
+            description="Vui lòng liên hệ Ban Tổ Chức để được cấp quyền chấm điểm trong sự kiện."
+            action={
+              <Link href="/events">
+                <Button variant="secondary" accent="judge">
+                  Quay lại danh sách sự kiện
+                </Button>
+              </Link>
+            }
+          />
+        </Card>
+      </PageShell>
     );
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans p-4 md:p-6 flex flex-col space-y-4">
-      <div className="max-w-[1600px] w-full mx-auto space-y-4 flex-1 flex flex-col">
-
-        {/* ── TẦNG 1: BREADCRUMB & WORK-HUB SWITCHER ── */}
-        <div className="bg-[#10171a] border border-zinc-800 p-3.5 hud-clipped flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-sm">
-          {/* Breadcrumb Navigation */}
-          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-            {eventId ? (
-              <Link href={`/events/${eventId}`} className="text-zinc-400 hover:text-white font-bold transition-colors">
-                [ &lt; QUAY LẠI CHI TIẾT SỰ KIỆN ]
+    <PageShell className="flex min-h-[calc(100vh-4rem)] max-w-[1600px] flex-col space-y-4">
+        <PageHeader
+          breadcrumb={
+            eventId ? (
+              <Link
+                href={`/events/${eventId}`}
+                className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--accent-judge)]"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Quay lại chi tiết sự kiện
               </Link>
             ) : (
-              <Link href="/events" className="text-zinc-400 hover:text-white font-bold transition-colors">
-                [ &lt; KHÁM PHÁ SỰ KIỆN ]
+              <Link
+                href="/events"
+                className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--accent-judge)]"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Khám phá sự kiện
               </Link>
-            )}
-            <span className="text-zinc-600">/</span>
-            <span className="text-amber-400 font-bold uppercase">[ BÀN CHẤM GIÁM KHẢO ]</span>
-            <span className="text-zinc-600">/</span>
-            <span className="text-white font-extrabold uppercase">{selectedTrack?.trackName || "Hạng mục"}</span>
-          </div>
+            )
+          }
+          title="Bàn chấm giám khảo"
+          description={selectedTrack?.trackName || "Hạng mục"}
+        />
 
-          {/* Work-Hub Switcher: Đổi Track Giám Khảo trong Sự kiện này (Nếu có >= 2 Track) */}
-          <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-            {currentEventTracks.length > 1 && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-zinc-500 text-[11px] uppercase">ĐỔI TRACK:</span>
-                {currentEventTracks.map((t) => {
-                  const isCurrent = normalizeId(t.trackId) === normalizeId(activeTrackId);
-                  return (
-                    <button
-                      key={t.trackId}
-                      type="button"
-                      onClick={() => {
-                        setSelectedTrackId(t.trackId);
-                        setSelectedSubmission(null);
-                      }}
-                      className={`px-2.5 py-1 text-[11px] font-bold uppercase transition-all cursor-pointer hud-clipped ${
-                        isCurrent
-                          ? "bg-amber-500 text-black font-extrabold shadow-sm"
-                          : "bg-[#141f23] text-zinc-400 border border-zinc-700 hover:text-white hover:border-amber-500/50"
-                      }`}
-                    >
-                      [ {t.trackName} ]
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        {currentEventTracks.length > 1 && (
+          <Card className="flex flex-wrap items-center gap-2 p-3">
+            <span className="text-xs font-medium text-[var(--text-muted)]">Chọn hạng mục:</span>
+            {currentEventTracks.map((t) => {
+              const isCurrent = normalizeId(t.trackId) === normalizeId(activeTrackId);
+              return (
+                <Button
+                  key={t.trackId}
+                  type="button"
+                  variant={isCurrent ? "primary" : "secondary"}
+                  accent="judge"
+                  className="text-xs"
+                  onClick={() => {
+                    setSelectedTrackId(t.trackId);
+                    setSelectedSubmission(null);
+                  }}
+                >
+                  {t.trackName}
+                </Button>
+              );
+            })}
+          </Card>
+        )}
 
         {/* ── BANNER TRẠNG THÁI KHUNG GIỜ NỘP BÀI & CHẤM ĐIỂM ── */}
         {isEventEnded ? (
@@ -514,28 +515,30 @@ export function JudgeScoringView() {
           </div>
         ) : (
           <>
-            {/* ── TẦNG 2: DẢI CHỌN BÀI DỰ THI ẨN DANH ── */}
-            <div className="bg-[#10171a] border border-amber-500/30 p-3 hud-clipped flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
-              {/* Header tiến độ */}
-              <div className="flex items-center gap-3 font-mono text-xs shrink-0">
-                <span className="px-2.5 py-0.5 bg-amber-500/15 text-amber-300 border border-amber-500/40 font-bold uppercase text-[11px] hud-clipped">
-                  HẠNG MỤC: {selectedTrack?.trackName}
-                </span>
-                <span className="text-zinc-400">
-                  Tiến độ: <strong className="text-emerald-400 font-bold">{submittedIds.size} / {apiSubmissions.length}</strong> bài đã chấm
+            <Card className="flex flex-col gap-3 p-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <Badge tone="judge">{selectedTrack?.trackName}</Badge>
+                <span className="text-xs text-[var(--text-muted)]">
+                  Tiến độ:{" "}
+                  <strong className="font-semibold text-[var(--color-success)]">
+                    {submittedIds.size} / {apiSubmissions.length}
+                  </strong>{" "}
+                  bài đã chấm
                 </span>
               </div>
 
-              {/* Dải điều hướng bài thi */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  accent="judge"
+                  className="shrink-0 text-xs"
                   onClick={handlePrevSubmission}
                   disabled={currentSubIndex === 0}
-                  className="px-3 py-1.5 bg-[#141f23] text-zinc-300 border border-zinc-700 hover:border-amber-400 hover:text-white font-mono text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hud-clipped shrink-0"
                 >
-                  [ &lt; BÀI TRƯỚC ]
-                </button>
+                  <ChevronLeft className="h-4 w-4" />
+                  Bài trước
+                </Button>
 
                 <div className="flex items-center gap-1.5 overflow-x-auto">
                   {apiSubmissions.map((item: any, idx: number) => {
@@ -545,40 +548,39 @@ export function JudgeScoringView() {
                     const code = `SUB-${String(itemId).slice(0, 6).toUpperCase()}`;
 
                     return (
-                      <button
+                      <Button
                         key={itemId}
                         type="button"
+                        variant={isSelected ? "primary" : itemGraded ? "secondary" : "ghost"}
+                        accent={itemGraded && !isSelected ? "primary" : "judge"}
+                        className={`shrink-0 text-xs ${itemGraded && !isSelected ? "border-[var(--color-success)]/40 text-[var(--color-success)]" : ""}`}
                         onClick={() => {
                           setSelectedSubmission(item);
                           setScores({});
                           setSaveError("");
                           setSaveOk("");
                         }}
-                        className={`px-3 py-1.5 font-mono text-xs font-bold transition-all cursor-pointer hud-clipped shrink-0 ${
-                          isSelected
-                            ? "bg-amber-500 text-black font-extrabold shadow-md"
-                            : itemGraded
-                            ? "bg-emerald-950/50 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-900/60"
-                            : "bg-[#141f23] text-zinc-400 border border-zinc-800 hover:text-white hover:border-zinc-600"
-                        }`}
                       >
-                        <span>{code}</span>
-                        {itemGraded && <span className="ml-1 text-[10px] text-emerald-300 font-extrabold">[✓]</span>}
-                      </button>
+                        {code}
+                        {itemGraded && <span className="text-[10px]">✓</span>}
+                      </Button>
                     );
                   })}
                 </div>
 
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  accent="judge"
+                  className="shrink-0 text-xs"
                   onClick={handleNextSubmission}
                   disabled={currentSubIndex >= apiSubmissions.length - 1}
-                  className="px-3 py-1.5 bg-[#141f23] text-zinc-300 border border-zinc-700 hover:border-amber-400 hover:text-white font-mono text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer hud-clipped shrink-0"
                 >
-                  [ BÀI TIẾP &gt; ]
-                </button>
+                  Bài tiếp
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
+            </Card>
 
             {/* ── TẦNG 3: BỐ CỤC 2 CỘT (HỒ SƠ BÀI THI & BẢNG CHẤM RUBRIC) ── */}
             {apiSubmissions.length === 0 ? (
@@ -826,7 +828,6 @@ export function JudgeScoringView() {
           </>
         )}
 
-      </div>
-    </main>
+    </PageShell>
   );
 }

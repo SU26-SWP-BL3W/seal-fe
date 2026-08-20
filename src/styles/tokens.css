@@ -48,11 +48,18 @@
   --space-sm: 10px;
   --space-md: 16px;
   --space-lg: 24px;
-  --space-xl: 36px;  /* FE cu: 36px, FE moi: 48px -> fix ve 36px */
+  --space-xl: 48px;
 
+<<<<<<< HEAD
   /* ---------- Shape — Geometric Discipline (proposal Command Deck) ---------- */
   --clip-size: 12px;  /* góc vát chuẩn — panel/CTA dùng .hud-clipped */
   --radius-none: 0;   /* input/table: vuông; cấm thay clip bằng rounded-lg */
+=======
+  /* ---------- Shape ---------- */
+  --clip-size: 8px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+>>>>>>> parent of 384ee5c (merge: integrate full project audit, bugfixes and email workflows into dev)
 
   /* ---------- Layout ---------- */
   --container-max: 1280px;
@@ -95,6 +102,7 @@
   }
 }
 
+<<<<<<< HEAD
 /* Landing redesign — arena stage (distinct from old centered HUD) */
 .landing-arena-slash {
   background:
@@ -113,21 +121,69 @@
 
 .landing-command-console {
   animation: landing-panel-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+=======
+/* Landing — SEAL Arena · Narrative Workflow */
+.landing-hero-atmosphere {
+  background:
+    linear-gradient(
+      115deg,
+      var(--bg-base) 0%,
+      var(--bg-base) 42%,
+      color-mix(in srgb, var(--accent-primary) 14%, var(--bg-panel)) 72%,
+      color-mix(in srgb, var(--accent-team) 8%, var(--bg-base)) 100%
+    );
+}
+
+.landing-hero-grid {
+  opacity: 0.35;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border-muted) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border-muted) 70%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 75% 65% at 70% 40%, black 20%, transparent 75%);
+}
+
+.landing-spotlight-wash {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-primary) 5%, var(--bg-base)) 0%,
+    var(--bg-base) 55%
+  );
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+>>>>>>> parent of 384ee5c (merge: integrate full project audit, bugfixes and email workflows into dev)
 }
 
 @keyframes landing-mark-drift {
   0%,
   100% {
+<<<<<<< HEAD
     transform: translateY(0) rotate(-4deg);
   }
   50% {
     transform: translateY(-18px) rotate(2deg);
+=======
+    transform: translateY(0) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(2deg);
+>>>>>>> parent of 384ee5c (merge: integrate full project audit, bugfixes and email workflows into dev)
   }
 }
 
 @keyframes landing-panel-in {
   from {
     opacity: 0;
+<<<<<<< HEAD
     transform: translateX(24px);
   }
   to {
@@ -139,6 +195,36 @@
 @media (prefers-reduced-motion: reduce) {
   .landing-arena-mark,
   .landing-command-console {
+=======
+    transform: translateY(28px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.landing-hero-copy {
+  animation: landing-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-hero-mark {
+  animation: landing-mark-drift 14s ease-in-out infinite;
+}
+
+.landing-hero-panel {
+  animation: landing-panel-in 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.landing-section-kicker {
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-copy,
+  .landing-hero-mark,
+  .landing-hero-panel {
+>>>>>>> parent of 384ee5c (merge: integrate full project audit, bugfixes and email workflows into dev)
     animation: none;
   }
 }

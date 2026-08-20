@@ -4,81 +4,22 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { User, EventRole } from "@/models/entities";
 import apiClient from "@/models/apiClient";
-
-// Trang đích sau khi đăng nhập cho từng vai trò
-const _REDIRECT_BY_ROLE: Record<string, string> = {
-  EventCoordinator: "/coordinator/dashboard",
-  Coordinator: "/coordinator/dashboard",
-  Judge: "/judge/events",
-  Mentor: "/events",
-  TeamLeader: "/my-team",
-  TeamMember: "/my-team",
-};
-
-const ROLE_RANK = ["EventCoordinator", "Coordinator", "Judge", "Mentor", "TeamLeader", "TeamMember"];
-
-function pickPrimaryRole(rows: unknown[], userId: string): EventRole | null {
-  const now = Date.now();
-  const norm = (Array.isArray(rows) ? rows : [])
-    .map((raw) => {
-      const r = raw as Record<string, unknown>;
-      const str = (...keys: string[]) => {
-        for (const k of keys) {
-          const v = r[k];
-          if (typeof v === "string" && v.trim()) return v;
-        }
-        return "";
-      };
-      const expiredAtStr = str("expiredAt", "ExpiredAt");
-      let isExpired = false;
-      if (expiredAtStr) {
-        const expTime = new Date(expiredAtStr).getTime();
-        if (!isNaN(expTime) && expTime < now) {
-          isExpired = true;
-        }
-      }
-      return {
-        id: str("id", "Id"),
-        eventId: str("eventId", "EventId"),
-        roleName: str("roleName", "RoleName"),
-        trackId: str("trackId", "TrackId"),
-        teamId: str("teamId", "TeamId"),
-        isExpired,
-      };
-    })
-    .filter((r) => !r.isExpired); // Chỉ giữ các vai trò còn hiệu lực trong sự kiện
-
-  const chosen = ROLE_RANK.map((rn) => norm.find((r) => r.roleName === rn)).find(Boolean);
-  if (!chosen) return null; // Hết hiệu lực -> Không có active role -> Trở thành Guest
-  const assigned = norm.filter((r) => r.roleName === chosen.roleName).map((r) => r.eventId).filter(Boolean);
-  return {
-    id: chosen.id,
-    eventRoleId: chosen.id,
-    EventRoleId: chosen.id,
-    userId,
-    UserId: userId,
-    eventId: chosen.eventId,
-    EventId: chosen.eventId,
-    roleName: chosen.roleName,
-    RoleName: chosen.roleName,
-    trackId: chosen.trackId,
-    TrackId: chosen.trackId,
-    teamId: chosen.teamId,
-    TeamId: chosen.teamId,
-    assignedEventIds: assigned,
-    AssignedEventIds: assigned,
-  };
-}
+import {
+  normalizeEventRoleRows,
+  pickPrimaryRoleFromRows,
+  resolveStaffLandingPath,
+  type NormalizedEventRole,
+} from "@/lib/eventRoles";
 
 interface AuthContextType {
   user: User | null;
   activeRole: EventRole | null;
+  allEventRoles: NormalizedEventRole[];
   isInitialized: boolean;
   loginWithCredentials: (email: string, password: string) => Promise<string>;
   loginWithGoogleCredential: (idToken: string) => Promise<string>;
   logout: () => void;
   refreshRoles: () => Promise<EventRole | null>;
-  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,10 +27,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [activeRole, setActiveRole] = useState<EventRole | null>(null);
+  const [allEventRoles, setAllEventRoles] = useState<NormalizedEventRole[]>([]);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  const fetchUserRoles = async (userId: string): Promise<EventRole | null> => {
-    if (!userId) return null;
+  const fetchUserRoles = async (userId: string): Promise<{
+    primaryRole: EventRole | null;
+    allRoles: NormalizedEventRole[];
+  }> => {
+    if (!userId) return { primaryRole: null, allRoles: [] };
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
         params: { UserId: userId, userId, PageSize: 200, pageSize: 200 },
@@ -100,62 +45,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         rolesRes.data?.data ??
         rolesRes.data ??
         [];
-      return pickPrimaryRole(rows, userId);
+      const allRoles = normalizeEventRoleRows(rows);
+      return {
+        primaryRole: pickPrimaryRoleFromRows(rows, userId),
+        allRoles,
+      };
     } catch {
-      return null;
+      return { primaryRole: null, allRoles: [] };
+    }
+  };
+
+  const applyRoleState = (primaryRole: EventRole | null, roles: NormalizedEventRole[]) => {
+    setActiveRole(primaryRole);
+    setAllEventRoles(roles);
+    if (typeof window !== "undefined") {
+      if (primaryRole) {
+        localStorage.setItem("activeRole", JSON.stringify(primaryRole));
+      } else {
+        localStorage.removeItem("activeRole");
+      }
+      localStorage.setItem("allEventRoles", JSON.stringify(roles));
     }
   };
 
   const refreshRoles = async (): Promise<EventRole | null> => {
     const currentUserId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
     if (!currentUserId) return null;
-    const latestRole = await fetchUserRoles(currentUserId);
-    setActiveRole(latestRole);
-    if (typeof window !== "undefined") {
-      if (latestRole) {
-        localStorage.setItem("activeRole", JSON.stringify(latestRole));
-      } else {
-        localStorage.removeItem("activeRole");
-      }
-    }
-    return latestRole;
-  };
-
-  const refreshUser = async (): Promise<User | null> => {
-    try {
-      const res = await apiClient.get<User>("/Users/profile");
-      if (res.data) {
-        let updatedUser: User | null = null;
-        setUser((prev) => {
-          updatedUser = {
-            ...(prev || {}),
-            ...res.data,
-            isApproved: res.data.isApproved ?? prev?.isApproved ?? false,
-            isStudent: res.data.isStudent ?? prev?.isStudent ?? true,
-            isAdmin: res.data.isAdmin ?? prev?.isAdmin ?? false,
-          } as User;
-          if (typeof window !== "undefined") {
-            localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-          }
-          return updatedUser;
-        });
-        const raw = res.data as any;
-        const uid = raw.id || raw.Id || raw.userId || raw.UserId;
-        if (uid) {
-          await fetchUserRoles(uid).then((r) => {
-            setActiveRole(r);
-            if (typeof window !== "undefined") {
-              if (r) localStorage.setItem("activeRole", JSON.stringify(r));
-              else localStorage.removeItem("activeRole");
-            }
-          });
-        }
-        return updatedUser;
-      }
-      return null;
-    } catch {
-      return null;
-    }
+    const { primaryRole, allRoles } = await fetchUserRoles(currentUserId);
+    applyRoleState(primaryRole, allRoles);
+    return primaryRole;
   };
 
   // Khôi phục phiên từ localStorage (F5 safe) & đồng bộ profile + eventRoles mới nhất từ BE
@@ -163,14 +81,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const storedUser = localStorage.getItem("currentUser");
       const storedRole = localStorage.getItem("activeRole");
+      const storedAllRoles = localStorage.getItem("allEventRoles");
       if (storedUser) {
         setUser(JSON.parse(storedUser));
         if (storedRole) setActiveRole(JSON.parse(storedRole));
+        if (storedAllRoles) setAllEventRoles(JSON.parse(storedAllRoles));
       } else {
         setUser(null);
         setActiveRole(null);
+        setAllEventRoles([]);
         if (typeof window !== "undefined") {
           localStorage.removeItem("activeRole");
+          localStorage.removeItem("allEventRoles");
         }
       }
     } catch (e) {
@@ -201,17 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return updated;
             });
 
-            // Tự động đồng bộ EventRoles mới nhất từ DB & Fallback vai trò thông minh (ví dụ: gỡ EC -> fallback về Judge)
             if (uid) {
-              const latestRole = await fetchUserRoles(uid);
-              setActiveRole(latestRole);
-              if (typeof window !== "undefined") {
-                if (latestRole) {
-                  localStorage.setItem("activeRole", JSON.stringify(latestRole));
-                } else {
-                  localStorage.removeItem("activeRole");
-                }
-              }
+              const { primaryRole, allRoles } = await fetchUserRoles(uid);
+              applyRoleState(primaryRole, allRoles);
             }
           }
         })
@@ -221,16 +135,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const saveSession = (newUser: User, newRole: EventRole | null) => {
+  const saveSession = (newUser: User, newRole: EventRole | null, roles: NormalizedEventRole[] = []) => {
     setUser(newUser);
-    setActiveRole(newRole);
+    applyRoleState(newRole, roles);
     if (typeof window !== "undefined") {
       localStorage.setItem("currentUser", JSON.stringify(newUser));
-      if (newRole) {
-        localStorage.setItem("activeRole", JSON.stringify(newRole));
-      } else {
-        localStorage.removeItem("activeRole");
-      }
     }
   };
 
@@ -294,17 +203,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     let primaryRole: EventRole | null = null;
+    let allRoles: NormalizedEventRole[] = [];
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
         params: { UserId: userId, userId, PageSize: 200, pageSize: 200 },
       });
       const rows: unknown[] = rolesRes.data?.data?.items ?? rolesRes.data?.items ?? rolesRes.data?.data ?? rolesRes.data ?? [];
-      primaryRole = pickPrimaryRole(rows, userId);
+      allRoles = normalizeEventRoleRows(rows);
+      primaryRole = pickPrimaryRoleFromRows(rows, userId);
     } catch {
       // fallback
     }
 
-    // Nhận diện vai trò từ email fallback nếu DB role mapping chưa trả về kịp
     const lowerEmail = (d.email ?? d.Email ?? email.trim()).toLowerCase();
     let detectedRole = primaryRole?.roleName;
     if (!detectedRole) {
@@ -317,16 +227,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // QUY TẮC ĐIỀU HƯỚNG THÔNG MINH (SMART CONTEXTUAL REDIRECT):
-    // 1. Admin -> /admin/dashboard
-    // 2. Coordinator -> /coordinator/dashboard (kèm eventId nếu có)
-    // 3. Judge -> /judge/events (kèm eventId nếu có); Mentor -> /events hoặc /events/${eventId}
-    // 4. TeamLeader / TeamMember -> /my-team (kèm eventId nếu có)
-    // 5. Sinh viên: đã duyệt thẻ -> / (Landing); chưa duyệt -> /onboarding/profile
-    // 6. Khác -> /
     let targetPath = "/";
     if (isAdmin) {
       targetPath = "/admin/dashboard";
+    } else if (allRoles.length > 0) {
+      targetPath = resolveStaffLandingPath(allRoles) || "/";
     } else if (detectedRole === "EventCoordinator" || detectedRole === "Coordinator") {
       targetPath = primaryRole?.eventId ? `/coordinator/dashboard?eventId=${primaryRole.eventId}` : "/coordinator/dashboard";
     } else if (detectedRole === "Judge") {
@@ -337,16 +242,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
       targetPath = isApproved ? "/" : "/onboarding/profile";
-    } else {
-      targetPath = "/";
     }
 
-    // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
     if (mustChangePassword) {
       targetPath = "/change-password";
     }
 
-    saveSession(authUser, isAdmin ? null : primaryRole);
+    saveSession(authUser, isAdmin ? null : primaryRole, allRoles);
     return targetPath;
   };
 
@@ -411,6 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     let primaryRole: EventRole | null = null;
+    let allRoles: NormalizedEventRole[] = [];
     try {
       const rolesRes = await apiClient.get<any>("/EventRoles/user", {
         params: { UserId: userId, userId, PageSize: 200, pageSize: 200 },
@@ -421,12 +324,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         rolesRes.data?.data ??
         rolesRes.data ??
         [];
-      primaryRole = pickPrimaryRole(rows, userId);
+      allRoles = normalizeEventRoleRows(rows);
+      primaryRole = pickPrimaryRoleFromRows(rows, userId);
     } catch {
       // fallback
     }
 
-    // Nhận diện vai trò từ email fallback nếu DB role mapping chưa trả về kịp
     const lowerEmail = email.toLowerCase();
     let detectedRole = primaryRole?.roleName;
     if (!detectedRole) {
@@ -439,16 +342,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // QUY TẮC ĐIỀU HƯỚNG GOOGLE THEO ĐÚNG ACTOR:
-    // 1. Admin -> /admin/dashboard
-    // 2. Coordinator -> /coordinator/dashboard (kèm eventId nếu có)
-    // 3. Judge -> /judge/events (kèm eventId nếu có); Mentor -> /events hoặc /events/${eventId}
-    // 4. TeamLeader / TeamMember -> /my-team (kèm eventId nếu có)
-    // 5. Sinh viên: đã duyệt thẻ -> / (Landing); chưa duyệt -> /onboarding/profile
-    // 6. Khác -> /
     let targetPath = "/";
     if (isAdmin) {
       targetPath = "/admin/dashboard";
+    } else if (allRoles.length > 0) {
+      targetPath = resolveStaffLandingPath(allRoles) || "/";
     } else if (detectedRole === "EventCoordinator" || detectedRole === "Coordinator") {
       targetPath = primaryRole?.eventId ? `/coordinator/dashboard?eventId=${primaryRole.eventId}` : "/coordinator/dashboard";
     } else if (detectedRole === "Judge") {
@@ -459,25 +357,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       targetPath = primaryRole?.eventId ? `/my-team?eventId=${primaryRole.eventId}` : "/my-team";
     } else if (isStudent) {
       targetPath = isApproved ? "/" : "/onboarding/profile";
-    } else {
-      targetPath = "/";
     }
 
-    // Tài khoản tạm vừa nhận mật khẩu tạm — bắt đổi mật khẩu trước khi vào bất cứ đâu khác.
     if (mustChangePassword) {
       targetPath = "/change-password";
     }
 
-    saveSession(authUser, isAdmin ? null : primaryRole);
+    saveSession(authUser, isAdmin ? null : primaryRole, allRoles);
     return targetPath;
   };
 
   const logout = () => {
     setUser(null);
     setActiveRole(null);
+    setAllEventRoles([]);
     if (typeof window !== "undefined") {
       localStorage.removeItem("currentUser");
       localStorage.removeItem("activeRole");
+      localStorage.removeItem("allEventRoles");
       localStorage.removeItem("accessToken");
       window.location.href = "/";
     }
@@ -491,12 +388,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         value={{
           user,
           activeRole,
+          allEventRoles,
           isInitialized,
           loginWithCredentials,
           loginWithGoogleCredential,
           logout,
           refreshRoles,
-          refreshUser,
         }}
       >
         {children}

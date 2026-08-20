@@ -5,12 +5,11 @@ import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useAuth } from "@/providers/AuthProvider";
 import { Link, useRouter } from "@/i18n/routing";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { SealShield } from "@/components/domain/SealShield";
-
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
-
 import { AlreadyLoggedInNotice } from "@/components/domain/AlreadyLoggedInNotice";
+import { AuthLayout } from "@/components/layout/AuthLayout";
+import { Button, Input, Field } from "@/components/ui";
 
 export function LoginView() {
   const toast = useToast();
@@ -30,11 +29,12 @@ export function LoginView() {
   if (currentUser) {
     return <AlreadyLoggedInNotice />;
   }
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     if (!email.trim() || !password) {
-      const msg = "Vui lòng nhập email và mật khẩu!";
+      const msg = "Vui lòng nhập email và mật khẩu.";
       setErrorMessage(msg);
       toast.error(msg);
       return;
@@ -44,8 +44,10 @@ export function LoginView() {
       const targetPath = await loginWithCredentials(email, password);
       toast.success("Đăng nhập thành công!");
       router.push(targetPath);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Email hoặc mật khẩu không đúng.";
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Email hoặc mật khẩu không đúng.";
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
@@ -66,8 +68,12 @@ export function LoginView() {
       const targetPath = await loginWithGoogleCredential(response.credential);
       toast.success("Đăng nhập Google thành công!");
       router.push(targetPath);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Đăng nhập Google thất bại.";
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data
+          ?.message ||
+        (err as Error)?.message ||
+        "Đăng nhập Google thất bại.";
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
@@ -82,147 +88,114 @@ export function LoginView() {
   };
 
   return (
-    <div className="min-h-[90vh] flex items-center justify-center py-12 px-4 hud-lattice font-sans">
-      <div className="w-full max-w-md space-y-6">
-        {/* Main Tactical Login Card */}
-        <div className="p-6 sm:p-8 bg-[#0f1826] border border-[#1e2e4a] hud-clipped shadow-2xl space-y-6">
-          
-          {/* Header with Glowing Hexagon Badge */}
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.25)] flex items-center justify-center mb-1">
-              <SealShield className="w-8 h-8 text-amber-400" />
-            </div>
+    <AuthLayout
+      title="Chào mừng trở lại"
+      description="Đăng nhập vào SEAL để tiếp tục"
+      footer={
+        <>
+          Chưa có tài khoản?{" "}
+          <Link href="/register" className="font-medium text-[var(--accent-primary)] hover:underline">
+            Đăng ký ngay
+          </Link>
+        </>
+      }
+    >
+      {isVerifiedNotice && (
+        <div className="mb-4 rounded-lg border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-3 py-2.5 text-sm text-[var(--color-success)]">
+          Xác thực email thành công. Vui lòng đăng nhập để hoàn thiện hồ sơ sinh viên.
+        </div>
+      )}
 
-            <h1 className="font-mono text-2xl font-bold tracking-wider text-white uppercase">
-              CHÀO MỪNG TRỞ LẠI
-            </h1>
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-[var(--color-danger)]/30 bg-[var(--color-danger)]/10 px-3 py-2.5 text-sm text-[var(--color-danger)]">
+          {errorMessage}
+        </div>
+      )}
 
-            <p className="font-mono text-xs text-slate-400">
-              Đăng nhập vào <span className="text-amber-400 font-bold">SEAL-HMS</span> để tiếp tục
-            </p>
-          </div>
-
-          {isVerifiedNotice && (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 font-mono text-xs hud-clipped">
-              Xác thực email thành công! Vui lòng đăng nhập để tiếp tục hoàn thiện hồ sơ sinh viên.
+      <form onSubmit={handleLoginSubmit} className="space-y-4">
+        <Field label="Email">
+          {({ id }) => (
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+              <Input
+                id={id}
+                type="email"
+                placeholder="you@fpt.edu.vn"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10"
+                required
+              />
             </div>
           )}
+        </Field>
 
-          {errorMessage && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/40 text-rose-400 font-mono text-xs hud-clipped">
-              {errorMessage}
-            </div>
-          )}
-
-          {/* Form Credentials */}
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            
-            {/* Email Field */}
-            <div className="space-y-1.5 font-mono">
-              <label className="text-xs font-bold text-slate-200">
-                Email
-              </label>
-              <div className="relative flex items-center">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                <input
-                  type="email"
-                  placeholder="you@fpt.edu.vn"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#152238] border border-[#1e2e4a] text-slate-100 font-mono text-xs focus:border-amber-400 focus:outline-none placeholder:text-slate-500 transition-colors hud-clipped"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div className="space-y-1.5 font-mono">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-200">
-                  Mật khẩu
-                </label>
-                <Link href="/forgot-password" className="text-xs text-amber-400 hover:underline">
+        <Field label="Mật khẩu">
+          {({ id }) => (
+            <div className="space-y-1">
+              <div className="flex justify-end">
+                <Link href="/forgot-password" className="text-xs text-[var(--accent-primary)] hover:underline">
                   Quên mật khẩu?
                 </Link>
               </div>
-
-              <div className="relative flex items-center">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                <input
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+                <Input
+                  id={id}
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-[#152238] border border-[#1e2e4a] text-slate-100 font-mono text-xs focus:border-amber-400 focus:outline-none placeholder:text-slate-500 transition-colors hud-clipped"
+                  className="pl-10 pr-10"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 text-slate-400 hover:text-slate-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
+          )}
+        </Field>
 
-            {/* Remember Me Checkbox */}
-            <div className="flex items-center gap-2 pt-1 font-mono">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 accent-amber-500 rounded border-slate-700 bg-[#152238] cursor-pointer"
-                />
-                <span>Nhớ tài khoản</span>
-              </label>
-            </div>
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)]">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 rounded border-[var(--border-muted)] accent-[var(--accent-primary)]"
+          />
+          Nhớ tài khoản
+        </label>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-60 disabled:cursor-not-allowed text-[#070b14] font-mono font-bold text-sm uppercase tracking-wider hud-clipped transition-all shadow-[0_0_15px_rgba(245,158,11,0.25)] flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? "ĐANG ĐĂNG NHẬP…" : "→] ĐĂNG NHẬP"}
-            </button>
-          </form>
+        <Button type="submit" disabled={isSubmitting} className="w-full">
+          {isSubmitting ? "Đang đăng nhập…" : "Đăng nhập"}
+        </Button>
+      </form>
 
-          {/* Divider */}
-          <div className="relative flex items-center justify-center my-4 font-mono">
-            <div className="border-t border-[#1e2e4a] w-full" />
-            <span className="bg-[#0f1826] px-3 text-[11px] text-slate-500 font-bold uppercase shrink-0">
-              HOẶC
-            </span>
-            <div className="border-t border-[#1e2e4a] w-full" />
-          </div>
-
-          {/* Social / OAuth Login Options */}
-          <div className="space-y-2.5 font-mono">
-            {/* Google Login (Real Google Identity Services) */}
-            <div className="flex justify-center w-full py-0.5 overflow-hidden">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                theme="filled_black"
-                shape="rectangular"
-                text="signin_with"
-                size="large"
-                width="100%"
-              />
-            </div>
-          </div>
-
-          {/* Footer Register Link */}
-          <div className="text-center pt-3 border-t border-[#1e2e4a] font-mono text-xs text-slate-400">
-            Chưa có tài khoản?{" "}
-            <Link href="/register" className="text-white hover:text-amber-400 font-bold transition-colors">
-              Đăng ký ngay ›
-            </Link>
-          </div>
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-[var(--border-muted)]" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-[var(--bg-panel)] px-2 text-[var(--text-muted)]">Hoặc</span>
         </div>
       </div>
-    </div>
+
+      <div className="flex justify-center overflow-hidden">
+        <GoogleLogin
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          theme="filled_black"
+          shape="rectangular"
+          text="signin_with"
+          size="large"
+          width="100%"
+        />
+      </div>
+    </AuthLayout>
   );
 }

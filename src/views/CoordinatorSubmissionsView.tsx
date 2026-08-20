@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Card, Input, ApiMissingDataBadge } from "@/components/ui";
+import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useAuth } from "@/providers/AuthProvider";
@@ -19,7 +19,9 @@ import {
   Filter,
   Layers,
   AlertTriangle,
+  ExternalLink,
   Download,
+  Search,
   Award,
   ArrowRight,
 } from "lucide-react";

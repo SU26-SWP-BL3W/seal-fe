@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   Lock,
   Eye,
+  AlertTriangle,
+  UserX,
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import type { User } from "@/models/entities";

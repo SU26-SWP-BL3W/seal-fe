@@ -16,11 +16,11 @@ import {
   useUpdateTeam,
   useAcceptOrDeclineInvitation,
 } from "@/repositories/teamsRepository";
-import { useMyInvitations } from "@/repositories/usersRepository";
+import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
 import { useToast } from "@/providers/ToastProvider";
-import { AlertTriangle, Check, X, Mail } from "lucide-react";
+import { AlertTriangle, Check, X, Mail, Sparkles, User, RefreshCw } from "lucide-react";
 import {
   AvailableTeamsList,
   buildRequirements,
@@ -118,7 +118,7 @@ export function MyTeamView() {
   }));
 
   const queryClient = useQueryClient();
-  const { data: invData, isLoading: _isLoadingMyInv, refetch: refetchMyInv } = useMyInvitations(!!user);
+  const { data: invData, isLoading: isLoadingMyInv, refetch: refetchMyInv } = useMyInvitations(!!user);
   const { mutateAsync: respondInvitation, isPending: isRespondingInv } = useAcceptOrDeclineInvitation();
   const myInvitations = invData?.invitations ?? [];
   const pendingMyInvitations = myInvitations.filter(

@@ -10,6 +10,7 @@ import {
   FileCheck2,
   Scale,
   Award,
+  Bell,
   Settings,
   Shield,
   GraduationCap,

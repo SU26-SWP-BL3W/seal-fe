@@ -314,7 +314,7 @@ export function useCreateMentorFeedback() {
 export function useDeleteMentorFeedback() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ feedbackId }: { feedbackId: string; submitResultId?: string }) => {
+    mutationFn: async ({ feedbackId, submitResultId }: { feedbackId: string; submitResultId?: string }) => {
       const res = await apiClient.delete<any>(`/SubmitResults/mentor-feedback/${feedbackId}`);
       return res.data;
     },
