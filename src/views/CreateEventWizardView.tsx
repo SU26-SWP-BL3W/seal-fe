@@ -91,8 +91,16 @@ export const CreateEventWizardView: React.FC = () => {
             )}
           </div>
 
-          <div className="font-mono text-xs text-[#8a9ba8]">
-            Tên sự kiện: <span className="text-[#e1e7ec] font-bold">{wizard.eventData.eventName || "Chưa chọn"}</span>
+          <div className="flex items-center gap-3 font-mono text-xs text-[#8a9ba8]">
+            <span>Tên: <strong className="text-[#e1e7ec]">{wizard.eventData.eventName || "Chưa chọn"}</strong></span>
+            {wizard.targetEventId && (
+              <Link
+                href={`/coordinator/staff?eventId=${wizard.targetEventId}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a855f7]/15 border border-[#a855f7]/40 text-[#c084fc] hover:bg-[#a855f7] hover:text-black text-xs font-bold hud-clipped transition-all cursor-pointer"
+              >
+                <span>QUẢN LÝ NHÂN SỰ ➔</span>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -182,9 +190,11 @@ export const CreateEventWizardView: React.FC = () => {
           {wizard.currentStep === 1 && (
             <Step1EventBasicInfo
               eventData={wizard.eventData}
+              onUpdateField={wizard.handleUpdateEventField}
               onNext={wizard.handleNextStep}
+              onSaveDraft={wizard.handleSaveDraft}
               isSubmitting={wizard.isSubmitting}
-              isReadOnly={true}
+              isReadOnly={false}
             />
           )}
 

@@ -18,6 +18,8 @@ export interface PrizeItemState {
 }
 
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import { UnsavedChangesModal } from "@/components/domain/UnsavedChangesModal";
 
 export const CoordinatorPrizesView: React.FC = () => {
@@ -131,6 +133,22 @@ export const CoordinatorPrizesView: React.FC = () => {
 
   const [filterTrack, setFilterTrack] = useState<string>("ALL");
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const filteredPrizeEntries = React.useMemo(() => {
+    return prizes
+      .map((p, originalIdx) => ({ p, originalIdx }))
+      .filter(({ p }) => filterTrack === "ALL" || p.trackName === filterTrack);
+  }, [prizes, filterTrack]);
+
+  const {
+    paginatedItems: paginatedPrizeEntries,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredPrizeEntries, 5);
 
   const handleMoveUp = (idx: number) => {
     if (idx <= 0) return;
@@ -333,10 +351,7 @@ export const CoordinatorPrizesView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#263339]">
-                  {prizes
-                    .map((p, originalIdx) => ({ p, originalIdx }))
-                    .filter(({ p }) => filterTrack === "ALL" || p.trackName === filterTrack)
-                    .map(({ p, originalIdx }, displayIdx) => (
+                  {paginatedPrizeEntries.map(({ p, originalIdx }, displayIdx) => (
                       <tr
                         key={p.id}
                         draggable
@@ -462,6 +477,20 @@ export const CoordinatorPrizesView: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {filteredPrizeEntries.length > 0 && (
+              <div className="p-4 border-t border-[#263339]">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="giải thưởng"
+                />
+              </div>
+            )}
           </div>
 
           {/* Right Panel: LIVE BUDGET SUMMARY & TRACK ALLOCATION BREAKDOWN (4 cols) */}

@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Badge, Button, Card, EmptyState, Table, TableHeader, TableRow, TableHead, TableCell } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Table, TableHeader, TableRow, TableHead, TableCell, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 
 export function JudgeTrackTeamsView() {
   const params = useParams();
@@ -36,6 +37,17 @@ export function JudgeTrackTeamsView() {
   const submissions = useMemo(() => {
     return Array.isArray(rawSubmissions) ? rawSubmissions : [];
   }, [rawSubmissions]);
+
+  const {
+    paginatedItems: paginatedSubmissions,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(submissions, 8);
+
   const eventRoleId = activeRole?.id || activeRole?.eventRoleId || "";
 
   const { data: myScores = [] } = useGetScoresByEventRole(eventRoleId || undefined);
@@ -149,7 +161,7 @@ export function JudgeTrackTeamsView() {
                   </TableRow>
                 </TableHeader>
                 <tbody>
-                  {submissions.map((sub: {
+                  {paginatedSubmissions.map((sub: {
                     id?: string;
                     Id?: string;
                     submissionUrl?: string;
@@ -165,7 +177,7 @@ export function JudgeTrackTeamsView() {
 
                     return (
                       <TableRow key={subId}>
-                        <TableCell className="text-[var(--text-muted)]">{idx + 1}</TableCell>
+                        <TableCell className="text-[var(--text-muted)]">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                         <TableCell>
                           <span className="font-medium text-[var(--accent-judge)]">{code}</span>
                         </TableCell>
@@ -218,7 +230,7 @@ export function JudgeTrackTeamsView() {
 
             {/* Mobile cards */}
             <div className="space-y-3 md:hidden">
-              {submissions.map((sub: {
+              {paginatedSubmissions.map((sub: {
                 id?: string;
                 Id?: string;
                 submissionUrl?: string;
@@ -236,7 +248,7 @@ export function JudgeTrackTeamsView() {
                   <Card key={subId} className="space-y-3 p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="text-xs text-[var(--text-muted)]">#{idx + 1}</span>
+                        <span className="text-xs text-[var(--text-muted)]">#{(currentPage - 1) * pageSize + idx + 1}</span>
                         <p className="font-medium text-[var(--accent-judge)]">{code}</p>
                       </div>
                       {isEvaluated ? (
@@ -284,6 +296,20 @@ export function JudgeTrackTeamsView() {
                 );
               })}
             </div>
+
+            {submissions.length > 0 && (
+              <div className="pt-2">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="bài nộp"
+                />
+              </div>
+            )}
           </>
         )}
       </section>

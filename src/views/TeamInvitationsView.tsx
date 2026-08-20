@@ -6,7 +6,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
-import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
+import { Badge, Button, Card, SkeletonRows, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
@@ -92,6 +93,26 @@ export function TeamInvitationsView() {
 
   const pending = invitations.filter((i) => i.status === "PendingAccept");
   const history = invitations.filter((i) => i.status !== "PendingAccept");
+
+  const {
+    paginatedItems: paginatedPending,
+    currentPage: pendingPage,
+    totalPages: totalPendingPages,
+    totalItems: totalPendingItems,
+    pageSize: pendingPageSize,
+    setCurrentPage: setPendingPage,
+    setPageSize: setPendingPageSize,
+  } = usePagination(pending, 5);
+
+  const {
+    paginatedItems: paginatedHistory,
+    currentPage: historyPage,
+    totalPages: totalHistoryPages,
+    totalItems: totalHistoryItems,
+    pageSize: historyPageSize,
+    setCurrentPage: setHistoryPage,
+    setPageSize: setHistoryPageSize,
+  } = usePagination(history, 5);
 
   const formatRoleLabel = (role?: string) => {
     switch (role) {
@@ -186,7 +207,7 @@ export function TeamInvitationsView() {
                 </Card>
               ) : (
                 <ul className="flex flex-col gap-[var(--space-sm)]">
-                  {pending.map((inv) => (
+                  {paginatedPending.map((inv) => (
                     <li key={inv.invitationId}>
                       <Card className="flex flex-col gap-[var(--space-md)] sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
@@ -228,6 +249,19 @@ export function TeamInvitationsView() {
                       </Card>
                     </li>
                   ))}
+
+                  {pending.length > 0 && (
+                    <Pagination
+                      currentPage={pendingPage}
+                      totalPages={totalPendingPages}
+                      totalItems={totalPendingItems}
+                      pageSize={pendingPageSize}
+                      onPageChange={setPendingPage}
+                      onPageSizeChange={setPendingPageSize}
+                      itemLabel="lời mời đang chờ"
+                      compact={true}
+                    />
+                  )}
                 </ul>
               )}
             </section>
@@ -238,7 +272,7 @@ export function TeamInvitationsView() {
                   Đã phản hồi gần đây
                 </h2>
                 <ul className="flex flex-col gap-[var(--space-xs)]">
-                  {history.map((inv) => (
+                  {paginatedHistory.map((inv) => (
                     <li key={inv.invitationId}>
                       <Card className="flex items-center justify-between gap-[var(--space-md)] bg-[var(--bg-panel)]/60 py-[var(--space-sm)]">
                         <span className="truncate font-mono text-xs text-[color:var(--text-muted)]">
@@ -250,6 +284,17 @@ export function TeamInvitationsView() {
                       </Card>
                     </li>
                   ))}
+
+                  <Pagination
+                    currentPage={historyPage}
+                    totalPages={totalHistoryPages}
+                    totalItems={totalHistoryItems}
+                    pageSize={historyPageSize}
+                    onPageChange={setHistoryPage}
+                    onPageSizeChange={setHistoryPageSize}
+                    itemLabel="lời mời lịch sử"
+                    compact={true}
+                  />
                 </ul>
               </section>
             )}

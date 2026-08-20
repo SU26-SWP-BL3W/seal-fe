@@ -24,7 +24,7 @@ import {
 import { Link } from "@/i18n/routing";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button, Badge, Card, Input, EmptyState } from "@/components/ui";
+import { Button, Badge, Card, Input, EmptyState, Pagination } from "@/components/ui";
 
 export const AdminSchoolsView: React.FC = () => {
   const { user } = useAuth();
@@ -314,79 +314,15 @@ export const AdminSchoolsView: React.FC = () => {
         )}
 
         {filteredSchools.length > 0 && (
-          <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border-muted)] px-4 py-4 text-xs text-[var(--text-muted)] sm:flex-row">
-            <div>
-              Hiển thị{" "}
-              <span className="font-medium text-[var(--text-primary)]">
-                {(safePage - 1) * PAGE_SIZE + 1}
-              </span>
-              {" – "}
-              <span className="font-medium text-[var(--text-primary)]">
-                {Math.min(safePage * PAGE_SIZE, filteredSchools.length)}
-              </span>
-              {" / "}
-              <span className="font-medium text-[var(--accent-primary)]">
-                {filteredSchools.length}
-              </span>{" "}
-              trường (tối đa {PAGE_SIZE}/trang)
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="ghost"
-                  accent="primary"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={safePage === 1}
-                  className="h-8 px-2.5 text-xs"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  Trước
-                </Button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                  if (
-                    totalPages > 7 &&
-                    p !== 1 &&
-                    p !== totalPages &&
-                    Math.abs(p - safePage) > 1
-                  ) {
-                    if (p === 2 || p === totalPages - 1) {
-                      return (
-                        <span key={p} className="select-none px-1 text-[var(--text-muted)]">
-                          …
-                        </span>
-                      );
-                    }
-                    return null;
-                  }
-
-                  const isActivePage = p === safePage;
-                  return (
-                    <Button
-                      key={p}
-                      variant={isActivePage ? "primary" : "ghost"}
-                      accent="primary"
-                      onClick={() => setCurrentPage(p)}
-                      className="h-8 w-8 px-0 text-xs"
-                    >
-                      {p}
-                    </Button>
-                  );
-                })}
-
-                <Button
-                  variant="ghost"
-                  accent="primary"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={safePage === totalPages}
-                  className="h-8 px-2.5 text-xs"
-                >
-                  Sau
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
+          <div className="p-4 border-t border-[var(--border-muted)]">
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              totalItems={filteredSchools.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+              itemLabel="trường học"
+            />
           </div>
         )}
       </Card>

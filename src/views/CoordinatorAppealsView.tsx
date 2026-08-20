@@ -6,6 +6,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import { Check, X, AlertCircle, CheckCircle2, UserPlus, Filter, ChevronDown } from "lucide-react";
 
 export const CoordinatorAppealsView: React.FC = () => {
@@ -50,6 +52,16 @@ export const CoordinatorAppealsView: React.FC = () => {
     () => appeals.filter((a) => a.status === AppealStatus.Pending),
     [appeals],
   );
+
+  const {
+    paginatedItems: paginatedAppeals,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(displayAppeals, 6);
 
   const [selectedAppealId, setSelectedAppealId] = useState<string | null>(null);
   const [assignedJudgeId, setAssignedJudgeId] = useState("");
@@ -191,7 +203,7 @@ export const CoordinatorAppealsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  displayAppeals.map((apl) => {
+                  paginatedAppeals.map((apl) => {
                     const team = teamNameById.get(apl.teamId) || apl.teamId;
 
                     return (
@@ -238,8 +250,21 @@ export const CoordinatorAppealsView: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
 
+          {displayAppeals.length > 0 && (
+            <div className="p-4 border-t border-[#263339]">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="đơn phúc khảo"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal Duyệt đơn & Phân công Giám khảo */}

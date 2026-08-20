@@ -21,7 +21,7 @@ import { readApiError } from "@/repositories/submitResultsRepository";
 import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button, Badge, Card, Input, EmptyState } from "@/components/ui";
+import { Button, Badge, Card, Input, EmptyState, Pagination } from "@/components/ui";
 
 export interface AdminUsersViewProps {
   mode?: "admin" | "coordinator";
@@ -492,79 +492,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({ mode = "admin" }
         )}
 
         {filteredUsers.length > 0 && (
-          <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border-muted)] px-4 py-4 text-xs text-[var(--text-muted)] sm:flex-row">
-            <div>
-              Hiển thị{" "}
-              <span className="font-medium text-[var(--text-primary)]">
-                {(safePage - 1) * PAGE_SIZE + 1}
-              </span>
-              {" – "}
-              <span className="font-medium text-[var(--text-primary)]">
-                {Math.min(safePage * PAGE_SIZE, filteredUsers.length)}
-              </span>
-              {" / "}
-              <span className="font-medium text-[var(--accent-coordinator)]">
-                {filteredUsers.length}
-              </span>{" "}
-              người dùng (tối đa {PAGE_SIZE}/trang)
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="ghost"
-                  accent="coordinator"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={safePage === 1}
-                  className="h-8 px-2.5 text-xs"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  Trước
-                </Button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                  if (
-                    totalPages > 7 &&
-                    p !== 1 &&
-                    p !== totalPages &&
-                    Math.abs(p - safePage) > 1
-                  ) {
-                    if (p === 2 || p === totalPages - 1) {
-                      return (
-                        <span key={p} className="select-none px-1 text-[var(--text-muted)]">
-                          …
-                        </span>
-                      );
-                    }
-                    return null;
-                  }
-
-                  const isActivePage = p === safePage;
-                  return (
-                    <Button
-                      key={p}
-                      variant={isActivePage ? "primary" : "ghost"}
-                      accent="coordinator"
-                      onClick={() => setCurrentPage(p)}
-                      className="h-8 w-8 px-0 text-xs"
-                    >
-                      {p}
-                    </Button>
-                  );
-                })}
-
-                <Button
-                  variant="ghost"
-                  accent="coordinator"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={safePage === totalPages}
-                  className="h-8 px-2.5 text-xs"
-                >
-                  Sau
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )}
+          <div className="p-4 border-t border-[var(--border-muted)]">
+            <Pagination
+              currentPage={safePage}
+              totalPages={totalPages}
+              totalItems={filteredUsers.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+              itemLabel="người dùng"
+            />
           </div>
         )}
       </Card>

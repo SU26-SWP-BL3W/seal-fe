@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { useGetTemplates, templatesRepository } from "@/repositories/templatesRepository";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import { Sliders, Plus, CheckCircle2, AlertTriangle, ArrowLeft, Trash2, FolderGit2, Layers, Edit3, Save, Eye, Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -55,6 +57,31 @@ export const CoordinatorTemplatesView: React.FC = () => {
       setSelectedSetId("");
     }
   }, [dbTemplates.length]);
+
+  // Pagination for Criteria Sets List (Left Panel)
+  const {
+    paginatedItems: paginatedSets,
+    currentPage: currentSetPage,
+    totalPages: totalSetPages,
+    totalItems: totalSetItems,
+    pageSize: setPageSize,
+    setCurrentPage: setCurrentSetPage,
+    setPageSize: setSetPageSize,
+  } = usePagination(criteriaSets, 4);
+
+  const activeSet = criteriaSets.find((s) => s.id === selectedSetId) || criteriaSets[0];
+  const activeSetTotalWeight = (activeSet?.criterias || []).reduce((acc, c) => acc + c.weight, 0);
+
+  // Pagination for Component Criteria inside active set (Right Panel)
+  const {
+    paginatedItems: paginatedActiveCriterias,
+    currentPage: currentCritPage,
+    totalPages: totalCritPages,
+    totalItems: totalCritItems,
+    pageSize: critPageSize,
+    setCurrentPage: setCurrentCritPage,
+    setPageSize: setCritPageSize,
+  } = usePagination(activeSet?.criterias || [], 4);
 
   const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
@@ -115,10 +142,6 @@ export const CoordinatorTemplatesView: React.FC = () => {
   // Computed weight for builder
   const builderTotalWeight = builderCriterias.reduce((acc, c) => acc + (Number(c.weight) || 0), 0);
   const isBuilderValid100 = builderTotalWeight === 100;
-
-  // Active Selected Set
-  const activeSet = criteriaSets.find((s) => s.id === selectedSetId) || criteriaSets[0];
-  const activeSetTotalWeight = activeSet ? activeSet.criterias.reduce((acc, c) => acc + c.weight, 0) : 0;
 
   // Add Row inside Builder
   const handleAddCriteriaRow = () => {
@@ -288,7 +311,7 @@ export const CoordinatorTemplatesView: React.FC = () => {
 
             {/* List of Criteria Sets Cards */}
             <div className="space-y-3">
-              {criteriaSets.map((set) => {
+              {paginatedSets.map((set) => {
                 const isSelected = set.id === selectedSetId;
                 const setWeight = set.criterias.reduce((acc, c) => acc + c.weight, 0);
 
@@ -342,6 +365,19 @@ export const CoordinatorTemplatesView: React.FC = () => {
                   </div>
                 );
               })}
+
+              {criteriaSets.length > 0 && (
+                <Pagination
+                  currentPage={currentSetPage}
+                  totalPages={totalSetPages}
+                  totalItems={totalSetItems}
+                  pageSize={setPageSize}
+                  onPageChange={setCurrentSetPage}
+                  onPageSizeChange={setSetPageSize}
+                  itemLabel="bộ tiêu chí"
+                  compact={true}
+                />
+              )}
             </div>
           </div>
 
@@ -434,12 +470,12 @@ export const CoordinatorTemplatesView: React.FC = () => {
                         <p className="text-[11px] text-[#8a9ba8]/70">Dữ liệu hiện tại trên hệ thống chưa tạo các tiêu chí nhỏ cho bộ này.</p>
                       </div>
                     ) : (
-                      activeSet.criterias.map((crit, idx) => (
+                      paginatedActiveCriterias.map((crit, idx) => (
                         <div key={crit.id} className="p-4 bg-[#0a0e10] border border-[#263339] space-y-2">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-2">
                               <span className="w-6 h-6 rounded-full bg-[#8b5cf6]/20 border border-[#8b5cf6]/40 text-[#8b5cf6] font-mono text-xs font-bold flex items-center justify-center shrink-0">
-                                {idx + 1}
+                                {(currentCritPage - 1) * critPageSize + idx + 1}
                               </span>
                               <h4 className="font-sans font-bold text-sm text-[#e1e7ec]">
                                 {crit.criterionName}
@@ -463,6 +499,19 @@ export const CoordinatorTemplatesView: React.FC = () => {
                           </div>
                         </div>
                       ))
+                    )}
+
+                    {activeSet.criterias.length > 0 && (
+                      <Pagination
+                        currentPage={currentCritPage}
+                        totalPages={totalCritPages}
+                        totalItems={totalCritItems}
+                        pageSize={critPageSize}
+                        onPageChange={setCurrentCritPage}
+                        onPageSizeChange={setCritPageSize}
+                        itemLabel="tiêu chí"
+                        compact={true}
+                      />
                     )}
                   </div>
                 </div>

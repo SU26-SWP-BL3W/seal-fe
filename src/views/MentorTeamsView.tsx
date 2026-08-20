@@ -5,7 +5,8 @@ import { Link } from "@/i18n/routing";
 import { useMentorWorkspaceViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Badge, Button, Card, EmptyState } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import { ChevronRight, RefreshCw, Users } from "lucide-react";
 
 export function MentorTeamsView() {
@@ -23,6 +24,16 @@ export function MentorTeamsView() {
     refetchAll,
     eventId,
   } = useMentorWorkspaceViewModel();
+
+  const {
+    paginatedItems: paginatedTeams,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(teamsInTrack, 6);
 
   const currentTrackId = trackIdQuery || selectedTrackId || (myTracks[0]?.id || myTracks[0]?.Id || "");
   const currentTrack = myTracks.find((t) => (t.id || t.Id) === currentTrackId);
@@ -133,7 +144,7 @@ export function MentorTeamsView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-muted)]/60">
-                {teamsInTrack.map((team) => {
+                {paginatedTeams.map((team) => {
                   const tid = (team.id || team.Id) as string;
                   const name = team.name || team.Name || `Đội #${tid}`;
                   const statusVal = team.status !== undefined ? String(team.status) : "Registered";
@@ -171,6 +182,20 @@ export function MentorTeamsView() {
                 })}
               </tbody>
             </table>
+          )}
+
+          {teamsInTrack.length > 0 && (
+            <div className="pt-3 border-t border-[var(--border-muted)]">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="đội thi"
+              />
+            </div>
           )}
         </div>
       </Card>

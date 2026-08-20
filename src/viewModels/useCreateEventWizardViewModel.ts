@@ -71,14 +71,14 @@ export function useCreateEventWizardViewModel() {
   // Step 1 State: Event Basic Info
   const [eventData, setEventData] = useState<EventFormState>({
     eventName: "",
-    season: "",
+    season: "Mùa Hè",
     year: new Date().getFullYear(),
     startDate: "",
     endDate: "",
     registrationStartDate: "",
     registrationEndDate: "",
-    maxTeams: 0,
-    minTeamSize: 1,
+    maxTeams: 50,
+    minTeamSize: 3,
     maxTeamSize: 5,
     tagline: "",
     description: "",
@@ -133,15 +133,15 @@ export function useCreateEventWizardViewModel() {
 
         setEventData({
           eventName: effectiveEv.eventName || effectiveEv.EventName || "",
-          season: effectiveEv.season || effectiveEv.Season || "",
+          season: effectiveEv.season || effectiveEv.Season || "Mùa Hè",
           year: effectiveEv.year || effectiveEv.Year || new Date().getFullYear(),
           startDate: effectiveEv.startDate || effectiveEv.StartDate || "",
           endDate: effectiveEv.endDate || effectiveEv.EndDate || "",
           registrationStartDate: effectiveEv.registrationStartDate || effectiveEv.RegistrationStartDate || "",
           registrationEndDate: effectiveEv.registrationEndDate || effectiveEv.RegistrationEndDate || "",
           maxTeams: effectiveEv.maxTeams || effectiveEv.MaxTeams || 50,
-          minTeamSize: 1,
-          maxTeamSize: 5,
+          minTeamSize: Math.max(3, Number(effectiveEv.minTeamSize || effectiveEv.MinTeamSize) || 3),
+          maxTeamSize: Math.max(3, Number(effectiveEv.maxTeamSize || effectiveEv.MaxTeamSize) || 5),
           tagline: effectiveEv.description || effectiveEv.Description || "",
           description: effectiveEv.description || effectiveEv.Description || "",
         });
@@ -245,7 +245,14 @@ export function useCreateEventWizardViewModel() {
   ]);
 
   // Real data-based Step completion checks
-  const isStep1Done = true; // Admin creates Step 1, so Step 1 is always completed by default
+  const isStep1Done = Boolean(
+    eventData.eventName?.trim() &&
+    eventData.startDate &&
+    eventData.endDate &&
+    new Date(eventData.startDate) <= new Date(eventData.endDate) &&
+    Number(eventData.maxTeams) >= 1 &&
+    Math.max(3, Number(eventData.minTeamSize) || 3) >= 3
+  );
 
   const isStep2Done = Boolean(
     rounds.length > 0 &&
@@ -443,6 +450,60 @@ export function useCreateEventWizardViewModel() {
 
     // Step 1 -> Step 2 transition
     if (currentStep === 1) {
+      if (!eventData.eventName?.trim()) {
+        setErrorMessage("Vui lòng nhập tên sự kiện!");
+        return;
+      }
+      if (!eventData.startDate || !eventData.endDate) {
+        setErrorMessage("Vui lòng thiết lập thời gian bắt đầu và kết thúc sự kiện!");
+        return;
+      }
+      if (new Date(eventData.startDate) > new Date(eventData.endDate)) {
+        setErrorMessage("Thời gian bắt đầu sự kiện phải diễn ra trước thời gian kết thúc!");
+        return;
+      }
+      if (
+        eventData.registrationStartDate &&
+        eventData.registrationEndDate &&
+        new Date(eventData.registrationStartDate) > new Date(eventData.registrationEndDate)
+      ) {
+        setErrorMessage("Thời gian mở cổng đăng ký phải trước thời gian đóng cổng đăng ký!");
+        return;
+      }
+      if (!eventData.maxTeams || Number(eventData.maxTeams) < 1) {
+        setErrorMessage("Vui lòng nhập số đội tham gia tối đa (tối thiểu 1 đội)!");
+        return;
+      }
+      if (Number(eventData.minTeamSize || 3) < 3) {
+        setErrorMessage("Quy chế thi đấu bắt buộc mỗi đội phải có tối thiểu 3 thành viên!");
+        return;
+      }
+      if (Number(eventData.maxTeamSize || 5) < Number(eventData.minTeamSize || 3)) {
+        setErrorMessage("Số thành viên tối đa không được nhỏ hơn số thành viên tối thiểu!");
+        return;
+      }
+
+      // Auto save step 1 changes to draft/backend
+      try {
+        const targetId = (createdEvent as any)?.id || (createdEvent as any)?.Id || (eventData as any)?.id || targetEventId;
+        if (targetId && !targetId.startsWith("tmp-") && !targetId.startsWith("ev-draft-")) {
+          await eventsRepository.updateEvent(targetId, {
+            eventName: eventData.eventName,
+            season: eventData.season,
+            year: Number(eventData.year),
+            startDate: new Date(eventData.startDate).toISOString(),
+            endDate: new Date(eventData.endDate).toISOString(),
+            registrationStartDate: eventData.registrationStartDate ? new Date(eventData.registrationStartDate).toISOString() : undefined,
+            registrationEndDate: eventData.registrationEndDate ? new Date(eventData.registrationEndDate).toISOString() : undefined,
+            description: eventData.description,
+            status: false,
+            maxTeams: Number(eventData.maxTeams),
+          });
+        }
+      } catch (err) {
+        // non-blocking
+      }
+
       if (!createdEvent) {
         setCreatedEvent({ id: `ev-draft-${Date.now()}`, eventName: eventData.eventName || "Sự kiện mới" } as any);
       }

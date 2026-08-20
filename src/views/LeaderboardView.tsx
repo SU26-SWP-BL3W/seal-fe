@@ -7,6 +7,8 @@ import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useLeaderboard } from "@/repositories/leaderboardRepository";
 import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import { Trophy, Target, Download, FileSpreadsheet, ArrowLeft, SlidersHorizontal } from "lucide-react";
 
 interface TableTeam {
@@ -108,6 +110,16 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
     if (selectedTrack !== "all" && r.track !== selectedTrack) return false;
     return true;
   });
+
+  const {
+    paginatedItems: paginatedResults,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredResults, 10);
 
   const topPodiumTeams = useMemo(() => {
     if (filteredResults.length === 0) return [];
@@ -315,7 +327,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
-                {filteredResults.map((row) => (
+                {paginatedResults.map((row) => (
                   <tr key={row.teamCode} className="hover:bg-zinc-800/40 transition-colors">
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center justify-center w-7 h-7 font-bold text-xs rounded border ${
@@ -348,6 +360,20 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
                 ))}
               </tbody>
             </table>
+
+            {filteredResults.length > 0 && (
+              <div className="p-4 border-t border-zinc-800 bg-[#0b1013]">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="đội thi"
+                />
+              </div>
+            )}
           </div>
         )}
       </section>
