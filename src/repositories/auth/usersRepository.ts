@@ -15,6 +15,58 @@ export function useCurrentUser() {
   });
 }
 
+export interface CreateUserPayload {
+  schoolId: string;
+  studentCode?: string;
+  email: string;
+  password: string;
+  fullName: string;
+  isStudent: boolean;
+  isAdmin: boolean;
+  isFpt?: boolean;
+  photoStudentCardUrl?: string;
+}
+
+/** POST /api/Users — Admin tạo tài khoản trực tiếp (mặc định duyệt + xác thực sẵn). */
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateUserPayload) => {
+      const res = await apiClient.post<BaseResponse<User>>("/Users", payload);
+      return (res.data as any)?.data ?? res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+}
+
+export interface UpdateUserPayload {
+  schoolId: string;
+  studentCode?: string;
+  fullName: string;
+  isStudent: boolean;
+  isAdmin: boolean;
+  isApproved: boolean;
+  isFpt?: boolean;
+  photoStudentCardUrl?: string;
+}
+
+/** PUT /api/Users/{id} — Admin cập nhật thông tin tài khoản. */
+export function useUpdateUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateUserPayload }) => {
+      const res = await apiClient.put<BaseResponse<User>>(`/Users/${id}`, data);
+      return (res.data as any)?.data ?? res.data;
+    },
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["user", id] });
+    },
+  });
+}
+
 /** GET /api/Users/{id} — Lấy chi tiết người dùng theo ID */
 export function useGetUserById(userId?: string | null) {
   return useQuery({

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useGetUsers, useApproveUser, useRejectUser } from "@/repositories/usersRepository";
+import { useGetUsers, useApproveUser, useRejectUser, useCreateUser, useUpdateUser } from "@/repositories/usersRepository";
+import { useGetSchools } from "@/repositories/schoolsRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { useEvents } from "@/repositories/eventsRepository";
 import { Button, Card, Badge, Table, Input } from "@/components/ui";
@@ -23,6 +24,7 @@ import {
   Eye,
   FileText,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import type { User } from "@/models/entities";
@@ -65,8 +67,96 @@ export const AdminUsersView: React.FC = () => {
   const { data: rawUsersData, isLoading, refetch } = useGetUsers();
   const usersList: User[] = rawUsersData?.data ?? [];
 
+  const { data: schoolsList = [] } = useGetSchools();
+
   const { mutateAsync: approveUser } = useApproveUser();
   const { mutateAsync: rejectUser } = useRejectUser();
+  const { mutateAsync: createUser, isPending: isCreatingUser } = useCreateUser();
+  const { mutateAsync: updateUser, isPending: isUpdatingUser } = useUpdateUser();
+
+  // Modal 4: Tạo tài khoản thủ công
+  const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
+  const [createUserError, setCreateUserError] = useState<string | null>(null);
+  const [createUserForm, setCreateUserForm] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    schoolId: "",
+    studentCode: "",
+    isStudent: true,
+    isAdmin: false,
+  });
+
+  const handleCreateUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateUserError(null);
+    try {
+      await createUser({
+        email: createUserForm.email.trim(),
+        password: createUserForm.password,
+        fullName: createUserForm.fullName.trim(),
+        schoolId: createUserForm.schoolId,
+        studentCode: createUserForm.studentCode.trim() || undefined,
+        isStudent: createUserForm.isStudent,
+        isAdmin: createUserForm.isAdmin,
+      });
+      setCreateUserModalOpen(false);
+      setCreateUserForm({ email: "", password: "", fullName: "", schoolId: "", studentCode: "", isStudent: true, isAdmin: false });
+      refetch();
+    } catch (err: any) {
+      setCreateUserError(err?.response?.data?.message || "Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin.");
+    }
+  };
+
+  // Modal 5: Sửa thông tin tài khoản
+  const [editUserModal, setEditUserModal] = useState<User | null>(null);
+  const [editUserError, setEditUserError] = useState<string | null>(null);
+  const [editUserForm, setEditUserForm] = useState({
+    fullName: "",
+    schoolId: "",
+    studentCode: "",
+    isStudent: true,
+    isAdmin: false,
+    isApproved: true,
+  });
+
+  const openEditUserModal = (u: User) => {
+    setEditUserModal(u);
+    setEditUserError(null);
+    setEditUserForm({
+      fullName: u.fullName || "",
+      schoolId: (u as any).schoolId || "",
+      studentCode: u.studentCode || "",
+      isStudent: !!u.isStudent,
+      isAdmin: !!u.isAdmin,
+      isApproved: !!u.isApproved,
+    });
+  };
+
+  const handleEditUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUserModal) return;
+    setEditUserError(null);
+    const userId = editUserModal.id || editUserModal.userId || "";
+    try {
+      await updateUser({
+        id: userId,
+        data: {
+          fullName: editUserForm.fullName.trim(),
+          schoolId: editUserForm.schoolId,
+          studentCode: editUserForm.studentCode.trim() || undefined,
+          isStudent: editUserForm.isStudent,
+          isAdmin: editUserForm.isAdmin,
+          isApproved: editUserForm.isApproved,
+        },
+      });
+      setEditUserModal(null);
+      setDetailUserModal(null);
+      refetch();
+    } catch (err: any) {
+      setEditUserError(err?.response?.data?.message || "Không thể cập nhật tài khoản.");
+    }
+  };
 
   // Filtered Users List
   const filteredUsers = usersList.filter((u) => {
@@ -160,6 +250,13 @@ export const AdminUsersView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <Button
+              variant="primary"
+              onClick={() => setCreateUserModalOpen(true)}
+              className="hud-clipped flex items-center gap-2 bg-[var(--accent-primary)] text-white hover:bg-white hover:text-[var(--bg-base)] font-mono text-xs font-bold"
+            >
+              <Plus className="w-4 h-4" /> Tạo Tài Khoản
+            </Button>
             <Link href="/admin/events/new">
               <Button variant="primary" className="hud-clipped flex items-center gap-2 bg-[var(--color-danger)] text-white hover:bg-white hover:text-[var(--bg-base)] font-mono text-xs font-bold">
                 <Plus className="w-4 h-4" /> Tạo Sự Kiện Mới
@@ -389,9 +486,16 @@ export const AdminUsersView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex justify-end pt-4 border-t border-[var(--border-muted)]">
+                    <div className="flex justify-end gap-2 pt-4 border-t border-[var(--border-muted)]">
                       <Button variant="ghost" onClick={() => setDetailUserModal(null)} className="font-mono text-xs border border-[var(--border-muted)] px-4">
                         ĐÓNG
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={() => openEditUserModal(detailUserModal)}
+                        className="font-mono text-xs flex items-center gap-1.5"
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> Sửa Thông Tin
                       </Button>
                     </div>
                   </div>
@@ -452,6 +556,13 @@ export const AdminUsersView: React.FC = () => {
                       </Button>
 
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          onClick={() => openEditUserModal(detailUserModal)}
+                          className="font-mono text-xs flex items-center gap-1.5"
+                        >
+                          <Pencil className="w-3.5 h-3.5" /> Sửa
+                        </Button>
                         <Button
                           variant="ghost"
                           onClick={() => {
@@ -602,6 +713,224 @@ export const AdminUsersView: React.FC = () => {
                   </div>
                 </form>
               )}
+            </Card>
+          </div>
+        )}
+
+        {/* Modal 4: Tạo Tài Khoản Thủ Công */}
+        {createUserModalOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+            <Card className="w-full max-w-lg bg-[var(--bg-panel)] border border-[var(--accent-primary)] hud-clipped p-6 space-y-4 relative">
+              <button
+                type="button"
+                onClick={() => setCreateUserModalOpen(false)}
+                className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-1">
+                <h3 className="font-display font-bold text-lg text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-[var(--accent-primary)]" /> Tạo Tài Khoản Mới
+                </h3>
+                <p className="font-mono text-xs text-[var(--text-muted)]">
+                  Admin tạo trực tiếp — tài khoản được duyệt & xác thực email ngay, không cần luồng đăng ký.
+                </p>
+              </div>
+
+              {createUserError && (
+                <div className="p-3 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/40 text-[var(--color-danger)] font-mono text-xs">
+                  {createUserError}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateUserSubmit} className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Email *</label>
+                    <Input
+                      type="email"
+                      required
+                      value={createUserForm.email}
+                      onChange={(e) => setCreateUserForm((f) => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mật khẩu *</label>
+                    <Input
+                      type="text"
+                      required
+                      minLength={6}
+                      value={createUserForm.password}
+                      onChange={(e) => setCreateUserForm((f) => ({ ...f, password: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Họ và Tên *</label>
+                  <Input
+                    type="text"
+                    required
+                    value={createUserForm.fullName}
+                    onChange={(e) => setCreateUserForm((f) => ({ ...f, fullName: e.target.value }))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Trường học *</label>
+                    <select
+                      required
+                      value={createUserForm.schoolId}
+                      onChange={(e) => setCreateUserForm((f) => ({ ...f, schoolId: e.target.value }))}
+                      className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs"
+                    >
+                      <option value="">-- Chọn trường --</option>
+                      {schoolsList.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.schoolName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mã SV (nếu là SV)</label>
+                    <Input
+                      type="text"
+                      value={createUserForm.studentCode}
+                      onChange={(e) => setCreateUserForm((f) => ({ ...f, studentCode: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 font-mono text-xs pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createUserForm.isStudent}
+                      onChange={(e) => setCreateUserForm((f) => ({ ...f, isStudent: e.target.checked }))}
+                    />
+                    Là sinh viên (Thí sinh)
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createUserForm.isAdmin}
+                      onChange={(e) => setCreateUserForm((f) => ({ ...f, isAdmin: e.target.checked }))}
+                    />
+                    Cấp quyền System Admin
+                  </label>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" type="button" onClick={() => setCreateUserModalOpen(false)}>
+                    Hủy Bỏ
+                  </Button>
+                  <Button variant="primary" type="submit" disabled={isCreatingUser}>
+                    {isCreatingUser ? "Đang tạo..." : "Tạo Tài Khoản"}
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        )}
+
+        {/* Modal 5: Sửa Thông Tin Tài Khoản */}
+        {editUserModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+            <Card className="w-full max-w-lg bg-[var(--bg-panel)] border border-[var(--accent-primary)] hud-clipped p-6 space-y-4 relative">
+              <button
+                type="button"
+                onClick={() => setEditUserModal(null)}
+                className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-1">
+                <h3 className="font-display font-bold text-lg text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-[var(--accent-primary)]" /> Sửa Tài Khoản
+                </h3>
+                <p className="font-mono text-xs text-[var(--accent-primary)]">{editUserModal.email}</p>
+              </div>
+
+              {editUserError && (
+                <div className="p-3 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/40 text-[var(--color-danger)] font-mono text-xs">
+                  {editUserError}
+                </div>
+              )}
+
+              <form onSubmit={handleEditUserSubmit} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Họ và Tên *</label>
+                  <Input
+                    type="text"
+                    required
+                    value={editUserForm.fullName}
+                    onChange={(e) => setEditUserForm((f) => ({ ...f, fullName: e.target.value }))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Trường học *</label>
+                    <select
+                      required
+                      value={editUserForm.schoolId}
+                      onChange={(e) => setEditUserForm((f) => ({ ...f, schoolId: e.target.value }))}
+                      className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs"
+                    >
+                      <option value="">-- Chọn trường --</option>
+                      {schoolsList.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.schoolName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Mã SV</label>
+                    <Input
+                      type="text"
+                      value={editUserForm.studentCode}
+                      onChange={(e) => setEditUserForm((f) => ({ ...f, studentCode: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 font-mono text-xs pt-1 flex-wrap">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editUserForm.isStudent}
+                      onChange={(e) => setEditUserForm((f) => ({ ...f, isStudent: e.target.checked }))}
+                    />
+                    Là sinh viên
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editUserForm.isAdmin}
+                      onChange={(e) => setEditUserForm((f) => ({ ...f, isAdmin: e.target.checked }))}
+                    />
+                    System Admin
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editUserForm.isApproved}
+                      onChange={(e) => setEditUserForm((f) => ({ ...f, isApproved: e.target.checked }))}
+                    />
+                    Đã phê duyệt
+                  </label>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" type="button" onClick={() => setEditUserModal(null)}>
+                    Hủy Bỏ
+                  </Button>
+                  <Button variant="primary" type="submit" disabled={isUpdatingUser}>
+                    {isUpdatingUser ? "Đang lưu..." : "Lưu Thay Đổi"}
+                  </Button>
+                </div>
+              </form>
             </Card>
           </div>
         )}

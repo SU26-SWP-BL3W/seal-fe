@@ -40,10 +40,11 @@ export function LoginView() {
       return;
     }
     setIsSubmitting(true);
+    const returnUrl = searchParams.get("returnUrl") || searchParams.get("redirect");
     try {
-      const targetPath = await loginWithCredentials(email, password);
+      const defaultPath = await loginWithCredentials(email, password);
       toast.success("Đăng nhập thành công!");
-      router.push(targetPath);
+      router.push(returnUrl ? decodeURIComponent(returnUrl) : defaultPath);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -64,10 +65,11 @@ export function LoginView() {
     }
     setIsSubmitting(true);
     setErrorMessage(null);
+    const returnUrl = searchParams.get("returnUrl") || searchParams.get("redirect");
     try {
-      const targetPath = await loginWithGoogleCredential(response.credential);
+      const defaultPath = await loginWithGoogleCredential(response.credential);
       toast.success("Đăng nhập Google thành công!");
-      router.push(targetPath);
+      router.push(returnUrl ? decodeURIComponent(returnUrl) : defaultPath);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data

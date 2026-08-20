@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useGetSchools, useCreateSchool } from "@/repositories/schoolsRepository";
+import { useGetSchoolsWithUserCount, useCreateSchool } from "@/repositories/schoolsRepository";
 import { Button, Card, Badge, Table, Input } from "@/components/ui";
 import {
   School as SchoolIcon,
@@ -44,12 +44,12 @@ export const AdminSchoolsView: React.FC = () => {
   const [newSchoolAddress, setNewSchoolAddress] = useState("");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const { data: schoolsList = [], isLoading, refetch } = useGetSchools();
+  const { data: schoolsList = [], isLoading, refetch } = useGetSchoolsWithUserCount();
   const { mutateAsync: createSchool, isPending: isCreating } = useCreateSchool();
 
   const filteredSchools = schoolsList.filter((sch) => {
-    const sName = sch.schoolName || sch.name || "";
-    const sCode = sch.code || "";
+    const sName = sch.schoolName || (sch as any).name || "";
+    const sCode = sch.schoolCode || (sch as any).code || "";
     const searchLower = searchTerm.toLowerCase().trim();
     return sName.toLowerCase().includes(searchLower) || sCode.toLowerCase().includes(searchLower);
   });
@@ -142,12 +142,13 @@ export const AdminSchoolsView: React.FC = () => {
                     <th>TÊN TRƯỜNG ĐẠI HỌC</th>
                     <th>ĐỊA CHỈ TRỤ SỞ</th>
                     <th>PHÂN LOẠI</th>
+                    <th className="text-center">SỐ NGƯỜI DÙNG</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredSchools.map((sch, idx) => {
-                    const name = sch.schoolName || sch.name || "Trường Đại Học";
-                    const code = sch.code || `SCH-${idx + 1}`;
+                    const name = sch.schoolName || (sch as any).name || "Trường Đại Học";
+                    const code = sch.schoolCode || (sch as any).code || `SCH-${idx + 1}`;
                     const isFpt = code.includes("FPT") || name.includes("FPT");
 
                     return (
@@ -171,6 +172,11 @@ export const AdminSchoolsView: React.FC = () => {
                               : "bg-[rgba(245,158,11,0.1)] text-[var(--color-warning)] border-[var(--color-warning)]/30"
                           }`}>
                             {isFpt ? "TRƯỜNG CHỦ TRÌ (FPTU)" : "TRƯỜNG ĐỐI TÁC (NON-FPT)"}
+                          </span>
+                        </td>
+                        <td className="text-center">
+                          <span className="font-mono text-xs font-bold text-[var(--accent-primary)]">
+                            {(sch as any).userCount ?? 0}
                           </span>
                         </td>
                       </tr>
