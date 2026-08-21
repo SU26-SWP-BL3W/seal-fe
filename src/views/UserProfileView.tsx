@@ -113,7 +113,7 @@ export function UserProfileView() {
   const [isEditing, setIsEditing] = useState(false);
 
   const currentUserId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
-  const { data: userRolesResult } = useGetEventRolesByUser(currentUserId, { pageSize: 100 });
+  const { data: userRolesResult, isLoading: rolesLoading } = useGetEventRolesByUser(currentUserId, { pageSize: 100 });
   const userRoles = useMemo(() => {
     const raw = (userRolesResult as any)?.data?.items ?? (userRolesResult as any)?.items ?? (Array.isArray(userRolesResult) ? userRolesResult : []);
     return Array.isArray(raw) ? raw : [];
@@ -199,8 +199,20 @@ export function UserProfileView() {
     if (isTeamLeader && !effectiveRoles.includes("TeamLeader")) effectiveRoles.push("TeamLeader");
     if (isTeamMember && !effectiveRoles.includes("TeamMember")) effectiveRoles.push("TeamMember");
 
+    // Roles đang tải và chưa có tín hiệu vai trò nào -> KHÔNG vội kết luận "Thí Sinh"
+    // (tránh mislabel giám khảo/cố vấn thành sinh viên khi query chưa về / userId chưa hydrate).
+    if (rolesLoading && !isAdmin && !rawRole && effectiveRoles.length === 0) {
+      return {
+        label: "Đang tải phân công…",
+        badgeClass: "bg-zinc-800/60 border-zinc-600/40 text-zinc-300",
+        dotClass: "bg-zinc-400 animate-pulse",
+        typeLabel: "Đang xác định vai trò…",
+        isStaff: true, // tạm ẩn các field sinh viên trong lúc chờ, tránh hiện nhầm
+      };
+    }
+
     return getRoleDetails(rawRole, effectiveRoles, isAdmin, isStudent);
-  }, [user, activeRole, assignedRoleNames, myTeam, currentUserId]);
+  }, [user, activeRole, assignedRoleNames, myTeam, currentUserId, rolesLoading]);
 
   const isStaff = roleInfo.isStaff;
 
@@ -1375,7 +1387,14 @@ export function UserProfileView() {
               </Card>
             )}
 
-            {userRoles.length === 0 && (
+            {rolesLoading && userRoles.length === 0 && (
+              <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-3 text-center shadow-sm font-mono text-xs text-zinc-400">
+                <p className="font-bold text-zinc-300 uppercase animate-pulse">[ ĐANG TẢI PHÂN CÔNG… ]</p>
+                <p className="text-zinc-500">Đang lấy dữ liệu đội thi và vai trò chuyên môn của bạn.</p>
+              </Card>
+            )}
+
+            {!rolesLoading && userRoles.length === 0 && (
               <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-3 text-center shadow-sm font-mono text-xs text-zinc-400">
                 <p className="font-bold text-white uppercase">[ CHƯA THAM GIA ĐỘI THI HOẶC PHÂN CÔNG CHUYÊN MÔN ]</p>
                 <p className="text-zinc-500">Bạn hiện tại chưa tham gia đội thi nào hoặc chưa được phân công vai trò chuyên môn trong hệ thống.</p>
