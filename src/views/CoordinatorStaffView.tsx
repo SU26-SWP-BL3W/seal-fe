@@ -508,7 +508,7 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-1.5 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-coordinator)]"
                   />
                   {coordinatorEmail.trim() && (
-                    checkEmailInSystem(coordinatorEmail, systemAccounts) ? (
+                    checkEmailInSystem(coordinatorEmail) ? (
                       <p className="text-[10px] font-mono text-emerald-400 mt-1 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span>Đã có tài khoản trong hệ thống</span>
@@ -579,7 +579,7 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-1.5 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
                   />
                   {judgeEmail.trim() && (
-                    checkEmailInSystem(judgeEmail, systemAccounts) ? (
+                    checkEmailInSystem(judgeEmail) ? (
                       <p className="text-[10px] font-mono text-emerald-400 mt-1 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span>Đã có tài khoản trong hệ thống</span>
@@ -669,7 +669,7 @@ export const CoordinatorStaffView: React.FC = () => {
                     className="w-full bg-[var(--bg-input)] border border-[var(--border-muted)] px-3 py-1.5 font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[#2dd4bf]"
                   />
                   {mentorEmail.trim() && (
-                    checkEmailInSystem(mentorEmail, systemAccounts) ? (
+                    checkEmailInSystem(mentorEmail) ? (
                       <p className="text-[10px] font-mono text-emerald-400 mt-1 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
                         <span>Đã có tài khoản trong hệ thống</span>
