@@ -96,7 +96,7 @@ export function MentorSubmissionsView() {
           suggestedScore: typeof suggestedScore === "number" ? suggestedScore : undefined,
         },
       });
-      toast.success("🎉 Đã gửi nhận xét và lời khuyên cho đội thi thành công!");
+      toast.success("Đã gửi nhận xét và lời khuyên cho đội thi thành công!");
       pushSystemNotification({
         title: "Cố vấn đã gửi nhận xét bài thi",
         message: `Cố vấn chuyên môn đã gửi nhận xét và lời khuyên kỹ thuật cho bài thi của Đội "${activeTeamName}".`,
@@ -490,7 +490,7 @@ export function MentorSubmissionsView() {
 
                         {fb.technicalAdvice && (
                           <div className="p-2.5 bg-[#2dd4bf]/10 border border-[#2dd4bf]/30 text-[#2dd4bf] text-[11px] rounded">
-                            💡 Khuyên dùng: {fb.technicalAdvice}
+                            Khuyên dùng: {fb.technicalAdvice}
                           </div>
                         )}
                       </div>

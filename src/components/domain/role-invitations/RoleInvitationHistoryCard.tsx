@@ -403,7 +403,7 @@ export function RoleInvitationHistoryCard({
                       {renderStatusBadge(rec.status)}
                       {rec.reason && (
                         <div className="text-[10px] text-red-400 mt-1 max-w-[200px] leading-tight" title={rec.reason}>
-                          ⚠️ Lý do: {rec.reason}
+                          Lý do: {rec.reason}
                         </div>
                       )}
                     </td>

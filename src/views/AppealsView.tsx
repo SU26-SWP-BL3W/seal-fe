@@ -95,7 +95,7 @@ export function AppealsView() {
 
     try {
       await createAppeal({ submitResultId, reason: reason.trim() });
-      toast.success("🎉 Đã gửi đơn phúc khảo thành công! Ban Tổ Chức sẽ tiếp nhận và phản hồi kết quả qua email và thông báo chuông.");
+      toast.success("Đã gửi đơn phúc khảo thành công! Ban Tổ Chức sẽ tiếp nhận và phản hồi kết quả qua email và thông báo chuông.");
       pushSystemNotification({
         title: "Gửi đơn phúc khảo thành công",
         message: `Đội thi đã gửi đơn phúc khảo bài nộp. Ban Tổ Chức sẽ tiếp nhận và xử lý sớm nhất.`,

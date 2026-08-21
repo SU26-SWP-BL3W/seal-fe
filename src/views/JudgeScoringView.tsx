@@ -14,7 +14,7 @@ import { useToast } from "@/providers/ToastProvider";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge, Button, Card, EmptyState } from "@/components/ui";
-import { Scale, ChevronLeft, ChevronRight } from "lucide-react";
+import { Scale, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
@@ -265,7 +265,7 @@ export function JudgeScoringView() {
         details: payloadDetails,
       });
       const okMsg = isFinalSubmit ? "Đã khóa và chốt điểm chính thức thành công!" : "Đã lưu nháp bảng điểm thành công.";
-      setSaveOk(`[✓ ${okMsg}]`);
+      setSaveOk(`[${okMsg}]`);
       toast.success(okMsg);
 
       if (isFinalSubmit) {
@@ -573,7 +573,7 @@ export function JudgeScoringView() {
                         }}
                       >
                         {code}
-                        {itemGraded && <span className="text-[10px]">✓</span>}
+                        {itemGraded && <Check className="w-3 h-3 text-emerald-400 ml-1 inline" />}
                       </Button>
                     );
                   })}

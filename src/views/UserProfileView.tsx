@@ -400,7 +400,7 @@ export function UserProfileView() {
   useEffect(() => {
     if (latestProfile?.isApproved && !user?.isApproved) {
       updateUser({ isApproved: true });
-      toast.success("🎉 Hồ sơ của bạn đã được Ban Tổ Chức phê duyệt!");
+      toast.success("Hồ sơ của bạn đã được Ban Tổ Chức phê duyệt!");
       router.push("/events");
     }
   }, [latestProfile?.isApproved, user?.isApproved, updateUser, toast, router]);
@@ -975,7 +975,7 @@ export function UserProfileView() {
                                 : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:border-zinc-700"
                               }`}
                           >
-                            <span className="text-xs">🏛️ SINH VIÊN FPT EDU</span>
+                            <span className="text-xs">SINH VIÊN FPT EDU</span>
                             <span className="text-[10px] opacity-75 font-normal">Xác thực tự động qua MSSV FPT</span>
                           </button>
                           <button
@@ -986,7 +986,7 @@ export function UserProfileView() {
                                 : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:border-zinc-700"
                               }`}
                           >
-                            <span className="text-xs">🎓 SINH VIÊN TRƯỜNG NGOÀI</span>
+                            <span className="text-xs">SINH VIÊN TRƯỜNG NGOÀI</span>
                             <span className="text-[10px] opacity-75 font-normal">Nộp ảnh thẻ sinh viên xét duyệt</span>
                           </button>
                         </div>
@@ -1032,13 +1032,13 @@ export function UserProfileView() {
                             {fptError && <p className="text-red-400 text-[11px] font-bold">{fptError}</p>}
                             {fptResult && (
                               <p className="text-emerald-400 text-[11px] font-bold">
-                                [✓ HỆ THỐNG XÁC NHẬN]: {fptResult.fullName || (fptResult as any).FullName} - {fptResult.major || "FPT Edu"}
+                                [HỆ THỐNG XÁC NHẬN]: {fptResult.fullName || (fptResult as any).FullName} - {fptResult.major || "FPT Edu"}
                               </p>
                             )}
                           </div>
 
                           <div className="p-2.5 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 font-mono text-[11px] hud-clipped">
-                            ✓ Sinh viên FPT được tra cứu và xác thực trực tiếp qua cơ sở dữ liệu FPT Edu, không cần nộp ảnh thẻ sinh viên.
+                            Sinh viên FPT được tra cứu và xác thực trực tiếp qua cơ sở dữ liệu FPT Edu, không cần nộp ảnh thẻ sinh viên.
                           </div>
                         </div>
                       ) : (
@@ -1163,7 +1163,7 @@ export function UserProfileView() {
                           </div>
 
                           <div className="p-2.5 bg-amber-950/20 border border-amber-500/20 text-amber-300 font-mono text-[11px] hud-clipped">
-                            📌 Sinh viên trường ngoài cần nộp ảnh thẻ sinh viên rõ nét để Ban Tổ Chức phê duyệt trước khi thi đấu.
+                            Sinh viên trường ngoài cần nộp ảnh thẻ sinh viên rõ nét để Ban Tổ Chức phê duyệt trước khi thi đấu.
                           </div>
                         </div>
                       )}
@@ -1171,7 +1171,7 @@ export function UserProfileView() {
                   )}
 
                   {submitError && <p className="text-red-400 font-bold">{submitError}</p>}
-                  {submitSuccess && <p className="text-emerald-400 font-bold">[✓ CẬP NHẬT HỒ SƠ THÀNH CÔNG]</p>}
+                  {submitSuccess && <p className="text-emerald-400 font-bold">[CẬP NHẬT HỒ SƠ THÀNH CÔNG]</p>}
 
                   <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
                     <Button
@@ -1479,7 +1479,7 @@ export function UserProfileView() {
                   </div>
 
                   {passwordError && <p className="text-red-400 font-bold">{passwordError}</p>}
-                  {passwordSuccess && <p className="text-emerald-400 font-bold">[✓ ĐỔI MẬT KHẨU THÀNH CÔNG]</p>}
+                  {passwordSuccess && <p className="text-emerald-400 font-bold">[ĐỔI MẬT KHẨU THÀNH CÔNG]</p>}
 
                   <div className="flex justify-end pt-2">
                     <Button type="submit" variant="primary" disabled={changePasswordMutation.isPending}>

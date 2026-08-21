@@ -579,7 +579,7 @@ export function CoordinatorTeamsView() {
                       Danh sách thành viên ({detailMembers.length} / 5 người):
                     </span>
                     <span className={`text-[10px] font-bold ${detailMembers.length >= 3 && detailMembers.length <= 5 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}`}>
-                      {detailMembers.length >= 3 && detailMembers.length <= 5 ? "✓ Sĩ số hợp lệ (3 - 5 người)" : "⚠ Sĩ số chưa đạt chuẩn (3 - 5 người)"}
+                      {detailMembers.length >= 3 && detailMembers.length <= 5 ? "Sĩ số hợp lệ (3 - 5 người)" : "Sĩ số chưa đạt chuẩn (3 - 5 người)"}
                     </span>
                   </div>
 

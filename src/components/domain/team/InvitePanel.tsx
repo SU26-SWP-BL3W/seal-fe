@@ -149,7 +149,7 @@ export function InvitePanel({
 
           {successNotice && (
             <p className="font-mono text-[11px] text-emerald-400 bg-emerald-950/40 p-2.5 rounded border border-emerald-500/30 leading-relaxed">
-              ✓ {successNotice}
+              {successNotice}
             </p>
           )}
 

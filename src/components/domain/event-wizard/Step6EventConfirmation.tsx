@@ -100,11 +100,12 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         }
       }
 
-      // 3. Persist tracks to backend API (update if id exists to prevent duplicate track records in DB)
+      // 3. Persist tracks to backend API (create in DB if ID is temporary tmp- or trk-)
       if (Array.isArray(tracks) && tracks.length > 0) {
         for (const trk of tracks) {
           try {
-            if (trk.id && typeof trk.id === "string" && !trk.id.startsWith("trk-")) {
+            const isDbTrack = trk.id && typeof trk.id === "string" && !trk.id.startsWith("trk-") && !trk.id.startsWith("tmp-") && !trk.id.startsWith("temp-");
+            if (isDbTrack) {
               await tracksRepository.updateTrack(trk.id, {
                 eventId: targetId,
                 trackName: trk.trackName,
@@ -112,15 +113,18 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
                 description: trk.description,
               });
             } else {
-              await tracksRepository.createTrack({
+              const created = await tracksRepository.createTrack({
                 eventId: targetId,
                 trackName: trk.trackName,
                 templateId: trk.templateId,
                 description: trk.description,
               });
+              if (created?.id) {
+                trk.id = created.id;
+              }
             }
           } catch (e) {
-            // Ignore API network error
+            console.error("Persist track error:", e);
           }
         }
       }

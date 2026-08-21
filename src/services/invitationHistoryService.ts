@@ -124,18 +124,18 @@ export const invitationHistoryService = {
    */
   syncWithEventRoles(eventId: string, activeRoles: any[]): RoleInvitationRecord[] {
     const list = this.getHistory(eventId);
+    if (!Array.isArray(activeRoles)) return list;
     let changed = false;
 
     // Check existing records against active roles
     for (const record of list) {
+      const recRole = normalizeRoleName(record.roleName);
       const isAssigned = activeRoles.some((ar: any) => {
         const uEmail = (ar.user?.email || ar.User?.Email || ar.email || "").toLowerCase();
-        const role = ar.roleName || ar.RoleName;
+        const role = normalizeRoleName(ar.roleName ?? ar.RoleName ?? ar.role ?? ar.Role);
         const trackId = ar.trackId || ar.TrackId;
         const matchEmail = uEmail === record.email.toLowerCase();
-        const matchRole =
-          role === record.roleName ||
-          (record.roleName === "EventCoordinator" && (role === "EventCoordinator" || role === 0));
+        const matchRole = role === recRole;
         const matchTrack = record.trackId ? trackId === record.trackId : true;
         return matchEmail && matchRole && matchTrack;
       });
@@ -165,17 +165,19 @@ export const invitationHistoryService = {
       const uEmail = (ar.user?.email || ar.User?.Email || ar.email || "").toLowerCase();
       if (!uEmail) continue;
       const uName = ar.user?.fullName || ar.User?.FullName || ar.fullName || ar.userName || uEmail.split("@")[0];
-      const role = ar.roleName || ar.RoleName || "EventCoordinator";
+      const role = normalizeRoleName(ar.roleName ?? ar.RoleName ?? ar.role ?? ar.Role ?? "EventCoordinator");
       const trackId = ar.trackId || ar.TrackId;
       const trackName = ar.track?.trackName || ar.Track?.TrackName;
 
-      const exists = list.some(
-        (item) => item.email.toLowerCase() === uEmail && item.roleName === role && (trackId ? item.trackId === trackId : true)
-      );
+      const exists = list.some((item) => {
+        const itemRole = normalizeRoleName(item.roleName);
+        return item.email.toLowerCase() === uEmail && itemRole === role && (trackId ? item.trackId === trackId : true);
+      });
 
       if (!exists) {
+        const roleId = ar.id || ar.Id || ar.eventRoleId || ar.EventRoleId;
         list.push({
-          id: ar.id || ar.Id || `role-inv-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          id: roleId || `role-inv-${uEmail}-${role}-${trackId || "all"}`,
           eventId,
           email: uEmail,
           fullName: uName,
@@ -196,6 +198,25 @@ export const invitationHistoryService = {
     return list;
   },
 };
+
+function normalizeRoleName(rawRole: any): string {
+  if (rawRole === 0 || rawRole === "0" || rawRole === "EventCoordinator" || rawRole === "Coordinator" || rawRole === "EC") {
+    return "EventCoordinator";
+  }
+  if (rawRole === 1 || rawRole === "1" || rawRole === "Judge") {
+    return "Judge";
+  }
+  if (rawRole === 2 || rawRole === "2" || rawRole === "Mentor") {
+    return "Mentor";
+  }
+  if (rawRole === 3 || rawRole === "3" || rawRole === "TeamLeader") {
+    return "TeamLeader";
+  }
+  if (rawRole === 4 || rawRole === "4" || rawRole === "TeamMember") {
+    return "TeamMember";
+  }
+  return String(rawRole || "");
+}
 
 function getStatusLabel(status: RoleInvitationStatus): string {
   switch (status) {

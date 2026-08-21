@@ -122,7 +122,7 @@ export const AdminCreateEventView: React.FC = () => {
 
           {errorMessage && (
             <div className="p-4 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)] text-[var(--color-danger)] font-mono text-xs hud-clipped">
-              ⚠️ {errorMessage}
+              {errorMessage}
             </div>
           )}
 

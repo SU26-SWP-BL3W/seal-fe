@@ -174,7 +174,7 @@ ${userFullName}`;
 
         {/* Next Step Guideline */}
         <div className="mt-4 p-3 bg-cyan-950/30 border border-cyan-500/30 rounded text-[11px] text-cyan-200/90 font-sans leading-relaxed">
-          💡 <strong>Quy trình sau khi gửi email:</strong> Đội trưởng sẽ liên hệ lại với bạn và gửi lời mời chính thức vào đội qua hệ thống SEAL. Bạn chỉ cần vào mục <strong>Lời Mời Của Tôi</strong> để nhấn <em>Chấp Nhận</em>.
+          <strong>Quy trình sau khi gửi email:</strong> Đội trưởng sẽ liên hệ lại với bạn và gửi lời mời chính thức vào đội qua hệ thống SEAL. Bạn chỉ cần vào mục <strong>Lời Mời Của Tôi</strong> để nhấn <em>Chấp Nhận</em>.
         </div>
 
         {/* Action Buttons */}

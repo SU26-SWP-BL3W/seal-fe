@@ -325,7 +325,7 @@ function TrackSubmissionCard({
             ) : isSaved ? (
               <div className="flex items-center gap-2">
                 <span className="text-[var(--color-success)] font-semibold flex items-center gap-1">
-                  ✓ Đã lưu bài nộp cho hạng mục {track.trackName}
+                  Đã lưu bài nộp cho hạng mục {track.trackName}
                 </span>
                 <Link
                   href="/my-submissions"
@@ -509,7 +509,7 @@ export function NewSubmissionView() {
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <Link href={`/events/${(team as any)?.eventId || (team as any)?.EventId || ""}/leaderboard`}>
               <button className="hud-clipped px-4 py-2.5 border border-[var(--accent-judge)]/40 bg-[var(--accent-judge)]/10 text-[var(--accent-judge)] font-mono text-xs font-bold tracking-wider uppercase hover:bg-[var(--accent-judge)]/20 transition-colors">
-                🏆 BẢNG XẾP HẠNG
+                BẢNG XẾP HẠNG
               </button>
             </Link>
             <Link href="/my-team">

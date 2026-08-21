@@ -444,7 +444,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
               <option value="">📂 Nạp từ Kho Mẫu Tiêu Chí (Template Bank)...</option>
               {allAvailableTemplates.map((t: any) => (
                 <option key={t.id || t.Id || t.templateId} value={t.id || t.Id || t.templateId}>
-                  ⚡ {t.templateName || t.TemplateName} ({(t.criterias || []).length} tiêu chí)
+                  {t.templateName || t.TemplateName} ({(t.criterias || []).length} tiêu chí)
                 </option>
               ))}
             </select>
@@ -639,7 +639,7 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
             <div className="font-bold text-[#8a9ba8] tracking-widest uppercase flex items-center justify-between">
               <span>TỔNG TRỌNG SỐ [{activeTrack?.trackName}]</span>
               <span className={activeIsValidWeight100 ? "text-[#10b981]" : "text-[#ef4444]"}>
-                {activeIsValidWeight100 ? "✓ ĐẠT CHUẨN" : "✗ CHƯA ĐẠT"}
+                {activeIsValidWeight100 ? "ĐẠT CHUẨN (100%)" : "CHƯA ĐẠT"}
               </span>
             </div>
 

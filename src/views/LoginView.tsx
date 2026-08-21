@@ -4,7 +4,7 @@ import { useState } from "react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useAuth } from "@/providers/AuthProvider";
 import { Link, useRouter } from "@/i18n/routing";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
 import { AlreadyLoggedInNotice } from "@/components/domain/AlreadyLoggedInNotice";
@@ -22,12 +22,24 @@ export function LoginView() {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const { user: currentUser, loginWithCredentials, loginWithGoogleCredential } = useAuth();
   const router = useRouter();
 
-  if (currentUser) {
+  if (currentUser && !isNavigating) {
     return <AlreadyLoggedInNotice />;
+  }
+
+  if (isNavigating) {
+    return (
+      <div className="min-h-screen bg-[#0a0e10] flex items-center justify-center font-mono text-xs text-[#00d9ff]">
+        <div className="flex items-center gap-3 bg-[#13191c] p-6 border border-[#263339] shadow-2xl">
+          <RefreshCw className="w-5 h-5 animate-spin text-[#00d9ff]" />
+          <span>Đang đăng nhập thành công &amp; chuyển hướng vào hệ thống...</span>
+        </div>
+      </div>
+    );
   }
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -43,6 +55,7 @@ export function LoginView() {
     const returnUrl = searchParams.get("returnUrl") || searchParams.get("redirect");
     try {
       const defaultPath = await loginWithCredentials(email, password);
+      setIsNavigating(true);
       toast.success("Đăng nhập thành công!");
       router.push(returnUrl ? decodeURIComponent(returnUrl) : defaultPath);
     } catch (err: unknown) {
@@ -51,7 +64,6 @@ export function LoginView() {
         "Email hoặc mật khẩu không đúng.";
       setErrorMessage(msg);
       toast.error(msg);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -68,6 +80,7 @@ export function LoginView() {
     const returnUrl = searchParams.get("returnUrl") || searchParams.get("redirect");
     try {
       const defaultPath = await loginWithGoogleCredential(response.credential);
+      setIsNavigating(true);
       toast.success("Đăng nhập Google thành công!");
       router.push(returnUrl ? decodeURIComponent(returnUrl) : defaultPath);
     } catch (err: unknown) {
@@ -78,7 +91,6 @@ export function LoginView() {
         "Đăng nhập Google thất bại.";
       setErrorMessage(msg);
       toast.error(msg);
-    } finally {
       setIsSubmitting(false);
     }
   };

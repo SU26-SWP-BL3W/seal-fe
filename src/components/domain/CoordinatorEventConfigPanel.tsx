@@ -435,11 +435,16 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
         };
 
         let targetTrackId = t.id;
-        if (t.id && !t.id.startsWith("temp-") && !t.isNew) {
+        const isDbTrack = Boolean(t.id && typeof t.id === "string" && !t.id.startsWith("temp-") && !t.id.startsWith("tmp-") && !t.id.startsWith("trk-") && !t.isNew);
+        if (isDbTrack && t.id) {
           await tracksRepository.updateTrack(t.id, trackPayload);
         } else {
           const created = await tracksRepository.createTrack(trackPayload);
           targetTrackId = created?.id || (created as any)?.Id;
+          if (targetTrackId) {
+            t.id = targetTrackId;
+            t.isNew = false;
+          }
         }
 
         if (targetTrackId && t.templateId) {
