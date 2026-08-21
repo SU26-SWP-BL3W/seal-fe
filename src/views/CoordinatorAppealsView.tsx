@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Link } from "@/i18n/routing";
 import { appealsRepository, AppealStatus, useGetAppealsByEvent } from "@/repositories/appealsRepository";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
@@ -90,6 +92,21 @@ export const CoordinatorAppealsView: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
       <div className="flex-1 p-6 space-y-6 max-w-[1500px] w-full mx-auto">
+        {/* Navigation back */}
+        <div className="flex items-center justify-between">
+          <Link href={`/coordinator/submissions${selectedEventId ? `?eventId=${selectedEventId}` : ""}`} className="text-xs font-mono text-[#8a9ba8] hover:text-white flex items-center gap-1">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>QUAY LẠI QUẢN LÝ BÀI NỘP</span>
+          </Link>
+          <Button
+            variant="ghost"
+            onClick={() => refetch()}
+            className="text-xs font-mono text-[#8a9ba8] hover:text-white flex items-center gap-1 border border-[#263339]"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>LÀM MỚI</span>
+          </Button>
+        </div>
 
         {/* Event + Round selectors */}
         <div className="bg-[#13191c] p-4 border border-[#263339] flex flex-col sm:flex-row sm:items-center gap-4 font-mono text-xs">
@@ -173,7 +190,7 @@ export const CoordinatorAppealsView: React.FC = () => {
                   <th className="p-4 w-36">MÃ BÀI NỘP</th>
                   <th className="p-4">LÝ DO KHIẾU NẠI</th>
                   <th className="p-4 w-44">THỜI GIAN</th>
-                  <th className="p-4 w-28">TRẠNG THÁI</th>
+                  <th className="p-4 w-36">TRẠNG THÁI</th>
                   <th className="p-4 w-44 text-right pr-6">THAO TÁC</th>
                 </tr>
               </thead>
@@ -265,7 +282,7 @@ export const CoordinatorAppealsView: React.FC = () => {
           <div className="bg-[#13191c] border border-[#263339] p-6 max-w-md w-full space-y-4">
             <div className="flex items-center gap-2 text-[#8b5cf6] font-mono font-bold text-xs uppercase">
               <UserPlus className="w-4 h-4" />
-              <span>DUYỆT ĐƠN PHÚC KHẢO &amp; GÁN GIÁM KHẢO CHẤM LẠI</span>
+              <span>Duyệt đơn &amp; Phân công Giám khảo chấm lại</span>
             </div>
             <p className="text-xs text-[#e1e7ec] font-sans">
               Đơn phúc khảo sẽ được phê duyệt. Chọn Giám khảo phụ trách chấm lại bài nộp (tuỳ chọn):
@@ -275,7 +292,7 @@ export const CoordinatorAppealsView: React.FC = () => {
               <select
                 value={assignedJudgeId}
                 onChange={(e) => setAssignedJudgeId(e.target.value)}
-                className="w-full p-2.5 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-xs focus:outline-none focus:border-[#8b5cf6]"
+                className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-xs focus:border-[#8b5cf6] outline-none cursor-pointer"
               >
                 <option value="">-- Không gán lại (giữ giám khảo cũ) --</option>
                 {judges.map((j: any) => {
@@ -294,18 +311,21 @@ export const CoordinatorAppealsView: React.FC = () => {
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button
-                onClick={() => setSelectedAppealId(null)}
+                type="button"
                 disabled={isSubmitting}
-                className="px-4 py-1.5 border border-[#263339] text-xs font-mono text-[#e1e7ec] hover:bg-[#263339]/50"
+                onClick={() => setSelectedAppealId(null)}
+                className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-white font-mono text-xs cursor-pointer"
               >
                 HỦY
               </button>
               <button
-                onClick={handleApproveAppeal}
+                type="button"
                 disabled={isSubmitting}
-                className="px-4 py-1.5 bg-[#8b5cf6] text-white font-mono text-xs font-semibold"
+                onClick={handleApproveAppeal}
+                className="px-4 py-2 bg-[#8b5cf6] text-white hover:bg-purple-600 font-mono text-xs font-bold cursor-pointer flex items-center gap-1"
               >
-                {isSubmitting ? "Đang xử lý..." : "XÁC NHẬN DUYỆT & GÁN"}
+                <Check className="w-3.5 h-3.5" />
+                <span>{isSubmitting ? "ĐANG DUYỆT..." : "XÁC NHẬN DUYỆT"}</span>
               </button>
             </div>
           </div>
@@ -314,38 +334,42 @@ export const CoordinatorAppealsView: React.FC = () => {
 
       {rejectingAppealId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#13191c] border border-[#ef4444]/40 p-6 max-w-md w-full space-y-4">
-            <div className="flex items-center gap-2 text-[#ef4444] font-mono font-bold text-xs uppercase">
-              <AlertCircle className="w-4 h-4" />
-              <span>TỪ CHỐI ĐƠN PHÚC KHẢO</span>
+          <div className="bg-[#13191c] border border-[#263339] p-6 max-w-md w-full space-y-4">
+            <div className="flex items-center gap-2 text-red-400 font-mono font-bold text-xs uppercase">
+              <X className="w-4 h-4" />
+              <span>Từ chối đơn phúc khảo</span>
             </div>
             <div className="space-y-1 font-mono text-xs">
               <label className="text-[#8a9ba8]">Lý do từ chối phúc khảo (bắt buộc):</label>
               <textarea
-                rows={4}
+                rows={3}
+                required
+                placeholder="Nhập lý do từ chối đơn khiếu nại (ví dụ: Đơn nộp quá hạn, bài thi đã chấm đúng thang điểm)..."
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Ví dụ: Đội thi nộp khiếu nại quá thời hạn quy định hoặc không cung cấp minh chứng rõ ràng..."
-                className="w-full p-3 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-sans text-xs focus:outline-none focus:border-[#ef4444]"
+                className="w-full px-3 py-2 bg-[#0a0e10] border border-[#263339] text-[#e1e7ec] font-mono text-xs focus:border-red-400 outline-none"
               />
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button
+                type="button"
+                disabled={isSubmitting}
                 onClick={() => {
                   setRejectingAppealId(null);
                   setRejectReason("");
                 }}
-                disabled={isSubmitting}
-                className="px-4 py-1.5 border border-[#263339] text-xs font-mono text-[#e1e7ec] hover:bg-[#263339]/50"
+                className="px-4 py-2 border border-[#263339] text-[#8a9ba8] hover:text-white font-mono text-xs cursor-pointer"
               >
                 HỦY
               </button>
               <button
-                onClick={handleRejectAppeal}
+                type="button"
                 disabled={isSubmitting}
-                className="px-4 py-1.5 bg-[#ef4444] text-white font-mono text-xs font-semibold"
+                onClick={handleRejectAppeal}
+                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 font-mono text-xs font-bold cursor-pointer flex items-center gap-1"
               >
-                {isSubmitting ? "Đang xử lý..." : "XÁC NHẬN TỪ CHỐI"}
+                <X className="w-3.5 h-3.5" />
+                <span>{isSubmitting ? "ĐANG TỪ CHỐI..." : "XÁC NHẬN TỪ CHỐI"}</span>
               </button>
             </div>
           </div>

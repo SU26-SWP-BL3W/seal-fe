@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button, Card, Badge, Input, ApiMissingDataBadge } from "@/components/ui";
 import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
+import { useGetAppealsByEvent, AppealStatus } from "@/repositories/appealsRepository";
+import { useMyNotifications } from "@/repositories/notificationsRepository";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
@@ -26,66 +29,182 @@ import {
   Search,
   Award,
   ArrowRight,
+  Bell,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export const CoordinatorSubmissionsView: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const { data: myEvents = [] } = useMyEvents();
-  const { data: rawAllEvents = [] } = useEvents();
-  const allEvents = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
-  const eventsList = (currentUser?.isAdmin || currentUser?.IsAdmin)
-    ? allEvents
-    : myEvents;
+  const searchParams = useSearchParams();
+  const queryEventId = searchParams.get("eventId") || searchParams.get("id") || "";
+  const queryTrackId = searchParams.get("trackId") || "";
 
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
-  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
+  // 1. Fetch Events: Chỉ lấy các sự kiện mà EC hiện tại được phân công (useMyEvents)
+  const { data: rawMyEvents = [], isLoading: isLoadingMyEvents, refetch: refetchMyEvents } = useMyEvents();
+  const { data: rawAllEvents = [], isLoading: isLoadingAllEvents, refetch: refetchAllEvents } = useEvents();
+
+  const eventsList = useMemo(() => {
+    const myEventsList = Array.isArray(rawMyEvents) ? rawMyEvents : (rawMyEvents as any)?.data ?? [];
+    
+    // Nếu là Admin hệ thống, cho phép xem toàn bộ sự kiện; Nếu là EC thì CHỈ lấy các sự kiện được phân công (assigned)
+    if (currentUser?.isAdmin) {
+      const allList = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
+      const map = new Map<string, any>();
+      allList.forEach((ev: any) => {
+        const id = ev.id || ev.Id || ev.eventId || ev.EventId;
+        if (id) map.set(id, ev);
+      });
+      myEventsList.forEach((ev: any) => {
+        const id = ev.id || ev.Id || ev.eventId || ev.EventId;
+        if (id && !map.has(id)) map.set(id, ev);
+      });
+      return Array.from(map.values());
+    }
+
+    return myEventsList;
+  }, [rawMyEvents, rawAllEvents, currentUser?.isAdmin]);
+
+  const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId);
+  const [selectedTrackId, setSelectedTrackId] = useState<string>(queryTrackId);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
-  const { data: tracks = [] } = useGetTracksByEvent(selectedEventId);
+  useEffect(() => {
+    if (queryEventId) {
+      setSelectedEventId(queryEventId);
+    } else if (eventsList.length > 0 && !selectedEventId) {
+      const firstId = eventsList[0].id || eventsList[0].Id || eventsList[0].eventId || eventsList[0].EventId || "";
+      setSelectedEventId(firstId);
+    }
+  }, [queryEventId, eventsList, selectedEventId]);
 
-  // Query submissions
+  useEffect(() => {
+    if (queryTrackId && !selectedTrackId) {
+      setSelectedTrackId(queryTrackId);
+    }
+  }, [queryTrackId, selectedTrackId]);
+
+  // 2. Fetch Tracks: Nếu đã chọn 1 sự kiện cụ thể, lấy tracks của sự kiện đó;
+  // Nếu chọn "Tất cả sự kiện", lấy tất cả tracks của mọi sự kiện trong hệ thống.
+  const { data: eventTracks = [] } = useGetTracksByEvent(selectedEventId || undefined);
+
+  const { data: allTracks = [] } = useQuery({
+    queryKey: ["all-coordinator-tracks", eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
+    queryFn: async () => {
+      if (eventsList.length === 0) return [];
+      const trackPromises = eventsList.map(async (ev: any) => {
+        const evId = ev.id || ev.Id || ev.eventId || ev.EventId;
+        try {
+          const res = await apiClient.get<any>("/Tracks/event", {
+            params: { eventId: evId, EventId: evId, PageSize: 100 },
+          });
+          const items =
+            res.data?.data?.items ??
+            res.data?.items ??
+            res.data?.data ??
+            (Array.isArray(res.data) ? res.data : []);
+          return Array.isArray(items) ? items : [];
+        } catch {
+          return [];
+        }
+      });
+      const results = await Promise.all(trackPromises);
+      return results.flat();
+    },
+    enabled: eventsList.length > 0 && !selectedEventId,
+  });
+
+  const tracks = useMemo(() => {
+    const rawList = selectedEventId ? eventTracks : allTracks;
+    const map = new Map<string, any>();
+    rawList.forEach((t: any) => {
+      const id = t.id || t.Id || t.trackId || t.TrackId;
+      if (id && !map.has(id)) map.set(id, t);
+    });
+    return Array.from(map.values());
+  }, [selectedEventId, eventTracks, allTracks]);
+
+  // 3. Query Submissions
   const {
     data: rawSubmissions = [],
     isLoading: isLoadingSubmissions,
     refetch: refetchSubmissions,
   } = useQuery({
-    queryKey: ["coordinator-submissions", selectedEventId, selectedTrackId, eventsList.map((e: any) => e.id || e.Id || e.eventId).join(",")],
+    queryKey: ["coordinator-submissions", selectedEventId, selectedTrackId],
     queryFn: async () => {
-      const params: Record<string, any> = { PageSize: 200 };
+      const params: Record<string, any> = { PageSize: 500 };
       if (selectedEventId) {
         params.EventId = selectedEventId;
       }
       if (selectedTrackId) {
         params.TrackId = selectedTrackId;
       }
-      const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", { params });
-      return res.data?.data ?? [];
+      const res = await apiClient.get<any>("/SubmitResults", { params });
+      const items =
+        res.data?.data?.items ??
+        res.data?.items ??
+        res.data?.data ??
+        (Array.isArray(res.data) ? res.data : []);
+      return Array.isArray(items) ? items : [];
     },
   });
 
-  const allSubmissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
-  // Filter submissions by EC assigned events
-  const allowedEventIds = new Set(eventsList.map((e: any) => e.id || e.Id || e.eventId || e.EventId));
-  const submissions = (currentUser?.isAdmin || currentUser?.IsAdmin)
-    ? allSubmissions
-    : allSubmissions.filter((sub: any) => {
-        const evId = sub.eventId || sub.EventId;
-        return evId ? allowedEventIds.has(evId) : true;
-      });
+  const submissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
 
-  // Filtered submissions by track and search term
-  const displaySubmissions = submissions.filter((sub: any) => {
-    if (selectedTrackId) {
-      const subTrackId = sub.trackId || sub.TrackId;
-      if (subTrackId && subTrackId !== selectedTrackId) return false;
-    }
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    const teamName = (sub.teamName || sub.TeamName || "").toLowerCase();
-    const eventName = (sub.eventName || sub.EventName || "").toLowerCase();
-    const trackName = (sub.trackName || sub.TrackName || "").toLowerCase();
-    return teamName.includes(term) || eventName.includes(term) || trackName.includes(term);
-  });
+  // 4. Query Appeals (phúc khảo) để đếm số đơn Pending
+  const effectiveEventIdForAppeals = selectedEventId || (eventsList[0]?.id || eventsList[0]?.Id || eventsList[0]?.eventId || "");
+  const { data: appeals = [], refetch: refetchAppeals } = useGetAppealsByEvent(effectiveEventIdForAppeals || undefined);
+  const pendingAppealsCount = useMemo(() => {
+    return appeals.filter((a) => a.status === AppealStatus.Pending).length;
+  }, [appeals]);
+
+  // 5. Query Notifications
+  const { data: notifications = [] } = useMyNotifications(Boolean(currentUser));
+  const unreadNotifsCount = useMemo(() => {
+    return notifications.filter((n) => !n.isRead).length;
+  }, [notifications]);
+
+  // 6. Filter Submissions (Chỉ lấy các bài nộp thuộc đúng sự kiện mà EC được phân công)
+  const displaySubmissions = useMemo(() => {
+    const validEventIds = new Set(
+      eventsList.map((e: any) => (e.id || e.Id || e.eventId || e.EventId || "").replace(/-/g, "").toLowerCase()).filter(Boolean)
+    );
+
+    return submissions.filter((sub: any) => {
+      // Bảo đảm bài nộp phải thuộc sự kiện mà EC được phân công
+      if (!currentUser?.isAdmin && validEventIds.size > 0) {
+        const subEventId = (sub.eventId || sub.EventId || "").replace(/-/g, "").toLowerCase();
+        if (subEventId && !validEventIds.has(subEventId)) return false;
+      }
+
+      if (selectedTrackId) {
+        const subTrackId = sub.trackId || sub.TrackId;
+        if (subTrackId && subTrackId !== selectedTrackId) return false;
+      }
+      if (!searchTerm.trim()) return true;
+      const term = searchTerm.toLowerCase();
+      const teamName = (sub.teamName || sub.TeamName || "").toLowerCase();
+      const eventName = (sub.eventName || sub.EventName || "").toLowerCase();
+      const trackName = (sub.trackName || sub.TrackName || "").toLowerCase();
+      return teamName.includes(term) || eventName.includes(term) || trackName.includes(term);
+    });
+  }, [submissions, eventsList, currentUser?.isAdmin, selectedTrackId, searchTerm]);
+
+  // 7. Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
+  const totalItems = displaySubmissions.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedEventId, selectedTrackId, searchTerm]);
+
+  const paginatedSubmissions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return displaySubmissions.slice(start, start + pageSize);
+  }, [displaySubmissions, currentPage, pageSize]);
 
   const {
     paginatedItems: paginatedSubmissions,
@@ -101,6 +220,13 @@ export const CoordinatorSubmissionsView: React.FC = () => {
   const reposCount = submissions.filter((s: any) => s.repoUrl || s.RepoUrl || s.submissionUrl || s.SubmissionUrl).length;
   const demosCount = submissions.filter((s: any) => s.demoUrl || s.DemoUrl).length;
   const slidesCount = submissions.filter((s: any) => s.slideUrl || s.SlideUrl).length;
+
+  const handleRefetchAll = () => {
+    refetchMyEvents();
+    refetchAllEvents();
+    refetchSubmissions();
+    refetchAppeals();
+  };
 
   // Export submissions to CSV
   const handleExportCSV = () => {
@@ -184,16 +310,32 @@ export const CoordinatorSubmissionsView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Link đến trang Phúc Khảo */}
+            <Link href={`/coordinator/appeals${selectedEventId ? `?eventId=${selectedEventId}` : ""}`}>
+              <Button
+                variant="ghost"
+                className="font-mono text-xs border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 flex items-center gap-2 cursor-pointer relative"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span>Phúc Khảo Điểm</span>
+                {pendingAppealsCount > 0 && (
+                  <span className="px-1.5 py-0.2 bg-amber-500 text-black text-[10px] font-bold rounded-full">
+                    {pendingAppealsCount}
+                  </span>
+                )}
+              </Button>
+            </Link>
+
             <Button
               variant="ghost"
               onClick={handleExportCSV}
               className="font-mono text-xs border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer hover:border-white"
             >
-              <Download className="w-3.5 h-3.5" /> Xuất File CSV
+              <Download className="w-3.5 h-3.5" /> Xuất CSV
             </Button>
             <Button
               variant="ghost"
-              onClick={() => refetchSubmissions()}
+              onClick={handleRefetchAll}
               className="font-mono text-xs border border-[var(--border-muted)] flex items-center gap-1.5 cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Làm Mới
@@ -234,16 +376,19 @@ export const CoordinatorSubmissionsView: React.FC = () => {
               }}
               className="w-full px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-muted)] text-[var(--text-primary)] hud-clipped cursor-pointer"
             >
-              <option value="">— Tất cả sự kiện ({eventsList.length}) —</option>
-              {eventsList.map((ev: any, idx: number) => {
-                const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
-                const name = ev.eventName || ev.EventName || "Sự kiện";
-                return (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                );
-              })}
+              {eventsList.length > 0 ? (
+                eventsList.map((ev: any, idx: number) => {
+                  const id = ev.id || ev.Id || ev.eventId || ev.EventId || `ev-${idx}`;
+                  const name = ev.eventName || ev.EventName || ev.name || ev.Name || "Sự kiện";
+                  return (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  );
+                })
+              ) : (
+                <option value="">Chưa có sự kiện nào được phân công</option>
+              )}
             </select>
           </div>
 
@@ -277,15 +422,6 @@ export const CoordinatorSubmissionsView: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs"
             />
-            <Link href="/coordinator/appeals">
-              <Button
-                variant="ghost"
-                className="whitespace-nowrap font-mono text-xs border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 flex items-center gap-1 cursor-pointer"
-                title="Xem danh sách đơn phúc khảo"
-              >
-                <AlertTriangle className="w-3.5 h-3.5" /> Phúc Khảo
-              </Button>
-            </Link>
           </div>
         </div>
 
@@ -301,7 +437,7 @@ export const CoordinatorSubmissionsView: React.FC = () => {
             </span>
           </div>
 
-          {isLoadingSubmissions ? (
+          {isLoadingSubmissions || isLoadingMyEvents || isLoadingAllEvents ? (
             <div className="py-16 flex flex-col items-center justify-center gap-2 font-mono text-xs text-[#a855f7]">
               <RefreshCw className="w-6 h-6 animate-spin" />
               <span>Đang tải danh sách bài làm từ hệ thống...</span>
