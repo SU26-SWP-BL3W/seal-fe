@@ -3,14 +3,15 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/routing";
-import { appealsRepository, AppealStatus, useGetAppealsByEvent } from "@/repositories/appealsRepository";
+import { appealsRepository, AppealStatus, useAppealsByRound } from "@/repositories/appealsRepository";
 import { useAuth } from "@/providers/AuthProvider";
-import { useMyEvents, useEvents } from "@/repositories/eventsRepository";
+import { useMyEvents, useEventRounds } from "@/repositories/eventsRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
-import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
+import { useGetEventRoles } from "@/repositories/staffRepository";
 import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/ui/Pagination";
-import { Check, X, AlertCircle, CheckCircle2, UserPlus, Filter, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui";
+import { Check, X, AlertCircle, CheckCircle2, UserPlus, Filter, ChevronDown, ArrowLeft, RefreshCw } from "lucide-react";
 
 // Bản trước ở view này roundId luôn là hằng số gia "round-phase-02" (không có
 // route param [roundId] nào trong /coordinator/appeals) nên KHÔNG BAO GIỜ tải
@@ -31,7 +32,19 @@ export const CoordinatorAppealsView: React.FC = () => {
   const { data: eventRoles = [] } = useGetEventRoles(eventId);
   const judges = eventRoles.filter((r: any) => (r.roleName || r.RoleName) === "Judge");
 
+  const { data: teams = [] } = useGetTeamsByEvent(eventId);
+  const teamNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (teams as any[]).forEach((t) => {
+      const id = t.id || t.Id;
+      const name = t.name || t.Name || t.teamName || t.TeamName;
+      if (id) map.set(id, name || id);
+    });
+    return map;
+  }, [teams]);
+
   const { data: appeals = [], isLoading, refetch } = useAppealsByRound(roundId);
+  const displayAppeals = appeals;
 
   const {
     paginatedItems: paginatedAppeals,
@@ -216,10 +229,14 @@ export const CoordinatorAppealsView: React.FC = () => {
                 ) : (
                   paginatedAppeals.map((apl) => {
                     const team = teamNameById.get(apl.teamId) || apl.teamId;
+                    const isPending = apl.status === AppealStatus.Pending;
 
                     return (
                       <tr key={apl.id} className="hover:bg-[#182024] transition-colors">
-                        <td className="p-4 text-[#8b5cf6] font-bold">#{apl.submitResultId}</td>
+                        <td className="p-4 text-[#8b5cf6] font-bold">
+                          #{apl.submitResultId}
+                          <div className="text-[10px] text-[#8a9ba8] font-normal mt-0.5 truncate max-w-[8rem]">{team}</div>
+                        </td>
                         <td className="p-4 text-[#8a9ba8] truncate max-w-xs">{apl.reason}</td>
                         <td className="p-4 text-[#8a9ba8]">
                           {apl.createdTime ? new Date(apl.createdTime).toLocaleString("vi-VN") : "—"}
