@@ -253,19 +253,6 @@ export function TeamInvitationsView() {
     setPageSize: setHistoryPageSize,
   } = usePagination(history, 5);
 
-  const formatRoleLabel = (role?: string) => {
-    switch (role) {
-      case "Coordinator":
-      case "EventCoordinator":
-        return "Cán Bộ Điều Phối (Coordinator)";
-      case "Judge":
-        return "Ban Giám Khảo (Judge)";
-      case "Mentor":
-        return "Cố Vấn Chuyên Môn (Mentor)";
-      default:
-        return role || "Cán Bộ Sự Kiện";
-    }
-  };
 
   // Guard: Not Logged In Notice
   if (!user) {
