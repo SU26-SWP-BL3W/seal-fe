@@ -73,7 +73,9 @@ export const AdminUsersView: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const { data: rawUsersData, isLoading, refetch } = useGetUsers();
+  // pageSize lớn: BE mặc định chỉ trả 10 user/trang -> hồ sơ SV mới nộp (ngoài 10 đầu)
+  // sẽ không lọt vào list nên admin không thấy để duyệt. Lấy đủ rồi lọc/phân trang phía client.
+  const { data: rawUsersData, isLoading, refetch } = useGetUsers({ pageSize: 1000 });
   const usersList: User[] = rawUsersData?.data ?? [];
 
   const { data: schoolsList = [] } = useGetSchools();
