@@ -416,6 +416,10 @@ export const AdminUsersView: React.FC = () => {
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border border-[var(--color-success)]/30">
                               ✓ ĐÃ PHÊ DUYỆT
                             </span>
+                          ) : u.isRejected ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(239,68,68,0.1)] text-[var(--color-danger)] border border-[var(--color-danger)]/30">
+                              ✕ ĐÃ TỪ CHỐI
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(245,158,11,0.1)] text-[var(--color-warning)] border border-[var(--color-warning)]/30">
                               ⏳ CHỜ DUYỆT THẺ
