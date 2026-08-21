@@ -192,20 +192,6 @@ export const CoordinatorSubmissionsView: React.FC = () => {
   }, [submissions, eventsList, currentUser?.isAdmin, selectedTrackId, searchTerm]);
 
   // 7. Pagination
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const pageSize = 10;
-  const totalItems = displaySubmissions.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedEventId, selectedTrackId, searchTerm]);
-
-  const paginatedSubmissions = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return displaySubmissions.slice(start, start + pageSize);
-  }, [displaySubmissions, currentPage, pageSize]);
-
   const {
     paginatedItems: paginatedSubmissions,
     currentPage,
@@ -215,6 +201,10 @@ export const CoordinatorSubmissionsView: React.FC = () => {
     setCurrentPage,
     setPageSize,
   } = usePagination(displaySubmissions, 8);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedEventId, selectedTrackId, searchTerm, setCurrentPage]);
 
   const uniqueTeamsCount = new Set(submissions.map((s: any) => s.teamId || s.TeamId)).size;
   const reposCount = submissions.filter((s: any) => s.repoUrl || s.RepoUrl || s.submissionUrl || s.SubmissionUrl).length;
