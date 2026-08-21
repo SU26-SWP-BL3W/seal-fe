@@ -181,7 +181,7 @@ export function OnboardingProfileView() {
     );
   }
 
-  if (user?.studentCode && !user?.isApproved && !user?.isRejected && step !== "pending") {
+  if (user?.studentCode && !user?.isApproved && !user?.isRejected) {
     return (
       <ProfileStatusCard
         icon={<RefreshCw className="w-8 h-8 text-[var(--color-warning)] animate-spin" />}
@@ -328,7 +328,7 @@ export function OnboardingProfileView() {
                       studentCode: fptResult.studentCode ?? fptCode,
                       fullName: fptResult.fullName ?? undefined,
                     } as any);
-                    setStep("pending");
+                    router.push("/profile");
                   } catch (err: any) {
                     setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
                   }
@@ -463,7 +463,7 @@ export function OnboardingProfileView() {
                     photoCardUrl = uploaded.fileUrl;
                   }
                   await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl });
-                  setStep("pending");
+                  router.push("/profile");
                 } catch (err: any) {
                   setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
                 } finally {

@@ -7,7 +7,6 @@ import { useSearchParams } from "next/navigation";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation, useDeclineEventRoleInvitationPublic } from "@/repositories/eventRolesRepository";
-import { useRegister } from "@/repositories/authRepository";
 import { useEvents } from "@/repositories/eventsRepository";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import { Badge, Button, Card, SkeletonRows, Pagination } from "@/components/ui";
@@ -22,7 +21,6 @@ import {
   Lock,
   LogIn,
   UserPlus,
-  Sparkles,
   ArrowRight,
   Shield,
   Info,
@@ -32,20 +30,13 @@ export function TeamInvitationsView() {
   const toast = useToast();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { user, refreshRoles, loginWithCredentials } = useAuth();
+  const { user, refreshRoles } = useAuth();
 
   const queryInvitationId = searchParams.get("invitationId") || searchParams.get("id") || "";
   const queryAction = searchParams.get("action") || "";
   const queryRole = searchParams.get("role") || "";
   const queryEventName = searchParams.get("eventName") || searchParams.get("event") || "";
   const queryEmail = searchParams.get("email") || "";
-
-  const [showQuickRegister, setShowQuickRegister] = useState(false);
-  const [inputEmail, setInputEmail] = useState(queryEmail || "");
-  const [quickFullName, setQuickFullName] = useState("");
-  const [quickPassword, setQuickPassword] = useState("Seal@2026!");
-  const [isQuickSubmitting, setIsQuickSubmitting] = useState(false);
-  const { mutateAsync: registerApi } = useRegister();
 
   const { data, isLoading, isError, refetch, isFetching } = useMyInvitations(Boolean(user));
   const { data: rawEvents = [] } = useEvents();
@@ -236,64 +227,6 @@ export function TeamInvitationsView() {
     }
   };
 
-  const handleQuickActivate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const targetEmail = (inputEmail || queryEmail || "").trim();
-    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
-      toast.error("Vui lòng nhập đúng định dạng email nhận lời mời.");
-      return;
-    }
-    if (!quickFullName.trim()) {
-      toast.error("Vui lòng nhập họ và tên của bạn.");
-      return;
-    }
-    if (!quickPassword || quickPassword.length < 8) {
-      toast.error("Mật khẩu phải có ít nhất 8 ký tự.");
-      return;
-    }
-
-    setIsQuickSubmitting(true);
-    try {
-      try {
-        await registerApi({
-          email: targetEmail,
-          password: quickPassword,
-          fullName: quickFullName.trim(),
-        });
-      } catch (regErr: any) {
-        console.warn("Register note:", regErr?.message);
-      }
-
-      await loginWithCredentials(targetEmail, quickPassword);
-      toast.success("🎉 Đã kích hoạt tài khoản tạm thành công! Đang chuyển hướng đổi mật khẩu...");
-
-      if (queryInvitationId) {
-        try {
-          await respondEventRole({ invitationId: queryInvitationId, isAccepted: true });
-        } catch {}
-      }
-
-      pushSystemNotification({
-        title: "Cấp tài khoản tạm thời thành công",
-        message: `Tài khoản ${targetEmail} đã được kích hoạt. Hãy đổi mật khẩu để bảo vệ tài khoản chính thức.`,
-        type: "success",
-      });
-
-      if (typeof window !== "undefined") {
-        try {
-          const stored = JSON.parse(localStorage.getItem("currentUser") || "{}");
-          localStorage.setItem("currentUser", JSON.stringify({ ...stored, mustChangePassword: true }));
-        } catch {}
-        window.location.href = "/change-password";
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Kích hoạt tài khoản thất bại. Vui lòng kiểm tra lại.";
-      toast.error(msg);
-    } finally {
-      setIsQuickSubmitting(false);
-    }
-  };
-
   const pending = invitations.filter((i) => i.status === "PendingAccept");
   const history = invitations.filter((i) => i.status !== "PendingAccept");
 
@@ -366,69 +299,26 @@ export function TeamInvitationsView() {
               <span>Bạn đã từ chối lời mời tham gia sự kiện thành công. Bạn có thể đóng trang này.</span>
             </div>
           ) : (
-            <form onSubmit={handleQuickActivate} className="text-left space-y-4 pt-2 border-t border-[var(--border-muted)]">
+            <div className="text-left space-y-4 pt-2 border-t border-[var(--border-muted)]">
               <div className="p-3 bg-cyan-950/30 border border-cyan-500/30 rounded text-[11px] text-cyan-300 font-sans leading-relaxed">
-                💡 <strong>Tài khoản đã được cấp sẵn:</strong> Ban tổ chức đã tạo tài khoản cho email của bạn. Nhấn nút bên dưới để đăng nhập, đổi mật khẩu chính thức và nhận vai trò trong sự kiện ngay!
-              </div>
-
-              <div>
-                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
-                  Email nhận lời mời <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="nhap.email.nhan.loi.moi@fpt.edu.vn"
-                  value={inputEmail}
-                  onChange={(e) => setInputEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
-                  Họ và tên của bạn <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nguyễn Văn A"
-                  value={quickFullName}
-                  onChange={(e) => setQuickFullName(e.target.value)}
-                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
-                  Mật khẩu khởi tạo / Mật khẩu tạm <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  minLength={6}
-                  value={quickPassword}
-                  onChange={(e) => setQuickPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
-                />
-                <span className="text-[9px] text-zinc-500 mt-1 block">Mật khẩu mặc định: Seal@2026! (Bạn sẽ được đổi mật khẩu riêng ngay sau đó)</span>
+                💡 <strong>Tài khoản cho email này đã được tạo sẵn.</strong> Nếu bạn nhận được email "Kích hoạt tài khoản", hãy bấm link kích hoạt trong email đó trước — hệ thống sẽ cấp mật khẩu tạm và gửi lại qua email. Nếu đã có mật khẩu, đăng nhập trực tiếp bên dưới.
               </div>
 
               <div className="flex flex-col gap-3 pt-2">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  accent="primary"
-                  disabled={isQuickSubmitting}
-                  className="w-full font-bold text-xs py-3 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]"
-                >
-                  <Sparkles className="size-4" />
-                  <span>{isQuickSubmitting ? "ĐANG ĐĂNG NHẬP & KÍCH HOẠT..." : "⚡ ĐĂNG NHẬP, ĐỔI MẬT KHẨU & VÀO SỰ KIỆN"}</span>
-                </Button>
+                <Link href={loginUrl} className="w-full">
+                  <Button
+                    variant="primary"
+                    accent="primary"
+                    className="w-full font-bold text-xs py-3 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]"
+                  >
+                    <LogIn className="size-4" />
+                    <span>ĐĂNG NHẬP ĐỂ PHẢN HỒI LỜI MỜI</span>
+                  </Button>
+                </Link>
 
                 <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
-                  <Link href={loginUrl} className="text-zinc-400 hover:text-cyan-300 transition-colors">
-                    🔐 Đã có mật khẩu riêng? Đăng nhập →
+                  <Link href={registerUrl} className="text-zinc-400 hover:text-cyan-300 transition-colors flex items-center gap-1">
+                    <UserPlus className="size-3" /> Chưa có tài khoản riêng? Đăng ký →
                   </Link>
 
                   {queryInvitationId && (
@@ -443,7 +333,7 @@ export function TeamInvitationsView() {
                   )}
                 </div>
               </div>
-            </form>
+            </div>
           )}
 
           <div className="pt-2 border-t border-[var(--border-muted)] text-[11px] text-zinc-300 flex items-center justify-center gap-1.5">
