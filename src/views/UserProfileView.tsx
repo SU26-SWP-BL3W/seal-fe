@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo, useEffect } from "react";
-import { Link } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
@@ -109,6 +109,7 @@ export const getRoleDetails = (
 
 export function UserProfileView() {
   const toast = useToast();
+  const router = useRouter();
   const { user, activeRole, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -382,6 +383,27 @@ export function UserProfileView() {
       isApproved: false,
     };
   }, [isBlocked, hasMSSV, hasSchool, customSchoolName, isFptStudent, hasStudentCardPhoto, user?.isApproved]);
+
+  // Hồ sơ chưa duyệt: poll định kỳ để tự phát hiện lúc BTC vừa duyệt xong,
+  // thay vì bắt người dùng tự F5 mới thấy trạng thái mới.
+  const { data: latestProfile } = useQuery({
+    queryKey: ["profile-approval-poll", currentUserId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<any>("/Users/profile");
+      return data;
+    },
+    enabled: !!user && !user?.isApproved,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: false,
+  });
+
+  useEffect(() => {
+    if (latestProfile?.isApproved && !user?.isApproved) {
+      updateUser({ isApproved: true });
+      toast.success("🎉 Hồ sơ của bạn đã được Ban Tổ Chức phê duyệt!");
+      router.push("/events");
+    }
+  }, [latestProfile?.isApproved, user?.isApproved, updateUser, toast, router]);
 
   // Xử lý xác minh sinh viên FPT qua API tra cứu FPT DB thật
   const handleVerifyFpt = async () => {
