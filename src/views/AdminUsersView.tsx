@@ -6,6 +6,7 @@ import { useGetSchools } from "@/repositories/schoolsRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { useEvents } from "@/repositories/eventsRepository";
 import { Button, Card, Badge, Table, Input, EmptyState, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import {
   Users,
   Search,
@@ -194,6 +195,15 @@ export const AdminUsersView: React.FC = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
+  // Phân trang danh sách đã lọc — hook tự clamp trang khi filter làm giảm số dòng.
+  const {
+    currentPage: safePage,
+    totalPages,
+    pageSize: PAGE_SIZE,
+    paginatedItems: pagedUsers,
+    setCurrentPage,
+  } = usePagination(filteredUsers, 10);
+
   const handleApprove = async (userId: string) => {
     try {
       await approveUser(userId);
@@ -359,7 +369,7 @@ export const AdminUsersView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((u) => {
+                  {pagedUsers.map((u) => {
                     const isLocked = (u.rejectionCount ?? 0) >= 2;
                     const userId = u.id || u.userId || "";
                     const userEmailLower = (u.email || "").toLowerCase();
