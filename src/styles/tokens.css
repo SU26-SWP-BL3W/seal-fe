@@ -50,8 +50,9 @@
   --space-lg: 24px;
   --space-xl: 36px;  /* FE cu: 36px, FE moi: 48px -> fix ve 36px */
 
-  /* ---------- Shape ---------- */
-  --clip-size: 12px;  /* FE cu: 12px, FE moi: 8px -> fix ve 12px */
+  /* ---------- Shape — Geometric Discipline (proposal Command Deck) ---------- */
+  --clip-size: 12px;  /* góc vát chuẩn — panel/CTA dùng .hud-clipped */
+  --radius-none: 0;   /* input/table: vuông; cấm thay clip bằng rounded-lg */
 
   /* ---------- Layout ---------- */
   --container-max: 1280px;
@@ -91,5 +92,53 @@
 @media (prefers-reduced-motion: reduce) {
   .scanline-overlay {
     display: none !important;
+  }
+}
+
+/* Landing redesign — arena stage (distinct from old centered HUD) */
+.landing-arena-slash {
+  background:
+    linear-gradient(
+      118deg,
+      var(--bg-base) 0%,
+      var(--bg-base) 46%,
+      color-mix(in srgb, var(--accent-primary) 10%, var(--bg-panel)) 72%,
+      var(--bg-base) 100%
+    );
+}
+
+.landing-arena-mark {
+  animation: landing-mark-drift 18s ease-in-out infinite;
+}
+
+.landing-command-console {
+  animation: landing-panel-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+@keyframes landing-mark-drift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-18px) rotate(2deg);
+  }
+}
+
+@keyframes landing-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-arena-mark,
+  .landing-command-console {
+    animation: none;
   }
 }

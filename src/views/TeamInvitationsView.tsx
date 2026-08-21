@@ -1,30 +1,83 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
+import { useSearchParams } from "next/navigation";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
-import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
-import { Badge, Button, Card, SkeletonRows } from "@/components/ui";
+import { useRespondEventRoleInvitation, useDeclineEventRoleInvitationPublic } from "@/repositories/eventRolesRepository";
+import { useRegister } from "@/repositories/authRepository";
+import { useEvents } from "@/repositories/eventsRepository";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
+import { Badge, Button, Card, SkeletonRows, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  RefreshCw,
+  XCircle,
+  Lock,
+  LogIn,
+  UserPlus,
+  Sparkles,
+  ArrowRight,
+  Shield,
+  Info,
+} from "lucide-react";
 
 export function TeamInvitationsView() {
   const toast = useToast();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const { data, isLoading, isError, refetch, isFetching } = useMyInvitations();
+  const { user, refreshRoles, loginWithCredentials } = useAuth();
+
+  const queryInvitationId = searchParams.get("invitationId") || searchParams.get("id") || "";
+  const queryAction = searchParams.get("action") || "";
+  const queryRole = searchParams.get("role") || "";
+  const queryEventName = searchParams.get("eventName") || searchParams.get("event") || "";
+  const queryEmail = searchParams.get("email") || "";
+
+  const [showQuickRegister, setShowQuickRegister] = useState(false);
+  const [inputEmail, setInputEmail] = useState(queryEmail || "");
+  const [quickFullName, setQuickFullName] = useState("");
+  const [quickPassword, setQuickPassword] = useState("Seal@2026!");
+  const [isQuickSubmitting, setIsQuickSubmitting] = useState(false);
+  const { mutateAsync: registerApi } = useRegister();
+
+  const { data, isLoading, isError, refetch, isFetching } = useMyInvitations(Boolean(user));
+  const { data: rawEvents = [] } = useEvents();
   const invitations = data?.invitations ?? [];
 
   const { mutateAsync: respondTeam, isPending: isRespondingTeam } = useAcceptOrDeclineInvitation();
   const { mutateAsync: respondEventRole, isPending: isRespondingEventRole } = useRespondEventRoleInvitation();
-  const isResponding = isRespondingTeam || isRespondingEventRole;
+  const { mutateAsync: declinePublic, isPending: isDecliningPublic } = useDeclineEventRoleInvitationPublic();
+  const isResponding = isRespondingTeam || isRespondingEventRole || isDecliningPublic;
 
   const [error, setError] = useState("");
+  const [publicDeclineSuccess, setPublicDeclineSuccess] = useState(false);
 
   const isProfileIncomplete = user?.isStudent && (!user?.schoolId || (!user?.isFpt && !user?.studentCode));
+
+  const formatRoleLabel = (role?: string) => {
+    switch (role) {
+      case "Coordinator":
+      case "EventCoordinator":
+        return "Cán Bộ Điều Phối (Event Coordinator)";
+      case "Judge":
+        return "Ban Giám Khảo (Judge)";
+      case "Mentor":
+        return "Cố Vấn Chuyên Môn (Mentor)";
+      case "TeamLeader":
+        return "Trưởng Nhóm (Team Leader)";
+      case "TeamMember":
+        return "Thành Viên Đội Thi";
+      default:
+        return role || "Cán Bộ Sự Kiện";
+    }
+  };
 
   const handleRespond = async (inv: MyInvitationItem | any, isAccepted: boolean) => {
     setError("");
@@ -47,21 +100,91 @@ export function TeamInvitationsView() {
       if (isAccepted) {
         if (invType === "TEAM" || invType === "TEAM_MEMBER") {
           toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+          pushSystemNotification({
+            title: "Gia nhập đội thi thành công",
+            message: `Bạn đã chính thức gia nhập đội "${targetName}". Chúc bạn và đồng đội đạt thành tích xuất sắc!`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Thành viên mới gia nhập đội",
+            message: `Một thành viên đã đồng ý lời mời và chính thức gia nhập đội "${targetName}".`,
+            type: "success",
+          });
         } else if (inv.role === "Judge") {
           toast.success(`🎉 Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
+          pushSystemNotification({
+            title: "Đã nhận vai trò Giám khảo",
+            message: `Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Nhân sự đã nhận vai trò",
+            message: `Nhân sự đã đồng ý nhận vai trò Giám khảo sự kiện "${targetName}".`,
+            type: "success",
+          });
         } else if (inv.role === "Mentor") {
           toast.success(`🎉 Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
+          pushSystemNotification({
+            title: "Đã nhận vai trò Cố vấn",
+            message: `Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Nhân sự đã nhận vai trò",
+            message: `Nhân sự đã đồng ý nhận vai trò Cố vấn sự kiện "${targetName}".`,
+            type: "success",
+          });
         } else {
           toast.success(`🎉 Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
+          pushSystemNotification({
+            title: "Đã nhận vai trò Điều Phối Viên",
+            message: `Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Nhân sự đã nhận vai trò",
+            message: `Nhân sự đã đồng ý nhận vai trò Điều Phối Viên sự kiện "${targetName}".`,
+            type: "success",
+          });
         }
+        await refreshRoles();
         queryClient.invalidateQueries({ queryKey: ["my-team"] });
         queryClient.invalidateQueries({ queryKey: ["myTeam"] });
         queryClient.invalidateQueries({ queryKey: ["eventRoles"] });
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
         queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+
+        let targetRedirectUrl = "/events";
+        if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+          targetRedirectUrl = "/my-team";
+        } else if (inv.role === "Judge") {
+          targetRedirectUrl = "/judge/events";
+        } else if (inv.role === "Mentor") {
+          targetRedirectUrl = "/mentor";
+        } else if (inv.role === "Coordinator" || inv.role === "EventCoordinator") {
+          targetRedirectUrl = inv.eventId || inv.targetId
+            ? `/coordinator/dashboard?eventId=${inv.eventId || inv.targetId}`
+            : "/coordinator/dashboard";
+        } else if (inv.eventId || inv.targetId) {
+          targetRedirectUrl = `/events/${inv.eventId || inv.targetId}`;
+        }
+
+        setTimeout(() => {
+          window.location.href = targetRedirectUrl;
+        }, 1200);
       } else {
         toast.info(`Bạn đã từ chối lời mời tham gia "${targetName}".`);
+        pushSystemNotification({
+          title: "Đã từ chối lời mời",
+          message: `Bạn đã từ chối lời mời tham gia "${targetName}".`,
+          type: "warning",
+        });
+        pushSystemNotification({
+          title: "Lời mời tham gia bị từ chối",
+          message: `Ứng viên đã từ chối lời mời tham gia "${targetName}".`,
+          type: "danger",
+        });
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
         queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
       }
@@ -90,22 +213,247 @@ export function TeamInvitationsView() {
     }
   };
 
+  const handlePublicDecline = async () => {
+    if (!queryInvitationId) return;
+    if (!confirm("Bạn có chắc chắn muốn từ chối lời mời tham gia sự kiện này?")) return;
+    try {
+      await declinePublic(queryInvitationId);
+      setPublicDeclineSuccess(true);
+      toast.success("Bạn đã từ chối lời mời tham gia sự kiện.");
+      pushSystemNotification({
+        title: "Đã từ chối lời mời sự kiện",
+        message: `Bạn đã từ chối lời mời tham gia sự kiện "${queryEventName || 'Sự kiện'}".`,
+        type: "warning",
+      });
+      pushSystemNotification({
+        title: "Lời mời tham gia bị từ chối",
+        message: `Ứng viên đã từ chối lời mời tham gia sự kiện "${queryEventName || 'Sự kiện'}" qua liên kết công khai.`,
+        type: "danger",
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Từ chối lời mời thất bại hoặc lời mời đã hết hạn.";
+      toast.error(msg);
+    }
+  };
+
+  const handleQuickActivate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetEmail = (inputEmail || queryEmail || "").trim();
+    if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
+      toast.error("Vui lòng nhập đúng định dạng email nhận lời mời.");
+      return;
+    }
+    if (!quickFullName.trim()) {
+      toast.error("Vui lòng nhập họ và tên của bạn.");
+      return;
+    }
+    if (!quickPassword || quickPassword.length < 8) {
+      toast.error("Mật khẩu phải có ít nhất 8 ký tự.");
+      return;
+    }
+
+    setIsQuickSubmitting(true);
+    try {
+      try {
+        await registerApi({
+          email: targetEmail,
+          password: quickPassword,
+          fullName: quickFullName.trim(),
+        });
+      } catch (regErr: any) {
+        console.warn("Register note:", regErr?.message);
+      }
+
+      await loginWithCredentials(targetEmail, quickPassword);
+      toast.success("🎉 Đã kích hoạt tài khoản tạm thành công! Đang chuyển hướng đổi mật khẩu...");
+
+      if (queryInvitationId) {
+        try {
+          await respondEventRole({ invitationId: queryInvitationId, isAccepted: true });
+        } catch {}
+      }
+
+      pushSystemNotification({
+        title: "Cấp tài khoản tạm thời thành công",
+        message: `Tài khoản ${targetEmail} đã được kích hoạt. Hãy đổi mật khẩu để bảo vệ tài khoản chính thức.`,
+        type: "success",
+      });
+
+      if (typeof window !== "undefined") {
+        try {
+          const stored = JSON.parse(localStorage.getItem("currentUser") || "{}");
+          localStorage.setItem("currentUser", JSON.stringify({ ...stored, mustChangePassword: true }));
+        } catch {}
+        window.location.href = "/change-password";
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "Kích hoạt tài khoản thất bại. Vui lòng kiểm tra lại.";
+      toast.error(msg);
+    } finally {
+      setIsQuickSubmitting(false);
+    }
+  };
+
   const pending = invitations.filter((i) => i.status === "PendingAccept");
   const history = invitations.filter((i) => i.status !== "PendingAccept");
 
-  const formatRoleLabel = (role?: string) => {
-    switch (role) {
-      case "Coordinator":
-      case "EventCoordinator":
-        return "Cán Bộ Điều Phối (Coordinator)";
-      case "Judge":
-        return "Ban Giám Khảo (Judge)";
-      case "Mentor":
-        return "Cố Vấn Chuyên Môn (Mentor)";
-      default:
-        return role || "Cán Bộ Sự Kiện";
-    }
-  };
+  const {
+    paginatedItems: paginatedPending,
+    currentPage: pendingPage,
+    totalPages: totalPendingPages,
+    totalItems: totalPendingItems,
+    pageSize: pendingPageSize,
+    setCurrentPage: setPendingPage,
+    setPageSize: setPendingPageSize,
+  } = usePagination(pending, 5);
+
+  const {
+    paginatedItems: paginatedHistory,
+    currentPage: historyPage,
+    totalPages: totalHistoryPages,
+    totalItems: totalHistoryItems,
+    pageSize: historyPageSize,
+    setCurrentPage: setHistoryPage,
+    setPageSize: setHistoryPageSize,
+  } = usePagination(history, 5);
+
+  // Guard: Not Logged In Notice
+  if (!user) {
+    const currentParams = searchParams.toString();
+    const returnUrl = `/my-invitations${currentParams ? `?${currentParams}` : ""}`;
+    const loginUrl = `/login?returnUrl=${encodeURIComponent(returnUrl)}${queryEmail ? `&email=${encodeURIComponent(queryEmail)}` : ""}`;
+    const registerUrl = `/register?returnUrl=${encodeURIComponent(returnUrl)}${queryEmail ? `&email=${encodeURIComponent(queryEmail)}` : ""}`;
+
+    return (
+      <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)] flex items-center justify-center">
+        <Card className="max-w-lg w-full p-8 text-center border border-cyan-500/40 bg-[#0c1417] hud-clipped shadow-2xl space-y-6 font-mono">
+          <div className="size-16 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+            <Lock className="size-8" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">
+              [ XÁC THỰC TÀI KHOẢN & PHẢN HỒI LỜI MỜI ]
+            </span>
+            <h2 className="font-display text-2xl font-bold uppercase text-white">
+              Xác Nhận Nhận Vai Trò Sự Kiện
+            </h2>
+
+            {queryRole || queryEventName ? (
+              <div className="p-3 bg-cyan-950/40 border border-cyan-500/30 rounded text-left space-y-1 text-xs">
+                <div className="text-zinc-300">
+                  Sự kiện: <strong className="text-white">{queryEventName || "SEAL Hackathon"}</strong>
+                </div>
+                <div className="text-zinc-300">
+                  Vai trò: <strong className="text-cyan-300">{formatRoleLabel(queryRole)}</strong>
+                </div>
+                {queryEmail && (
+                  <div className="text-zinc-300">
+                    Email mời: <strong className="text-amber-300">{queryEmail}</strong>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                Bạn nhận được thư mời tham gia sự kiện / đội thi trên hệ thống SEAL. Vui lòng đăng nhập hoặc kích hoạt tài khoản để hệ thống tự động gán quyền.
+              </p>
+            )}
+          </div>
+
+          {publicDeclineSuccess ? (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded text-xs text-emerald-300 font-sans flex items-center gap-2">
+              <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+              <span>Bạn đã từ chối lời mời tham gia sự kiện thành công. Bạn có thể đóng trang này.</span>
+            </div>
+          ) : (
+            <form onSubmit={handleQuickActivate} className="text-left space-y-4 pt-2 border-t border-[var(--border-muted)]">
+              <div className="p-3 bg-cyan-950/30 border border-cyan-500/30 rounded text-[11px] text-cyan-300 font-sans leading-relaxed">
+                💡 <strong>Tài khoản đã được cấp sẵn:</strong> Ban tổ chức đã tạo tài khoản cho email của bạn. Nhấn nút bên dưới để đăng nhập, đổi mật khẩu chính thức và nhận vai trò trong sự kiện ngay!
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
+                  Email nhận lời mời <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="nhap.email.nhan.loi.moi@fpt.edu.vn"
+                  value={inputEmail}
+                  onChange={(e) => setInputEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
+                  Họ và tên của bạn <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Nguyễn Văn A"
+                  value={quickFullName}
+                  onChange={(e) => setQuickFullName(e.target.value)}
+                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase block mb-1">
+                  Mật khẩu khởi tạo / Mật khẩu tạm <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={6}
+                  value={quickPassword}
+                  onChange={(e) => setQuickPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-black border border-cyan-500/40 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+                />
+                <span className="text-[9px] text-zinc-500 mt-1 block">Mật khẩu mặc định: Seal@2026! (Bạn sẽ được đổi mật khẩu riêng ngay sau đó)</span>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  accent="primary"
+                  disabled={isQuickSubmitting}
+                  className="w-full font-bold text-xs py-3 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]"
+                >
+                  <Sparkles className="size-4" />
+                  <span>{isQuickSubmitting ? "ĐANG ĐĂNG NHẬP & KÍCH HOẠT..." : "⚡ ĐĂNG NHẬP, ĐỔI MẬT KHẨU & VÀO SỰ KIỆN"}</span>
+                </Button>
+
+                <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
+                  <Link href={loginUrl} className="text-zinc-400 hover:text-cyan-300 transition-colors">
+                    🔐 Đã có mật khẩu riêng? Đăng nhập →
+                  </Link>
+
+                  {queryInvitationId && (
+                    <button
+                      type="button"
+                      onClick={handlePublicDecline}
+                      disabled={isDecliningPublic}
+                      className="text-red-400 hover:text-red-300 hover:underline transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Từ chối lời mời
+                    </button>
+                  )}
+                </div>
+              </div>
+            </form>
+          )}
+
+          <div className="pt-2 border-t border-[var(--border-muted)] text-[11px] text-zinc-300 flex items-center justify-center gap-1.5">
+            <Info className="size-3.5 text-cyan-400 shrink-0" />
+            <span>Nếu bạn được cấp mật khẩu tạm thời trong email, hãy dùng để Đăng nhập.</span>
+          </div>
+        </Card>
+      </main>
+    );
+  }
 
   const titleOf = (inv: MyInvitationItem) =>
     inv.type === "TEAM"
@@ -186,7 +534,7 @@ export function TeamInvitationsView() {
                 </Card>
               ) : (
                 <ul className="flex flex-col gap-[var(--space-sm)]">
-                  {pending.map((inv) => (
+                  {paginatedPending.map((inv) => (
                     <li key={inv.invitationId}>
                       <Card className="flex flex-col gap-[var(--space-md)] sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
@@ -228,6 +576,19 @@ export function TeamInvitationsView() {
                       </Card>
                     </li>
                   ))}
+
+                  {pending.length > 0 && (
+                    <Pagination
+                      currentPage={pendingPage}
+                      totalPages={totalPendingPages}
+                      totalItems={totalPendingItems}
+                      pageSize={pendingPageSize}
+                      onPageChange={setPendingPage}
+                      onPageSizeChange={setPendingPageSize}
+                      itemLabel="lời mời đang chờ"
+                      compact={true}
+                    />
+                  )}
                 </ul>
               )}
             </section>
@@ -238,18 +599,70 @@ export function TeamInvitationsView() {
                   Đã phản hồi gần đây
                 </h2>
                 <ul className="flex flex-col gap-[var(--space-xs)]">
-                  {history.map((inv) => (
-                    <li key={inv.invitationId}>
-                      <Card className="flex items-center justify-between gap-[var(--space-md)] bg-[var(--bg-panel)]/60 py-[var(--space-sm)]">
-                        <span className="truncate font-mono text-xs text-[color:var(--text-muted)]">
-                          {titleOf(inv)}
-                        </span>
-                        <Badge tone={inv.status === "Accepted" ? "success" : "neutral"}>
-                          {inv.status === "Accepted" ? "Đã chấp nhận" : "Đã từ chối"}
-                        </Badge>
-                      </Card>
-                    </li>
-                  ))}
+                  {paginatedHistory.map((inv) => {
+                    const isAccepted = inv.status === "Accepted";
+                    const role = inv.role || "";
+                    const isTeam = inv.type === "TEAM";
+
+                    // Find matching event
+                    const matchedEvent = (rawEvents || []).find((ev: any) => {
+                      const evId = ev.id || ev.Id || ev.eventId || ev.EventId;
+                      const evName = ev.name || ev.eventName || ev.EventName || "";
+                      if ((inv as any).eventId && ((inv as any).eventId === evId || (inv as any).EventId === evId)) return true;
+                      if (inv.targetName && evName.trim().toLowerCase() === inv.targetName.trim().toLowerCase()) return true;
+                      return false;
+                    });
+                    const eventId = (inv as any).eventId || (inv as any).EventId || (inv as any).targetId || (inv as any).TargetId || matchedEvent?.id || (matchedEvent as any)?.Id;
+
+                    let destinationUrl = "/events";
+                    if (role === "Coordinator" || role === "EventCoordinator") {
+                      destinationUrl = eventId ? `/coordinator/events/${eventId}` : "/coordinator/dashboard";
+                    } else if (role === "Judge") {
+                      destinationUrl = eventId ? `/judge/scoring?eventId=${eventId}` : "/judge/events";
+                    } else if (role === "Mentor") {
+                      destinationUrl = eventId ? `/mentor/teams?eventId=${eventId}` : "/mentor/teams";
+                    } else if (isTeam) {
+                      destinationUrl = eventId ? `/events/${eventId}` : "/my-team";
+                    } else if (eventId) {
+                      destinationUrl = `/events/${eventId}`;
+                    }
+
+                    return (
+                      <li key={inv.invitationId}>
+                        <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--bg-panel)]/60 py-3">
+                          <div className="min-w-0">
+                            <span className="truncate font-mono text-xs text-[color:var(--text-muted)] block">
+                              {titleOf(inv)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge tone={isAccepted ? "success" : "neutral"}>
+                              {isAccepted ? "Đã chấp nhận" : "Đã từ chối"}
+                            </Badge>
+                            {isAccepted && (
+                              <Link href={destinationUrl}>
+                                <Button variant="secondary" className="text-[11px] py-1 px-2.5 h-7">
+                                  <span>Truy cập sự kiện</span>
+                                  <ArrowRight className="size-3" />
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
+                        </Card>
+                      </li>
+                    );
+                  })}
+
+                  <Pagination
+                    currentPage={historyPage}
+                    totalPages={totalHistoryPages}
+                    totalItems={totalHistoryItems}
+                    pageSize={historyPageSize}
+                    onPageChange={setHistoryPage}
+                    onPageSizeChange={setHistoryPageSize}
+                    itemLabel="lời mời lịch sử"
+                    compact={true}
+                  />
                 </ul>
               </section>
             )}

@@ -13,6 +13,8 @@ import apiClient from "@/models/apiClient";
 import { PagedResult } from "@/models/types";
 import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
 import { Link } from "@/i18n/routing";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import {
   FileCode,
   Globe,
@@ -203,6 +205,16 @@ export const CoordinatorSubmissionsView: React.FC = () => {
     const start = (currentPage - 1) * pageSize;
     return displaySubmissions.slice(start, start + pageSize);
   }, [displaySubmissions, currentPage, pageSize]);
+
+  const {
+    paginatedItems: paginatedSubmissions,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(displaySubmissions, 8);
 
   const uniqueTeamsCount = new Set(submissions.map((s: any) => s.teamId || s.TeamId)).size;
   const reposCount = submissions.filter((s: any) => s.repoUrl || s.RepoUrl || s.submissionUrl || s.SubmissionUrl).length;
@@ -437,132 +449,112 @@ export const CoordinatorSubmissionsView: React.FC = () => {
               message="Chưa có đội thi nào nộp bài làm trong phạm vi sự kiện đã chọn. Khi các thí sinh nộp liên kết GitHub/Demo/Slides, dữ liệu sẽ hiển thị ngay tại đây."
             />
           ) : (
-            <div className="space-y-4">
-              <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-input)] hud-clipped">
-                <table className="w-full table-fixed min-w-[850px] text-left border-collapse font-mono text-xs">
-                  <thead className="bg-[var(--bg-panel)] border-b border-[var(--border-muted)]">
-                    <tr>
-                      <th className="w-[24%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
-                        ĐỘI THI
-                      </th>
-                      <th className="w-[18%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
-                        HẠNG MỤC (TRACK)
-                      </th>
-                      <th className="w-[38%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
-                        LIÊN KẾT BÀI LÀM (DELIVERABLES)
-                      </th>
-                      <th className="w-[20%] px-4 py-3.5 text-right text-[var(--text-muted)] uppercase tracking-wider">
-                        THỜI GIAN NỘP
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedSubmissions.map((sub: any, idx: number) => {
-                      const subId = sub.id || sub.Id || `sub-${idx}`;
-                      const teamName = sub.teamName || sub.TeamName || `Đội #${(sub.teamId || sub.TeamId)?.slice(-4) || idx + 1}`;
-                      const trackName = sub.trackName || sub.TrackName || "Chung";
-                      const repoUrl = sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl;
-                      const demoUrl = sub.demoUrl || sub.DemoUrl;
-                      const slideUrl = sub.slideUrl || sub.SlideUrl;
-                      const createdTime = sub.createdTime || sub.CreatedTime;
+            <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-input)] hud-clipped">
+              <table className="w-full table-fixed min-w-[850px] text-left border-collapse font-mono text-xs">
+                <thead className="bg-[var(--bg-panel)] border-b border-[var(--border-muted)]">
+                  <tr>
+                    <th className="w-[24%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                      ĐỘI THI
+                    </th>
+                    <th className="w-[18%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                      HẠNG MỤC (TRACK)
+                    </th>
+                    <th className="w-[38%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                      LIÊN KẾT BÀI LÀM (DELIVERABLES)
+                    </th>
+                    <th className="w-[20%] px-4 py-3.5 text-right text-[var(--text-muted)] uppercase tracking-wider">
+                      THỜI GIAN NỘP
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedSubmissions.map((sub: any, idx: number) => {
+                    const subId = sub.id || sub.Id || `sub-${idx}`;
+                    const teamName = sub.teamName || sub.TeamName || `Đội #${(sub.teamId || sub.TeamId)?.slice(-4) || idx + 1}`;
+                    const trackName = sub.trackName || sub.TrackName || "Chung";
+                    const repoUrl = sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl;
+                    const demoUrl = sub.demoUrl || sub.DemoUrl;
+                    const slideUrl = sub.slideUrl || sub.SlideUrl;
+                    const createdTime = sub.createdTime || sub.CreatedTime;
 
-                      return (
-                        <tr key={subId} className="hover:bg-[#a855f7]/5 transition-colors border-t border-[var(--border-muted)]/50">
-                          <td className="px-4 py-3.5 align-middle font-bold text-[var(--text-primary)] truncate" title={teamName}>
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-[var(--accent-team)] shrink-0" />
-                              <span className="truncate">{teamName}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3.5 align-middle text-[var(--accent-team)] truncate font-semibold" title={trackName}>
-                            {trackName}
-                          </td>
-                          <td className="px-4 py-3.5 align-middle">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {repoUrl ? (
-                                <a
-                                  href={repoUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-2.5 py-1 bg-[var(--bg-base)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:border-white hover:text-white rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
-                                  title={repoUrl}
-                                >
-                                  <Code2 className="w-3.5 h-3.5 text-blue-400" />
-                                  <span>GitHub Repo</span>
-                                </a>
-                              ) : null}
+                    return (
+                      <tr key={subId} className="hover:bg-[#a855f7]/5 transition-colors border-t border-[var(--border-muted)]/50">
+                        <td className="px-4 py-3.5 align-middle font-bold text-[var(--text-primary)] truncate" title={teamName}>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[var(--accent-team)] shrink-0" />
+                            <span className="truncate">{teamName}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 align-middle text-[var(--accent-team)] truncate font-semibold" title={trackName}>
+                          {trackName}
+                        </td>
+                        <td className="px-4 py-3.5 align-middle">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {repoUrl ? (
+                              <a
+                                href={repoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 bg-[var(--bg-base)] border border-[var(--border-muted)] text-[var(--text-primary)] hover:border-white hover:text-white rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
+                                title={repoUrl}
+                              >
+                                <Code2 className="w-3.5 h-3.5 text-blue-400" />
+                                <span>GitHub Repo</span>
+                              </a>
+                            ) : null}
 
-                              {demoUrl ? (
-                                <a
-                                  href={demoUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-2.5 py-1 bg-[rgba(16,185,129,0.1)] border border-[var(--color-success)]/40 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
-                                  title={demoUrl}
-                                >
-                                  <Globe className="w-3.5 h-3.5" />
-                                  <span>Live Demo</span>
-                                </a>
-                              ) : null}
+                            {demoUrl ? (
+                              <a
+                                href={demoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 bg-[rgba(16,185,129,0.1)] border border-[var(--color-success)]/40 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
+                                title={demoUrl}
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                <span>Live Demo</span>
+                              </a>
+                            ) : null}
 
-                              {slideUrl ? (
-                                <a
-                                  href={slideUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/40 text-purple-300 hover:bg-purple-500/20 rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
-                                  title={slideUrl}
-                                >
-                                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                                  <span>Slides Pitch</span>
-                                </a>
-                              ) : null}
+                            {slideUrl ? (
+                              <a
+                                href={slideUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/40 text-purple-300 hover:bg-purple-500/20 rounded flex items-center gap-1 text-[11px] font-bold transition-colors"
+                                title={slideUrl}
+                              >
+                                <FileSpreadsheet className="w-3.5 h-3.5" />
+                                <span>Slides Pitch</span>
+                              </a>
+                            ) : null}
 
-                              {!repoUrl && !demoUrl && !slideUrl && (
-                                <span className="text-[11px] text-[var(--text-muted)] italic">Đang cập nhật link</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3.5 align-middle text-right text-[11px] text-[var(--text-muted)] whitespace-nowrap">
-                            {createdTime ? new Date(createdTime).toLocaleString("vi-VN") : "Vừa xong"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Inline Pagination */}
-              {totalItems > pageSize && (
-                <div className="flex items-center justify-between pt-3 border-t border-[var(--border-muted)] font-mono text-xs text-[var(--text-muted)]">
-                  <div>
-                    Hiển thị <strong>{(currentPage - 1) * pageSize + 1}</strong> – <strong>{Math.min(currentPage * pageSize, totalItems)}</strong> trong tổng số <strong>{totalItems}</strong> bài nộp
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      disabled={currentPage <= 1}
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      className="px-2.5 py-1 text-xs border border-[var(--border-muted)] flex items-center gap-1 cursor-pointer disabled:opacity-40"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" /> Trước
-                    </Button>
-                    <span className="px-2 font-bold text-[var(--text-primary)]">
-                      {currentPage} / {totalPages}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      disabled={currentPage >= totalPages}
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      className="px-2.5 py-1 text-xs border border-[var(--border-muted)] flex items-center gap-1 cursor-pointer disabled:opacity-40"
-                    >
-                      Sau <ChevronRight className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+                            {!repoUrl && !demoUrl && !slideUrl && (
+                              <span className="text-[11px] text-[var(--text-muted)] italic">Đang cập nhật link</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 align-middle text-right text-[11px] text-[var(--text-muted)] whitespace-nowrap">
+                          {createdTime ? new Date(createdTime).toLocaleString("vi-VN") : "Vừa xong"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
+          )}
+
+          {displaySubmissions.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="bài nộp"
+            />
           )}
         </Card>
 

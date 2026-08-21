@@ -12,7 +12,6 @@ import { useGetUserRejections } from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
 import { uploadRepository } from "@/repositories/uploadRepository";
 import { Button, Input, Card, Badge } from "@/components/ui";
-import { useToast } from "@/providers/ToastProvider";
 import {
   Shield,
   GraduationCap,
@@ -31,7 +30,6 @@ import type { FptStudentResponse } from "@/models/entities";
 type Step = "choose" | "fpt" | "nonFpt" | "pending";
 
 export function OnboardingProfileView() {
-  const toast = useToast();
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -40,7 +38,6 @@ export function OnboardingProfileView() {
   const [fptResult, setFptResult] = useState<FptStudentResponse | null>(null);
   const [fptError, setFptError] = useState("");
   const [schoolId, setSchoolId] = useState("");
-  const [customSchoolName, setCustomSchoolName] = useState("");
   const [studentCode, setStudentCode] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -67,16 +64,11 @@ export function OnboardingProfileView() {
       const result = await verifyFpt(fptCode);
       if (result?.isValid) {
         setFptResult(result);
-        toast.success("Xác thực thông tin sinh viên FPT thành công!");
       } else {
-        const msg = "Mã sinh viên không tồn tại trong hệ thống FPT.";
-        setFptError(msg);
-        toast.error(msg);
+        setFptError("Mã sinh viên không tồn tại trong hệ thống FPT.");
       }
     } catch {
-      const msg = "Không thể kết nối hệ thống FPT. Vui lòng thử lại sau.";
-      setFptError(msg);
-      toast.error(msg);
+      setFptError("Không thể kết nối hệ thống. Vui lòng thử lại sau.");
     }
   };
 
@@ -108,7 +100,7 @@ export function OnboardingProfileView() {
             <AlertTriangle className="w-6 h-6 text-[var(--color-danger)] flex-shrink-0" />
             <div>
               <p className="font-mono text-sm font-bold text-[var(--color-danger)] tracking-wider uppercase">
-                TÀI KHOẢN TẠM KHÓA
+                ⚠ TÀI KHOẢN TẠM KHÓA
               </p>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 Hồ sơ đã bị từ chối {rejectionCount} lần — tài khoản cần yêu cầu mở khóa
@@ -147,22 +139,28 @@ export function OnboardingProfileView() {
           </div>
 
           <div className="space-y-3">
+            {submitError && (
+              <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
+                ⚠ {submitError}
+              </div>
+            )}
             <Button
               variant="secondary"
               disabled={isUnblocking || requestUnblockSuccess}
               onClick={async () => {
                 if (!user?.email) return;
+                setSubmitError("");
                 try {
-                  await requestUnblock(user.email).catch(console.warn);
+                  await requestUnblock(user.email);
                   setRequestUnblockSuccess(true);
-                } catch {
-                  // ignored
+                } catch (err: any) {
+                  setSubmitError(err?.response?.data?.message || "Không thể gửi yêu cầu mở khóa. Vui lòng thử lại.");
                 }
               }}
               className="w-full justify-center flex items-center gap-2 border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[rgba(239,68,68,0.1)]"
             >
               {requestUnblockSuccess ? (
-                <>ĐÃ GỬI YÊU CẦU MỞ KHÓA</>
+                <>✓ ĐÃ GỬI YÊU CẦU MỞ KHÓA</>
               ) : isUnblocking ? (
                 <><RefreshCw className="w-4 h-4 animate-spin" /> Đang gửi yêu cầu...</>
               ) : (
@@ -216,7 +214,7 @@ export function OnboardingProfileView() {
             Bước bắt buộc trước khi tham gia SEAL Hackathon
           </p>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setStep("fpt")}
               className="group p-5 bg-[var(--bg-base)] border border-[var(--border-muted)] hover:border-[var(--accent-primary)]/50 transition-all duration-200 text-left hud-clipped cursor-pointer"
@@ -243,17 +241,6 @@ export function OnboardingProfileView() {
               </p>
               <p className="text-xs text-[var(--text-muted)] mb-3">Upload ảnh thẻ SV để BTC duyệt.</p>
               <Badge tone="warning" className="text-[10px]">MANUAL REVIEW</Badge>
-            </button>
-          </div>
-
-          <div className="pt-4 border-t border-[var(--border-muted)] flex items-center justify-between font-mono text-xs text-[var(--text-muted)]">
-            <span>Muốn tìm hiểu các cuộc thi trước?</span>
-            <button
-              type="button"
-              onClick={() => router.push("/events")}
-              className="text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-bold cursor-pointer"
-            >
-              Xem danh sách sự kiện →
             </button>
           </div>
         </Card>
@@ -310,7 +297,7 @@ export function OnboardingProfileView() {
 
             {fptError && (
               <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
-                {fptError}
+                ⚠ {fptError}
               </div>
             )}
 
@@ -336,23 +323,14 @@ export function OnboardingProfileView() {
                 onClick={async () => {
                   setSubmitError("");
                   try {
-                    const fptSchool = schools.find(
-                      (s) =>
-                        s.schoolName?.toLowerCase().includes("fpt") ||
-                        s.schoolName?.toLowerCase().includes("đại học fpt")
-                    );
                     await submitProfile({
                       isFpt: true,
-                      schoolId: fptSchool?.id || "",
                       studentCode: fptResult.studentCode ?? fptCode,
                       fullName: fptResult.fullName ?? undefined,
                     } as any);
-                    toast.success("Đã gửi hồ sơ sinh viên FPT thành công!");
                     setStep("pending");
                   } catch (err: any) {
-                    const msg = err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.";
-                    setSubmitError(msg);
-                    toast.error(msg);
+                    setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
                   }
                 }}
                 className="w-full justify-center flex items-center gap-2"
@@ -413,25 +391,10 @@ export function OnboardingProfileView() {
                   {schools.map((s) => (
                     <option key={s.id} value={s.id}>{s.schoolName}</option>
                   ))}
-                  <option value="OTHER_CUSTOM">-- Trường khác (Nhập tên trường bên dưới) --</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
               </div>
             </div>
-
-            {schoolId === "OTHER_CUSTOM" && (
-              <div className="flex flex-col gap-1.5 p-3 bg-[rgba(167,139,250,0.05)] border border-[var(--accent-coordinator)]/30">
-                <label className="text-xs font-mono tracking-widest text-[var(--accent-coordinator)] uppercase">
-                  Nhập tên trường đại học của bạn <span className="text-[var(--color-danger)]">*</span>
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Ví dụ: Trường Đại học Giao Thông Vận Tải, ĐH Y Dược..."
-                  value={customSchoolName}
-                  onChange={(e) => setCustomSchoolName(e.target.value)}
-                />
-              </div>
-            )}
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
@@ -483,46 +446,26 @@ export function OnboardingProfileView() {
 
             {submitError && (
               <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
-                {submitError}
+                ⚠ {submitError}
               </div>
             )}
 
             <Button
               variant="primary"
-              disabled={isSubmitting || !schoolId || (schoolId === "OTHER_CUSTOM" && !customSchoolName.trim()) || !studentCode || !photoFile}
+              disabled={isSubmitting || !schoolId || !studentCode || !photoFile}
               onClick={async () => {
                 setSubmitError("");
                 try {
-                  let selectedSchoolId = schoolId;
-                  if (schoolId === "OTHER_CUSTOM") {
-                    const matched = schools.find((s) =>
-                      s.schoolName?.toLowerCase().includes(customSchoolName.trim().toLowerCase())
-                    );
-                    if (matched?.id) {
-                      selectedSchoolId = matched.id;
-                    } else {
-                      const fallback = schools.find(
-                        (s) =>
-                          s.schoolName?.toLowerCase().includes("khác") ||
-                          s.schoolName?.toLowerCase().includes("other")
-                      ) || schools[0];
-                      selectedSchoolId = fallback?.id || "";
-                    }
-                  }
-
                   let photoCardUrl: string | undefined;
                   if (photoFile) {
                     setIsUploadingPhoto(true);
                     const uploaded = await uploadRepository.uploadFile(photoFile);
                     photoCardUrl = uploaded.fileUrl;
                   }
-                  await submitProfile({ isFpt: false, schoolId: selectedSchoolId, studentCode, photoStudentCardUrl: photoCardUrl });
-                  toast.success("Đã nộp hồ sơ sinh viên thành công! Vui lòng chờ xét duyệt.");
+                  await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl });
                   setStep("pending");
                 } catch (err: any) {
-                  const msg = err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.";
-                  setSubmitError(msg);
-                  toast.error(msg);
+                  setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
                 } finally {
                   setIsUploadingPhoto(false);
                 }

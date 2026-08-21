@@ -1,289 +1,244 @@
 "use client";
 
 import React from "react";
+import { Scale, ChevronRight } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyAssignedJudgeTracks } from "@/viewModels/useMyAssignedJudgeTracks";
 import { Link } from "@/i18n/routing";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Badge, Button, Card, EmptyState, StatCard, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
+
+function TrackProgressBar({ done, total }: { done: number; total: number }) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const isComplete = total > 0 && done === total;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-[var(--text-muted)]">Tiến độ đánh giá</span>
+        <span className="font-medium text-[var(--accent-judge)]">
+          {done} / {total} bài nộp ({pct}%)
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full border border-[var(--border-muted)] bg-[var(--bg-input)]">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${pct}%`,
+            backgroundColor: isComplete ? "var(--color-success)" : "var(--accent-judge)",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export const JudgeTracksView: React.FC = () => {
   const { user } = useAuth();
   const { assignedTracks, isLoading } = useMyAssignedJudgeTracks();
 
+  const {
+    paginatedItems: paginatedTracks,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(assignedTracks, 6);
+
   const totalAssigned = assignedTracks.length;
   const totalPendingScoring = assignedTracks.reduce((acc, t) => acc + t.pendingSubmissions, 0);
-  const totalCompleted = assignedTracks.reduce((acc, t) => acc + t.totalSubmissions - t.pendingSubmissions, 0);
+  const totalCompleted = assignedTracks.reduce(
+    (acc, t) => acc + t.totalSubmissions - t.pendingSubmissions,
+    0,
+  );
 
   if (!user) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-[#0e1417] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#080f11] border border-[#ffbb2a] p-8 text-center glow-box-amber relative space-y-4">
-          <div className="corner-accent-tl text-[#ffbb2a]" />
-          <div className="corner-accent-tr text-[#ffbb2a]" />
-          <div className="corner-accent-bl text-[#ffbb2a]" />
-          <div className="corner-accent-br text-[#ffbb2a]" />
-          
-          <h2 className="font-display text-xl font-bold uppercase text-amber-300">
-            [ YÊU CẦU QUYỀN GIÁM KHẢO ]
-          </h2>
-          <p className="font-mono text-xs text-zinc-400 leading-relaxed">
-            Vui lòng đăng nhập với tài khoản Giám khảo để tiếp tục.
-          </p>
-          <div className="pt-2 flex flex-col gap-2 font-mono text-xs">
-            <Link href="/login" className="w-full">
-              <button className="w-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold py-2.5 uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer">
-                [ ĐẾN TRANG ĐĂNG NHẬP ]
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Card className="w-full max-w-md text-center">
+          <EmptyState
+            icon={Scale}
+            title="Yêu cầu quyền giám khảo"
+            description="Vui lòng đăng nhập với tài khoản Giám khảo để tiếp tục."
+            action={
+              <Link href="/login">
+                <Button accent="judge">Đến trang đăng nhập</Button>
+              </Link>
+            }
+          />
+        </Card>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0c1214] text-[#dde4e6] font-sans hex-bg py-8 px-4 md:px-8 selection:bg-amber-500/30 selection:text-amber-200">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Top Header Title */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-800 pb-4 gap-4">
-          <div>
-            <div className="font-mono text-[11px] text-amber-400 mb-1 uppercase tracking-wider">
-              [ BẢNG PHÂN CÔNG GIÁM KHẢO ]
-            </div>
-            <h1 className="font-display text-2xl md:text-3xl font-bold text-white uppercase">
-              HẠNG MỤC PHÂN CÔNG CHẤM ĐIỂM
-            </h1>
-          </div>
+    <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
+      <PageHeader
+        title="Hạng mục phân công chấm điểm"
+        description="Danh sách hạng mục thi đấu bạn được phân công đánh giá."
+        actions={
+          <Link href="/judge/scoring">
+            <Button accent="judge">
+              Bàn chấm điểm trực tiếp
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        }
+      />
 
-          <div className="flex items-center gap-3 font-mono text-xs">
-            <Link href="/judge/scoring">
-              <button className="px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold uppercase tracking-wider hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-sm">
-                [ BÀN CHẤM ĐIỂM TRỰC TIẾP &gt; ]
-              </button>
-            </Link>
-          </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          label="Hạng mục đang phụ trách"
+          value={isLoading ? "…" : totalAssigned}
+          subtext="Phân công trực tiếp từ Ban Tổ Chức"
+          accent="var(--accent-judge)"
+        />
+        <StatCard
+          label="Bài nộp chờ đánh giá"
+          value={isLoading ? "…" : totalPendingScoring}
+          subtext="Cần hoàn tất trước hạn đóng cổng"
+          accent="var(--color-warning)"
+        />
+        <StatCard
+          label="Tiến độ hoàn thành"
+          value={totalAssigned > 0 ? `${totalCompleted} bài` : "100%"}
+          subtext="Tự động tính toán chỉ số đánh giá"
+          accent="var(--color-success)"
+        />
+      </div>
+
+      <section className="space-y-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
+            Hạng mục thi đấu phân công ({assignedTracks.length})
+          </h2>
+          <p className="text-sm text-[var(--text-muted)]">
+            Đánh giá chuyên môn và chấm điểm độc lập
+          </p>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 font-mono">
-          <div className="bg-[#0e1518] border border-zinc-800 p-5 relative space-y-2 shadow-sm">
-            <div className="corner-accent-tl text-amber-400/40" />
-            <div className="corner-accent-tr text-amber-400/40" />
-            <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
-              Hạng Mục Thi Đang Phụ Trách
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-bold text-3xl text-amber-300">
-                {isLoading ? "..." : totalAssigned}
-              </span>
-              <span className="text-xs text-amber-400/80 font-bold">[TRACKS]</span>
-            </div>
-            <span className="text-[10px] text-zinc-500 block">
-              Phân công trực tiếp từ Ban Tổ Chức
-            </span>
-          </div>
+        {isLoading ? (
+          <Card className="py-12 text-center">
+            <p className="animate-pulse text-sm text-[var(--text-muted)]">
+              Đang tải dữ liệu hạng mục phân công…
+            </p>
+          </Card>
+        ) : assignedTracks.length === 0 ? (
+          <EmptyState
+            icon={Scale}
+            title="Chưa có hạng mục phân công"
+            description="Bạn hiện chưa được phân công chấm điểm cho hạng mục nào trong sự kiện này."
+          />
+        ) : assignedTracks.length === 1 ? (
+          (() => {
+            const track = assignedTracks[0];
+            const done = track.totalSubmissions - track.pendingSubmissions;
 
-          <div className="bg-[#0e1518] border border-zinc-800 p-5 relative space-y-2 shadow-sm">
-            <div className="corner-accent-tl text-amber-400/40" />
-            <div className="corner-accent-tr text-amber-400/40" />
-            <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
-              Bài Nộp Chờ Đánh Giá (Pending)
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-bold text-3xl text-amber-400">
-                {isLoading ? "..." : totalPendingScoring}
-              </span>
-              <span className="text-xs text-amber-400/80 font-bold">[PENDING]</span>
-            </div>
-            <span className="text-[10px] text-amber-400/80 block">
-              ● Cần hoàn tất trước hạn đóng cổng
-            </span>
-          </div>
-
-          <div className="bg-[#0e1518] border border-zinc-800 p-5 relative space-y-2 shadow-sm">
-            <div className="corner-accent-tl text-amber-400/40" />
-            <div className="corner-accent-tr text-amber-400/40" />
-            <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">
-              Tiến Độ Hoàn Thành
-            </span>
-            <div className="flex items-baseline justify-between">
-              <span className="font-bold text-3xl text-emerald-400">
-                {totalAssigned > 0 ? `${totalCompleted} Bài` : "100%"}
-              </span>
-              <span className="text-xs text-emerald-400 font-bold">[DONE]</span>
-            </div>
-            <span className="text-[10px] text-zinc-500 block">
-              Tự động tính toán chỉ số đánh giá
-            </span>
-          </div>
-        </div>
-
-        {/* Assigned Tracks List */}
-        <div className="space-y-4 font-mono">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display font-bold text-lg text-white uppercase tracking-wider">
-              HẠNG MỤC THI ĐẤU PHÂN CÔNG ({assignedTracks.length})
-            </h2>
-            <span className="text-xs text-zinc-400">
-              Đánh giá chuyên môn &amp; Chấm điểm độc lập
-            </span>
-          </div>
-
-          {isLoading ? (
-            <div className="p-12 text-center text-xs text-amber-400/80 animate-pulse bg-[#0e1518] border border-zinc-800">
-              [ ĐANG TRUY XUẤT DỮ LIỆU HẠNG MỤC PHÂN CÔNG... ]
-            </div>
-          ) : assignedTracks.length === 0 ? (
-            <div className="p-12 bg-[#0c1214] border border-zinc-800 text-center space-y-3">
-              <p className="text-xs text-zinc-500">
-                [ Bạn hiện chưa được phân công chấm điểm cho Hạng mục nào trong sự kiện này ]
-              </p>
-            </div>
-          ) : assignedTracks.length === 1 ? (
-            /* HERO TRACK CARD CHO SỰ KIỆN 1 HẠNG MỤC */
-            (() => {
-              const track = assignedTracks[0];
-              const progressPct =
-                track.totalSubmissions > 0
-                  ? Math.round(((track.totalSubmissions - track.pendingSubmissions) / track.totalSubmissions) * 100)
-                  : 0;
-
-              return (
-                <div className="bg-gradient-to-br from-[#121c20] via-[#0f171a] to-[#0a1012] border border-zinc-800/80 hover:border-amber-500/40 transition-all p-6 md:p-8 relative shadow-lg">
-                  <div className="corner-accent-tl text-amber-400/40" />
-                  <div className="corner-accent-tr text-amber-400/40" />
-                  <div className="corner-accent-bl text-amber-400/40" />
-                  <div className="corner-accent-br text-amber-400/40" />
-
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div className="space-y-3 max-w-2xl">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="text-[11px] text-amber-300 font-bold px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 uppercase tracking-wider">
-                          [ HẠNG MỤC CHÍNH ]
-                        </span>
-                        <span className="text-xs text-zinc-400">
-                          {track.eventName} • {track.roundName}
-                        </span>
-                      </div>
-
-                      <h3 className="font-display font-bold text-2xl md:text-3xl text-white">
-                        {track.trackName}
-                      </h3>
-                      <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                        Hạng mục thi đấu chuyên môn. Thông tin đội thi được ẩn danh để đảm bảo tính khách quan và công bằng.
-                      </p>
-
-                      {/* Sleek Progress Bar */}
-                      <div className="pt-2 space-y-1.5 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-400">TIẾN ĐỘ ĐÁNH GIÁ:</span>
-                          <span className="text-amber-300 font-bold">
-                            {track.totalSubmissions - track.pendingSubmissions} / {track.totalSubmissions} Bài Nộp ({progressPct}%)
-                          </span>
-                        </div>
-                        <div className="w-full h-2.5 bg-zinc-900 border border-zinc-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-cyan-500 to-amber-400 transition-all duration-500 rounded-full"
-                            style={{ width: `${progressPct}%` }}
-                          />
-                        </div>
-                      </div>
+            return (
+              <Card className="transition-colors hover:border-[var(--accent-judge)]/40">
+                <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+                  <div className="max-w-2xl space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone="judge">Hạng mục chính</Badge>
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {track.eventName} · {track.roundName}
+                      </span>
                     </div>
 
-                    {/* Right Direct CTA Deck */}
-                    <div className="flex flex-col gap-3 min-w-[240px] shrink-0">
-                      <Link
-                        href={`/judge/scoring?trackId=${track.trackId}`}
-                        className="px-6 py-4 bg-amber-500 hover:bg-amber-400 text-black text-sm font-extrabold uppercase transition-all text-center"
-                      >
-                        <span>[ BẮT ĐẦU CHẤM ĐIỂM NGAY &gt; ]</span>
-                      </Link>
+                    <h3 className="font-display text-2xl font-semibold text-[var(--text-primary)] md:text-3xl">
+                      {track.trackName}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-[var(--text-muted)]">
+                      Hạng mục thi đấu chuyên môn. Thông tin đội thi được ẩn danh để đảm bảo tính khách quan và công bằng.
+                    </p>
 
-                      <Link
-                        href={`/judge/tracks/${track.trackId}/teams`}
-                        className="px-6 py-3 bg-[#141f23] border border-zinc-700 hover:border-amber-500/40 text-zinc-300 hover:text-white text-xs font-bold uppercase transition-all text-center"
-                      >
-                        <span>[ Xem Danh Sách Bài Nộp ({track.totalSubmissions}) ]</span>
-                      </Link>
-                    </div>
+                    <TrackProgressBar done={done} total={track.totalSubmissions} />
+                  </div>
+
+                  <div className="flex min-w-[240px] shrink-0 flex-col gap-3">
+                    <Link href={`/judge/scoring?trackId=${track.trackId}`}>
+                      <Button accent="judge" className="w-full">
+                        Bắt đầu chấm điểm ngay
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Link href={`/judge/tracks/${track.trackId}/teams`}>
+                      <Button variant="secondary" accent="judge" className="w-full">
+                        Xem danh sách bài nộp ({track.totalSubmissions})
+                      </Button>
+                    </Link>
                   </div>
                 </div>
-              );
-            })()
-          ) : (
-            /* DUAL TRACK COMPARISON DECK CHO SỰ KIỆN 2 HẠNG MỤC HOẶC NHIỀU HƠN */
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {assignedTracks.map((track, idx) => {
-                const progressPct =
-                  track.totalSubmissions > 0
-                    ? Math.round(((track.totalSubmissions - track.pendingSubmissions) / track.totalSubmissions) * 100)
-                    : 0;
+              </Card>
+            );
+          })()
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {paginatedTracks.map((track, idx) => {
+                const done = track.totalSubmissions - track.pendingSubmissions;
                 const isAllDone = track.pendingSubmissions === 0;
 
                 return (
-                  <div
+                  <Card
                     key={track.trackId || idx}
-                    className="bg-gradient-to-br from-[#121c20] via-[#0f171a] to-[#0a1012] border border-zinc-800/80 hover:border-amber-500/40 transition-all p-6 relative flex flex-col justify-between space-y-4 shadow-md"
+                    className="flex flex-col justify-between gap-4 transition-colors hover:border-[var(--accent-judge)]/40"
                   >
-                    <div className="corner-accent-tl text-amber-400/40" />
-                    <div className="corner-accent-tr text-amber-400/40" />
-                    <div className="corner-accent-bl text-amber-400/40" />
-                    <div className="corner-accent-br text-amber-400/40" />
-
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-amber-300 font-bold px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 uppercase tracking-wider">
-                          [ TRACK 0{idx + 1} ]
-                        </span>
-                        <span className="text-xs text-zinc-400">
-                          {track.roundName}
-                        </span>
+                        <Badge tone="judge">Hạng mục {(currentPage - 1) * pageSize + idx + 1}</Badge>
+                        <span className="text-xs text-[var(--text-muted)]">{track.roundName}</span>
                       </div>
 
-                      <h3 className="font-display font-bold text-xl text-white">
+                      <h3 className="font-display text-xl font-semibold text-[var(--text-primary)]">
                         {track.trackName}
                       </h3>
-                      <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed font-sans">
-                        {(track as any).description || "Hạng mục thi đấu chuyên môn được đánh giá theo thang điểm chuẩn mực."}
+                      <p className="line-clamp-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                        {(track as any).description ||
+                          "Hạng mục thi đấu chuyên môn được đánh giá theo thang điểm chuẩn mực."}
                       </p>
 
-                      {/* Progress Bar */}
-                      <div className="space-y-1.5 text-xs">
-                        <div className="flex items-center justify-between text-zinc-300">
-                          <span className="text-[11px] text-zinc-400">TIẾN ĐỘ CHẤM:</span>
-                          <span className="text-amber-300 font-bold">
-                            {track.totalSubmissions - track.pendingSubmissions} / {track.totalSubmissions} BÀI ({progressPct}%)
-                          </span>
-                        </div>
-                        <div className="w-full h-2 bg-zinc-900 border border-zinc-800 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 rounded-full ${
-                              isAllDone ? "bg-emerald-400" : "bg-gradient-to-r from-cyan-500 to-amber-400"
-                            }`}
-                            style={{ width: `${progressPct}%` }}
-                          />
-                        </div>
-                      </div>
+                      <TrackProgressBar done={done} total={track.totalSubmissions} />
                     </div>
 
-                    <div className="pt-6 mt-4 border-t border-zinc-800/80 flex flex-col sm:flex-row items-center gap-2 justify-between">
-                      <Link href={`/judge/tracks/${track.trackId}/teams`} className="w-full sm:w-auto">
-                        <button className="w-full sm:w-auto px-3.5 py-2 bg-transparent border border-zinc-700/80 text-zinc-300 text-xs uppercase hover:border-amber-500/40 hover:text-white transition-all cursor-pointer">
-                          <span>[ DS Bài Nộp ({track.pendingSubmissions}) ]</span>
-                        </button>
+                    <div className="flex flex-col gap-2 border-t border-[var(--border-muted)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <Link href={`/judge/tracks/${track.trackId}/teams`} className="sm:flex-1">
+                        <Button variant="ghost" accent="judge" className="w-full">
+                          Danh sách bài nộp ({track.pendingSubmissions} chờ)
+                        </Button>
                       </Link>
-                      <Link href={`/judge/scoring?trackId=${track.trackId}`} className="w-full sm:w-auto">
-                        <button className="w-full sm:w-auto px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold uppercase hover:bg-amber-500 hover:text-black transition-all cursor-pointer shadow-sm">
-                          <span>[ CHẤM TRACK NÀY &gt; ]</span>
-                        </button>
+                      <Link href={`/judge/scoring?trackId=${track.trackId}`} className="sm:flex-1">
+                        <Button accent="judge" className="w-full" disabled={isAllDone && track.totalSubmissions === 0}>
+                          Chấm hạng mục này
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
                       </Link>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
-    </div>
+
+            {assignedTracks.length > 0 && (
+              <div className="pt-2">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="hạng mục"
+                />
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </PageShell>
   );
 };

@@ -24,6 +24,11 @@ export interface JudgeTrackItem {
   scoredSubmissions: number;
   pendingSubmissions: number;
   status: string;
+  /** Mốc thời gian THẬT của track (EC cấu hình, override Round) — để gate cổng chấm ở FE
+   * đọc đúng ngày của track, không fallback nhầm sang ngày của Round. */
+  endDate?: string;
+  scoringStartDate?: string;
+  scoringEndDate?: string;
 }
 
 async function fetchTracksByEvent(eventId: string): Promise<TrackWithStaffModel[]> {
@@ -48,7 +53,7 @@ export function useMyAssignedJudgeTracks() {
   const eventRoleIdByTrack = useMemo(() => {
     const map = new Map<string, string>();
     myEventRoles.forEach((r) => {
-      if (r.trackId) map.set(r.trackId, r.id);
+      if (r.roleName === "Judge" && r.trackId) map.set(r.trackId, r.id);
     });
     return map;
   }, [myEventRoles]);
@@ -69,7 +74,10 @@ export function useMyAssignedJudgeTracks() {
   const candidateEventIds = useMemo(() => {
     if (!user) return [];
     if (isAdmin) return eventsList.map((e: any) => e.id || e.Id).filter(Boolean);
-    const ids = myEventRoles.map((r) => r.eventId).filter(Boolean);
+    const ids = myEventRoles
+      .filter((r) => r.roleName === "Judge")
+      .map((r) => r.eventId)
+      .filter(Boolean);
     const single = activeRole?.eventId || (activeRole as any)?.EventId;
     if (single) ids.push(single);
     return [...new Set(ids)];
@@ -111,7 +119,7 @@ export function useMyAssignedJudgeTracks() {
             return rn === "Judge" && rTId === normTrackId;
           });
 
-          if (!isRealAssigned && !isFallbackAssigned && !isDirectRoleAssigned) return;
+          if (!isDirectRoleAssigned && !isRealAssigned) return;
         }
 
         list.push({
@@ -123,6 +131,10 @@ export function useMyAssignedJudgeTracks() {
           trackId,
           templateId: t.templateId || t.TemplateId || "",
           eventRoleId: eventRoleIdByTrack.get(trackId) || fallbackEventRoleId,
+          // Mang theo mốc thời gian THẬT của track để gate cổng chấm không đọc nhầm ngày Round.
+          endDate: (t as any).endDate || (t as any).EndDate,
+          scoringStartDate: (t as any).scoringStartDate || (t as any).ScoringStartDate,
+          scoringEndDate: (t as any).scoringEndDate || (t as any).ScoringEndDate,
         });
       });
     });

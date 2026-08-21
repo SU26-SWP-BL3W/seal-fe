@@ -23,8 +23,11 @@ import {
   TableCell,
   Badge,
   ApiMissingDataBadge,
+  Pagination,
 } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/providers/ToastProvider";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -72,6 +75,16 @@ export function AppealsView() {
   const { data: appealsRaw, isLoading, refetch } = isEC ? eventAppeals : teamAppeals;
   const appeals: Appeal[] = Array.isArray(appealsRaw) ? appealsRaw : ((appealsRaw as any)?.data ?? []);
 
+  const {
+    paginatedItems: paginatedAppeals,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(appeals, 6);
+
   const { mutateAsync: createAppeal, isPending: isSubmitting } = useCreateAppeal();
   const { mutateAsync: respondAppeal, isPending: isResponding } = useRespondAppeal();
 
@@ -83,6 +96,16 @@ export function AppealsView() {
     try {
       await createAppeal({ submitResultId, reason: reason.trim() });
       toast.success("🎉 Đã gửi đơn phúc khảo thành công! Ban Tổ Chức sẽ tiếp nhận và phản hồi kết quả qua email và thông báo chuông.");
+      pushSystemNotification({
+        title: "Gửi đơn phúc khảo thành công",
+        message: `Đội thi đã gửi đơn phúc khảo bài nộp. Ban Tổ Chức sẽ tiếp nhận và xử lý sớm nhất.`,
+        type: "info",
+      });
+      pushSystemNotification({
+        title: "Đơn phúc khảo mới cần xử lý",
+        message: `Có đơn phúc khảo mới từ Đội thi cho bài nộp. Cán bộ điều phối vui lòng kiểm tra và xử lý.`,
+        type: "warning",
+      });
       setReason("");
       setSubmitResultId("");
       refetch();
@@ -100,8 +123,18 @@ export function AppealsView() {
       await respondAppeal({ id: detailModal.id, appealId: detailModal.id, status, response: responseText.trim(), payload: { status, response: responseText.trim() } } as any);
       if (status === AppealStatus.Approved) {
         toast.success("✅ Đã phê duyệt đơn phúc khảo. Điểm số bài thi đã được cập nhật và gửi thông báo tới đội thi.");
+        pushSystemNotification({
+          title: "Đơn phúc khảo đã được phê duyệt",
+          message: `Đơn phúc khảo của bạn đã được Ban Tổ Chức phê duyệt: "${responseText.trim()}". Điểm số đã được điều chỉnh.`,
+          type: "success",
+        });
       } else {
         toast.info("Đã từ chối đơn phúc khảo. Lý do phản hồi đã được gửi qua thông báo và email tới đội thi.");
+        pushSystemNotification({
+          title: "Kết quả xử lý phúc khảo",
+          message: `Ban Tổ Chức đã phản hồi đơn phúc khảo của bạn: "${responseText.trim()}".`,
+          type: "warning",
+        });
       }
       setDetailModal(null);
       setResponseText("");
@@ -234,7 +267,7 @@ export function AppealsView() {
           ) : appeals.length === 0 ? (
             <ApiMissingDataBadge
               title="CHƯA CÓ ĐƠN PHÚC KHẢO"
-              message="Chưa có bản ghi đơn phúc khảo nào phù hợp."
+              message="Hiện chưa có đơn phúc khảo nào."
             />
           ) : (
             <Table>
@@ -247,7 +280,7 @@ export function AppealsView() {
                 </TableRow>
               </TableHeader>
               <tbody>
-                {appeals.map((item) => {
+                {paginatedAppeals.map((item) => {
                   const isPending = item.status === AppealStatus.Pending;
                   const isApproved = item.status === AppealStatus.Approved;
                   return (
@@ -288,6 +321,20 @@ export function AppealsView() {
                 })}
               </tbody>
             </Table>
+          )}
+
+          {appeals.length > 0 && (
+            <div className="pt-2">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="đơn phúc khảo"
+              />
+            </div>
           )}
         </div>
       </div>

@@ -1,9 +1,13 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Link } from "@/i18n/routing";
+import Link from "next/link";
 import { useMentorWorkspaceViewModel } from "@/viewModels/useMentorWorkspaceViewModel";
-import { Button } from "@/components/ui";
+import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Badge, Button, Card, EmptyState, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
+import { ChevronRight, RefreshCw, Users, Info, Eye } from "lucide-react";
 
 export function MentorTeamsView() {
   const searchParams = useSearchParams();
@@ -16,10 +20,20 @@ export function MentorTeamsView() {
     setSelectedTrackId,
     teamsInTrack,
     submissions,
+    teamById,
     isLoading,
     refetchAll,
-    eventId,
   } = useMentorWorkspaceViewModel();
+
+  const {
+    paginatedItems: paginatedTeams,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(teamsInTrack, 6);
 
   const currentTrackId = trackIdQuery || selectedTrackId || (myTracks[0]?.id || myTracks[0]?.Id || "");
   const currentTrack = myTracks.find((t) => (t.id || t.Id) === currentTrackId);
@@ -32,101 +46,99 @@ export function MentorTeamsView() {
   // Helper to check submission status for a team
   const getTeamSubmissionStatus = (teamId: string) => {
     const subs = submissions.filter((s) => (s.teamId || s.TeamId) === teamId);
-    if (subs.length === 0) return { label: "CHƯA NỘP", color: "text-zinc-500 bg-zinc-800/40 border-zinc-700", count: 0 };
-    return { label: "ĐÃ NỘP BÀI", color: "text-amber-400 bg-amber-950/40 border-amber-500/40", count: subs.length };
+    if (subs.length === 0) return { label: "NOT_SUBMITTED", color: "text-on-surface-variant bg-surface-container border-outline-variant", count: 0 };
+    return { label: "SUBMITTED", color: "text-yellow-400 bg-yellow-900/20 border-yellow-500/30", count: subs.length };
   };
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#090e11] text-[#dde4e6] font-sans p-4 md:p-6 flex flex-col space-y-4">
-      <div className="max-w-[1600px] w-full mx-auto space-y-4 flex-1 flex flex-col">
-
-        {/* ── TẦNG 1: BREADCRUMB & HEADER ── */}
-        <header className="bg-[#10171a] border border-zinc-800 p-4 hud-clipped flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
-          <div className="space-y-1">
-            <div className="font-mono text-xs text-zinc-400 flex flex-wrap items-center gap-2">
-              {eventId ? (
-                <Link href={`/events/${eventId}`} className="text-zinc-400 hover:text-white font-bold transition-colors">
-                  [ &lt; CHI TIẾT SỰ KIỆN ]
-                </Link>
-              ) : null}
-              <span className="text-zinc-600">/</span>
-              <Link href="/mentor/tracks" className="text-teal-400 hover:underline font-bold">
-                [ CÁC HẠNG MỤC CỐ VẤN ]
-              </Link>
-              <span className="text-zinc-600">/</span>
-              <span className="text-white font-bold">{currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}</span>
-            </div>
-            <h1 className="font-display text-xl md:text-2xl text-white font-extrabold tracking-wider uppercase">
-              DANH SÁCH ĐỘI THI ĐƯỢC HỖ TRỢ
-            </h1>
+    <div className="bg-surface text-on-surface font-sans min-h-screen p-6 flex flex-col">
+      <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6">
+        {/* Context Header Panel (HUD Style) */}
+        <header className="w-full bg-surface-container-low border border-outline-variant p-5 relative rounded-lg shadow-sm">
+          {/* Breadcrumb */}
+          <div className="font-mono text-xs text-on-surface-variant flex items-center gap-2 mb-2">
+            <Link href="/mentor/tracks" className="text-[#2dd4bf] hover:underline">
+              Bàn Làm Việc Cố Vấn
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span>{currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-on-surface font-bold">Danh sách đội</span>
           </div>
 
-          <div className="flex items-center gap-3 font-mono text-xs">
-            <div className="text-teal-300 bg-teal-950/50 px-3 py-1.5 border border-teal-500/40 hud-clipped font-bold">
-              [ TRẠNG THÁI: ĐANG ĐỒNG HÀNH ]
+          {/* Title Row */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-outline-variant pb-3 gap-3">
+            <div>
+              <h1 className="font-display text-2xl md:text-3xl text-on-surface font-extrabold tracking-wider uppercase">
+                DANH SÁCH ĐỘI HỖ TRỢ
+              </h1>
+              <p className="font-mono text-xs text-on-surface-variant mt-1">
+                Danh sách các đội thi thuộc Hạng mục chuyên môn được phân công.
+              </p>
             </div>
-            <Button variant="ghost" accent="mentor" onClick={() => refetchAll()} className="text-xs uppercase font-mono font-bold">
-              [ LÀM MỚI ]
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="font-mono text-xs text-[#2dd4bf] bg-[#2dd4bf]/10 px-3 py-1 border border-[#2dd4bf]/30 rounded">
+                [ Trạng thái: Đang theo dõi ]
+              </div>
+              <Button variant="ghost" accent="mentor" onClick={() => refetchAll()} className="text-xs">
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Làm mới
+              </Button>
+            </div>
           </div>
         </header>
 
-        {/* ── TẦNG 2: TRACK SELECTOR ── */}
+        {/* Track Selector Bar */}
         {myTracks.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 font-mono text-xs bg-[#10171a] p-3 border border-zinc-800 hud-clipped">
-            <span className="text-zinc-400 uppercase font-bold">[ CHỌN HẠNG MỤC: ]</span>
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-3 font-mono text-xs bg-surface-container-low p-3 border border-outline-variant rounded-md">
+            <span className="text-on-surface-variant uppercase font-bold">Hạng mục:</span>
+            <select
+              value={currentTrackId}
+              onChange={(e) => handleTrackChange(e.target.value)}
+              className="bg-surface-container border border-outline-variant px-3 py-1.5 text-on-surface font-mono rounded focus:outline-none focus:border-[#2dd4bf]"
+            >
               {myTracks.map((t) => {
                 const tid = (t.id || t.Id) as string;
-                const isSelected = tid === currentTrackId;
                 return (
-                  <button
-                    key={tid}
-                    type="button"
-                    onClick={() => handleTrackChange(tid)}
-                    className={`px-3 py-1.5 font-mono text-xs font-bold uppercase transition-all cursor-pointer hud-clipped ${
-                      isSelected
-                        ? "bg-teal-500 text-black font-extrabold shadow-sm"
-                        : "bg-[#141f23] text-zinc-400 border border-zinc-700 hover:text-white hover:border-teal-500/40"
-                    }`}
-                  >
-                    [ {t.trackName || t.TrackName} ]
-                  </button>
+                  <option key={tid} value={tid}>
+                    {t.trackName || t.TrackName} (ID: {tid})
+                  </option>
                 );
               })}
-            </div>
+            </select>
           </div>
         )}
 
-        {/* ── TẦNG 3: BẢNG DANH SÁCH ĐỘI THI ── */}
-        <div className="flex-1 bg-[#10171a] border border-zinc-800 hud-clipped flex flex-col overflow-hidden shadow-md">
-          {/* Header Bảng */}
-          <div className="h-10 bg-teal-950/40 border-b border-teal-500/20 flex items-center px-4 justify-between font-mono text-xs">
-            <span className="text-teal-300 font-bold tracking-wider">[ DANH SÁCH ĐỘI THI TRONG HẠNG MỤC ]</span>
-            <span className="text-zinc-400 text-[11px]">{teamsInTrack.length} ĐỘI THI GHI DANH</span>
+        {/* Data Table Panel (HUD Style) */}
+        <div className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-lg flex flex-col overflow-hidden">
+          {/* Panel Header */}
+          <div className="h-8 bg-[#2dd4bf]/10 border-b border-[#2dd4bf]/20 flex items-center px-4 justify-between font-mono text-xs">
+            <span className="text-[#2dd4bf] font-bold tracking-wider">DANH SÁCH ĐỘI THI</span>
+            <span className="text-on-surface-variant text-[11px]">{teamsInTrack.length} Đội thi</span>
           </div>
 
-          {/* Nội dung bảng */}
+          {/* Table Container */}
           <div className="flex-1 overflow-x-auto p-4">
             {isLoading ? (
-              <div className="flex justify-center py-20 font-mono text-xs text-teal-400 animate-pulse">
-                [ ĐANG TẢI DỮ LIỆU ĐỘI THI... ]
+              <div className="flex justify-center py-20 font-mono text-xs text-[#2dd4bf] animate-pulse">
+                Đang tải danh sách đội thi...
               </div>
             ) : teamsInTrack.length === 0 ? (
-              <div className="text-center py-16 font-mono text-xs text-zinc-400">
-                [ Chưa có đội thi nào ghi danh thuộc Hạng mục này ]
+              <div className="text-center py-16 font-mono text-xs text-on-surface-variant">
+                <Info className="w-8 h-8 mx-auto mb-2 text-on-surface-variant/60" />
+                Chưa có đội thi nào thuộc Hạng mục này.
               </div>
             ) : (
               <table className="w-full text-left font-mono text-xs border-collapse">
-                <thead className="text-[11px] text-zinc-400 uppercase border-b border-zinc-800 bg-[#090e11]">
+                <thead className="text-[11px] text-on-surface-variant uppercase border-b border-outline-variant bg-surface-container-lowest sticky top-0">
                   <tr>
-                    <th className="py-3 px-4 font-bold">TÊN ĐỘI THI</th>
-                    <th className="py-3 px-4 font-bold">TRẠNG THÁI</th>
-                    <th className="py-3 px-4 font-bold text-right">TIẾN ĐỘ BÀI NỘP</th>
-                    <th className="py-3 px-4 font-bold text-center">TÁC VỤ CỐ VẤN</th>
+                    <th className="py-3 px-4 font-semibold">TÊN ĐỘI THI</th>
+                    <th className="py-3 px-4 font-semibold">TRẠNG THÁI</th>
+                    <th className="py-3 px-4 font-semibold">THÀNH VIÊN</th>
+                    <th className="py-3 px-4 font-semibold text-right">TIẾN ĐỘ BÀI NỘP</th>
+                    <th className="py-3 px-4 font-semibold text-center">THAO TÁC</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800/60">
+                <tbody className="divide-y divide-outline-variant/40">
                   {teamsInTrack.map((team) => {
                     const tid = (team.id || team.Id) as string;
                     const name = team.name || team.Name || `Đội #${tid}`;
@@ -134,34 +146,49 @@ export function MentorTeamsView() {
                     const subStatus = getTeamSubmissionStatus(tid);
 
                     return (
-                      <tr key={tid} className="hover:bg-zinc-800/30 transition-colors">
+                      <tr key={tid} className="hover:bg-surface-variant/30 transition-colors group">
                         <td className="py-4 px-4 align-middle">
                           <div className="flex flex-col">
-                            <span className="text-white font-bold">
+                            <span className="text-on-surface font-bold group-hover:text-[#2dd4bf] transition-colors">
                               {name}
                             </span>
-                            <span className="text-[10px] text-zinc-500">ID: TM-{tid.substring(0, 8)}</span>
+                            <span className="text-[10px] text-on-surface-variant">TM-{tid.substring(0, 8)}</span>
                           </div>
                         </td>
 
                         <td className="py-4 px-4 align-middle">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold hud-clipped">
-                            [ {statusVal.toUpperCase()} ]
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-900/30 border border-green-500/30 text-green-400 text-[11px] font-bold rounded">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                            {statusVal.toUpperCase()}
                           </span>
+                        </td>
+
+                        <td className="py-4 px-4 align-middle">
+                          <div className="flex items-center gap-1 text-on-surface-variant">
+                            <Users className="w-4 h-4 text-[#2dd4bf]" />
+                            <span>Thành viên</span>
+                          </div>
                         </td>
 
                         <td className="py-4 px-4 align-middle text-right">
                           <div className="flex flex-col items-end gap-1">
-                            <span className={`text-[10px] border px-2 py-0.5 font-bold hud-clipped ${subStatus.color}`}>
-                              [ {subStatus.label}: {subStatus.count} BÀI ]
+                            <span className={`text-[10px] border px-2 py-0.5 font-bold ${subStatus.color}`}>
+                              {subStatus.label} ({subStatus.count})
                             </span>
+                            <div className="w-24 h-1.5 bg-surface-variant flex rounded overflow-hidden">
+                              <div
+                                className={`h-full ${
+                                  subStatus.count > 0 ? "bg-[#2dd4bf] w-full" : "bg-surface-container-highest w-0"
+                                }`}
+                              />
+                            </div>
                           </div>
                         </td>
 
                         <td className="py-4 px-4 align-middle text-center">
                           <Link href={`/mentor/submissions?teamId=${tid}&trackId=${currentTrackId}`}>
-                            <button className="px-3.5 py-1.5 bg-teal-500/15 border border-teal-500/40 text-teal-300 hover:bg-teal-500 hover:text-black text-xs font-bold hud-clipped transition-all cursor-pointer">
-                              [ XEM BÀI NỘP &amp; HỖ TRỢ &gt; ]
+                            <button className="px-3 py-1.5 bg-surface border border-[#2dd4bf]/40 text-[#2dd4bf] hover:bg-[#2dd4bf] hover:text-[#080f11] text-[11px] font-bold rounded transition-colors inline-flex items-center gap-1">
+                              <Eye className="w-3.5 h-3.5" /> Chi tiết
                             </button>
                           </Link>
                         </td>
@@ -174,7 +201,85 @@ export function MentorTeamsView() {
           </div>
         </div>
 
+        <div className="flex-1 overflow-x-auto p-4">
+          {isLoading ? (
+            <EmptyState
+              icon={RefreshCw}
+              title="Đang tải dữ liệu"
+              description="Đang tải danh sách đội thi..."
+            />
+          ) : teamsInTrack.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="Chưa có đội thi"
+              description="Chưa có đội thi nào ghi danh thuộc hạng mục này."
+            />
+          ) : (
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border-muted)] text-xs text-[var(--text-muted)]">
+                  <th className="px-4 py-3 font-medium">Tên đội thi</th>
+                  <th className="px-4 py-3 font-medium">Trạng thái</th>
+                  <th className="px-4 py-3 text-right font-medium">Tiến độ bài nộp</th>
+                  <th className="px-4 py-3 text-center font-medium">Tác vụ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-muted)]/60">
+                {paginatedTeams.map((team) => {
+                  const tid = (team.id || team.Id) as string;
+                  const name = team.name || team.Name || `Đội #${tid}`;
+                  const statusVal = team.status !== undefined ? String(team.status) : "Registered";
+                  const subStatus = getTeamSubmissionStatus(tid);
+
+                  return (
+                    <tr key={tid} className="transition-colors hover:bg-[var(--bg-input)]/50">
+                      <td className="px-4 py-4 align-middle">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-[var(--text-primary)]">{name}</span>
+                          <span className="text-xs text-[var(--text-muted)]">ID: {tid.substring(0, 8)}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 align-middle">
+                        <Badge tone="success">{statusVal}</Badge>
+                      </td>
+
+                      <td className="px-4 py-4 align-middle text-right">
+                        <Badge tone={subStatus.tone}>
+                          {subStatus.label}: {subStatus.count} bài
+                        </Badge>
+                      </td>
+
+                      <td className="px-4 py-4 align-middle text-center">
+                        <Link href={`/mentor/submissions?teamId=${tid}&trackId=${currentTrackId}`}>
+                          <Button variant="secondary" accent="mentor" className="gap-1 text-xs">
+                            Xem bài nộp
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {teamsInTrack.length > 0 && (
+            <div className="pt-3 border-t border-[var(--border-muted)]">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="đội thi"
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

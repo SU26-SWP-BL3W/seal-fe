@@ -96,6 +96,9 @@ export interface TrackCalibration {
   scores: CalibrationScoreRow[];
   criteriaStats: CalibrationCriteriaStat[];
   judgeStats: CalibrationJudgeStat[];
+  /** Alias PascalCase back-compat cho code cũ đọc trực tiếp — API thật luôn trả camelCase. */
+  Scores?: CalibrationScoreRow[];
+  JudgeStats?: CalibrationJudgeStat[];
 }
 
 /** GET /Scores/track/{trackId}/calibration — chỉ Admin/EC của sự kiện. */
@@ -136,6 +139,7 @@ export function useExportScoresCsv() {
       exportScoresCsv(payload.eventId, payload.anonymize ?? true),
   });
 }
+
 
 export interface CreateScorePayload {
   eventRoleId: string;
@@ -214,6 +218,9 @@ export function useSaveScore() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["scoreDetail", data.id] });
       queryClient.invalidateQueries({ queryKey: ["trackCalibration"] });
+      // Refetch danh sách phiếu chấm để form nạp lại đúng bản nháp vừa lưu khi
+      // giám khảo chuyển bài rồi quay lại (nếu không sẽ đọc cache cũ -> mất điểm).
+      queryClient.invalidateQueries({ queryKey: ["scoresByEventRole"] });
     },
   });
 }

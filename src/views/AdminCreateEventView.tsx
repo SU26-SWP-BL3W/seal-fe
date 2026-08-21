@@ -1,16 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Input, Card, CalendarRangeField } from "@/components/ui";
+import { Button, Input, Card } from "@/components/ui";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { usersRepository } from "@/repositories/usersRepository";
-import { Shield, Calendar, Clock, Info, ArrowLeft, CheckCircle2, UserCheck, AlertCircle } from "lucide-react";
-import { useToast } from "@/providers/ToastProvider";
-import { Link } from "@/i18n/routing";
+import { Shield, Calendar, Info, ArrowLeft, CheckCircle2, UserCheck } from "lucide-react";
+import Link from "next/link";
 
 export const AdminCreateEventView: React.FC = () => {
-  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successEventId, setSuccessEventId] = useState<string | null>(null);
@@ -19,19 +17,15 @@ export const AdminCreateEventView: React.FC = () => {
     eventName: "SEAL Hackathon 2026",
     season: "Mùa Hè",
     year: 2026,
-    startDate: "2026-07-15T08:00",
-    endDate: "2026-09-20T17:00",
-    registrationStartDate: "2026-06-01T08:00",
-    registrationEndDate: "2026-07-10T23:59",
+    startDate: "2026-07-15",
+    endDate: "2026-09-20",
+    registrationStartDate: "2026-06-01",
+    registrationEndDate: "2026-07-10",
     description: "Đấu trường công nghệ quy mô lớn dành cho sinh viên toàn quốc do Ban Quản Trị SEAL phê duyệt.",
     coordinatorEmail: "ec.coordinator@seal.edu.vn",
     minTeamSize: 3,
     maxTeamSize: 5,
     maxTeams: 50,
-    round1Name: "Vòng 1",
-    round1StartDate: "2026-07-15T08:00",
-    round1EndDate: "2026-09-20T17:00",
-    track1Name: "Bảng Đấu Phần Mềm Ứng Dụng (General Software)",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,27 +33,11 @@ export const AdminCreateEventView: React.FC = () => {
     setErrorMessage(null);
 
     if (!form.eventName.trim()) {
-      const msg = "Vui lòng nhập tên sự kiện!";
-      setErrorMessage(msg);
-      toast.error(msg);
+      setErrorMessage("Vui lòng nhập tên sự kiện!");
       return;
     }
     if (new Date(form.startDate) > new Date(form.endDate)) {
-      const msg = "Ngày bắt đầu sự kiện phải diễn ra trước ngày kết thúc!";
-      setErrorMessage(msg);
-      toast.error(msg);
-      return;
-    }
-    if (!form.round1Name.trim() || !form.round1StartDate || !form.round1EndDate) {
-      const msg = "Vui lòng nhập đủ tên và thời gian Vòng 1 — hệ thống bắt buộc mỗi sự kiện phải có ít nhất một vòng thi.";
-      setErrorMessage(msg);
-      toast.error(msg);
-      return;
-    }
-    if (!form.track1Name.trim()) {
-      const msg = "Vui lòng nhập tên Hạng mục (Track) đầu tiên — mỗi vòng thi bắt buộc phải có ít nhất một hạng mục.";
-      setErrorMessage(msg);
-      toast.error(msg);
+      setErrorMessage("Ngày bắt đầu sự kiện phải diễn ra trước ngày kết thúc!");
       return;
     }
 
@@ -77,15 +55,7 @@ export const AdminCreateEventView: React.FC = () => {
         description: form.description,
         maxTeams: Number(form.maxTeams),
         status: true,
-        rounds: [
-          {
-            roundName: form.round1Name,
-            roundNumber: 1,
-            startDate: new Date(form.round1StartDate).toISOString(),
-            endDate: new Date(form.round1EndDate).toISOString(),
-            tracks: [{ trackName: form.track1Name }],
-          },
-        ],
+        rounds: [],
       };
 
       const res = await eventsRepository.createEvent(payload);
@@ -111,51 +81,48 @@ export const AdminCreateEventView: React.FC = () => {
           }
         }
         setSuccessEventId(eventId);
-        toast.success("Khởi tạo sự kiện cuộc thi thành công!");
       } else {
-        const msg = res?.message || "Tạo sự kiện thất bại. Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.";
-        setErrorMessage(msg);
-        toast.error(msg);
+        setErrorMessage(res?.message || "Tạo sự kiện thất bại. Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.");
       }
     } catch (err: any) {
       console.error("Lỗi tạo sự kiện:", err);
-      const details = err?.response?.data?.details;
-      const detailMsg = Array.isArray(details) ? details.map((d: any) => d?.value?.join?.(" ") || d?.value).filter(Boolean).join(" ") : null;
-      const apiMsg = detailMsg || err?.response?.data?.message || err?.message || "Tạo sự kiện thất bại. Vui lòng kiểm tra dữ liệu và thử lại.";
+      const apiMsg = err?.response?.data?.message || err?.message || "Tạo sự kiện thất bại. Vui lòng kiểm tra kết nối mạng và thử lại.";
       setErrorMessage(apiMsg);
-      toast.error(apiMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans flex flex-col">
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] font-sans hud-lattice flex flex-col">
       <main className="flex-1 max-w-[var(--container-max)] w-full mx-auto px-4 py-8 space-y-6">
-        <div className="flex items-center gap-2 font-mono text-xs text-[var(--text-muted)] border-b border-zinc-800 pb-4">
-          <Link href="/admin/dashboard" className="hover:text-amber-400 flex items-center gap-1">
+        <div className="flex items-center gap-2 font-mono text-xs text-[var(--text-muted)] border-b border-[var(--border-muted)] pb-4">
+          <Link href="/admin/dashboard" className="hover:text-[var(--color-danger)] flex items-center gap-1">
             <ArrowLeft className="w-3.5 h-3.5" /> Bảng Điều Hành Admin
           </Link>
           <span>/</span>
-          <span className="text-amber-400 font-bold">Khởi Tạo Sự Kiện Cuộc Thi Mới</span>
+          <span className="text-[var(--color-danger)] font-bold">STT #1: Khởi Tạo Sự Kiện (Admin Only)</span>
         </div>
 
-        <div className="bg-[#10171a] border border-zinc-800 rounded-lg p-6 space-y-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+        <Card className="hud-glow-cyan p-6 space-y-6">
+          <div className="flex items-center justify-between border-b border-[var(--border-muted)] pb-4">
             <div>
-              <h2 className="font-display font-bold text-xl text-white uppercase tracking-wider flex items-center gap-2">
-                <Shield className="w-6 h-6 text-amber-400" />
-                Khởi Tạo Sự Kiện Cuộc Thi Mới
+              <h2 className="font-display font-bold text-xl text-[var(--text-primary)] uppercase tracking-wider flex items-center gap-2">
+                <Shield className="w-6 h-6 text-[var(--color-danger)]" />
+                Admin Khởi Tạo Sự Kiện Mới (POST /api/Events)
               </h2>
-              <p className="text-xs font-mono text-zinc-400 mt-1">
-                Tạo khung sự kiện chính, thiết lập thời gian và chỉ định Event Coordinator phụ trách điều phối giải đấu.
+              <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
+                Tạo Khung Sự Kiện Chính và chỉ định Event Coordinator (Trưởng Ban Tổ Chức) phụ trách điều phối sự kiện.
               </p>
             </div>
+            <span className="px-3 py-1 font-mono text-xs bg-[rgba(239,68,68,0.1)] text-[var(--color-danger)] border border-[var(--color-danger)]/30 hud-clipped font-bold">
+              [ADM-ACTION ONLY]
+            </span>
           </div>
 
           {errorMessage && (
-            <div className="p-4 bg-rose-950/40 border border-rose-500/40 text-rose-300 font-mono text-xs rounded">
-              {errorMessage}
+            <div className="p-4 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)] text-[var(--color-danger)] font-mono text-xs hud-clipped">
+              ⚠️ {errorMessage}
             </div>
           )}
 
@@ -178,12 +145,12 @@ export const AdminCreateEventView: React.FC = () => {
               <div className="pt-2 flex flex-wrap justify-center gap-4">
                 <Link href="/admin/dashboard">
                   <Button variant="primary" className="font-mono text-xs bg-[var(--color-danger)]">
-                    Về Bảng Điều Hành Admin Tổng
+                    Về Bảng Điều Hành Admin Tổng &gt;
                   </Button>
                 </Link>
                 <Link href="/coordinator/dashboard">
                   <Button variant="secondary" className="font-mono text-xs border-[var(--accent-coordinator)] text-[var(--accent-coordinator)]">
-                    Sang Bảng EC Dashboard
+                    Sang Bảng EC Dashboard &gt;
                   </Button>
                 </Link>
               </div>
@@ -249,90 +216,53 @@ export const AdminCreateEventView: React.FC = () => {
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <CalendarRangeField
-                    title="Thời Gian Diễn Ra Sự Kiện *"
-                    icon={<Calendar className="w-4 h-4 text-cyan-400" />}
-                    startValue={form.startDate}
-                    endValue={form.endDate}
-                    onStartChange={(v) => setForm((prev) => ({ ...prev, startDate: v }))}
-                    onEndChange={(v) => setForm((prev) => ({ ...prev, endDate: v }))}
-                    startLabel="Khai mạc"
-                    endLabel="Bế mạc"
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                    Ngày Bắt Đầu Sự Kiện *
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.startDate}
+                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                    required
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <CalendarRangeField
-                    title="Thời Gian Mở / Đóng Cổng Đăng Ký"
-                    icon={<Clock className="w-4 h-4 text-amber-400" />}
-                    startValue={form.registrationStartDate}
-                    endValue={form.registrationEndDate}
-                    onStartChange={(v) => setForm((prev) => ({ ...prev, registrationStartDate: v }))}
-                    onEndChange={(v) => setForm((prev) => ({ ...prev, registrationEndDate: v }))}
-                    startLabel="Mở cổng"
-                    endLabel="Đóng cổng"
-                    hint="Cân đối mốc đăng ký so với thời gian diễn ra sự kiện đã chọn ở trên."
-                    referenceRange={{
-                      start: form.startDate,
-                      end: form.endDate,
-                      label: "Sự kiện diễn ra",
-                    }}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                    Ngày Kết Thúc Sự Kiện *
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.endDate}
+                    onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    required
                   />
                 </div>
 
-                {/* Vòng 1 + Hạng mục 1 — hệ thống bắt buộc mỗi sự kiện phải có sẵn ít nhất
-                    1 Round chứa ít nhất 1 Track thì mới tạo được (validate ở BE). EC có thể
-                    thêm Vòng/Hạng mục khác sau tại Coordinator Dashboard. */}
-                <div className="md:col-span-2 p-4 bg-[var(--bg-input)] border border-cyan-500/30 hud-clipped space-y-4">
-                  <p className="text-xs font-mono tracking-widest text-cyan-300 uppercase font-bold">
-                    Vòng Thi &amp; Hạng Mục Khởi Tạo (bắt buộc — có thể thêm/sửa sau ở trang EC)
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                        Tên Vòng Thi *
-                      </label>
-                      <Input
-                        type="text"
-                        value={form.round1Name}
-                        onChange={(e) => setForm({ ...form, round1Name: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
-                        Tên Hạng Mục *
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="Ví dụ: Lập trình Web"
-                        value={form.track1Name}
-                        onChange={(e) => setForm({ ...form, track1Name: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <CalendarRangeField
-                    title="Thời Gian Nộp Bài Vòng 1"
-                    icon={<Calendar className="w-4 h-4 text-cyan-400" />}
-                    startValue={form.round1StartDate}
-                    endValue={form.round1EndDate}
-                    minDate={form.startDate}
-                    maxDate={form.endDate}
-                    onStartChange={(v) => setForm((prev) => ({ ...prev, round1StartDate: v }))}
-                    onEndChange={(v) => setForm((prev) => ({ ...prev, round1EndDate: v }))}
-                    startLabel="Mở nộp bài"
-                    endLabel="Hạn chót"
-                    hint="Phải nằm trong khoảng Khai mạc – Bế mạc sự kiện ở trên."
-                    referenceRange={{
-                      start: form.startDate,
-                      end: form.endDate,
-                      label: "Sự kiện diễn ra",
-                    }}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                    Ngày Mở Cổng Đăng Ký
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.registrationStartDate}
+                    onChange={(e) => setForm({ ...form, registrationStartDate: e.target.value })}
                   />
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
+                    Ngày Đóng Cổng Đăng Ký
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.registrationEndDate}
+                    onChange={(e) => setForm({ ...form, registrationEndDate: e.target.value })}
+                  />
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-mono tracking-widest text-[var(--accent-team)] uppercase font-bold">
                     Số Thành Viên Tối Thiểu / Đội *
@@ -374,31 +304,18 @@ export const AdminCreateEventView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action-Anchored Error Banner: Hiển thị ngay trên nút bấm để nhìn thấy lập tức mà không cần cuộn trang */}
-              {errorMessage && (
-                <div className="p-4 bg-rose-950/70 border border-rose-500/80 text-rose-200 font-mono text-xs rounded-lg flex items-center gap-3 animate-in slide-in-from-bottom-2 shadow-[0_0_25px_rgba(244,63,94,0.25)]">
-                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 animate-pulse" />
-                  <div className="flex-1">
-                    <strong className="block text-rose-300 font-bold uppercase tracking-wider text-[11px] mb-0.5">
-                      Chưa Thể Khởi Tạo Sự Kiện
-                    </strong>
-                    <span>{errorMessage}</span>
-                  </div>
-                </div>
-              )}
-
               <div className="flex items-center justify-between pt-4 border-t border-[var(--border-muted)]">
-                <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-                  <Info className="w-4 h-4 text-amber-400" />
-                  <span>Dành riêng cho Quản Trị Viên khởi tạo giải đấu.</span>
+                <div className="flex items-center gap-2 text-xs font-mono text-[var(--text-muted)]">
+                  <Info className="w-4 h-4 text-[var(--color-danger)]" />
+                  <span>Chỉ System Admin mới có nút bấm khởi tạo này.</span>
                 </div>
-                <Button variant="primary" type="submit" disabled={isSubmitting} className="bg-amber-500 text-black hover:bg-amber-400 font-bold">
-                  {isSubmitting ? "Đang khởi tạo sự kiện..." : "Xác Nhận Tạo Sự Kiện"}
+                <Button variant="primary" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Đang tạo event & gán EC..." : "Xác Nhận Tạo Sự Kiện"}
                 </Button>
               </div>
             </form>
           )}
-        </div>
+        </Card>
       </main>
     </div>
   );

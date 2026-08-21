@@ -10,6 +10,29 @@ export interface SystemNotification {
   createdAt: string;
   isRead: boolean;
   linkUrl?: string;
+  recipientEmail?: string;
+  senderEmail?: string;
+}
+
+const LOCAL_NOTIF_KEY = "seal_local_system_notifications";
+
+export function pushSystemNotification(notif: Omit<SystemNotification, "id" | "createdAt" | "isRead">) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(LOCAL_NOTIF_KEY);
+    const list: SystemNotification[] = raw ? JSON.parse(raw) : [];
+    const item: SystemNotification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      ...notif,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    list.unshift(item);
+    localStorage.setItem(LOCAL_NOTIF_KEY, JSON.stringify(list.slice(0, 50)));
+    window.dispatchEvent(new Event("seal-notification-updated"));
+  } catch (e) {
+    console.warn("Could not save local notification", e);
+  }
 }
 
 export const notificationsRepository = {
@@ -30,6 +53,19 @@ export const notificationsRepository = {
 
   /** Mark notification as read */
   async markAsRead(notificationId: string): Promise<BaseResponse<boolean>> {
+    if (typeof window !== "undefined" && notificationId.startsWith("notif-")) {
+      try {
+        const raw = localStorage.getItem(LOCAL_NOTIF_KEY);
+        if (raw) {
+          const list: SystemNotification[] = JSON.parse(raw);
+          const updated = list.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n));
+          localStorage.setItem(LOCAL_NOTIF_KEY, JSON.stringify(updated));
+          window.dispatchEvent(new Event("seal-notification-updated"));
+        }
+      } catch {}
+      return { success: true, data: true, message: "OK" };
+    }
+
     try {
       const res = await apiClient.put<BaseResponse<boolean>>(`/Notifications/${notificationId}/read`);
       return res.data;
@@ -63,7 +99,16 @@ export function useMyNotifications(enabled: boolean = true) {
     queryKey: ["my-notifications"],
     queryFn: async () => {
       const res = await notificationsRepository.getNotifications();
-      return unwrapList(res);
+      const beList = unwrapList(res);
+      let localList: SystemNotification[] = [];
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem(LOCAL_NOTIF_KEY);
+          if (raw) localList = JSON.parse(raw);
+        } catch {}
+      }
+      // Combine local notifications with backend notifications
+      return [...localList, ...beList];
     },
     refetchInterval: 30_000,
     enabled,

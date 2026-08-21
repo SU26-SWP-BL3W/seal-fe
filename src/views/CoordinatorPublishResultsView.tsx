@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 
 export const CoordinatorPublishResultsView: React.FC = () => {
   const toast = useToast();
@@ -130,6 +132,14 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           : `Đã hủy gán giải thưởng cho Đội "${teamName}".`;
       setSuccessMessage(okMsg);
       toast.success(okMsg);
+
+      if (prizeId !== "none") {
+        pushSystemNotification({
+          title: "🏆 THƯ CHÚC MỪNG ĐẠT GIẢI THƯỞNG SỰ KIỆN",
+          message: `Nhiệt liệt chúc mừng Đội "${teamName}" đã xuất sắc đạt ${prizeObj?.name || 'Giải thưởng danh giá'} tại sự kiện "${currentEvent?.eventName || 'Sự kiện'}"! Ban Tổ Chức xin chúc mừng thành tích rực rỡ của toàn đội!`,
+          type: "success",
+        });
+      }
     } catch (err: any) {
       const errMsg = `Gán giải thưởng thất bại: ${err?.message}`;
       setErrorMessage(errMsg);
@@ -138,6 +148,16 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   };
 
   const displayResults = results;
+
+  const {
+    paginatedItems: paginatedResults,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(displayResults, 8);
 
   const handleCalculate = async () => {
     setIsSubmitting(true);
@@ -171,10 +191,18 @@ export const CoordinatorPublishResultsView: React.FC = () => {
       }
       setIsPublishedState(nextStatus);
       const okMsg = nextStatus
-        ? "🎉 Đã công bố kết quả chung cuộc và trao giải thưởng thành công! Hệ thống đã gửi email chúc mừng tới các đội đạt giải và mở Bảng Vàng Vinh Danh."
+        ? "Đã công bố công khai bảng kết quả cho thí sinh và Bảng Vàng Danh Dự!"
         : "Đã ẩn bảng kết quả về chế độ bản nháp an toàn.";
       setSuccessMessage(okMsg);
       toast.success(okMsg);
+
+      if (nextStatus) {
+        pushSystemNotification({
+          title: "📢 Công bố kết quả chính thức!",
+          message: `Ban Tổ Chức đã chính thức công bố bảng điểm & xếp hạng cho Vòng thi "${currentRound?.name || 'Vòng thi'}" sự kiện "${currentEvent?.eventName || 'Sự kiện'}". Hãy kiểm tra Bảng xếp hạng ngay!`,
+          type: "success",
+        });
+      }
       await refetch();
     } catch (err: any) {
       const errMsg = `Đổi trạng thái thất bại: ${err?.response?.data?.message || err?.message}`;
@@ -477,8 +505,8 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  displayResults.map((r: any, idx: number) => {
-                    const rankStr = String(r.rank || idx + 1).padStart(2, "0");
+                  paginatedResults.map((r: any, idx: number) => {
+                    const rankStr = String(r.rank || (currentPage - 1) * pageSize + idx + 1).padStart(2, "0");
                     const name = teamNameById.get(r.teamId) || r.teamName || r.TeamName || r.teamId;
                     const uid = `KQ: ${(r.id || "").slice(0, 8).toUpperCase()}`;
                     const score = Number(r.finalScore || r.totalScore || r.TotalScore || 0).toFixed(2);
@@ -533,13 +561,19 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           </div>
 
           {/* Table Footer Pagination */}
-          <div className="p-3 bg-[#0a0e10] border-t border-[#263339] flex items-center justify-between font-mono text-xs text-[#8a9ba8]">
-            <div>TỔNG SỐ BẢN GHI: {String(displayResults.length).padStart(2, "0")}</div>
-            <div className="flex items-center gap-1">
-              <button className="px-2 py-0.5 border border-[#263339] hover:border-[#8b5cf6] text-xs">&lt;</button>
-              <button className="px-2 py-0.5 border border-[#263339] hover:border-[#8b5cf6] text-xs">&gt;</button>
+          {displayResults.length > 0 && (
+            <div className="p-3 bg-[#0a0e10] border-t border-[#263339]">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="kết quả xếp hạng"
+              />
             </div>
-          </div>
+          )}
         </div>
 
       </div>

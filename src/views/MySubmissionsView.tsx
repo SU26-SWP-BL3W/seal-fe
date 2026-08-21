@@ -15,6 +15,8 @@ import {
   parseMentorFeedbackComment,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import {
   FolderOpen,
   Code,
@@ -50,6 +52,16 @@ export function MySubmissionsView() {
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
   const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
+
+  const {
+    paginatedItems: paginatedSubmissions,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(submissions, 5);
 
   // Edit Modal State
   const [editingSub, setEditingSub] = useState<SubmitResultListItem | null>(null);
@@ -241,7 +253,7 @@ export function MySubmissionsView() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#3c494d]/40">
-                      {submissions.map((sub, idx) => {
+                      {paginatedSubmissions.map((sub, idx) => {
                         const id = sub.id || sub.Id || `sub-${idx}`;
                         const isEliminated = (sub as any).isTeamDisqualified || (sub as any).IsTeamDisqualified;
                         const isActive = sub.isActive ?? sub.IsActive ?? true;
@@ -249,7 +261,7 @@ export function MySubmissionsView() {
                         return (
                           <tr key={id} className="hover:bg-white/[0.02] transition-colors group">
                             <td className="py-4 px-4 font-bold text-white whitespace-nowrap">
-                              {(sub as any).roundName || (sub as any).RoundName || `Vòng ${idx + 1}`}
+                              {(sub as any).roundName || (sub as any).RoundName || `Vòng ${(currentPage - 1) * pageSize + idx + 1}`}
                             </td>
 
                             <td className="py-4 px-4">
@@ -351,6 +363,20 @@ export function MySubmissionsView() {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {submissions.length > 0 && (
+                <div className="p-3 border-t border-[#3c494d]/40">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={setPageSize}
+                    itemLabel="bài nộp"
+                  />
                 </div>
               )}
             </div>

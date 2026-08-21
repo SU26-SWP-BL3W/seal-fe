@@ -16,6 +16,8 @@ import { Link } from "@/i18n/routing";
 import type { User } from "@/models/entities";
 import { readApiError } from "@/repositories/submitResultsRepository";
 import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 
 export const CoordinatorProfilesView: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -83,6 +85,16 @@ export const CoordinatorProfilesView: React.FC = () => {
       return matchesSearch && matchesStatus;
     });
   }, [usersList, searchTerm, statusFilter]);
+
+  const {
+    paginatedItems: paginatedCandidates,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredCandidates, 8);
 
   const handleApprove = async (userId: string) => {
     setActionError(null);
@@ -280,14 +292,14 @@ export const CoordinatorProfilesView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/60">
-                  {filteredCandidates.map((u, idx) => {
+                  {paginatedCandidates.map((u, idx) => {
                     const userId = u.id || (u as any).Id || u.userId || "";
                     const isLocked = (u.rejectionCount ?? 0) >= 2;
                     const isApproved = !!u.isApproved;
 
                     return (
                       <tr key={userId || idx} className="hover:bg-[#141e22] transition-colors">
-                        <td className="py-3.5 px-4 text-zinc-500 text-center">{idx + 1}</td>
+                        <td className="py-3.5 px-4 text-zinc-500 text-center">{(currentPage - 1) * pageSize + idx + 1}</td>
                         <td className="py-3.5 px-4 font-bold text-white tracking-wider">
                           <button
                             onClick={() => setDetailUserModal(u)}
@@ -330,6 +342,20 @@ export const CoordinatorProfilesView: React.FC = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {filteredCandidates.length > 0 && (
+            <div className="p-4 border-t border-zinc-800">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="thí sinh"
+              />
             </div>
           )}
         </div>

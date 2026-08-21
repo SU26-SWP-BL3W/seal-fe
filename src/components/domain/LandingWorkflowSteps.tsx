@@ -26,10 +26,10 @@ const WORKFLOW_STEPS = [
   },
   {
     step: "04",
-    title: "CHẤM ĐIỂM MINH BẠCH",
+    title: "CHẤM ĐIỂM MINH BẠCH RBL",
     badge: "4 GIÁM KHẢO ĐỘC LẬP",
     accent: "var(--accent-judge)",
-    description: "Hội đồng 4 giám khảo độc lập chấm theo ma trận tiêu chuẩn, kiểm toán độ lệch điểm số minh bạch.",
+    description: "Hội đồng 4 giám khảo độc lập chấm theo ma trận tiêu chuẩn, kiểm toán độ lệch RBL minh bạch.",
   },
 ];
 
@@ -39,7 +39,7 @@ export function LandingWorkflowSteps() {
       <div className="mx-auto flex w-full max-w-[var(--container-max)] flex-col gap-[var(--space-xl)]">
         <div className="flex flex-col items-center text-center gap-2">
           <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-primary)]">
-            QUY TRÌNH THI ĐẤU
+            QUY TRÌNH THI ĐẤU HẠNG MỤC
           </span>
 
           <h2 className="font-display text-2xl font-bold uppercase text-[var(--text-primary)] md:text-4xl">

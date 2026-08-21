@@ -109,11 +109,11 @@ export const getRoleDetails = (
 
 export function UserProfileView() {
   const toast = useToast();
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
   const currentUserId = user?.id || user?.userId || user?.UserID || (user as any)?.Id;
-  const { data: userRolesResult } = useGetEventRolesByUser(currentUserId, { pageSize: 100 });
+  const { data: userRolesResult, isLoading: rolesLoading } = useGetEventRolesByUser(currentUserId, { pageSize: 100 });
   const userRoles = useMemo(() => {
     const raw = (userRolesResult as any)?.data?.items ?? (userRolesResult as any)?.items ?? (Array.isArray(userRolesResult) ? userRolesResult : []);
     return Array.isArray(raw) ? raw : [];
@@ -199,8 +199,20 @@ export function UserProfileView() {
     if (isTeamLeader && !effectiveRoles.includes("TeamLeader")) effectiveRoles.push("TeamLeader");
     if (isTeamMember && !effectiveRoles.includes("TeamMember")) effectiveRoles.push("TeamMember");
 
+    // Roles đang tải và chưa có tín hiệu vai trò nào -> KHÔNG vội kết luận "Thí Sinh"
+    // (tránh mislabel giám khảo/cố vấn thành sinh viên khi query chưa về / userId chưa hydrate).
+    if (rolesLoading && !isAdmin && !rawRole && effectiveRoles.length === 0) {
+      return {
+        label: "Đang tải phân công…",
+        badgeClass: "bg-zinc-800/60 border-zinc-600/40 text-zinc-300",
+        dotClass: "bg-zinc-400 animate-pulse",
+        typeLabel: "Đang xác định vai trò…",
+        isStaff: true, // tạm ẩn các field sinh viên trong lúc chờ, tránh hiện nhầm
+      };
+    }
+
     return getRoleDetails(rawRole, effectiveRoles, isAdmin, isStudent);
-  }, [user, activeRole, assignedRoleNames, myTeam, currentUserId]);
+  }, [user, activeRole, assignedRoleNames, myTeam, currentUserId, rolesLoading]);
 
   const isStaff = roleInfo.isStaff;
 
@@ -221,21 +233,6 @@ export function UserProfileView() {
   const [fptCode, setFptCode] = useState(studentCode || "");
   const [fptResult, setFptResult] = useState<FptStudentResponse | null>(null);
   const [fptError, setFptError] = useState("");
-
-  const [isDragging, setIsDragging] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [requestUnblockSuccess, setRequestUnblockSuccess] = useState(false);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Change password state
-  const [showPasswordCard, setShowPasswordCard] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   // Sync state when user loads
   useEffect(() => {
@@ -259,6 +256,21 @@ export function UserProfileView() {
       }
     }
   }, [user]);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [requestUnblockSuccess, setRequestUnblockSuccess] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Change password state
+  const [showPasswordCard, setShowPasswordCard] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   // API mutations
   const updateProfileMutation = useUpdateStudentProfile();
@@ -564,6 +576,13 @@ export function UserProfileView() {
         confirmNewPassword: confirmPassword,
       });
       setPasswordSuccess(true);
+      updateUser({ mustChangePassword: false });
+      if (typeof window !== "undefined") {
+        try {
+          const stored = JSON.parse(localStorage.getItem("currentUser") || "{}");
+          localStorage.setItem("currentUser", JSON.stringify({ ...stored, mustChangePassword: false }));
+        } catch {}
+      }
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -716,7 +735,7 @@ export function UserProfileView() {
                 <div className="flex justify-between items-center py-1">
                   <span className="text-zinc-400">NGÀY THAM GIA:</span>
                   <span className="text-zinc-300">
-                    {user?.createdTime ? new Date(user.createdTime).toLocaleDateString("vi-VN") : "18/07/2026"}
+                    {user?.createdTime ? new Date(user.createdTime).toLocaleDateString("vi-VN") : "Chưa rõ"}
                   </span>
                 </div>
               </div>
@@ -1212,7 +1231,10 @@ export function UserProfileView() {
                     const rEventId = r.eventId || r.EventId;
                     const rEventObj = eventsList.find((e: any) => normalizeId(e.id || e.Id) === normalizeId(rEventId));
                     const rEventName = rEventObj?.eventName || rEventObj?.EventName || eventNameMap.get(normalizeId(rEventId)) || "Sự kiện SEAL";
-                    const isEnded = rEventObj?.status === false || (rEventObj?.endDate && new Date(rEventObj.endDate).getTime() < Date.now());
+                    // Hết hiệu lực = role hết hạn (ExpiredAt) HOẶC sự kiện đã đóng — không chỉ dựa endDate.
+                    const rExpiredAt = r.expiredAt || r.ExpiredAt;
+                    const isRoleExpired = rExpiredAt ? new Date(rExpiredAt).getTime() < Date.now() : false;
+                    const isEnded = isRoleExpired || rEventObj?.status === false || (rEventObj?.endDate && new Date(rEventObj.endDate).getTime() < Date.now());
                     const rRoleName = r.roleName || r.RoleName || "Chuyên gia";
                     const rTrackId = r.trackId || r.TrackId;
                     const rTrackName = r.track?.trackName || r.Track?.TrackName || (rTrackId ? trackNameMap.get(normalizeId(rTrackId)) : null);
@@ -1221,11 +1243,12 @@ export function UserProfileView() {
                     let actionLabel = "[ VÀO SỰ KIỆN > ]";
 
                     if (rRoleName === "Judge") {
-                      targetUrl = `/judge/events?eventId=${rEventId}`;
+                      // Có trackId → vào thẳng bàn chấm hạng mục đó; chưa gán → panel Judge liệt kê.
+                      targetUrl = rTrackId ? `/judge/scoring?trackId=${rTrackId}` : `/judge/events?eventId=${rEventId}`;
                       actionLabel = isEnded ? "[ XEM BÀI ĐÃ CHẤM > ]" : "[ BÀN CHẤM ĐIỂM > ]";
                     } else if (rRoleName === "Mentor") {
-                      targetUrl = `/events/${rEventId}`;
-                      actionLabel = isEnded ? "[ XEM SỰ KIỆN > ]" : "[ VÀO SỰ KIỆN > ]";
+                      targetUrl = rTrackId ? `/mentor/teams?eventId=${rEventId}&trackId=${rTrackId}` : `/mentor?eventId=${rEventId}`;
+                      actionLabel = isEnded ? "[ XEM DANH SÁCH ĐỘI > ]" : "[ KHÔNG GIAN CỐ VẤN > ]";
                     } else if (rRoleName === "EventCoordinator" || rRoleName === "Coordinator") {
                       targetUrl = `/coordinator/dashboard?eventId=${rEventId}`;
                       actionLabel = "[ BÀN ĐIỀU PHỐI > ]";
@@ -1255,9 +1278,15 @@ export function UserProfileView() {
                               <span className="px-2 py-0.5 bg-zinc-900 text-zinc-400 border border-zinc-700 font-mono text-[10px] hud-clipped">
                                 TRACK: {String(rTrackId).substring(0, 8)}...
                               </span>
-                            ) : (
+                            ) : (rRoleName === "EventCoordinator" || rRoleName === "Coordinator") ? (
+                              // EC không gắn track là ĐÚNG nghĩa: điều phối toàn sự kiện.
                               <span className="px-2 py-0.5 bg-zinc-900 text-zinc-400 border border-zinc-700 font-mono text-[10px] hud-clipped">
                                 PHẠM VI: TOÀN SỰ KIỆN
+                              </span>
+                            ) : (
+                              // Judge/Mentor thiếu track = chưa được gán, KHÔNG phải "toàn sự kiện".
+                              <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300/80 border border-amber-700/40 font-mono text-[10px] hud-clipped">
+                                CHƯA GÁN HẠNG MỤC
                               </span>
                             )}
 
@@ -1351,7 +1380,14 @@ export function UserProfileView() {
               </Card>
             )}
 
-            {userRoles.length === 0 && (
+            {rolesLoading && userRoles.length === 0 && (
+              <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-3 text-center shadow-sm font-mono text-xs text-zinc-400">
+                <p className="font-bold text-zinc-300 uppercase animate-pulse">[ ĐANG TẢI PHÂN CÔNG… ]</p>
+                <p className="text-zinc-500">Đang lấy dữ liệu đội thi và vai trò chuyên môn của bạn.</p>
+              </Card>
+            )}
+
+            {!rolesLoading && userRoles.length === 0 && (
               <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-3 text-center shadow-sm font-mono text-xs text-zinc-400">
                 <p className="font-bold text-white uppercase">[ CHƯA THAM GIA ĐỘI THI HOẶC PHÂN CÔNG CHUYÊN MÔN ]</p>
                 <p className="text-zinc-500">Bạn hiện tại chưa tham gia đội thi nào hoặc chưa được phân công vai trò chuyên môn trong hệ thống.</p>
