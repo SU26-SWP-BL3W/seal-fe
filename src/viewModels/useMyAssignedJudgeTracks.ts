@@ -24,6 +24,11 @@ export interface JudgeTrackItem {
   scoredSubmissions: number;
   pendingSubmissions: number;
   status: string;
+  /** Mốc thời gian THẬT của track (EC cấu hình, override Round) — để gate cổng chấm ở FE
+   * đọc đúng ngày của track, không fallback nhầm sang ngày của Round. */
+  endDate?: string;
+  scoringStartDate?: string;
+  scoringEndDate?: string;
 }
 
 async function fetchTracksByEvent(eventId: string): Promise<TrackWithStaffModel[]> {
@@ -126,6 +131,10 @@ export function useMyAssignedJudgeTracks() {
           trackId,
           templateId: t.templateId || t.TemplateId || "",
           eventRoleId: eventRoleIdByTrack.get(trackId) || fallbackEventRoleId,
+          // Mang theo mốc thời gian THẬT của track để gate cổng chấm không đọc nhầm ngày Round.
+          endDate: (t as any).endDate || (t as any).EndDate,
+          scoringStartDate: (t as any).scoringStartDate || (t as any).ScoringStartDate,
+          scoringEndDate: (t as any).scoringEndDate || (t as any).ScoringEndDate,
         });
       });
     });
