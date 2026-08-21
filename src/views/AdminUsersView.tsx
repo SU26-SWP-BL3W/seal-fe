@@ -5,7 +5,7 @@ import { useGetUsers, useApproveUser, useRejectUser, useCreateUser, useUpdateUse
 import { useGetSchools } from "@/repositories/schoolsRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { useEvents } from "@/repositories/eventsRepository";
-import { Button, Card, Badge, Table, Input } from "@/components/ui";
+import { Button, Card, Badge, Table, Input, EmptyState, Pagination } from "@/components/ui";
 import {
   Users,
   Search,
@@ -32,7 +32,6 @@ import { readApiError } from "@/repositories/submitResultsRepository";
 import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button, Badge, Card, Input, EmptyState, Pagination } from "@/components/ui";
 
 export interface AdminUsersViewProps {
   mode?: "admin" | "coordinator";
