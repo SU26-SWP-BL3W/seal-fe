@@ -218,6 +218,9 @@ export function useSaveScore() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["scoreDetail", data.id] });
       queryClient.invalidateQueries({ queryKey: ["trackCalibration"] });
+      // Refetch danh sách phiếu chấm để form nạp lại đúng bản nháp vừa lưu khi
+      // giám khảo chuyển bài rồi quay lại (nếu không sẽ đọc cache cũ -> mất điểm).
+      queryClient.invalidateQueries({ queryKey: ["scoresByEventRole"] });
     },
   });
 }
