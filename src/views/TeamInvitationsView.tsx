@@ -90,7 +90,7 @@ export function TeamInvitationsView() {
 
       if (isAccepted) {
         if (invType === "TEAM" || invType === "TEAM_MEMBER") {
-          toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+          toast.success(`Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
           pushSystemNotification({
             title: "Gia nhập đội thi thành công",
             message: `Bạn đã chính thức gia nhập đội "${targetName}". Chúc bạn và đồng đội đạt thành tích xuất sắc!`,
@@ -102,7 +102,7 @@ export function TeamInvitationsView() {
             type: "success",
           });
         } else if (inv.role === "Judge") {
-          toast.success(`🎉 Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
+          toast.success(`Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
           pushSystemNotification({
             title: "Đã nhận vai trò Giám khảo",
             message: `Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`,
@@ -114,7 +114,7 @@ export function TeamInvitationsView() {
             type: "success",
           });
         } else if (inv.role === "Mentor") {
-          toast.success(`🎉 Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
+          toast.success(`Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
           pushSystemNotification({
             title: "Đã nhận vai trò Cố vấn",
             message: `Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`,
@@ -126,7 +126,7 @@ export function TeamInvitationsView() {
             type: "success",
           });
         } else {
-          toast.success(`🎉 Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
+          toast.success(`Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
           pushSystemNotification({
             title: "Đã nhận vai trò Điều Phối Viên",
             message: `Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`,
@@ -301,7 +301,7 @@ export function TeamInvitationsView() {
           ) : (
             <div className="text-left space-y-4 pt-2 border-t border-[var(--border-muted)]">
               <div className="p-3 bg-cyan-950/30 border border-cyan-500/30 rounded text-[11px] text-cyan-300 font-sans leading-relaxed">
-                💡 <strong>Tài khoản cho email này đã được tạo sẵn.</strong> Nếu bạn nhận được email "Kích hoạt tài khoản", hãy bấm link kích hoạt trong email đó trước — hệ thống sẽ cấp mật khẩu tạm và gửi lại qua email. Nếu đã có mật khẩu, đăng nhập trực tiếp bên dưới.
+                <strong>Tài khoản cho email này đã được tạo sẵn.</strong> Nếu bạn nhận được email "Kích hoạt tài khoản", hãy bấm link kích hoạt trong email đó trước — hệ thống sẽ cấp mật khẩu tạm và gửi lại qua email. Nếu đã có mật khẩu, đăng nhập trực tiếp bên dưới.
               </div>
 
               <div className="flex flex-col gap-3 pt-2">
@@ -348,9 +348,9 @@ export function TeamInvitationsView() {
   const titleOf = (inv: MyInvitationItem) =>
     inv.type === "TEAM"
       ? inv.role === "Trưởng nhóm"
-        ? `👑 Yêu cầu chuyển quyền Đội trưởng đội ${inv.targetName}`
-        : `📩 Lời mời gia nhập đội thi ${inv.targetName} (Từ Đội trưởng)`
-      : `🎖️ Lời mời đảm nhiệm vai trò: ${formatRoleLabel(inv.role)} — Sự kiện ${inv.targetName}${inv.trackName ? ` · Hạng mục ${inv.trackName}` : ""}`;
+        ? `Yêu cầu chuyển quyền Đội trưởng đội ${inv.targetName}`
+        : `Lời mời gia nhập đội thi ${inv.targetName} (Từ Đội trưởng)`
+      : `Lời mời đảm nhiệm vai trò: ${formatRoleLabel(inv.role)} — Sự kiện ${inv.targetName}${inv.trackName ? ` · Hạng mục ${inv.trackName}` : ""}`;
 
   return (
     <main className="hud-lattice min-h-[calc(100dvh-4rem)] px-[var(--space-lg)] py-[var(--space-xl)]">

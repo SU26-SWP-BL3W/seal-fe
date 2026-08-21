@@ -10,11 +10,10 @@ import { useMyNotifications } from "@/repositories/notificationsRepository";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
-import { PagedResult } from "@/models/types";
-import { SubmitResultListItem } from "@/repositories/submitResultsRepository";
 import { Link } from "@/i18n/routing";
 import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/ui/Pagination";
+import { SubmissionJudgeScoresModal } from "@/components/domain/SubmissionJudgeScoresModal";
 import {
   FileCode,
   Globe,
@@ -24,15 +23,10 @@ import {
   Filter,
   Layers,
   AlertTriangle,
-  ExternalLink,
   Download,
-  Search,
   Award,
   ArrowRight,
-  Bell,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
+  Eye,
 } from "lucide-react";
 
 export const CoordinatorSubmissionsView: React.FC = () => {
@@ -48,7 +42,6 @@ export const CoordinatorSubmissionsView: React.FC = () => {
   const eventsList = useMemo(() => {
     const myEventsList = Array.isArray(rawMyEvents) ? rawMyEvents : (rawMyEvents as any)?.data ?? [];
     
-    // Nếu là Admin hệ thống, cho phép xem toàn bộ sự kiện; Nếu là EC thì CHỈ lấy các sự kiện được phân công (assigned)
     if (currentUser?.isAdmin) {
       const allList = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
       const map = new Map<string, any>();
@@ -70,6 +63,14 @@ export const CoordinatorSubmissionsView: React.FC = () => {
   const [selectedTrackId, setSelectedTrackId] = useState<string>(queryTrackId);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
+  // Modal xem chi tiết điểm số từng giám khảo chấm
+  const [inspectScoresModal, setInspectScoresModal] = useState<{
+    open: boolean;
+    teamId?: string;
+    teamName?: string;
+    submitResultId?: string;
+  }>({ open: false });
+
   useEffect(() => {
     if (queryEventId) {
       setSelectedEventId(queryEventId);
@@ -85,8 +86,7 @@ export const CoordinatorSubmissionsView: React.FC = () => {
     }
   }, [queryTrackId, selectedTrackId]);
 
-  // 2. Fetch Tracks: Nếu đã chọn 1 sự kiện cụ thể, lấy tracks của sự kiện đó;
-  // Nếu chọn "Tất cả sự kiện", lấy tất cả tracks của mọi sự kiện trong hệ thống.
+  // 2. Fetch Tracks
   const { data: eventTracks = [] } = useGetTracksByEvent(selectedEventId || undefined);
 
   const { data: allTracks = [] } = useQuery({
@@ -152,7 +152,7 @@ export const CoordinatorSubmissionsView: React.FC = () => {
 
   const submissions = Array.isArray(rawSubmissions) ? rawSubmissions : [];
 
-  // 4. Query Appeals (phúc khảo) để đếm số đơn Pending
+  // 4. Query Appeals
   const effectiveEventIdForAppeals = selectedEventId || (eventsList[0]?.id || eventsList[0]?.Id || eventsList[0]?.eventId || "");
   const { data: appeals = [], refetch: refetchAppeals } = useGetAppealsByEvent(effectiveEventIdForAppeals || undefined);
   const pendingAppealsCount = useMemo(() => {
@@ -161,18 +161,14 @@ export const CoordinatorSubmissionsView: React.FC = () => {
 
   // 5. Query Notifications
   const { data: notifications = [] } = useMyNotifications(Boolean(currentUser));
-  const unreadNotifsCount = useMemo(() => {
-    return notifications.filter((n) => !n.isRead).length;
-  }, [notifications]);
 
-  // 6. Filter Submissions (Chỉ lấy các bài nộp thuộc đúng sự kiện mà EC được phân công)
+  // 6. Filter Submissions
   const displaySubmissions = useMemo(() => {
     const validEventIds = new Set(
       eventsList.map((e: any) => (e.id || e.Id || e.eventId || e.EventId || "").replace(/-/g, "").toLowerCase()).filter(Boolean)
     );
 
     return submissions.filter((sub: any) => {
-      // Bảo đảm bài nộp phải thuộc sự kiện mà EC được phân công
       if (!currentUser?.isAdmin && validEventIds.size > 0) {
         const subEventId = (sub.eventId || sub.EventId || "").replace(/-/g, "").toLowerCase();
         if (subEventId && !validEventIds.has(subEventId)) return false;
@@ -218,7 +214,6 @@ export const CoordinatorSubmissionsView: React.FC = () => {
     refetchAppeals();
   };
 
-  // Export submissions to CSV
   const handleExportCSV = () => {
     if (displaySubmissions.length === 0) {
       alert("Không có dữ liệu bài nộp để xuất file!");
@@ -295,12 +290,11 @@ export const CoordinatorSubmissionsView: React.FC = () => {
               Quản Lý Bài Nộp Của Các Đội Thi
             </h1>
             <p className="text-xs font-mono text-[var(--text-muted)] mt-1">
-              Kiểm tra trực tiếp toàn bộ mã nguồn GitHub, bản chạy thử Demo URL và Slide thuyết trình từ các đội thi.
+              Kiểm tra trực tiếp toàn bộ mã nguồn GitHub, bản chạy thử Demo URL, Slide thuyết trình và soi chi tiết phiếu chấm của từng Giám khảo.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Link đến trang Phúc Khảo */}
             <Link href={`/coordinator/appeals${selectedEventId ? `?eventId=${selectedEventId}` : ""}`}>
               <Button
                 variant="ghost"
@@ -355,7 +349,6 @@ export const CoordinatorSubmissionsView: React.FC = () => {
 
         {/* Filter Bar */}
         <div className="flex flex-col md:flex-row items-center gap-3 bg-[var(--bg-panel)] p-3 border border-[var(--border-muted)] hud-clipped font-mono text-xs">
-          {/* Event Filter */}
           <div className="flex items-center gap-2 w-full md:w-1/3">
             <Filter className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
             <select
@@ -382,7 +375,6 @@ export const CoordinatorSubmissionsView: React.FC = () => {
             </select>
           </div>
 
-          {/* Track Filter */}
           <div className="flex items-center gap-2 w-full md:w-1/3">
             <Layers className="w-4 h-4 text-[#a855f7] shrink-0" />
             <select
@@ -403,7 +395,6 @@ export const CoordinatorSubmissionsView: React.FC = () => {
             </select>
           </div>
 
-          {/* Search Term */}
           <div className="w-full md:w-1/3 flex items-center gap-2">
             <Input
               type="text"
@@ -423,7 +414,7 @@ export const CoordinatorSubmissionsView: React.FC = () => {
               Danh Sách Bài Nộp Chi Tiết ({displaySubmissions.length})
             </h3>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              Bấm vào các nút liên kết để kiểm tra trực tiếp sản phẩm của đội thi
+              Bấm vào nút "Soi Điểm GK" để xem chi tiết phiếu chấm của từng Giám khảo
             </span>
           </div>
 
@@ -443,24 +434,28 @@ export const CoordinatorSubmissionsView: React.FC = () => {
               <table className="w-full table-fixed min-w-[850px] text-left border-collapse font-mono text-xs">
                 <thead className="bg-[var(--bg-panel)] border-b border-[var(--border-muted)]">
                   <tr>
-                    <th className="w-[24%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[20%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
                       ĐỘI THI
                     </th>
-                    <th className="w-[18%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[15%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
                       HẠNG MỤC (TRACK)
                     </th>
-                    <th className="w-[38%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[30%] px-4 py-3.5 text-left text-[var(--text-muted)] uppercase tracking-wider">
                       LIÊN KẾT BÀI LÀM (DELIVERABLES)
                     </th>
-                    <th className="w-[20%] px-4 py-3.5 text-right text-[var(--text-muted)] uppercase tracking-wider">
+                    <th className="w-[17%] px-4 py-3.5 text-right text-[var(--text-muted)] uppercase tracking-wider">
                       THỜI GIAN NỘP
+                    </th>
+                    <th className="w-[18%] px-4 py-3.5 text-center text-[var(--text-muted)] uppercase tracking-wider">
+                      ĐIỂM GIÁM KHẢO
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedSubmissions.map((sub: any, idx: number) => {
                     const subId = sub.id || sub.Id || `sub-${idx}`;
-                    const teamName = sub.teamName || sub.TeamName || `Đội #${(sub.teamId || sub.TeamId)?.slice(-4) || idx + 1}`;
+                    const teamId = sub.teamId || sub.TeamId;
+                    const teamName = sub.teamName || sub.TeamName || `Đội #${(teamId)?.slice(-4) || idx + 1}`;
                     const trackName = sub.trackName || sub.TrackName || "Chung";
                     const repoUrl = sub.repoUrl || sub.RepoUrl || sub.submissionUrl || sub.SubmissionUrl;
                     const demoUrl = sub.demoUrl || sub.DemoUrl;
@@ -527,6 +522,23 @@ export const CoordinatorSubmissionsView: React.FC = () => {
                         <td className="px-4 py-3.5 align-middle text-right text-[11px] text-[var(--text-muted)] whitespace-nowrap">
                           {createdTime ? new Date(createdTime).toLocaleString("vi-VN") : "Vừa xong"}
                         </td>
+                        <td className="px-4 py-3.5 align-middle text-center">
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              setInspectScoresModal({
+                                open: true,
+                                teamId,
+                                teamName,
+                                submitResultId: subId,
+                              })
+                            }
+                            className="font-mono text-xs border border-[#a855f7]/40 text-[#a855f7] hover:bg-[#a855f7]/15 flex items-center gap-1.5 mx-auto font-bold cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Soi Điểm GK</span>
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -575,6 +587,15 @@ export const CoordinatorSubmissionsView: React.FC = () => {
           </Link>
         </div>
       </main>
+
+      {/* Modal Soi Chi Tiết Điểm Giám Khảo */}
+      <SubmissionJudgeScoresModal
+        open={inspectScoresModal.open}
+        onClose={() => setInspectScoresModal({ open: false })}
+        teamId={inspectScoresModal.teamId}
+        teamName={inspectScoresModal.teamName}
+        submitResultId={inspectScoresModal.submitResultId}
+      />
     </div>
   );
 };

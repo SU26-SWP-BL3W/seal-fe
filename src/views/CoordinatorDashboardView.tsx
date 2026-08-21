@@ -265,11 +265,11 @@ export const CoordinatorDashboardView: React.FC = () => {
                         <div className="flex items-center gap-1.5">
                           {isPublished ? (
                             <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold hud-clipped">
-                              🟢 PUBLIC
+                              PUBLIC
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-mono font-bold hud-clipped">
-                              🟡 BẢN NHÁP
+                              BẢN NHÁP
                             </span>
                           )}
                           <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
@@ -313,7 +313,7 @@ export const CoordinatorDashboardView: React.FC = () => {
                           className="w-full text-xs font-mono py-2 flex items-center justify-center gap-1.5 shadow-sm font-bold bg-[#a855f7] hover:bg-[#9333ea] text-white"
                         >
                           <Edit3 className="w-4 h-4" />
-                          <span>✏️ CHỈNH SỬA SỰ KIỆN &amp; VÒNG THI</span>
+                          <span>CHỈNH SỬA SỰ KIỆN &amp; VÒNG THI</span>
                         </Button>
                       </Link>
 
@@ -439,7 +439,7 @@ export const CoordinatorDashboardView: React.FC = () => {
               Bạn có chắc chắn muốn xoá sự kiện <strong className="text-[var(--accent-coordinator)]">"{deleteTargetName}"</strong>? 
               <br />
               <span className="text-[var(--color-danger)] font-mono text-[11px] block mt-2">
-                ⚠️ Cảnh báo: Hành động này sẽ xoá toàn bộ Vòng thi, Hạng mục và dữ liệu liên quan!
+                Cảnh báo: Hành động này sẽ xoá toàn bộ Vòng thi, Hạng mục và dữ liệu liên quan!
               </span>
             </p>
 

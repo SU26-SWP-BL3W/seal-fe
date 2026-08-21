@@ -81,13 +81,13 @@ export function CoordinatorCalibrationView() {
     setCriteriaList([...criteriaList, newCr]);
     setNewCriteriaName("");
     setNewDesc("");
-    alert("✓ Đã thêm tiêu chí mới vào Kho Tiêu Chí Chấm Điểm!");
+    alert("Đã thêm tiêu chí mới vào Kho Tiêu Chí Chấm Điểm!");
   };
 
   const handleCalculate = async () => {
     try {
       await calculateRound(roundId);
-      alert("✓ Đã tính điểm tổng & xếp hạng Vòng thi thành công!");
+      alert("Đã tính điểm tổng & xếp hạng Vòng thi thành công!");
     } catch {
       alert("Đã hoàn tất tính điểm & phân hạng Vòng thi.");
     }
@@ -209,7 +209,7 @@ export function CoordinatorCalibrationView() {
               : "border-transparent text-[var(--text-muted)] hover:text-white"
           }`}
         >
-          <span>📐 Kho Tiêu Chí Chấm Điểm ({criteriaList.length})</span>
+          <span>Kho Tiêu Chí Chấm Điểm ({criteriaList.length})</span>
         </button>
         <button
           onClick={() => setActiveTab("calibration")}
@@ -219,7 +219,7 @@ export function CoordinatorCalibrationView() {
               : "border-transparent text-[var(--text-muted)] hover:text-white"
           }`}
         >
-          <span>📊 Ma Trận Chấm Điểm Giám Khảo</span>
+          <span>Ma Trận Chấm Điểm Giám Khảo</span>
         </button>
       </div>
 
@@ -229,7 +229,7 @@ export function CoordinatorCalibrationView() {
             {/* Form Thêm Tiêu Chí */}
             <Card className="p-6 bg-[var(--bg-panel)] border border-[var(--accent-judge)]/30 hud-clipped space-y-4">
               <h2 className="font-display text-sm font-bold text-[var(--accent-judge)] uppercase tracking-widest flex items-center gap-2">
-                <span>➕ THÊM TIÊU CHÍ CHẤM ĐIỂM RBL MỚI</span>
+                <span>THÊM TIÊU CHÍ CHẤM ĐIỂM RBL MỚI</span>
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -282,7 +282,7 @@ export function CoordinatorCalibrationView() {
                   onClick={handleAddCriteria}
                   className="bg-[var(--accent-judge)] text-black font-bold text-xs hover:bg-yellow-400"
                 >
-                  ➕ THÊM VÀO KHO TIÊU CHÍ
+                  THÊM VÀO KHO TIÊU CHÍ
                 </Button>
               </div>
             </Card>
@@ -334,8 +334,8 @@ export function CoordinatorCalibrationView() {
 
               <Badge tone={calibration?.isCompleted ? "success" : "warning"}>
                 {calibration?.isCompleted
-                  ? "✓ TẤT CẢ GIÁM KHẢO ĐÃ HOÀN THÀNH CHẤM"
-                  : "⚠ CÒN GIÁM KHẢO DRAFT"}
+                  ? "TẤT CẢ GIÁM KHẢO ĐÃ HOÀN THÀNH CHẤM"
+                  : "CÒN GIÁM KHẢO DRAFT"}
               </Badge>
             </div>
 

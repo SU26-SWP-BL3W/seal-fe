@@ -319,7 +319,7 @@ export function CreateTeamForm({ defaultEventId }: CreateTeamFormProps) {
               ? "Cần xác thực hồ sơ để tạo đội"
               : isPending
                 ? "Đang khởi tạo đội thi..."
-                : "⚡ KHỞI TẠO ĐỘI THI"}
+                : "KHỞI TẠO ĐỘI THI"}
           </Button>
         </form>
       </Card>

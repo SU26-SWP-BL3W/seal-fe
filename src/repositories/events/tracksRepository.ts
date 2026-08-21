@@ -160,16 +160,33 @@ export interface GetTracksByEventParams {
   isAscending?: boolean;
 }
 
+export function extractTrackArray(resData: any): TrackWithStaffModel[] {
+  if (!resData) return [];
+  if (Array.isArray(resData)) return resData;
+  if (Array.isArray(resData.data)) return resData.data;
+  if (Array.isArray(resData.items)) return resData.items;
+  if (Array.isArray(resData.data?.data)) return resData.data.data;
+  if (Array.isArray(resData.data?.items)) return resData.data.items;
+  if (Array.isArray(resData.items?.items)) return resData.items.items;
+  return [];
+}
+
 /** GET /Tracks/event?eventId=... — LƯU Ý: eventId là query param, KHÔNG phải route param (giống Rounds). */
 export function useGetTracksByEvent(eventId: string | undefined, params: GetTracksByEventParams = {}) {
+  const hasParams = Object.keys(params).length > 0;
   return useQuery({
-    queryKey: ["tracksByEvent", eventId, params],
+    queryKey: hasParams ? ["tracksByEvent", eventId, params] : ["tracksByEvent", eventId],
     queryFn: async (): Promise<TrackWithStaffModel[]> => {
-      const res = await apiClient.get<any>("/Tracks/event", {
-        params: { eventId, EventId: eventId, ...params, PageSize: 100 },
-      });
-      const items = res.data?.data?.items ?? res.data?.items ?? res.data?.data ?? res.data ?? [];
-      return Array.isArray(items) ? items : [];
+      if (!eventId) return [];
+      try {
+        const res = await apiClient.get<any>("/Tracks/event", {
+          params: { eventId, EventId: eventId, ...params, PageSize: 100 },
+        });
+        return extractTrackArray(res.data);
+      } catch (err: any) {
+        console.warn("[SEAL BE-DATA MISSING] GET /api/Tracks/event error:", err?.message);
+        return [];
+      }
     },
     enabled: !!eventId,
   });
@@ -205,10 +222,14 @@ export const tracksRepository = {
     return res.data;
   },
   async getTracksByEvent(eventId: string): Promise<Track[]> {
-    const res = await apiClient.get<PagedResult<Track>>("/Tracks/event", {
-      params: { EventId: eventId, PageSize: 100 },
-    });
-    return res.data?.data ?? [];
+    try {
+      const res = await apiClient.get<any>("/Tracks/event", {
+        params: { eventId, EventId: eventId, PageSize: 100 },
+      });
+      return extractTrackArray(res.data);
+    } catch {
+      return extractTrackArray(null);
+    }
   },
 };
 

@@ -33,11 +33,12 @@ export function RegisterView() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isAccountCreated, setIsAccountCreated] = useState(false);
 
+  const [isNavigating, setIsNavigating] = useState(false);
   const { mutateAsync: registerApi, isPending } = useRegister();
   const { mutateAsync: resendApi, isPending: isResending } = useResendVerification();
   const [resendMsg, setResendMsg] = useState("");
 
-  if (currentUser) {
+  if (currentUser && !isNavigating) {
     return <AlreadyLoggedInNotice />;
   }
 
@@ -104,6 +105,7 @@ export function RegisterView() {
     }
     try {
       const targetPath = await loginWithGoogleCredential(response.credential);
+      setIsNavigating(true);
       toast.success("Đăng ký / Đăng nhập Google thành công!");
       router.push(returnUrl ? decodeURIComponent(returnUrl) : targetPath);
     } catch (err: unknown) {

@@ -154,7 +154,7 @@ export function MyTeamView() {
 
     try {
       await respondInvitation({ invitationId: invId, isAccepted: true });
-      toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}".`);
+      toast.success(`Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}".`);
       queryClient.invalidateQueries({ queryKey: ["my-team"] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
       queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
@@ -302,7 +302,7 @@ export function MyTeamView() {
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
-                ⚡ Tạo Đội Mới
+                Tạo Đội Mới
               </button>
               <button
                 type="button"
@@ -364,14 +364,14 @@ export function MyTeamView() {
                             onClick={() => handleAcceptInv(inv)}
                             className="px-5 py-2.5 bg-emerald-500 hover:bg-white text-black font-bold uppercase hud-clipped transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-1.5 text-xs"
                           >
-                            <Check className="size-4" /> [ ✓ ĐỒNG Ý VÀO ĐỘI ]
+                            <Check className="size-4" /> [ ĐỒNG Ý VÀO ĐỘI ]
                           </button>
                           <button
                             disabled={isRespondingInv}
                             onClick={() => handleDeclineInv(inv)}
                             className="px-4 py-2.5 bg-rose-950/40 hover:bg-rose-900 text-rose-300 border border-rose-500/40 font-bold uppercase hud-clipped transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 text-xs"
                           >
-                            <X className="size-4" /> [ ✕ TỪ CHỐI ]
+                            <X className="size-4" /> [ TỪ CHỐI ]
                           </button>
                         </div>
                       </div>
@@ -395,7 +395,7 @@ export function MyTeamView() {
           ) : (
             <div className="space-y-4">
               <div className="p-4 bg-cyan-950/20 border border-cyan-500/30 rounded text-xs text-zinc-300 font-sans leading-relaxed">
-                💡 <strong>Dành cho thí sinh chưa có nhóm:</strong> Danh sách bên dưới hiển thị các đội thi trong sự kiện đang tuyển thêm thành viên. Bạn có thể nhấn <strong>Gửi Email Đề Nghị Gia Nhập</strong> để gửi thông tin ứng tuyển trực tiếp tới Đội trưởng.
+                <strong>Dành cho thí sinh chưa có nhóm:</strong> Danh sách bên dưới hiển thị các đội thi trong sự kiện đang tuyển thêm thành viên. Bạn có thể nhấn <strong>Gửi Email Đề Nghị Gia Nhập</strong> để gửi thông tin ứng tuyển trực tiếp tới Đội trưởng.
               </div>
               <AvailableTeamsList
                 eventId={targetEventId}
@@ -484,7 +484,7 @@ export function MyTeamView() {
               {team.lastRejectReason || "Hồ sơ đội chưa đáp ứng đầy đủ thể lệ của giải đấu. Vui lòng kiểm tra lại thông tin các thành viên."}
             </div>
             <p className="font-sans text-[11px] text-zinc-400">
-              💡 Vui lòng hoàn thiện lại đội hình hoặc cập nhật hồ sơ thành viên theo lý do trên, sau đó nhấn nút <strong>[ Ghi danh với BTC ]</strong> để gửi lại hồ sơ xét duyệt.
+              Vui lòng hoàn thiện lại đội hình hoặc cập nhật hồ sơ thành viên theo lý do trên, sau đó nhấn nút <strong>[ Ghi danh với BTC ]</strong> để gửi lại hồ sơ xét duyệt.
             </p>
           </Card>
         )}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Card, Badge, Input, EmptyState, Pagination } from "@/components/ui";
 import { usePagination } from "@/hooks/usePagination";
@@ -76,10 +76,12 @@ export function AdminCoordinatorsView() {
   }, [eventsList, selectedEventId]);
 
   const {
-    data: rawRoles = [],
+    data: rawRolesData,
     isLoading: isLoadingRoles,
     refetch: refetchRoles,
   } = useGetEventRoles(selectedEventId);
+
+  const rawRoles = useMemo(() => rawRolesData || [], [rawRolesData]);
 
   const currentCoordinators: EventRole[] = useMemo(() => {
     const list = Array.isArray(rawRoles) ? rawRoles : [];
@@ -112,18 +114,22 @@ export function AdminCoordinatorsView() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [historyRecords, setHistoryRecords] = useState<RoleInvitationRecord[]>([]);
 
-  const loadHistory = () => {
+  const loadHistory = useCallback(() => {
     if (!selectedEventId) {
       setHistoryRecords([]);
       return;
     }
+    if (!rawRolesData) {
+      setHistoryRecords(invitationHistoryService.getHistory(selectedEventId));
+      return;
+    }
     const synced = invitationHistoryService.syncWithEventRoles(selectedEventId, currentCoordinators);
     setHistoryRecords([...synced]);
-  };
+  }, [selectedEventId, rawRolesData, currentCoordinators]);
 
   useEffect(() => {
     loadHistory();
-  }, [selectedEventId, currentCoordinators]);
+  }, [loadHistory]);
 
   const searchMatches = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -580,7 +586,7 @@ export function AdminCoordinatorsView() {
                     disabled={isSubmitting}
                   />
                   <span className="block text-xs text-cyan-400 font-mono">
-                    ⚡ Tài khoản chưa có trong hệ thống: Sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt qua email này.
+                    Tài khoản chưa có trong hệ thống: Sẽ tự động cấp tài khoản tạm &amp; gửi email kích hoạt qua email này.
                   </span>
                 </div>
               )}
@@ -602,7 +608,7 @@ export function AdminCoordinatorsView() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" /> ⚡ Gửi Mời &amp; Cấp TK Tạm EC
+                    <Sparkles className="h-4 w-4" /> Gửi Mời &amp; Cấp TK Tạm EC
                   </>
                 )}
               </Button>

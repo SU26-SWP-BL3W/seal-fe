@@ -100,7 +100,7 @@ export function OnboardingProfileView() {
             <AlertTriangle className="w-6 h-6 text-[var(--color-danger)] flex-shrink-0" />
             <div>
               <p className="font-mono text-sm font-bold text-[var(--color-danger)] tracking-wider uppercase">
-                ⚠ TÀI KHOẢN TẠM KHÓA
+                TÀI KHOẢN TẠM KHÓA
               </p>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 Hồ sơ đã bị từ chối {rejectionCount} lần — tài khoản cần yêu cầu mở khóa
@@ -141,7 +141,7 @@ export function OnboardingProfileView() {
           <div className="space-y-3">
             {submitError && (
               <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {submitError}
+                {submitError}
               </div>
             )}
             <Button
@@ -160,7 +160,7 @@ export function OnboardingProfileView() {
               className="w-full justify-center flex items-center gap-2 border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[rgba(239,68,68,0.1)]"
             >
               {requestUnblockSuccess ? (
-                <>✓ ĐÃ GỬI YÊU CẦU MỞ KHÓA</>
+                <>ĐÃ GỬI YÊU CẦU MỞ KHÓA</>
               ) : isUnblocking ? (
                 <><RefreshCw className="w-4 h-4 animate-spin" /> Đang gửi yêu cầu...</>
               ) : (
@@ -297,7 +297,7 @@ export function OnboardingProfileView() {
 
             {fptError && (
               <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {fptError}
+                {fptError}
               </div>
             )}
 
@@ -446,7 +446,7 @@ export function OnboardingProfileView() {
 
             {submitError && (
               <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
-                ⚠ {submitError}
+                {submitError}
               </div>
             )}
 

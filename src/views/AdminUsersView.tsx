@@ -414,7 +414,7 @@ export const AdminUsersView: React.FC = () => {
                             </span>
                           ) : u.isApproved ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(16,185,129,0.1)] text-[var(--color-success)] border border-[var(--color-success)]/30">
-                              ✓ ĐÃ PHÊ DUYỆT
+                              ĐÃ PHÊ DUYỆT
                             </span>
                           ) : u.isRejected ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold bg-[rgba(239,68,68,0.1)] text-[var(--color-danger)] border border-[var(--color-danger)]/30">
@@ -505,7 +505,7 @@ export const AdminUsersView: React.FC = () => {
 
                       <div className="space-y-2.5 p-4 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped">
                         <span className="text-[10px] text-[var(--text-muted)] uppercase block font-bold">2. Trạng thái phân quyền:</span>
-                        <div>Trạng thái hoạt động: <span className="text-[var(--color-success)] font-bold">✓ TÀI KHOẢN KÍCH HOẠT HỢP LỆ</span></div>
+                        <div>Trạng thái hoạt động: <span className="text-[var(--color-success)] font-bold">TÀI KHOẢN KÍCH HOẠT HỢP LỆ</span></div>
                         <div>Quyền truy cập: <span className="text-[var(--accent-team)] font-semibold">Bảng điều hành & Control Center</span></div>
                       </div>
                     </div>
@@ -544,7 +544,7 @@ export const AdminUsersView: React.FC = () => {
                           </div>
                         )}
                         <div>Trạng thái hiện tại: {detailUserModal.isApproved ? (
-                          <span className="text-[var(--color-success)] font-bold">✓ ĐÃ PHÊ DUYỆT HỒ SƠ</span>
+                          <span className="text-[var(--color-success)] font-bold">ĐÃ PHÊ DUYỆT HỒ SƠ</span>
                         ) : (
                           <span className="text-[var(--color-warning)] font-bold">⏳ ĐANG CHỜ PHÊ DUYỆT</span>
                         )}</div>

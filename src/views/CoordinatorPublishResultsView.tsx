@@ -8,7 +8,9 @@ import { useMyEvents, useEvents, useEventRounds } from "@/repositories/eventsRep
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
+import { useGetTrackCalibration } from "@/repositories/scoresRepository";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
+import { SubmissionJudgeScoresModal } from "@/components/domain/SubmissionJudgeScoresModal";
 import {
   Eye,
   EyeOff,
@@ -25,6 +27,10 @@ import {
   FileSpreadsheet,
   AlertTriangle,
   X,
+  UserCheck,
+  BarChart2,
+  Clock,
+  Zap,
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { Link } from "@/i18n/routing";
@@ -87,6 +93,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   }, [tracksList, selectedTrackId]);
 
   const { data: results = [], isLoading, refetch } = useGetFinalResultsByRound(selectedRoundId);
+  const { data: calibration, isLoading: isLoadingCalibration } = useGetTrackCalibration(selectedTrackId);
   const assignPrizeMutation = useAssignPrize();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,6 +101,21 @@ export const CoordinatorPublishResultsView: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPublishedState, setIsPublishedState] = useState(false);
+
+  // Modal soi chi tiết điểm từng giám khảo chấm
+  const [inspectScoresModal, setInspectScoresModal] = useState<{
+    open: boolean;
+    teamId?: string;
+    teamName?: string;
+  }>({ open: false });
+
+  // Calibration Real API Progress Calculations
+  const scoresList = calibration?.scores ?? (calibration as any)?.Scores ?? [];
+  const isCalibrationCompleted = Boolean(calibration?.isCompleted ?? (calibration as any)?.IsCompleted);
+  const totalPairs = scoresList.length;
+  const submittedPairs = scoresList.filter((s: any) => Boolean(s.isSubmitted ?? s.IsSubmitted)).length;
+  const pendingPairs = totalPairs - submittedPairs;
+  const progressPercent = totalPairs > 0 ? Math.round((submittedPairs / totalPairs) * 100) : 0;
 
   // Local prize assignment state map
   const [assignedPrizesMap, setAssignedPrizesMap] = useState<Record<string, string>>({});
@@ -136,7 +158,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
 
       if (prizeId !== "none") {
         pushSystemNotification({
-          title: "🏆 THƯ CHÚC MỪNG ĐẠT GIẢI THƯỞNG SỰ KIỆN",
+          title: "THƯ CHÚC MỪNG ĐẠT GIẢI THƯỞNG SỰ KIỆN",
           message: `Nhiệt liệt chúc mừng Đội "${teamName}" đã xuất sắc đạt ${prizeObj?.name || 'Giải thưởng danh giá'} tại sự kiện "${currentEvent?.eventName || 'Sự kiện'}"! Ban Tổ Chức xin chúc mừng thành tích rực rỡ của toàn đội!`,
           type: "success",
         });
@@ -199,7 +221,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
 
       if (nextStatus) {
         pushSystemNotification({
-          title: "📢 Công bố kết quả chính thức!",
+          title: "Công bố kết quả chính thức!",
           message: `Ban Tổ Chức đã chính thức công bố bảng điểm & xếp hạng cho Vòng thi "${currentRound?.name || 'Vòng thi'}" sự kiện "${currentEvent?.eventName || 'Sự kiện'}". Hãy kiểm tra Bảng xếp hạng ngay!`,
           type: "success",
         });
@@ -388,6 +410,90 @@ export const CoordinatorPublishResultsView: React.FC = () => {
 
         </div>
 
+        {/* HUD Judge Progress Monitor Card (100% Real API Data) */}
+        <div className="bg-[#13191c] border border-[#263339] p-5 space-y-4 font-mono text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#263339] pb-3">
+            <div className="flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-[#00d9ff]" />
+              <h3 className="font-bold text-sm text-[#e1e7ec] uppercase">
+                TIẾN ĐỘ CHẤM BÀI CỦA GIÁM KHẢO (REALTIME MONITORING)
+              </h3>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-[#8a9ba8]">TRẠNG THÁI TOÀN HẠNG MỤC:</span>
+              {isCalibrationCompleted ? (
+                <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  100% GIÁM KHẢO ĐÃ CHỐT ĐIỂM
+                </span>
+              ) : (
+                <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/40 text-amber-300 text-xs font-bold uppercase flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+                  CÒN {pendingPairs} PHIẾU CHƯA CHỐT ĐIỂM (DRAFT)
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Bar & Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+            <div className="md:col-span-2 space-y-1.5">
+              <div className="flex justify-between text-[11px] text-[#8a9ba8]">
+                <span>Tỷ lệ hoàn tất phiếu chấm ({submittedPairs}/{totalPairs})</span>
+                <span className="font-bold text-[#00d9ff]">{progressPercent}%</span>
+              </div>
+              <div className="w-full bg-[#0a0e10] border border-[#263339] h-2.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-cyan-500 to-emerald-500 h-full transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#0a0e10] border border-[#263339] flex items-center justify-between">
+              <span className="text-[#8a9ba8] text-[11px]">Đã chốt chính thức:</span>
+              <span className="font-bold text-emerald-400 text-sm">{submittedPairs} phiếu</span>
+            </div>
+
+            <div className="p-3 bg-[#0a0e10] border border-[#263339] flex items-center justify-between">
+              <span className="text-[#8a9ba8] text-[11px]">Chưa chốt (Draft/Chờ):</span>
+              <span className="font-bold text-amber-400 text-sm">{pendingPairs} phiếu</span>
+            </div>
+          </div>
+
+          {/* Real API Judges Matrix Overview */}
+          {scoresList.length > 0 && (
+            <div className="pt-2 border-t border-[#263339]">
+              <div className="text-[11px] text-[#8a9ba8] uppercase mb-2 flex items-center justify-between">
+                <span>Chi tiết phân công tự động theo Hạng mục:</span>
+                <Link href="/coordinator/calibration" className="text-[#00d9ff] hover:underline flex items-center gap-1">
+                  <BarChart2 className="w-3.5 h-3.5" /> Xem Ma Trận Hiệu Chuẩn Chi Tiết (RBL) &rarr;
+                </Link>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {scoresList.map((sc: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className={`px-2.5 py-1 text-[11px] border flex items-center gap-1.5 ${
+                      sc.isSubmitted || sc.IsSubmitted
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                        : "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                    }`}
+                  >
+                    <span className="font-bold">{sc.judgeName || sc.JudgeName}</span>
+                    <span className="text-[#8a9ba8]">&rarr;</span>
+                    <span>{sc.teamName || sc.TeamName}</span>
+                    <span className="font-bold">
+                      ({sc.isSubmitted || sc.IsSubmitted ? `${sc.totalScore || sc.TotalScore}đ` : "Draft"})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Title Header */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-[#263339] pb-4">
           <div>
@@ -519,7 +625,24 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                       <tr key={r.id || idx} className="hover:bg-[#182024] transition-colors">
                         <td className="p-4 text-center font-bold text-base text-[#8b5cf6]">{rankStr}</td>
                         <td className="p-4">
-                          <div className="font-sans font-bold text-sm text-[#e1e7ec]">{name}</div>
+                          <div className="font-sans font-bold text-sm text-[#e1e7ec] flex items-center justify-between gap-2">
+                            <span>{name}</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setInspectScoresModal({
+                                  open: true,
+                                  teamId: r.teamId || r.TeamId,
+                                  teamName: name,
+                                })
+                              }
+                              className="px-2 py-0.5 bg-[#a855f7]/10 hover:bg-[#a855f7]/20 border border-[#a855f7]/30 text-[#a855f7] rounded text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                              title="Xem chi tiết phiếu chấm của từng Giám khảo"
+                            >
+                              <Eye className="w-3 h-3 text-[#a855f7]" />
+                              <span>Soi điểm GK</span>
+                            </button>
+                          </div>
                           <div className="text-[10px] text-[#8a9ba8] font-mono mt-0.5">{uid}</div>
                         </td>
                         <td className="p-4 text-right font-bold text-base text-[#e1e7ec]">{score}</td>
@@ -672,6 +795,13 @@ export const CoordinatorPublishResultsView: React.FC = () => {
         </div>
       )}
 
+      {/* Modal Soi Chi Tiết Điểm Giám Khảo */}
+      <SubmissionJudgeScoresModal
+        open={inspectScoresModal.open}
+        onClose={() => setInspectScoresModal({ open: false })}
+        teamId={inspectScoresModal.teamId}
+        teamName={inspectScoresModal.teamName}
+      />
     </div>
   );
 };
