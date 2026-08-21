@@ -139,26 +139,45 @@ export function useGetAppealsByEvent(eventId: string | undefined) {
   return useQuery({
     queryKey: ["appealsByEvent", eventId],
     queryFn: async (): Promise<Appeal[]> => {
-      const roundsRes = await apiClient.get<any>("/Rounds/event", {
-        params: { EventId: eventId, PageSize: 100 },
-      });
-      const rounds: any[] = Array.isArray(roundsRes.data?.data)
-        ? roundsRes.data.data
-        : Array.isArray(roundsRes.data)
-          ? roundsRes.data
-          : [];
+      if (!eventId) return [];
+      try {
+        const roundsRes = await apiClient.get<any>("/Rounds/event", {
+          params: { EventId: eventId, eventId, PageSize: 100 },
+        });
+        const rawRounds =
+          roundsRes.data?.data?.items ??
+          roundsRes.data?.items ??
+          roundsRes.data?.data ??
+          roundsRes.data ??
+          [];
+        const rounds: any[] = Array.isArray(rawRounds) ? rawRounds : [];
 
-      const perRound = await Promise.all(
-        rounds.map(async (r) => {
-          const roundId = r.id || r.Id;
-          if (!roundId) return [];
-          const res = await apiClient.get<PagedResult<Appeal>>(`/Appeals/round/${roundId}`, {
-            params: { PageSize: 200 },
-          });
-          return Array.isArray(res.data?.data) ? res.data.data : [];
-        }),
-      );
-      return perRound.flat();
+        if (rounds.length === 0) return [];
+
+        const perRound = await Promise.all(
+          rounds.map(async (r) => {
+            const roundId = r.id || r.Id;
+            if (!roundId) return [];
+            try {
+              const res = await apiClient.get<any>(`/Appeals/round/${roundId}`, {
+                params: { PageSize: 200 },
+              });
+              const rawAppeals =
+                res.data?.data?.items ??
+                res.data?.items ??
+                res.data?.data ??
+                (Array.isArray(res.data) ? res.data : []);
+              return Array.isArray(rawAppeals) ? rawAppeals : [];
+            } catch {
+              return [];
+            }
+          }),
+        );
+        return perRound.flat();
+      } catch (err) {
+        console.warn("[Appeals] Failed to fetch appeals for event:", eventId, err);
+        return [];
+      }
     },
     enabled: !!eventId,
   });

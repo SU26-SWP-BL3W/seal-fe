@@ -217,6 +217,26 @@ export function UserProfileView() {
     user?.photoStudentCardUrl || (user as any)?.PhotoStudentCardUrl || null
   );
 
+  // FPT Verification state
+  const [fptCode, setFptCode] = useState(studentCode || "");
+  const [fptResult, setFptResult] = useState<FptStudentResponse | null>(null);
+  const [fptError, setFptError] = useState("");
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [requestUnblockSuccess, setRequestUnblockSuccess] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Change password state
+  const [showPasswordCard, setShowPasswordCard] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
   // Sync state when user loads
   useEffect(() => {
     if (user) {
@@ -240,26 +260,6 @@ export function UserProfileView() {
     }
   }, [user]);
 
-  // FPT Verification state
-  const [fptCode, setFptCode] = useState(studentCode || "");
-  const [fptResult, setFptResult] = useState<FptStudentResponse | null>(null);
-  const [fptError, setFptError] = useState("");
-
-  const [isDragging, setIsDragging] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [requestUnblockSuccess, setRequestUnblockSuccess] = useState(false);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Change password state
-  const [showPasswordCard, setShowPasswordCard] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-
   // API mutations
   const updateProfileMutation = useUpdateStudentProfile();
   const verifyFptMutation = useFptStudentVerification();
@@ -282,10 +282,10 @@ export function UserProfileView() {
     (schoolId === "OTHER_CUSTOM" && customSchoolName.trim())
       ? customSchoolName.trim()
       : userSchool?.schoolName ||
-        (user as any)?.schoolName ||
-        (user as any)?.SchoolName ||
-        (user as any)?.school?.schoolName ||
-        "Chưa cập nhật";
+      (user as any)?.schoolName ||
+      (user as any)?.SchoolName ||
+      (user as any)?.school?.schoolName ||
+      "Chưa cập nhật";
 
   const userStudentCode = user?.studentCode || (user as any)?.StudentCode || (user as any)?.StudentId || "";
   const hasMSSV = Boolean(userStudentCode && userStudentCode.trim() !== "");
@@ -598,11 +598,10 @@ export function UserProfileView() {
             <button
               type="button"
               onClick={() => setIsEditing(!isEditing)}
-              className={`px-4 py-2 border font-bold uppercase transition-all cursor-pointer hud-clipped ${
-                isEditing
+              className={`px-4 py-2 border font-bold uppercase transition-all cursor-pointer hud-clipped ${isEditing
                   ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:text-white"
                   : "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500 hover:text-black shadow-sm"
-              }`}
+                }`}
             >
               {isEditing ? "[ HỦY CHỈNH SỬA ]" : "[ CHỈNH SỬA HỒ SƠ ]"}
             </button>
@@ -779,7 +778,7 @@ export function UserProfileView() {
 
           {/* ── CỘT PHẢI (2 COLS / 67%): FORM THÔNG TIN CHUẨN DATABASE ── */}
           <div className="md:col-span-2 space-y-6">
-            
+
             {/* Thẻ Thông tin Hồ sơ (Chế độ xem tự nhiên & Chế độ chỉnh sửa) */}
             <Card className="p-6 bg-[#10171a] border border-zinc-800 hud-clipped space-y-6 shadow-sm">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
@@ -930,11 +929,10 @@ export function UserProfileView() {
                               );
                               if (fptSchool?.id) setSchoolId(fptSchool.id);
                             }}
-                            className={`p-3 text-center font-bold uppercase transition-all hud-clipped cursor-pointer flex flex-col items-center gap-1 ${
-                              schoolChoice === "FPT"
+                            className={`p-3 text-center font-bold uppercase transition-all hud-clipped cursor-pointer flex flex-col items-center gap-1 ${schoolChoice === "FPT"
                                 ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 font-extrabold shadow-sm"
                                 : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:border-zinc-700"
-                            }`}
+                              }`}
                           >
                             <span className="text-xs">🏛️ SINH VIÊN FPT EDU</span>
                             <span className="text-[10px] opacity-75 font-normal">Xác thực tự động qua MSSV FPT</span>
@@ -942,11 +940,10 @@ export function UserProfileView() {
                           <button
                             type="button"
                             onClick={() => setSchoolChoice("OTHER")}
-                            className={`p-3 text-center font-bold uppercase transition-all hud-clipped cursor-pointer flex flex-col items-center gap-1 ${
-                              schoolChoice === "OTHER"
+                            className={`p-3 text-center font-bold uppercase transition-all hud-clipped cursor-pointer flex flex-col items-center gap-1 ${schoolChoice === "OTHER"
                                 ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 font-extrabold shadow-sm"
                                 : "bg-[#090e11] text-zinc-400 border border-zinc-800 hover:border-zinc-700"
-                            }`}
+                              }`}
                           >
                             <span className="text-xs">🎓 SINH VIÊN TRƯỜNG NGOÀI</span>
                             <span className="text-[10px] opacity-75 font-normal">Nộp ảnh thẻ sinh viên xét duyệt</span>
@@ -1104,11 +1101,10 @@ export function UserProfileView() {
                                   setIsDragging(false);
                                   if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]);
                                 }}
-                                className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${
-                                  isDragging
+                                className={`p-6 border-2 border-dashed text-center cursor-pointer transition-all hud-clipped ${isDragging
                                     ? "border-amber-400 bg-amber-500/10"
                                     : "border-zinc-800 hover:border-zinc-700 bg-[#090e11]"
-                                }`}
+                                  }`}
                               >
                                 <input
                                   ref={fileInputRef}
@@ -1242,13 +1238,12 @@ export function UserProfileView() {
                       >
                         <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`px-2 py-0.5 font-bold uppercase text-[10px] hud-clipped ${
-                              rRoleName === "Judge"
+                            <span className={`px-2 py-0.5 font-bold uppercase text-[10px] hud-clipped ${rRoleName === "Judge"
                                 ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                                 : rRoleName === "Mentor"
-                                ? "bg-teal-500/20 text-teal-300 border border-teal-500/40"
-                                : "bg-purple-500/20 text-purple-300 border border-purple-500/40"
-                            }`}>
+                                  ? "bg-teal-500/20 text-teal-300 border border-teal-500/40"
+                                  : "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                              }`}>
                               VAI TRÒ: {rRoleName.toUpperCase()}
                             </span>
 
@@ -1266,9 +1261,8 @@ export function UserProfileView() {
                               </span>
                             )}
 
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 hud-clipped ${
-                              isEnded ? "bg-zinc-800 text-zinc-400" : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
-                            }`}>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 hud-clipped ${isEnded ? "bg-zinc-800 text-zinc-400" : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+                              }`}>
                               {isEnded ? "[ ĐÃ ĐÓNG ]" : "[ ĐANG MỞ ]"}
                             </span>
                           </div>
@@ -1330,9 +1324,8 @@ export function UserProfileView() {
                               VAI TRÒ: {rRoleName === "TeamLeader" ? "TRƯỞNG ĐỘI" : "THÀNH VIÊN ĐỘI"}
                             </span>
 
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 hud-clipped ${
-                              isEnded ? "bg-zinc-800 text-zinc-400" : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
-                            }`}>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 hud-clipped ${isEnded ? "bg-zinc-800 text-zinc-400" : "bg-emerald-950/60 text-emerald-300 border border-emerald-500/30"
+                              }`}>
                               {isEnded ? "[ ĐÃ ĐÓNG ]" : "[ ĐANG MỞ ]"}
                             </span>
                           </div>

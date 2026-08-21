@@ -41,9 +41,21 @@ export const notificationsRepository = {
 };
 
 function unwrapList(raw: unknown): SystemNotification[] {
+  if (!raw) return [];
   if (Array.isArray(raw)) return raw as SystemNotification[];
-  const inner = (raw as BaseResponse<SystemNotification[]> | undefined)?.data;
-  return Array.isArray(inner) ? inner : [];
+  const r = raw as any;
+  const items = r.data?.items ?? r.items ?? r.data ?? [];
+  if (!Array.isArray(items)) return [];
+
+  return items.map((n: any) => ({
+    id: n.id || n.Id || String(Math.random()),
+    title: n.title || n.Title || "Thông báo hệ thống",
+    message: n.message || n.Message || n.content || n.Content || "",
+    type: (n.type || n.Type || "info").toLowerCase(),
+    createdAt: n.createdAt || n.CreatedAt || n.createdTime || n.CreatedTime || new Date().toISOString(),
+    isRead: Boolean(n.isRead ?? n.IsRead ?? false),
+    linkUrl: n.linkUrl || n.LinkUrl || n.url || n.Url,
+  }));
 }
 
 export function useMyNotifications(enabled: boolean = true) {

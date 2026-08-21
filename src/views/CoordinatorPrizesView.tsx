@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useGetPrizesByEvent, useCreatePrize, saveStoredPrizesForEvent } from "@/repositories/results/prizesRepository";
+import { useGetPrizesByEvent, useCreatePrize, useUpdatePrize, useDeletePrize, saveStoredPrizesForEvent } from "@/repositories/results/prizesRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { Award, CheckCircle2, AlertCircle, Plus, Trash2, Layers, DollarSign, Save, GripVertical, ArrowUp, ArrowDown, Filter } from "lucide-react";
 
@@ -41,6 +41,9 @@ export const CoordinatorPrizesView: React.FC = () => {
   const { data: dbPrizes = [] } = useGetPrizesByEvent(activeEventId);
   const { data: dbTracks = [] } = useGetTracksByEvent(activeEventId);
   const createPrizeMutation = useCreatePrize();
+  const updatePrizeMutation = useUpdatePrize();
+  const deletePrizeMutation = useDeletePrize();
+  const [deletedPrizeIds, setDeletedPrizeIds] = useState<string[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -84,6 +87,7 @@ export const CoordinatorPrizesView: React.FC = () => {
         };
       });
       setPrizes(mapped);
+      setDeletedPrizeIds([]);
     }
   }, [activeEventId, dbPrizes]);
 
@@ -107,6 +111,9 @@ export const CoordinatorPrizesView: React.FC = () => {
   const handleRemovePrize = (id: string) => {
     if (prizes.length <= 1) return;
     setIsDirty(true);
+    if (!id.startsWith("prz-")) {
+      setDeletedPrizeIds((prev) => [...prev, id]);
+    }
     const updated = prizes.filter((p) => p.id !== id);
     setPrizes(updated);
     if (activeEventId) {
@@ -185,7 +192,7 @@ export const CoordinatorPrizesView: React.FC = () => {
     return acc + val * (p.quantity || 1);
   }, 0);
 
-  // Save All Prizes Configuration
+  // Save All Prizes Configuration (Sửa / Xóa / Thêm mới chính xác, không trùng lặp)
   const handleSaveConfig = async () => {
     setIsSubmitting(true);
     setSuccessMessage(null);
@@ -193,10 +200,20 @@ export const CoordinatorPrizesView: React.FC = () => {
 
     try {
       if (activeEventId) {
-        saveStoredPrizesForEvent(activeEventId, prizes);
-
-        for (const p of prizes) {
+        // 1. Xóa các giải đã bị bấm xóa trên giao diện
+        for (const delId of deletedPrizeIds) {
           try {
+            await deletePrizeMutation.mutateAsync(delId);
+          } catch (e) {
+            console.warn("Delete prize error:", e);
+          }
+        }
+        setDeletedPrizeIds([]);
+
+        // 2. Cập nhật các giải đã có hoặc tạo mới nếu là dòng giải mới thêm
+        for (const p of prizes) {
+          const isNew = p.id.startsWith("prz-");
+          if (isNew) {
             await createPrizeMutation.mutateAsync({
               eventId: activeEventId,
               payload: {
@@ -205,10 +222,19 @@ export const CoordinatorPrizesView: React.FC = () => {
                 quantity: p.quantity,
               },
             });
-          } catch {
-            // Ignore API network errors
+          } else {
+            await updatePrizeMutation.mutateAsync({
+              id: p.id,
+              payload: {
+                prizeName: p.prizeName,
+                value: p.value,
+                quantity: p.quantity,
+              },
+            });
           }
         }
+
+        saveStoredPrizesForEvent(activeEventId, prizes);
       }
       setSuccessMessage(`Đã ghi nhận thành công cấu hình ${prizes.length} giải thưởng với Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ!`);
       setIsDirty(false);
