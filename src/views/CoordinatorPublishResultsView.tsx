@@ -8,6 +8,7 @@ import { useMyEvents, useEvents, useEventRounds } from "@/repositories/eventsRep
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetPrizesByEvent } from "@/repositories/results/prizesRepository";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import {
   Eye,
   EyeOff,

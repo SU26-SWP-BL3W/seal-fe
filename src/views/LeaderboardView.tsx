@@ -40,6 +40,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
   const event = {
     id: eventId || "event-seal-2026",
     eventName: "SEAL Hackathon 2026",
+    season: "Mùa Hè",
     totalPrizeVnd: 200000000,
   };
 

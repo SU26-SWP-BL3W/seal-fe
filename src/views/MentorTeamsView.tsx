@@ -46,8 +46,8 @@ export function MentorTeamsView() {
   // Helper to check submission status for a team
   const getTeamSubmissionStatus = (teamId: string) => {
     const subs = submissions.filter((s) => (s.teamId || s.TeamId) === teamId);
-    if (subs.length === 0) return { label: "NOT_SUBMITTED", color: "text-on-surface-variant bg-surface-container border-outline-variant", count: 0 };
-    return { label: "SUBMITTED", color: "text-yellow-400 bg-yellow-900/20 border-yellow-500/30", count: subs.length };
+    if (subs.length === 0) return { label: "NOT_SUBMITTED", color: "text-on-surface-variant bg-surface-container border-outline-variant", count: 0, tone: "warning" as const };
+    return { label: "SUBMITTED", color: "text-yellow-400 bg-yellow-900/20 border-yellow-500/30", count: subs.length, tone: "success" as const };
   };
 
   return (

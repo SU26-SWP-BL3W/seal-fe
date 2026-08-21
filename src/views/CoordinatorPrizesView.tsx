@@ -123,8 +123,6 @@ export const CoordinatorPrizesView: React.FC = () => {
         } else {
           await updatePrizeMutation.mutateAsync({ id: p.id, payload });
         }
-
-        saveStoredPrizesForEvent(activeEventId, prizes);
       }
       setRemovedIds([]);
       setSuccessMessage(`Đã lưu thành công ${prizes.length} giải thưởng — Tổng ngân sách ${totalPrizeBudget.toLocaleString("vi-VN")} VNĐ.`);
