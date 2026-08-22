@@ -129,6 +129,11 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         }
       }
 
+      // 4. Update localStorage with real DB track IDs
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`seal_wizard_draft_${targetId}`, JSON.stringify({ ...fullPayload, tracks }));
+      }
+
       setIsPublishing(false);
       setPublishSuccess(true);
       setTimeout(() => {

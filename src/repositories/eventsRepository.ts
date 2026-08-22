@@ -139,33 +139,58 @@ export function useMyEvents() {
 }
 
 export function useEventDetail(eventId: string) {
+  const isValidId = Boolean(
+    eventId &&
+    eventId !== "new" &&
+    eventId !== "create" &&
+    eventId !== "undefined" &&
+    !eventId.startsWith("ev-draft-") &&
+    !eventId.startsWith("tmp-")
+  );
+
   return useQuery({
     queryKey: ["event-detail", eventId],
     queryFn: async () => {
-      if (!eventId) return null;
+      if (!isValidId) return null;
       try {
         const res = await apiClient.get<any>(`/Events/${eventId}`);
         return (res.data?.data ?? res.data ?? null) as Event | null;
-      } catch (err) {
-        console.error("Error fetching event detail for ID:", eventId, err);
+      } catch (err: any) {
+        if (err?.name !== "CanceledError" && !err?.message?.includes("canceled") && err?.response?.status !== 400) {
+          console.warn("Could not fetch event detail for ID:", eventId, err?.message || err);
+        }
         return null;
       }
     },
-    enabled: !!eventId,
+    enabled: isValidId,
   });
 }
 
 export function useEventRounds(eventId: string) {
+  const isValidId = Boolean(
+    eventId &&
+    eventId !== "new" &&
+    eventId !== "create" &&
+    eventId !== "undefined" &&
+    !eventId.startsWith("ev-draft-") &&
+    !eventId.startsWith("tmp-")
+  );
+
   return useQuery({
     queryKey: ["event-rounds", eventId],
     queryFn: async () => {
-      const res = await apiClient.get<any>(`/Rounds/event`, {
-        params: { EventId: eventId, PageSize: 100 },
-      });
-      const data = res.data?.data ?? res.data;
-      return Array.isArray(data) ? data : [];
+      if (!isValidId) return [];
+      try {
+        const res = await apiClient.get<any>(`/Rounds/event`, {
+          params: { EventId: eventId, PageSize: 100 },
+        });
+        const data = res.data?.data ?? res.data;
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
     },
-    enabled: !!eventId,
+    enabled: isValidId,
   });
 }
 

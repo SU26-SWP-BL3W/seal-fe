@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { eventsRepository, useMyEvents } from "@/repositories/eventsRepository";
 import { useGetRoundsByEvent } from "@/repositories/events/roundsRepository";
+import { useGetTracksByEvent } from "@/repositories/events/tracksRepository";
 import type { EventEntity } from "@/models/entities";
 
 export interface EventFormState {
@@ -211,6 +212,28 @@ export function useCreateEventWizardViewModel() {
       }
     }
   }, [dbRoundsPaged, activeEventIdForRounds]);
+
+  // Fetch tracks from backend API if tracks state is empty or missing DB sync
+  const { data: dbTracksRaw } = useGetTracksByEvent(activeEventIdForRounds || undefined);
+
+  useEffect(() => {
+    if (activeEventIdForRounds) {
+      const rawTracks = Array.isArray(dbTracksRaw) ? dbTracksRaw : [];
+      if (rawTracks.length > 0) {
+        setTracks((prev) => {
+          if (prev.length > 0 && !prev.every((t) => t.id.startsWith("trk-") || t.id.startsWith("tmp-"))) return prev;
+          return rawTracks.map((t: any, idx: number) => ({
+            id: t.id || t.Id || t.trackId || `trk-${idx}`,
+            eventId: t.eventId || t.EventId || activeEventIdForRounds,
+            trackName: t.trackName || t.TrackName || `Hạng mục ${idx + 1}`,
+            description: t.description || t.Description || "",
+            templateId: t.templateId || t.TemplateId || "",
+            submissionRuleDescription: t.submissionRuleDescription || t.SubmissionRuleDescription || "",
+          }));
+        });
+      }
+    }
+  }, [dbTracksRaw, activeEventIdForRounds]);
 
   const setCriteriasForTrack = (trackId: string, list: TemplateCriteriaFormState[]) => {
     setIsDirty(true);
