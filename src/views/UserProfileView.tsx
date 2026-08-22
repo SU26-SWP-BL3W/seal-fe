@@ -539,7 +539,7 @@ export function UserProfileView() {
       if (!isStaff && photoFile) {
         setIsUploadingPhoto(true);
         const uploadRes = await uploadRepository.uploadFile(photoFile);
-        finalPhotoUrl = uploadRes.fileUrl;
+        finalPhotoUrl = uploadRes?.fileUrl || (uploadRes as any)?.FileUrl;
         setIsUploadingPhoto(false);
       }
 
