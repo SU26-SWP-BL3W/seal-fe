@@ -13,14 +13,14 @@ import { pushSystemNotification } from "@/repositories/shared/notificationsRepos
 import type { TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/team/teamTypes";
 import { useNewSubmissionViewModel } from "@/viewModels/team/useNewSubmissionViewModel";
 
-const DELIVERABLE_ICONS: Record<DeliverableType, { label: string; icon: string; badgeColor: string }> = {
-  github:       { label: "GITHUB REPO",     icon: "⌥", badgeColor: "text-[var(--text-primary)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
-  slides:       { label: "SLIDES / PPT",    icon: "▦", badgeColor: "text-[#fb923c] border-[#fb923c]/30 bg-[#fb923c]/10" },
-  demo_video:   { label: "DEMO VIDEO",      icon: "▶", badgeColor: "text-[#f87171] border-[#f87171]/30 bg-[#f87171]/10" },
-  deployed_url: { label: "LIVE DEMO URL",   icon: "⬡", badgeColor: "text-[var(--color-success)] border-[var(--color-success)]/30 bg-[var(--color-success)]/10" },
-  report:       { label: "BÁO CÁO PDF",     icon: "▤", badgeColor: "text-[#facc15] border-[#facc15]/30 bg-[#facc15]/10" },
-  figma:        { label: "FIGMA DESIGN",    icon: "◈", badgeColor: "text-[#c084fc] border-[#c084fc]/30 bg-[#c084fc]/10" },
-  other:        { label: "LINK BỔ SUNG",    icon: "⊕", badgeColor: "text-[var(--text-muted)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
+const DELIVERABLE_ICONS: Record<DeliverableType, { label: string; badgeColor: string }> = {
+  github:       { label: "GITHUB REPO",     badgeColor: "text-[var(--text-primary)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
+  slides:       { label: "SLIDES / PPT",    badgeColor: "text-[#fb923c] border-[#fb923c]/30 bg-[#fb923c]/10" },
+  demo_video:   { label: "DEMO VIDEO",      badgeColor: "text-[#f87171] border-[#f87171]/30 bg-[#f87171]/10" },
+  deployed_url: { label: "LIVE DEMO URL",   badgeColor: "text-[var(--color-success)] border-[var(--color-success)]/30 bg-[var(--color-success)]/10" },
+  report:       { label: "BÁO CÁO PDF",     badgeColor: "text-[#facc15] border-[#facc15]/30 bg-[#facc15]/10" },
+  figma:        { label: "FIGMA DESIGN",    badgeColor: "text-[#c084fc] border-[#c084fc]/30 bg-[#c084fc]/10" },
+  other:        { label: "LINK BỔ SUNG",    badgeColor: "text-[var(--text-muted)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
 };
 
 function TrackSubmissionCard({
@@ -422,12 +422,12 @@ export function NewSubmissionView() {
             </Link>
             <Link href="/my-team">
               <button className="hud-clipped px-4 py-2.5 border border-[var(--accent-team)]/40 bg-[var(--accent-team)]/10 text-[var(--accent-team)] font-mono text-xs font-bold tracking-wider uppercase hover:bg-[var(--accent-team)]/20 transition-colors">
-                👥 ĐỘI THI
+                ĐỘI THI
               </button>
             </Link>
             <Link href="/my-submissions">
               <button className="hud-clipped px-5 py-2.5 border border-[var(--border-muted)] text-[var(--text-primary)] font-mono text-xs font-bold tracking-wider uppercase hover:border-[var(--accent-team)] hover:text-[var(--accent-team)] transition-colors">
-                📄 QUẢN LÝ BÀI NỘP
+                QUẢN LÝ BÀI NỘP
               </button>
             </Link>
           </div>

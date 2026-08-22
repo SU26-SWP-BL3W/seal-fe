@@ -3,18 +3,6 @@
 import React from "react";
 import { Button, Card, Badge, Input, Pagination } from "@/components/ui";
 import { useCoordinatorTeamsViewModel } from "@/viewModels/coordinator/useCoordinatorTeamsViewModel";
-import {
-  Users,
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
-  Shield,
-  AlertTriangle,
-  Eye,
-  Crown,
-  Ban,
-  Filter,
-} from "lucide-react";
 
 export function CoordinatorTeamsView() {
   const { state, data, actions } = useCoordinatorTeamsViewModel();
@@ -61,7 +49,6 @@ export function CoordinatorTeamsView() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--border-muted)] pb-3">
           <div>
             <div className="flex items-center gap-2 font-mono text-[11px] text-[#a855f7] font-bold uppercase tracking-wider mb-0.5">
-              <Shield className="w-3.5 h-3.5 text-[#a855f7]" />
               <span>QUẢN LÝ ĐỘI THI BAN TỔ CHỨC</span>
             </div>
             <h1 className="font-mono font-bold text-xl md:text-2xl text-[#e1e7ec] uppercase tracking-wider">
@@ -78,8 +65,7 @@ export function CoordinatorTeamsView() {
               onClick={actions.handleRefresh}
               className="flex items-center gap-1.5 text-xs font-mono py-1 px-3"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
-              <span>LÀM MỚI</span>
+              <span>{isLoading ? "ĐANG TẢI..." : "LÀM MỚI"}</span>
             </Button>
           </div>
         </div>
@@ -117,8 +103,8 @@ export function CoordinatorTeamsView() {
 
             {/* Track Selector */}
             <div className="flex items-center gap-1.5">
-              <span className="font-mono text-xs text-[var(--text-muted)] flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5 text-[#8b5cf6]" /> Hạng mục:
+              <span className="font-mono text-xs text-[var(--text-muted)]">
+                Hạng mục:
               </span>
               <select
                 value={selectedTrackId}
@@ -220,12 +206,10 @@ export function CoordinatorTeamsView() {
         <Card className="p-4 space-y-3">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-16 space-y-3">
-              <RefreshCw className="w-8 h-8 animate-spin text-[var(--accent-coordinator)]" />
               <p className="font-mono text-xs text-[var(--text-muted)]">Đang tải danh sách đội thi...</p>
             </div>
           ) : paginatedTeams.length === 0 ? (
             <div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] space-y-2">
-              <Users className="w-10 h-10 text-[var(--text-muted)] mx-auto opacity-40" />
               <p className="uppercase tracking-wider">Không tìm thấy đội thi nào phù hợp với điều kiện lọc.</p>
             </div>
           ) : (
@@ -254,7 +238,6 @@ export function CoordinatorTeamsView() {
                           {/* Name & Desc */}
                           <td className="p-2.5 max-w-xs">
                             <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4 text-[var(--accent-team)] shrink-0" />
                               <span className="font-bold text-sm text-[var(--text-primary)] truncate">
                                 {teamName}
                               </span>
@@ -297,7 +280,7 @@ export function CoordinatorTeamsView() {
                                 onClick={() => actions.setDetailModal(team)}
                                 className="text-[11px] font-mono text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10 py-1 px-2.5"
                               >
-                                <Eye className="w-3.5 h-3.5 mr-1" /> Xem đội
+                                Xem đội
                               </Button>
 
                               {/* Nút Duyệt nếu Pending */}
@@ -307,7 +290,7 @@ export function CoordinatorTeamsView() {
                                   onClick={() => actions.handleApprove(teamId)}
                                   className="text-[11px] font-mono bg-[var(--color-success)] text-black hover:bg-emerald-400 py-1 px-2.5 font-bold"
                                 >
-                                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Duyệt đội
+                                  Duyệt đội
                                 </Button>
                               )}
 
@@ -317,7 +300,7 @@ export function CoordinatorTeamsView() {
                                   onClick={() => actions.setRejectModal({ teamId, teamName, isDisqualify: false })}
                                   className="text-[11px] font-mono text-[var(--color-danger)] border border-[var(--color-danger)]/40 hover:bg-red-500/10 py-1 px-2"
                                 >
-                                  <XCircle className="w-3.5 h-3.5 mr-1" /> Từ chối
+                                  Từ chối
                                 </Button>
                               )}
 
@@ -327,7 +310,7 @@ export function CoordinatorTeamsView() {
                                   onClick={() => actions.setRejectModal({ teamId, teamName, isDisqualify: true })}
                                   className="text-[11px] font-mono text-[var(--color-danger)] bg-red-500/10 border border-[var(--color-danger)]/40 hover:bg-[var(--color-danger)] hover:text-white py-1 px-2.5"
                                 >
-                                  <Ban className="w-3.5 h-3.5 mr-1" /> Loại đội
+                                  Loại đội
                                 </Button>
                               )}
                             </div>
@@ -377,9 +360,9 @@ export function CoordinatorTeamsView() {
                 </div>
                 <button
                   onClick={() => actions.setDetailModal(null)}
-                  className="text-[var(--text-muted)] hover:text-white p-1 cursor-pointer"
+                  className="text-[var(--text-muted)] hover:text-white p-1 cursor-pointer text-xs font-bold uppercase"
                 >
-                  <XCircle className="w-5 h-5" />
+                  Đóng
                 </button>
               </div>
 
@@ -409,8 +392,7 @@ export function CoordinatorTeamsView() {
                 {/* Danh Sách Thành Viên (Phân biệt Leader và Member) */}
                 <div className="pt-1">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-[var(--text-primary)] uppercase font-bold flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-[var(--accent-team)]" />
+                    <span className="text-xs text-[var(--text-primary)] uppercase font-bold">
                       Danh sách thành viên ({detailMembers.length} / 5 người):
                     </span>
                     <span className={`text-[10px] font-bold ${detailMembers.length >= 3 && detailMembers.length <= 5 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"}`}>
@@ -420,7 +402,6 @@ export function CoordinatorTeamsView() {
 
                   {isLoadingDetail ? (
                     <div className="p-4 text-center text-xs text-[var(--text-muted)]">
-                      <RefreshCw className="w-4 h-4 animate-spin inline mr-2 text-[var(--accent-coordinator)]" />
                       Đang tải danh sách thành viên...
                     </div>
                   ) : detailMembers.length === 0 ? (
@@ -442,7 +423,6 @@ export function CoordinatorTeamsView() {
                               <div className="font-bold text-[var(--text-primary)] flex items-center gap-1.5 text-xs">
                                 {isLeader ? (
                                   <>
-                                    <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                                     <span>{m.fullName}</span>
                                     <span className="text-[9px] px-1.5 py-0.2 bg-amber-400/20 text-amber-300 font-mono font-bold rounded">
                                       TRƯỞNG NHÓM (LEADER)
@@ -450,7 +430,6 @@ export function CoordinatorTeamsView() {
                                   </>
                                 ) : (
                                   <>
-                                    <Users className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
                                     <span>{m.fullName}</span>
                                     <span className="text-[9px] text-[var(--text-muted)] font-mono">
                                       [THÀNH VIÊN]
@@ -491,14 +470,14 @@ export function CoordinatorTeamsView() {
                         })}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white font-mono"
                       >
-                        <XCircle className="w-3.5 h-3.5" /> TỪ CHỐI ĐĂNG KÝ
+                        TỪ CHỐI ĐĂNG KÝ
                       </Button>
                       <Button
                         disabled={isApproving}
                         onClick={() => actions.handleApprove(actions.pickId(detailModal))}
                         className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-[var(--color-success)] text-black hover:bg-emerald-400 font-mono font-bold"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" /> PHÊ DUYỆT ĐỘI THI
+                        PHÊ DUYỆT ĐỘI THI
                       </Button>
                     </>
                   )}
@@ -512,7 +491,7 @@ export function CoordinatorTeamsView() {
                       })}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/40 text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white font-mono font-bold"
                     >
-                      <Ban className="w-3.5 h-3.5" /> LOẠI ĐỘI KHỎI CUỘC THI
+                      LOẠI ĐỘI KHỎI CUỘC THI
                     </Button>
                   )}
                 </div>
@@ -526,7 +505,6 @@ export function CoordinatorTeamsView() {
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
             <Card className="w-full max-w-md p-5 bg-[var(--bg-panel)] hud-clipped border-[var(--color-danger)]/50 space-y-4">
               <div className="flex items-center gap-2.5">
-                <AlertTriangle className="w-5 h-5 text-[var(--color-danger)] shrink-0" />
                 <h3 className="font-display text-sm font-bold text-[var(--color-danger)] tracking-wide uppercase">
                   {rejectModal.isDisqualify ? "LOẠI ĐỘI KHỎI CUỘC THI" : "TỪ CHỐI ĐĂNG KÝ ĐỘI THI"}
                 </h3>

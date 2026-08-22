@@ -3,7 +3,6 @@
 import React from "react";
 import { Link } from "@/i18n/routing";
 import { Card, ConfirmDialog, SkeletonRows } from "@/components/ui";
-import { AlertTriangle, Check, X, Mail } from "lucide-react";
 import {
   AvailableTeamsList,
   buildRequirements,
@@ -152,7 +151,7 @@ export function MyTeamView() {
                       : "text-cyan-300 hover:text-white"
                   }`}
                 >
-                  <Mail className="size-3.5" /> Lời Mời Nhận Được ({pendingMyInvitations.length})
+                  Lời Mời Nhận Được ({pendingMyInvitations.length})
                 </button>
               )}
               <button
@@ -175,7 +174,7 @@ export function MyTeamView() {
                     : "text-zinc-400 hover:text-white"
                 }`}
               >
-                🔍 Tìm &amp; Gia Nhập Đội
+                Tìm &amp; Gia Nhập Đội
               </button>
             </div>
           </div>
@@ -226,14 +225,14 @@ export function MyTeamView() {
                             onClick={() => actions.handleAcceptInv(inv)}
                             className="px-5 py-2.5 bg-emerald-500 hover:bg-white text-black font-bold uppercase hud-clipped transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-1.5 text-xs"
                           >
-                            <Check className="size-4" /> [ ĐỒNG Ý VÀO ĐỘI ]
+                            [ ĐỒNG Ý VÀO ĐỘI ]
                           </button>
                           <button
                             disabled={isRespondingInv}
                             onClick={() => actions.handleDeclineInv(inv)}
                             className="px-4 py-2.5 bg-rose-950/40 hover:bg-rose-900 text-rose-300 border border-rose-500/40 font-bold uppercase hud-clipped transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 text-xs"
                           >
-                            <X className="size-4" /> [ TỪ CHỐI ]
+                            [ TỪ CHỐI ]
                           </button>
                         </div>
                       </div>
@@ -315,7 +314,6 @@ export function MyTeamView() {
         {(team.lastRejectReason || team.status === "Rejected") && (
           <Card className="border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 p-5 hud-clipped space-y-3">
             <div className="flex items-center gap-2 text-[var(--color-danger)] font-mono font-bold text-xs uppercase tracking-wider">
-              <AlertTriangle className="w-4 h-4 text-[var(--color-danger)]" />
               <span>Lý do Ban Tổ Chức từ chối / trả hồ sơ</span>
             </div>
             <div className="p-3.5 bg-black/50 border border-red-500/30 font-mono text-xs text-red-200 leading-relaxed rounded">
@@ -451,9 +449,9 @@ export function MyTeamView() {
                 <button
                   type="button"
                   onClick={() => actions.setShowEditDialog(false)}
-                  className="text-zinc-400 hover:text-white"
+                  className="text-zinc-400 hover:text-white text-xs font-bold uppercase"
                 >
-                  <X className="size-4" />
+                  Đóng
                 </button>
               </div>
 

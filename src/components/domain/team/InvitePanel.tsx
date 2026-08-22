@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Badge, Button, Card, Field, Input, SkeletonRows } from "@/components/ui";
-import { AlertTriangle, Clock, ShieldAlert, X } from "lucide-react";
 import { MAX_MEMBERS } from "./teamStatus";
 import type { InvitationView } from "./types";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
@@ -110,12 +109,10 @@ export function InvitePanel({
       {/* Team Capacity Notice */}
       {isFull ? (
         <div className="p-4 bg-amber-500/10 border-b border-amber-500/20 text-xs font-mono text-amber-200 flex items-center gap-2">
-          <ShieldAlert className="size-4 text-amber-400 shrink-0" />
           <span>Đội đã đạt tối đa {MAX_MEMBERS}/{MAX_MEMBERS} thành viên. Không thể mời thêm.</span>
         </div>
       ) : isPotentialFull ? (
         <div className="p-3 bg-cyan-950/30 border-b border-cyan-500/30 text-[11px] font-mono text-cyan-300/90 flex items-start gap-2">
-          <AlertTriangle className="size-3.5 text-cyan-400 shrink-0 mt-0.5" />
           <span>
             Đội có {memberCount} thành viên + {pendingCount} lời mời đang chờ (Tổng: {memberCount + pendingCount}/5).
           </span>
@@ -219,9 +216,8 @@ export function InvitePanel({
                       <span className="text-[10px] text-zinc-400 font-mono">
                         Gửi: {inv.sentAt ? new Date(inv.sentAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" }) : "—"}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950/60 text-amber-300 border border-amber-500/40 flex items-center gap-1 shrink-0">
-                        <Clock className="size-3 text-amber-400" />
-                        <span>Đang chờ</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950/60 text-amber-300 border border-amber-500/40 shrink-0">
+                        Đang chờ
                       </span>
                     </div>
 
@@ -243,9 +239,9 @@ export function InvitePanel({
                           type="button"
                           disabled={isCancelling}
                           onClick={() => onCancel(inv)}
-                          className="px-2 py-0.5 font-mono font-bold uppercase text-rose-400 hover:text-white bg-rose-950/30 hover:bg-rose-900/60 border border-rose-500/30 rounded transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                          className="px-2 py-0.5 font-mono font-bold uppercase text-rose-400 hover:text-white bg-rose-950/30 hover:bg-rose-900/60 border border-rose-500/30 rounded transition-all cursor-pointer disabled:opacity-40"
                         >
-                          <X className="size-3" /> Hủy mời
+                          Hủy mời
                         </button>
                       </div>
                     )}
