@@ -20,9 +20,23 @@ export function useNewSubmissionViewModel() {
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
   const { data: rounds = [] } = useEventRounds(eventId);
   const { data: existingSubs = [] } = useMySubmissions();
-  const roundId = rounds.length
-    ? (rounds[rounds.length - 1].id || rounds[rounds.length - 1].Id || "")
-    : "";
+  // Chọn vòng đang MỞ (now nằm trong [startDate, endDate]), không phải luôn lấy vòng
+  // cuối cùng — sự kiện có ≥2 vòng thì vòng cuối thường chưa mở, khiến nộp bài luôn bị
+  // BE từ chối dù vòng trước đó đang mở thật.
+  const now = new Date();
+  const openRound = (rounds as any[]).find((r) => {
+    const start = r.startDate || r.StartDate;
+    const end = r.endDate || r.EndDate;
+    if (!start || !end) return false;
+    const startTime = new Date(start).getTime();
+    const endTime = new Date(end).getTime();
+    return startTime <= now.getTime() && now.getTime() <= endTime;
+  });
+  const roundId = openRound
+    ? (openRound.id || openRound.Id || "")
+    : rounds.length
+      ? (rounds[rounds.length - 1].id || rounds[rounds.length - 1].Id || "")
+      : "";
 
   const availableTracks: TrackItem[] = (tracks as any[])
     .filter((t) => !teamTrackId || (t.id || t.Id) === teamTrackId)
