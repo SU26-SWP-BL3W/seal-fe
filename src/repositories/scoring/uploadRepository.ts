@@ -12,10 +12,12 @@ export const uploadRepository = {
 
     const res = await apiClient.post<UploadFileResponse>("/Storage/upload", formData, {
       headers: {
-        "Content-Type": "multipart/form-data",
+        "Content-Type": undefined, // Để Axios / browser tự tạo multipart/form-data; boundary=...
       },
     });
 
-    return res.data;
+    const raw = res.data as any;
+    const url = raw?.fileUrl || raw?.FileUrl || raw?.data?.fileUrl || (typeof raw === "string" ? raw : "");
+    return { fileUrl: url };
   },
 };

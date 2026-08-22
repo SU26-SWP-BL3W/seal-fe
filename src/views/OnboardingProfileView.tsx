@@ -460,12 +460,19 @@ export function OnboardingProfileView() {
                   if (photoFile) {
                     setIsUploadingPhoto(true);
                     const uploaded = await uploadRepository.uploadFile(photoFile);
-                    photoCardUrl = uploaded.fileUrl;
+                    photoCardUrl = uploaded?.fileUrl || (uploaded as any)?.FileUrl;
+                    if (!photoCardUrl) {
+                      throw new Error("Không thể lấy đường dẫn ảnh sau khi tải lên. Vui lòng thử lại.");
+                    }
                   }
                   await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl });
                   router.push("/profile");
                 } catch (err: any) {
-                  setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
+                  const errorMsg =
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Không thể gửi hồ sơ. Vui lòng thử lại.";
+                  setSubmitError(errorMsg);
                 } finally {
                   setIsUploadingPhoto(false);
                 }
