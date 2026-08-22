@@ -1,4 +1,4 @@
-import { AdminEventsView } from "@/views/AdminEventsView";
+import { AdminEventsView } from "@/views/admin/AdminEventsView";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function AdminEventsPage() {

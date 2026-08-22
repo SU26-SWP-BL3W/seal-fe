@@ -1,4 +1,4 @@
-import { JudgeTracksView } from "@/views/JudgeTracksView";
+import { JudgeTracksView } from "@/views/judge/JudgeTracksView";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function JudgeTracksPage() {

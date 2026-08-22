@@ -1,4 +1,4 @@
-import { AdminDashboardView } from "@/views/AdminDashboardView";
+import { AdminDashboardView } from "@/views/admin/AdminDashboardView";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function AdminDashboardPage() {

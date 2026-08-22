@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { TemplateCriteriaFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
+import { TemplateCriteriaFormState, TrackFormState } from "@/viewModels/coordinator/useCreateEventWizardViewModel";
 import { templatesRepository, getStoredCustomTemplates, saveStoredCustomTemplates } from "@/repositories/templatesRepository";
 import { useGetAllCriteria } from "@/repositories/events/criteriasRepository";
 import { Modal } from "@/components/ui/Modal";

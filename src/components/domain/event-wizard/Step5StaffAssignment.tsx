@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Button, Input, Card, Badge } from "@/components/ui";
-import { StaffInviteFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
+import { StaffInviteFormState, TrackFormState } from "@/viewModels/coordinator/useCreateEventWizardViewModel";
 import { Users, Mail, UserPlus, Trash2, ArrowLeft, CheckCircle2, ShieldCheck, Clock, AlertCircle } from "lucide-react";
-import { checkEmailInSystem } from "@/views/CoordinatorStaffView";
+import { checkEmailInSystem } from "@/viewModels/coordinator/useCoordinatorStaffViewModel";
 import { useGetUsers } from "@/repositories/usersRepository";
 
 interface Step5StaffAssignmentProps {

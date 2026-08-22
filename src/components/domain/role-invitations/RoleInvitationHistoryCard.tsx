@@ -6,7 +6,7 @@ import {
   RoleInvitationRecord,
   RoleInvitationStatus,
   invitationHistoryService,
-} from "@/services/invitationHistoryService";
+} from "@/services/coordinator/invitationHistoryService";
 import {
   Mail,
   RefreshCw,

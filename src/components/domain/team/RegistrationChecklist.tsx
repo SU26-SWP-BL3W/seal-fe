@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
-import type { MemberItem } from "@/viewModels/teamTypes";
+import type { MemberItem } from "@/viewModels/team/teamTypes";
 import { MAX_MEMBERS, MIN_MEMBERS } from "./teamStatus";
 
 export interface RegistrationRequirements {

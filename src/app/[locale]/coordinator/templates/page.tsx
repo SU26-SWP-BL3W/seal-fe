@@ -1,4 +1,4 @@
-import { CoordinatorTemplatesView } from "@/views/CoordinatorTemplatesView";
+import { CoordinatorTemplatesView } from "@/views/coordinator/CoordinatorTemplatesView";
 
 export default function CoordinatorTemplatesPage() {
   return <CoordinatorTemplatesView />;

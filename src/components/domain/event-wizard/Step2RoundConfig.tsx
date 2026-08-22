@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { RoundFormState } from "@/viewModels/useCreateEventWizardViewModel";
+import { RoundFormState } from "@/viewModels/coordinator/useCreateEventWizardViewModel";
 import { Layers, Plus, Trash2, AlertTriangle, ArrowLeft, ArrowRight, Award, Clock, Calendar, CheckCircle2, Shield, Save } from "lucide-react";
 
 interface ModernDateTimePickerFieldProps {

@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, Card, SkeletonRows } from "@/components/ui";
-import type { MemberItem } from "@/viewModels/teamTypes";
+import type { MemberItem } from "@/viewModels/team/teamTypes";
 import { MAX_MEMBERS, MIN_MEMBERS } from "./teamStatus";
 
 interface Props {

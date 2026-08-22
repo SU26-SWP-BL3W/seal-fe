@@ -1,4 +1,4 @@
-import { MentorTracksView } from "@/views/MentorTracksView";
+import { MentorTracksView } from "@/views/mentor/MentorTracksView";
 
 export default function MentorPage() {
   return <MentorTracksView />;

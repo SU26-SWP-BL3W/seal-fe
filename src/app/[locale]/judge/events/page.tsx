@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { JudgeEventsView } from "@/views/JudgeEventsView";
+import { JudgeEventsView } from "@/views/judge/JudgeEventsView";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export const metadata: Metadata = {

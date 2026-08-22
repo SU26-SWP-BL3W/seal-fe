@@ -44,6 +44,7 @@ export const notificationsRepository = {
     } catch (error: any) {
       console.warn("[SEAL BE-DATA MISSING] GET /api/Notifications/my-notifications error:", error?.message);
       return {
+        statusCode: 400,
         success: false,
         data: [],
         message: "Chưa có thông báo từ Backend API",
@@ -63,7 +64,7 @@ export const notificationsRepository = {
           window.dispatchEvent(new Event("seal-notification-updated"));
         }
       } catch {}
-      return { success: true, data: true, message: "OK" };
+      return { statusCode: 200, success: true, data: true, message: "OK" };
     }
 
     try {
@@ -71,7 +72,7 @@ export const notificationsRepository = {
       return res.data;
     } catch (error: any) {
       console.warn("[SEAL BE-DATA MISSING] PUT /api/Notifications/" + notificationId + "/read error:", error?.message);
-      return { success: false, data: false, message: "Lỗi cập nhật trạng thái thông báo" };
+      return { statusCode: 400, success: false, data: false, message: "Lỗi cập nhật trạng thái thông báo" };
     }
   },
 };

@@ -5,6 +5,8 @@
 // Optional PascalCase & helper fields are included for backward-compatibility with legacy components.
 // ============================================================
 
+export type { BaseResponse, PagedResult, ApiError } from "./types";
+
 export type UserRole = "Admin" | "Coordinator" | "Judge" | "Mentor" | "TeamLeader" | "TeamMember" | "Guest";
 
 export type TeamStatus = "Forming" | "PendingApproval" | "Registered" | "Disqualified";
@@ -404,22 +406,4 @@ export interface UserRejection {
   isActive?: boolean;
   rejectedByUserId?: string;
   createdTime?: string;
-}
-
-// ─── Pagination ──────────────────────────────────────────────
-
-export interface PagedResult<T> {
-  data: T[];
-  currentPage: number;
-  pageSize: number;
-  totalItems: number;
-  totalPages: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
-}
-
-export interface BaseResponse<T> {
-  data: T;
-  message?: string | null;
-  success: boolean;
 }

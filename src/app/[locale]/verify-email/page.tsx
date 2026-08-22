@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { VerifyEmailView } from '@/views/VerifyEmailView';
+import { VerifyEmailView } from '@/views/auth/VerifyEmailView';
 
 export const metadata: Metadata = {
   title: 'Xác thực email - SEAL',

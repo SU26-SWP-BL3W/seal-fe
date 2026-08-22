@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import type { Event, Round } from "@/models/entities";
-import type { EventRoundItem } from "@/viewModels/eventsMetadata";
+import type { EventRoundItem } from "@/viewModels/public/eventsMetadata";
 
 export interface MyEventModel {
   id?: string;

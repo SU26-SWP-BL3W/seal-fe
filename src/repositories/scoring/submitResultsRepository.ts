@@ -358,10 +358,25 @@ export function useDeleteMentorFeedback() {
 
 export async function fetchSubmitResultsByTrack(trackId: string, eventId?: string): Promise<SubmitResultListItem[]> {
   try {
-    const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", {
-      params: { TrackId: trackId, EventId: eventId, PageSize: 100 },
-    });
-    return res.data?.data ?? [];
+    const params: Record<string, any> = {
+      pageSize: 100,
+      PageSize: 100,
+    };
+    if (trackId) {
+      params.trackId = trackId;
+      params.TrackId = trackId;
+    }
+    if (eventId) {
+      params.eventId = eventId;
+      params.EventId = eventId;
+    }
+    const res = await apiClient.get<any>("/SubmitResults", { params });
+    const items =
+      res.data?.data?.items ??
+      res.data?.items ??
+      res.data?.data ??
+      (Array.isArray(res.data) ? res.data : []);
+    return Array.isArray(items) ? items : [];
   } catch {
     return [];
   }

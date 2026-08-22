@@ -1,4 +1,4 @@
-import { NewSubmissionView } from "@/views/NewSubmissionView";
+import { NewSubmissionView } from "@/views/team/NewSubmissionView";
 
 // Route trong app/ luôn giữ MỎNG — chỉ render View tương ứng, không chứa logic.
 // NewSubmissionView tự xử lý cả nộp mới (T7) lẫn chỉnh sửa bài đã nộp theo

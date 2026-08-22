@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Card, Input, CalendarRangeField } from "@/components/ui";
-import { EventFormState } from "@/viewModels/useCreateEventWizardViewModel";
+import { EventFormState } from "@/viewModels/coordinator/useCreateEventWizardViewModel";
 import {
   Calendar,
   Shield,

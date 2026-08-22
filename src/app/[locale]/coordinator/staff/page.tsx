@@ -1,4 +1,4 @@
-import { CoordinatorStaffView } from "@/views/CoordinatorStaffView";
+import { CoordinatorStaffView } from "@/views/coordinator/CoordinatorStaffView";
 
 export default function CoordinatorStaffPage() {
   return <CoordinatorStaffView />;
