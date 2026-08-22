@@ -15,14 +15,6 @@ function pick(obj: unknown, ...keys: string[]): string {
   return "";
 }
 
-export interface TeamEligibilityResult {
-  hasEnoughMembers: boolean;
-  isWithinLimit: boolean;
-  membersWithoutProfile: MemberItem[];
-  canRegister: boolean;
-  issues: string[];
-}
-
 export const teamService = {
   /**
    * Normalizes raw backend team response into frontend TeamView.
@@ -90,39 +82,5 @@ export const teamService = {
       Boolean(rawTeam?.LeaderId && rawTeam.LeaderId === currentUserId) ||
       Boolean(rawTeam?.isLeader && rawTeam.isLeader === true)
     );
-  },
-
-  /**
-   * Validates if a team meets all registration requirements (3-5 members, valid student cards).
-   */
-  checkTeamEligibility(members: MemberItem[], teamStatus: string): TeamEligibilityResult {
-    const issues: string[] = [];
-    const count = members.length;
-    const hasEnoughMembers = count >= 3;
-    const isWithinLimit = count <= 5;
-
-    if (!hasEnoughMembers) {
-      issues.push(`Đội cần tối thiểu 3 thành viên để ghi danh (hiện có ${count}).`);
-    }
-    if (!isWithinLimit) {
-      issues.push(`Đội vượt quá số lượng tối đa 5 thành viên (hiện có ${count}).`);
-    }
-
-    const membersWithoutProfile = members.filter((m) => !m.hasStudentProfile && !m.isApproved);
-    if (membersWithoutProfile.length > 0) {
-      const names = membersWithoutProfile.map((m) => m.fullName).join(", ");
-      issues.push(`Các thành viên chưa hoàn thiện hồ sơ sinh viên: ${names}.`);
-    }
-
-    const isForming = teamStatus === "Forming" || teamStatus === "Rejected";
-    const canRegister = isForming && hasEnoughMembers && isWithinLimit && membersWithoutProfile.length === 0;
-
-    return {
-      hasEnoughMembers,
-      isWithinLimit,
-      membersWithoutProfile,
-      canRegister,
-      issues,
-    };
   },
 };

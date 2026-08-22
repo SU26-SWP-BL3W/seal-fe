@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button, Card, SkeletonRows } from "@/components/ui";
-import { Check, Copy, ExternalLink, Mail, Sparkles, User, X } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useGetTeamById } from "@/repositories/teamsRepository";
 
@@ -108,17 +107,14 @@ ${userFullName}`;
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          className="absolute right-4 top-4 text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs font-bold uppercase"
           aria-label="Đóng"
         >
-          <X className="size-5" />
+          Đóng
         </button>
 
         {/* Header */}
         <div className="flex items-start gap-3 border-b border-zinc-800 pb-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-            <Mail className="size-5" />
-          </div>
           <div className="min-w-0 pr-6">
             <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">
               [ ĐỀ NGHỊ GIA NHẬP ĐỘI QUA EMAIL ]
@@ -137,7 +133,6 @@ ${userFullName}`;
         {/* Recipient Info Strip */}
         <div className="my-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-zinc-900/80 border border-zinc-800 rounded text-xs">
           <div className="flex items-center gap-2 min-w-0">
-            <User className="size-4 text-zinc-400 shrink-0" />
             <span className="text-zinc-400">Gửi tới Đội trưởng:</span>
             <span className="font-bold text-white truncate" title={leaderEmail}>
               {leaderEmail}
@@ -148,7 +143,6 @@ ${userFullName}`;
             onClick={handleCopyEmail}
             className="flex items-center gap-1.5 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded text-[11px] transition-colors cursor-pointer shrink-0"
           >
-            {copiedEmail ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
             <span>{copiedEmail ? "Đã chép email" : "Chép email"}</span>
           </button>
         </div>
@@ -159,8 +153,8 @@ ${userFullName}`;
             <label className="text-[11px] uppercase tracking-wider text-zinc-400 font-bold">
               Mẫu Email Đề Nghị Tham Gia Đã Soạn Sẵn:
             </label>
-            <span className="text-[10px] text-cyan-400 flex items-center gap-1">
-              <Sparkles className="size-3" /> Tự động điền theo hồ sơ của bạn
+            <span className="text-[10px] text-cyan-400">
+              Tự động điền theo hồ sơ của bạn
             </span>
           </div>
 
@@ -193,7 +187,6 @@ ${userFullName}`;
             onClick={handleCopyBody}
             className="w-full sm:w-auto flex items-center justify-center gap-1.5 border border-zinc-700 text-zinc-200 hover:border-cyan-400 hover:text-white"
           >
-            {copiedBody ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
             <span>{copiedBody ? "Đã Sao Chép Email" : "Sao Chép Nội Dung Email"}</span>
           </Button>
           <Button
@@ -202,7 +195,6 @@ ${userFullName}`;
             onClick={handleOpenMailto}
             className="w-full sm:w-auto flex items-center justify-center gap-1.5 font-bold"
           >
-            <ExternalLink className="size-4" />
             <span>Mở Ứng Dụng Email (Gửi Ngay)</span>
           </Button>
         </div>

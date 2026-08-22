@@ -9,7 +9,6 @@ import { useCreateTeam } from "@/repositories/teamsRepository";
 import { usePublicEvents } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent, type TrackWithStaffModel } from "@/repositories/tracksRepository";
 import { useToast } from "@/providers/ToastProvider";
-import { AlertCircle, Calendar, Sparkles, Info } from "lucide-react";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import { MAX_MEMBERS, MIN_MEMBERS } from "./teamStatus";
 
@@ -121,8 +120,8 @@ export function CreateTeamForm({ defaultEventId }: CreateTeamFormProps) {
   return (
     <div className="mx-auto w-full max-w-lg py-[var(--space-xl)]">
       <div className="mb-[var(--space-lg)]">
-        <div className="font-mono text-[10px] uppercase tracking-widest text-cyan-400 font-bold flex items-center gap-1.5">
-          <Sparkles className="size-3.5" /> [ KHÔNG GIAN ĐỘI THI CỦA TÔI ]
+        <div className="font-mono text-[10px] uppercase tracking-widest text-cyan-400 font-bold">
+          [ KHÔNG GIAN ĐỘI THI CỦA TÔI ]
         </div>
         <h1 className="mt-1 font-display text-2xl sm:text-3xl font-bold uppercase text-balance text-[color:var(--text-primary)]">
           Khởi Tạo Đội Thi Mới
@@ -135,7 +134,6 @@ export function CreateTeamForm({ defaultEventId }: CreateTeamFormProps) {
       {!isApproved && (
         <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded flex flex-col gap-3 font-mono text-xs hud-clipped">
           <div className="flex items-start gap-2.5 text-amber-300">
-            <AlertCircle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
             <div>
               <span className="font-bold uppercase tracking-wider text-amber-200">HỒ SƠ CHƯA ĐƯỢC XÁC THỰC:</span>
               <p className="mt-1 text-zinc-300">
@@ -162,7 +160,6 @@ export function CreateTeamForm({ defaultEventId }: CreateTeamFormProps) {
                 {(!isChangingEvent && activeEvent) ? (
                   <div className="w-full border border-zinc-700 bg-zinc-900/90 px-3.5 py-3 font-mono text-xs flex items-center justify-between gap-3 rounded hud-clipped">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Calendar className="size-4 text-cyan-400 shrink-0" />
                       <div className="min-w-0">
                         <span className="font-bold text-white truncate block">
                           {eventName}
@@ -251,8 +248,7 @@ export function CreateTeamForm({ defaultEventId }: CreateTeamFormProps) {
 
                 {/* Track description hint */}
                 {selectedTrack && (selectedTrack.description || (selectedTrack as any).Description) && (
-                  <div className="p-2.5 bg-cyan-950/20 border border-cyan-500/20 rounded text-[11px] text-cyan-300/90 font-sans flex items-start gap-2">
-                    <Info className="size-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                  <div className="p-2.5 bg-cyan-950/20 border border-cyan-500/20 rounded text-[11px] text-cyan-300/90 font-sans">
                     <span>{selectedTrack.description || (selectedTrack as any).Description}</span>
                   </div>
                 )}

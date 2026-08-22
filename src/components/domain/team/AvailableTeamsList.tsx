@@ -6,7 +6,6 @@ import { usePagination } from "@/hooks/usePagination";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { JoinRequestEmailModal } from "./JoinRequestEmailModal";
-import { Mail, Search, Sparkles, UserCheck, Users } from "lucide-react";
 import { MAX_MEMBERS, MIN_MEMBERS } from "./teamStatus";
 
 interface Props {
@@ -104,13 +103,12 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#10171a] border border-zinc-800 p-4 hud-clipped">
         {/* Search Box */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
           <input
             type="text"
             placeholder="Tìm theo tên đội, kỹ năng, đội trưởng..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-black/60 border border-zinc-700 rounded text-xs text-white placeholder:text-zinc-500 focus:border-cyan-400 outline-none"
+            className="w-full px-4 py-2 bg-black/60 border border-zinc-700 rounded text-xs text-white placeholder:text-zinc-500 focus:border-cyan-400 outline-none"
           />
         </div>
 
@@ -136,14 +134,13 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
         <button
           type="button"
           onClick={() => setOnlyRecruiting(!onlyRecruiting)}
-          className={`px-3 py-2 text-xs font-bold uppercase rounded border transition-colors flex items-center gap-1.5 cursor-pointer ${
+          className={`px-3 py-2 text-xs font-bold uppercase rounded border transition-colors cursor-pointer ${
             onlyRecruiting
               ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
               : "bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-white"
           }`}
         >
-          <Sparkles className="size-3.5" />
-          <span>{onlyRecruiting ? "Đang tuyển quân" : "Tất cả trạng thái"}</span>
+          {onlyRecruiting ? "Đang tuyển quân" : "Tất cả trạng thái"}
         </button>
       </div>
 
@@ -152,11 +149,6 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
         <SkeletonRows rows={4} />
       ) : filteredTeams.length === 0 ? (
         <Card className="text-center py-12 px-4 space-y-4 border border-zinc-800 bg-[#10171a]">
-          <div className="flex justify-center">
-            <div className="size-12 rounded-full bg-zinc-800/80 flex items-center justify-center text-zinc-400">
-              <Users className="size-6" />
-            </div>
-          </div>
           <div className="space-y-1">
             <h3 className="font-display text-base font-bold uppercase text-white">
               Không tìm thấy đội thi nào phù hợp
@@ -218,8 +210,7 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
                     {/* Member Progress Bar */}
                     <div className="space-y-1.5 pt-1">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-zinc-400 flex items-center gap-1.5">
-                          <Users className="size-3.5 text-cyan-400" />
+                        <span className="text-zinc-400">
                           Đội hình:
                         </span>
                         <span className={`font-bold tabular-nums ${isNeedMin ? "text-amber-400" : "text-emerald-400"}`}>
@@ -239,7 +230,6 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
                     {/* Leader Info */}
                     <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
                       <div className="flex items-center gap-1.5 truncate">
-                        <UserCheck className="size-3.5 text-zinc-500 shrink-0" />
                         <span className="truncate">
                           Đội trưởng: <strong className="text-zinc-200">{t.leaderName}</strong>
                         </span>
@@ -257,10 +247,9 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
                           eventName: eventName || "Sự kiện Hackathon SEAL",
                         })
                       }
-                      className="w-full py-2.5 px-4 bg-cyan-950/60 border border-cyan-500/40 hover:bg-cyan-500 hover:text-black text-cyan-300 font-bold uppercase text-xs transition-all hud-clipped flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                      className="w-full py-2.5 px-4 bg-cyan-950/60 border border-cyan-500/40 hover:bg-cyan-500 hover:text-black text-cyan-300 font-bold uppercase text-xs transition-all hud-clipped cursor-pointer shadow-sm"
                     >
-                      <Mail className="size-3.5" />
-                      <span>Gửi Email Đề Nghị Gia Nhập</span>
+                      Gửi Email Đề Nghị Gia Nhập
                     </button>
                   </div>
                 </div>
