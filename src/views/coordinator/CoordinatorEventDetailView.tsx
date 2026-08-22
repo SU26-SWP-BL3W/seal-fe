@@ -9,6 +9,7 @@ export const CoordinatorEventDetailView: React.FC = () => {
   const { state, data } = useCoordinatorEventDetailViewModel();
 
   const {
+    eventId,
     eventName,
     season,
     year,
@@ -142,7 +143,7 @@ export const CoordinatorEventDetailView: React.FC = () => {
 
             {/* CTA Button: OPEN EVENT CONFIG WIZARD */}
             <div className="pt-4 flex justify-end">
-              <Link href="/coordinator/events/new">
+              <Link href={eventId ? `/coordinator/events/new?eventId=${eventId}` : "/coordinator/events/new"}>
                 <button
                   type="button"
                   className="px-6 py-3 bg-[#8b5cf6] hover:bg-purple-600 text-white font-mono font-bold text-xs uppercase flex items-center gap-2 cursor-pointer transition-colors shadow-lg"

@@ -101,8 +101,12 @@ export function useAdminCoordinatorsViewModel() {
   }, [loadHistory]);
 
   const searchMatches = useMemo(() => {
+    if (selectedUser) return [];
     const q = searchQuery.trim().toLowerCase();
-    if (!q || q.length < 1 || selectedUser) return [];
+
+    // Chưa gõ gì: hiện luôn danh sách đầy đủ tài khoản có sẵn để duyệt (bấm vào ô là thấy ngay,
+    // không bắt phải gõ trước mới có gợi ý).
+    if (!q) return allUsers.slice(0, 30);
 
     return allUsers
       .filter((u: any) => {
@@ -111,7 +115,7 @@ export function useAdminCoordinatorsViewModel() {
         const studentCode = (u.studentCode || u.StudentCode || "").toLowerCase();
         return name.includes(q) || email.includes(q) || studentCode.includes(q);
       })
-      .slice(0, 6);
+      .slice(0, 30);
   }, [allUsers, searchQuery, selectedUser]);
 
   const matchedUser: User | null = useMemo(() => {

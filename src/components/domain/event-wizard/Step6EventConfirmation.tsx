@@ -80,11 +80,12 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         localStorage.setItem(`seal_wizard_draft_${targetId}`, JSON.stringify(fullPayload));
       }
 
-      // 2. Persist rounds to backend API
+      // 2. Persist rounds to backend API (update in DB if ID is real, create if temp ID)
       if (Array.isArray(rounds) && rounds.length > 0) {
         for (const rnd of rounds) {
           try {
-            await roundsRepository.createRound({
+            const isDbRound = rnd.id && typeof rnd.id === "string" && !rnd.id.startsWith("tmp-") && !rnd.id.startsWith("rnd-") && !rnd.id.startsWith("temp-");
+            const roundPayload = {
               eventId: targetId,
               roundName: rnd.roundName,
               roundNumber: rnd.roundNumber || 1,
@@ -93,9 +94,17 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
               advancementRule: rnd.advancementRule,
               scoringStartDate: rnd.scoringStartDate,
               scoringEndDate: rnd.scoringEndDate,
-            });
+            };
+            if (isDbRound) {
+              await roundsRepository.updateRound(rnd.id, roundPayload);
+            } else {
+              const created = await roundsRepository.createRound(roundPayload);
+              if (created?.id) {
+                rnd.id = created.id;
+              }
+            }
           } catch (e) {
-            // Ignore API network error
+            console.error("Persist round error:", e);
           }
         }
       }
