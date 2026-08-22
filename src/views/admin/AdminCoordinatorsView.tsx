@@ -29,6 +29,7 @@ function pickEventId(ev: any): string {
 
 export function AdminCoordinatorsView() {
   const { state, data, pagination, actions } = useAdminCoordinatorsViewModel();
+  const [isSearchFocused, setIsSearchFocused] = React.useState(false);
 
   const {
     selectedEventId,
@@ -179,15 +180,17 @@ export function AdminCoordinatorsView() {
                       actions.setSearchQuery(e.target.value);
                       if (selectedUser) actions.handleClearSelection();
                     }}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setIsSearchFocused(false), 150)}
                     className="pl-9"
                     disabled={isSubmitting}
                   />
                 </div>
 
-                {searchMatches.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-lg">
-                    <div className="border-b border-[var(--border-muted)] bg-[var(--bg-base)] p-2 text-xs text-[var(--text-muted)]">
-                      Gợi ý ({searchMatches.length})
+                {isSearchFocused && searchMatches.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-lg border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-lg">
+                    <div className="sticky top-0 border-b border-[var(--border-muted)] bg-[var(--bg-base)] p-2 text-xs text-[var(--text-muted)]">
+                      {searchQuery.trim() ? `Gợi ý (${searchMatches.length})` : `Tất cả tài khoản (${searchMatches.length})`}
                     </div>
                     {searchMatches.map((u: any) => {
                       const name = u.fullName || u.FullName || "Không tên";
@@ -334,8 +337,8 @@ export function AdminCoordinatorsView() {
                 {paginatedCoordinators.map((c: any, idx: number) => {
                   const roleId = c.id || c.Id || c.roleId || c.RoleId || `ec-${idx}`;
                   const coordUserId = c.userId || c.UserId || c.user?.id || c.user?.userId || c.User?.Id;
-                  const uName = c.fullName || c.FullName || c.userName || c.UserName || "Điều phối viên";
-                  const uEmail = c.email || c.Email || "coordinator@seal.edu.vn";
+                  const uName = c.user?.fullName || c.User?.FullName || c.fullName || c.FullName || c.userName || c.UserName || "Điều phối viên";
+                  const uEmail = c.user?.email || c.User?.Email || c.email || c.Email || "coordinator@seal.edu.vn";
                   const isRemoving = removingRoleId === roleId;
 
                   return (
