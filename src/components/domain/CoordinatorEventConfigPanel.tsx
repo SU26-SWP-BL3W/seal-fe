@@ -424,8 +424,9 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
         try { await tracksRepository.deleteTrack(delTrackId); } catch {}
       }
 
-      for (let i = 0; i < tracks.length; i++) {
-        const t = tracks[i];
+      const nextTracks = tracks.map((track) => ({ ...track }));
+      for (let i = 0; i < nextTracks.length; i++) {
+        const t = nextTracks[i];
         const trackPayload = {
           eventId,
           trackName: t.trackName.trim() || `HẠNG MỤC ${i + 1}`,
@@ -442,8 +443,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
           const created = await tracksRepository.createTrack(trackPayload);
           targetTrackId = created?.id || (created as any)?.Id;
           if (targetTrackId) {
-            t.id = targetTrackId;
-            t.isNew = false;
+            nextTracks[i] = { ...t, id: targetTrackId, isNew: false };
           }
         }
 
@@ -455,6 +455,7 @@ export const CoordinatorEventConfigPanel: React.FC<CoordinatorEventConfigPanelPr
           }
         }
       }
+      setTracks(nextTracks);
 
       setIsSaving(false);
       setIsPublished(targetPublishStatus);
