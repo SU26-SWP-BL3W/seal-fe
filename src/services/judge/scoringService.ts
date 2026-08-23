@@ -36,9 +36,8 @@ export const scoringService = {
   evaluateScoringTimeline(context: ScoringTimelineContext): ScoringTimelineStatus {
     const { event, round, track, now = Date.now() } = context;
 
-    const isEventEnded = Boolean(
-      event && (event.status === false || (event.endDate && new Date(event.endDate).getTime() < now))
-    );
+    // Event.Status = công bố/nháp, không phải "đã kết thúc".
+    const isEventEnded = Boolean(event?.endDate && new Date(event.endDate).getTime() < now);
 
     const submissionDeadlineStr = track?.endDate || round?.endDate || round?.submissionDeadline || event?.endDate;
     const scoringStartDateStr = track?.scoringStartDate || round?.scoringStartDate;
@@ -98,8 +97,8 @@ export const scoringService = {
         const val = Number(scoreInputs[crId]) || 0;
         const max = Number(cr.maxScore) || 10;
         const weight = Number(cr.weight) || 0;
-        // Percentage of max score scaled by weight percentage
-        totalScore += (val / max) * weight;
+        // Khớp BE SaveScore: (value/MaxScore) × (Weight/100) × 10.
+        totalScore += (val / max) * (weight / 100) * 10;
       }
     } else {
       for (const cr of criteria) {

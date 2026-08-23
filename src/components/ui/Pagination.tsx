@@ -1,7 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+
+type PaginationAccent = "primary" | "team" | "mentor" | "judge" | "coordinator";
+
+const ACCENT_VALUE: Record<PaginationAccent, string> = {
+  primary: "var(--accent-primary)",
+  team: "var(--accent-team)",
+  mentor: "var(--accent-mentor)",
+  judge: "var(--accent-judge)",
+  coordinator: "var(--accent-coordinator)",
+};
 
 export interface PaginationProps {
   currentPage: number;
@@ -14,6 +24,7 @@ export interface PaginationProps {
   compact?: boolean;
   className?: string;
   itemLabel?: string;
+  accent?: PaginationAccent;
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -27,11 +38,11 @@ export const Pagination: React.FC<PaginationProps> = ({
   compact = false,
   className = "",
   itemLabel = "mục",
+  accent = "primary",
 }) => {
   const safeTotalPages = Math.max(1, totalPages || 1);
   const safeCurrentPage = Math.min(Math.max(1, currentPage || 1), safeTotalPages);
 
-  // Generate page numbers with window
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisible = compact ? 3 : 5;
@@ -71,27 +82,30 @@ export const Pagination: React.FC<PaginationProps> = ({
     ? Math.min(safeCurrentPage * pageSize, totalItems)
     : undefined;
 
+  const navBtn =
+    "border border-[#263339] bg-[#0a0e10] text-[#8a9ba8] hover:border-[var(--pager-accent)] hover:text-[#e1e7ec] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-[#263339] disabled:hover:text-[#8a9ba8] cursor-pointer transition-colors";
+
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-[#13191c] border border-[#263339] font-mono text-xs text-[#8a9ba8] hud-clipped select-none ${className}`}
+      style={{ "--pager-accent": ACCENT_VALUE[accent] } as CSSProperties}
+      className={`flex flex-col items-center justify-between gap-3 border border-[#263339] bg-[#13191c] p-3 font-mono text-xs text-[#8a9ba8] hud-clipped select-none sm:flex-row ${className}`}
     >
-      {/* Left: Summary Info & Page Size */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-wrap items-center gap-3">
         {totalItems !== undefined && startItem !== undefined && endItem !== undefined ? (
           <span>
             Hiển thị <strong className="text-[#e1e7ec]">{totalItems > 0 ? startItem : 0}</strong> -{" "}
             <strong className="text-[#e1e7ec]">{endItem}</strong> trong{" "}
-            <strong className="text-[#00d9ff]">{totalItems}</strong> {itemLabel}
+            <strong className="text-[var(--pager-accent)]">{totalItems}</strong> {itemLabel}
           </span>
         ) : (
           <span>
             Trang <strong className="text-[#e1e7ec]">{safeCurrentPage}</strong> /{" "}
-            <strong className="text-[#00d9ff]">{safeTotalPages}</strong>
+            <strong className="text-[var(--pager-accent)]">{safeTotalPages}</strong>
           </span>
         )}
 
         {onPageSizeChange && pageSize && (
-          <div className="flex items-center gap-1.5 pl-2 border-l border-[#263339]">
+          <div className="flex items-center gap-1.5 border-l border-[#263339] pl-2">
             <span className="text-[11px]">Cỡ trang:</span>
             <select
               value={pageSize}
@@ -99,7 +113,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                 onPageSizeChange(Number(e.target.value));
                 onPageChange(1);
               }}
-              className="bg-[#0a0e10] border border-[#263339] px-2 py-1 text-[#e1e7ec] text-xs font-bold outline-none focus:border-[#8b5cf6] cursor-pointer"
+              className="cursor-pointer border border-[#263339] bg-[#0a0e10] px-2 py-1 text-xs font-bold text-[#e1e7ec] outline-none focus:border-[var(--pager-accent)]"
             >
               {pageSizeOptions.map((sz) => (
                 <option key={sz} value={sz}>
@@ -111,37 +125,33 @@ export const Pagination: React.FC<PaginationProps> = ({
         )}
       </div>
 
-      {/* Right: Navigation Controls */}
       <div className="flex items-center gap-1">
-        {/* First Page */}
         <button
           type="button"
           onClick={() => onPageChange(1)}
           disabled={safeCurrentPage <= 1}
           title="Trang đầu"
-          className="p-1.5 rounded bg-[#0a0e10] border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] hover:border-[#8b5cf6] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-[#263339] disabled:hover:text-[#8a9ba8] cursor-pointer transition-colors"
+          className={`rounded p-1.5 ${navBtn}`}
         >
-          <ChevronsLeft className="w-3.5 h-3.5" />
+          <ChevronsLeft className="h-3.5 w-3.5" />
         </button>
 
-        {/* Previous Page */}
         <button
           type="button"
           onClick={() => onPageChange(safeCurrentPage - 1)}
           disabled={safeCurrentPage <= 1}
           title="Trang trước"
-          className="px-2.5 py-1.5 rounded bg-[#0a0e10] border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] hover:border-[#8b5cf6] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-[#263339] disabled:hover:text-[#8a9ba8] flex items-center gap-1 font-bold cursor-pointer transition-colors"
+          className={`flex items-center gap-1 rounded px-2.5 py-1.5 font-bold ${navBtn}`}
         >
-          <ChevronLeft className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline text-[11px]">Trước</span>
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span className="hidden text-[11px] sm:inline">Trước</span>
         </button>
 
-        {/* Numeric Pages */}
         <div className="flex items-center gap-1">
           {pageNumbers.map((p, idx) => {
             if (p === "...") {
               return (
-                <span key={`dots-${idx}`} className="px-2 py-1 text-[#8a9ba8] text-xs">
+                <span key={`dots-${idx}`} className="px-2 py-1 text-xs text-[#8a9ba8]">
                   ...
                 </span>
               );
@@ -155,10 +165,10 @@ export const Pagination: React.FC<PaginationProps> = ({
                 key={`page-${pageNum}`}
                 type="button"
                 onClick={() => onPageChange(pageNum)}
-                className={`min-w-[28px] h-7 px-2 flex items-center justify-center font-bold text-xs rounded transition-all cursor-pointer ${
+                className={`flex h-7 min-w-[28px] cursor-pointer items-center justify-center rounded px-2 text-xs font-bold transition-all ${
                   isActive
-                    ? "bg-[#8b5cf6] text-white border border-[#8b5cf6] shadow-[0_0_10px_rgba(139,92,246,0.4)] scale-105"
-                    : "bg-[#0a0e10] border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] hover:border-[#8b5cf6]"
+                    ? "scale-105 border border-[var(--pager-accent)] bg-[var(--pager-accent)] text-[var(--bg-base)]"
+                    : "border border-[#263339] bg-[#0a0e10] text-[#8a9ba8] hover:border-[var(--pager-accent)] hover:text-[#e1e7ec]"
                 }`}
               >
                 {pageNum}
@@ -167,27 +177,25 @@ export const Pagination: React.FC<PaginationProps> = ({
           })}
         </div>
 
-        {/* Next Page */}
         <button
           type="button"
           onClick={() => onPageChange(safeCurrentPage + 1)}
           disabled={safeCurrentPage >= safeTotalPages}
           title="Trang kế tiếp"
-          className="px-2.5 py-1.5 rounded bg-[#0a0e10] border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] hover:border-[#8b5cf6] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-[#263339] disabled:hover:text-[#8a9ba8] flex items-center gap-1 font-bold cursor-pointer transition-colors"
+          className={`flex items-center gap-1 rounded px-2.5 py-1.5 font-bold ${navBtn}`}
         >
-          <span className="hidden sm:inline text-[11px]">Sau</span>
-          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="hidden text-[11px] sm:inline">Sau</span>
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
 
-        {/* Last Page */}
         <button
           type="button"
           onClick={() => onPageChange(safeTotalPages)}
           disabled={safeCurrentPage >= safeTotalPages}
           title="Trang cuối"
-          className="p-1.5 rounded bg-[#0a0e10] border border-[#263339] text-[#8a9ba8] hover:text-[#e1e7ec] hover:border-[#8b5cf6] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-[#263339] disabled:hover:text-[#8a9ba8] cursor-pointer transition-colors"
+          className={`rounded p-1.5 ${navBtn}`}
         >
-          <ChevronsRight className="w-3.5 h-3.5" />
+          <ChevronsRight className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>

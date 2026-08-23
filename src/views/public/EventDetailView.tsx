@@ -112,10 +112,8 @@ export function EventDetailView({ eventId: propEventId }: { eventId?: string }) 
   const hasJudgeRole = judgeRoles.length > 0;
   const hasMentorRole = mentorRoles.length > 0;
 
-  // Kiểm tra sự kiện đã đóng / kết thúc chưa
-  const isEventEnded = Boolean(
-    event && (event.status === false || (event.endDate && new Date(event.endDate).getTime() < Date.now()))
-  );
+  // Event.Status = công bố/nháp, không phải "đã kết thúc".
+  const isEventEnded = Boolean(event?.endDate && new Date(event.endDate).getTime() < Date.now());
 
   // XÁC ĐỊNH CHÍNH XÁC VAI TRÒ CỦA NGƯỜI DÙNG ĐỐI VỚI SỰ KIỆN NÀY (EVENT-SCOPED ROLE)
   const roleName = useMemo(() => {

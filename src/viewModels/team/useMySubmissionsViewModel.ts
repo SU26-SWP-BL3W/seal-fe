@@ -10,6 +10,7 @@ import {
   readApiError,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
+import { validateDemoUrl, validateRepoUrl, validateSlideUrl } from "@/lib/linkValidators";
 import { usePagination } from "@/hooks/usePagination";
 
 export function useMySubmissionsViewModel() {
@@ -67,6 +68,22 @@ export function useMySubmissionsViewModel() {
 
     if (!repoFormatted && !demoFormatted && !slideFormatted) {
       setEditError("Vui lòng điền ít nhất một đường dẫn hợp lệ cho bài nộp.");
+      return;
+    }
+
+    const repoCheck = validateRepoUrl(repoFormatted);
+    if (!repoCheck.isValid) {
+      setEditError(repoCheck.errorMessage || "Repo không hợp lệ.");
+      return;
+    }
+    const demoCheck = validateDemoUrl(demoFormatted);
+    if (demoFormatted && !demoCheck.isValid) {
+      setEditError(demoCheck.errorMessage || "Demo không hợp lệ.");
+      return;
+    }
+    const slideCheck = validateSlideUrl(slideFormatted);
+    if (slideFormatted && !slideCheck.isValid) {
+      setEditError(slideCheck.errorMessage || "Slide không hợp lệ.");
       return;
     }
 

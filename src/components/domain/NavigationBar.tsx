@@ -525,20 +525,20 @@ export function NavigationBar() {
     })();
 
     return (
-      <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[#2dd4bf]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
+      <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--accent-mentor)]/30 flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">
         <div className="flex flex-col gap-6">
           {/* Brand Logo & Notification Bell */}
           <div className="flex flex-col gap-3 pb-4 border-b border-[var(--border-muted)]">
             <div className="flex items-center justify-between">
-              <Link href="/" className="font-display font-bold text-lg text-[#2dd4bf] tracking-widest uppercase flex items-center gap-2">
-                <SealShield className="h-6 w-6 text-[#2dd4bf]" />
+              <Link href="/" className="font-display font-bold text-lg text-[var(--accent-mentor)] tracking-widest uppercase flex items-center gap-2">
+                <SealShield className="h-6 w-6 text-[var(--accent-mentor)]" />
                 <span>MENTOR PANEL</span>
               </Link>
-              <NotificationBell />
+              <NotificationBell align="sidebar" />
             </div>
             <Link
               href="/"
-              className="font-mono text-[11px] text-[var(--text-muted)] hover:text-[#2dd4bf] flex items-center gap-1.5 transition-colors"
+              className="font-mono text-[11px] text-[var(--text-muted)] hover:text-[var(--accent-mentor)] flex items-center gap-1.5 transition-colors"
             >
               <ArrowLeft className="w-3 h-3" /> Quay lại trang chủ
             </Link>
@@ -546,18 +546,18 @@ export function NavigationBar() {
 
           {/* Mentor Profile Card */}
           <div className={`p-3 bg-[var(--bg-input)] border hud-clipped flex flex-col gap-1 ${
-            isAuthorizedMentor ? "border-[#2dd4bf]/40" : "border-[var(--color-warning)]/50 bg-[var(--color-warning)]/5"
+            isAuthorizedMentor ? "border-[var(--accent-mentor)]/40" : "border-[var(--color-warning)]/50 bg-[var(--color-warning)]/5"
           }`}>
             <span className={`font-mono text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 ${
-              isAuthorizedMentor ? "text-[#2dd4bf]" : "text-[var(--color-warning)]"
+              isAuthorizedMentor ? "text-[var(--accent-mentor)]" : "text-[var(--color-warning)]"
             }`}>
-              <Briefcase className="w-3.5 h-3.5" /> {isAuthorizedMentor ? "MENTOR CỐ VẤN" : "CHƯA PHÂN CÔNG CỐ VẤN"}
+              <Briefcase className="w-3.5 h-3.5" /> {isAuthorizedMentor ? "CỐ VẤN" : "CHƯA PHÂN CÔNG CỐ VẤN"}
             </span>
             <span className="font-display text-xs font-bold text-[var(--text-primary)] truncate">
-              {user?.FullName || "Cố Vấn Chuyên Môn"}
+              {user?.FullName || "Cố vấn chuyên môn"}
             </span>
             <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {isAuthorizedMentor ? mentorAssignmentLine : "Quyền hạn: Read-Only (Chỉ Xem)"}
+              {isAuthorizedMentor ? mentorAssignmentLine : "Quyền hạn: chỉ xem"}
             </span>
           </div>
 
@@ -573,44 +573,44 @@ export function NavigationBar() {
                   href={`/mentor/tracks${mentorQuery}`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname === "/mentor/tracks" || pathname === "/mentor"
-                      ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
+                      ? "bg-[var(--accent-mentor)] text-[var(--bg-base)] shadow-sm"
                       : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Briefcase className="w-4 h-4 shrink-0" /> Hạng Mục Cố Vấn
+                  <Briefcase className="w-4 h-4 shrink-0" /> Hạng mục cố vấn
                 </Link>
 
                 <Link
                   href={`/mentor/teams${mentorQuery}`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/mentor/teams")
-                      ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
+                      ? "bg-[var(--accent-mentor)] text-[var(--bg-base)] shadow-sm"
                       : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Users className="w-4 h-4 shrink-0" /> Đội Thi Cố Vấn
+                  <Users className="w-4 h-4 shrink-0" /> Danh sách đội
                 </Link>
 
                 <Link
                   href={`/mentor/submissions${mentorQuery}`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/mentor/submissions")
-                      ? "bg-[#2dd4bf] text-[var(--bg-base)] shadow-sm"
+                      ? "bg-[var(--accent-mentor)] text-[var(--bg-base)] shadow-sm"
                       : "text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Send className="w-4 h-4 shrink-0" /> Bài Nộp &amp; Góp Ý
+                  <Send className="w-4 h-4 shrink-0" /> Bài nộp &amp; góp ý
                 </Link>
 
                 <Link
                   href={`/events/${activeViewEventId}/leaderboard`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/leaderboard")
-                      ? "bg-[var(--accent-judge)] text-[var(--bg-base)] shadow-sm"
-                      : "text-[var(--text-muted)] hover:text-[var(--accent-judge)] hover:bg-[var(--bg-input)]"
+                      ? "bg-[var(--accent-mentor)] text-[var(--bg-base)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--accent-mentor)] hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Trophy className="w-4 h-4 shrink-0" /> Bảng Xếp Hạng Track
+                  <Trophy className="w-4 h-4 shrink-0" /> Bảng xếp hạng
                 </Link>
               </>
             ) : (
@@ -623,18 +623,18 @@ export function NavigationBar() {
                       : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <FileText className="w-4 h-4 shrink-0" /> Thể Lệ & Chi Tiết Sự Kiện
+                  <FileText className="w-4 h-4 shrink-0" /> Thể lệ &amp; chi tiết sự kiện
                 </Link>
 
                 <Link
                   href={`/events/${activeViewEventId}/leaderboard`}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/leaderboard")
-                      ? "bg-[var(--accent-judge)] text-[var(--bg-base)] shadow-sm"
-                      : "text-[var(--text-muted)] hover:text-[var(--accent-judge)] hover:bg-[var(--bg-input)]"
+                      ? "bg-[var(--accent-mentor)] text-[var(--bg-base)] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--accent-mentor)] hover:bg-[var(--bg-input)]"
                   }`}
                 >
-                  <Trophy className="w-4 h-4 shrink-0" /> Bảng Xếp Hạng
+                  <Trophy className="w-4 h-4 shrink-0" /> Bảng xếp hạng
                 </Link>
               </>
             )}
@@ -645,8 +645,8 @@ export function NavigationBar() {
         <div className="flex flex-col gap-2.5 pt-3 border-t border-[var(--border-muted)]">
           <div className="flex items-center justify-between font-mono text-xs">
             <span className="text-[var(--text-muted)]">Vai trò:</span>
-            <span className="text-[#2dd4bf] font-bold">
-              {isAuthorizedMentor ? "Mentor" : "User (Chưa Phân Công Cố Vấn)"}
+            <span className="text-[var(--accent-mentor)] font-bold">
+              {isAuthorizedMentor ? "Mentor" : "User (Chưa phân công cố vấn)"}
             </span>
           </div>
 

@@ -12,6 +12,7 @@ import { ApiMissingDataBadge } from "@/components/ui";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import type { TrackItem, DeliverableItem, SubmissionItem, DeliverableType } from "@/viewModels/team/teamTypes";
 import { useNewSubmissionViewModel } from "@/viewModels/team/useNewSubmissionViewModel";
+import { validateDeliverableByType } from "@/lib/linkValidators";
 
 const DELIVERABLE_ICONS: Record<DeliverableType, { label: string; badgeColor: string }> = {
   github:       { label: "GITHUB REPO",     badgeColor: "text-[var(--text-primary)] border-[var(--border-muted)] bg-[var(--bg-input)]" },
@@ -72,7 +73,7 @@ function TrackSubmissionCard({
     let reqTotal = 0;
     for (const d of deliverables) {
       const val = (linkValues[d.type] || linkValues[d.id] || "").trim();
-      const valid = val.startsWith("http://") || val.startsWith("https://");
+      const valid = val.length > 0 && validateDeliverableByType(d.type, val, false).isValid;
       if (valid) filled++;
       if (d.required) {
         reqTotal++;
@@ -92,6 +93,15 @@ function TrackSubmissionCard({
   const handleCardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allRequiredDone) return;
+
+    for (const d of deliverables) {
+      const val = (linkValues[d.type] || linkValues[d.id] || "").trim();
+      const check = validateDeliverableByType(d.type, val, d.required);
+      if (!check.isValid) {
+        setFormError(check.errorMessage || "Link không hợp lệ.");
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     const primaryDeliverable = deliverables.find((d) => d.required);
@@ -214,7 +224,7 @@ function TrackSubmissionCard({
               const meta = (DELIVERABLE_ICONS as any)[dlv.type] || DELIVERABLE_ICONS.other;
               const val = linkValues[dlv.type] || linkValues[dlv.id] || "";
               const isFilled = val.trim().length > 0;
-              const isValidUrl = isFilled && (val.startsWith("http://") || val.startsWith("https://"));
+              const isValidUrl = isFilled && validateDeliverableByType(dlv.type, val, false).isValid;
 
               return (
                 <div
@@ -346,22 +356,25 @@ function TrackSubmissionCard({
 
 export function NewSubmissionView() {
   const { state, data, actions } = useNewSubmissionViewModel();
-  const { team, teamId, roundId, canSubmit, isLoading } = state;
+  const { team, teamId, roundId, canSubmit, submitBlockReason, isLoading } = state;
   const { availableTracks, submissions } = data;
 
   if (!isLoading && (!team || !canSubmit)) {
+    const windowClosed = submitBlockReason === "window-closed";
     return (
       <div className="hud-lattice min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-4 space-y-4">
         <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--color-warning)]/40 hud-clipped p-8 text-center">
           <div className="font-mono text-[10px] text-[var(--color-warning)] tracking-widest uppercase mb-3">
-            CHƯA ĐỦ ĐIỀU KIỆN NỘP BÀI
+            {windowClosed ? "CỔNG NỘP BÀI ĐÃ ĐÓNG" : "CHƯA ĐỦ ĐIỀU KIỆN NỘP BÀI"}
           </div>
           <p className="font-mono text-sm text-[var(--text-primary)] mb-4 leading-relaxed">
-            {!team ? "Bạn chưa có đội thi." : `Trạng thái đội thi hiện tại: `}
-            {team && <span className="font-bold text-[var(--color-warning)]">{(team as any)?.status || (team as any)?.Status}</span>}
+            {!team ? "Bạn chưa có đội thi." : windowClosed ? "Hạng mục hoặc vòng thi không còn trong thời gian nộp bài." : `Trạng thái đội thi hiện tại: `}
+            {team && !windowClosed && <span className="font-bold text-[var(--color-warning)]">{(team as any)?.status || (team as any)?.Status}</span>}
             <br />
             <span className="text-xs text-[var(--text-muted)] mt-1 block">
-              Đội cần được BTC phê duyệt ghi danh trước khi thực hiện nộp bài.
+              {windowClosed
+                ? "Không thể nộp hoặc sửa bài ngoài cửa sổ hạng mục. Liên hệ điều phối viên nếu cần gia hạn."
+                : "Đội cần được BTC phê duyệt ghi danh trước khi thực hiện nộp bài."}
             </span>
           </p>
           <Link href="/my-team">

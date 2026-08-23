@@ -249,6 +249,7 @@ export function useMentorWorkspaceViewModel() {
   }, [trackStatsMap]);
 
   const isLoadingSubmissionsByTrack = submissionQueries.some((q) => q.isLoading);
+  const hasSubmissionFetchError = submissionQueries.some((q) => q.isError);
 
   return {
     eventId: resolvedEventId,
@@ -271,6 +272,7 @@ export function useMentorWorkspaceViewModel() {
       isLoadingSubs ||
       isLoadingEventRoles ||
       isLoadingSubmissionsByTrack,
+    hasSubmissionFetchError,
     refetchAll: () => {
       refetchTracks();
       refetchTeams();

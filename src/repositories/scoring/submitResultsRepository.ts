@@ -306,8 +306,10 @@ export function useMentorFeedbacks(submitResultId?: string) {
             suggestedScore: decoded.suggestedScore,
           };
         });
-      } catch {
-        return [];
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 404) return [];
+        throw err;
       }
     },
     enabled: !!submitResultId,
@@ -357,22 +359,16 @@ export function useDeleteMentorFeedback() {
 }
 
 export async function fetchSubmitResultsByTrack(trackId: string, eventId?: string): Promise<SubmitResultListItem[]> {
-  try {
-    // CHỈ gửi 1 casing mỗi param. Gửi trùng (trackId + TrackId) khiến ASP.NET gộp 2
-    // giá trị thành "X,X" -> scope/filter không khớp -> 403/rỗng -> catch nuốt lỗi ->
-    // dashboard "Hạng mục phân công" hiện 0 bài dù thực tế có bài (bug đã xác nhận).
-    const params: Record<string, any> = { pageSize: 100 };
-    if (trackId) params.trackId = trackId;
-    if (eventId) params.eventId = eventId;
-    const res = await apiClient.get<any>("/SubmitResults", { params });
-    const items =
-      res.data?.data?.items ??
-      res.data?.items ??
-      res.data?.data ??
-      (Array.isArray(res.data) ? res.data : []);
-    return Array.isArray(items) ? items : [];
-  } catch {
-    return [];
-  }
+  // Chỉ gửi 1 casing mỗi param. Gửi trùng trackId+TrackId khiến ASP.NET gộp "X,X" -> 403.
+  const params: Record<string, any> = { pageSize: 100 };
+  if (trackId) params.trackId = trackId;
+  if (eventId) params.eventId = eventId;
+  const res = await apiClient.get<any>("/SubmitResults", { params });
+  const items =
+    res.data?.data?.items ??
+    res.data?.items ??
+    res.data?.data ??
+    (Array.isArray(res.data) ? res.data : []);
+  return Array.isArray(items) ? items : [];
 }
 
