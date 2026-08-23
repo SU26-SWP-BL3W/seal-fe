@@ -22,9 +22,11 @@ export function useUploadFile() {
       formData.append("file", file);
       const { data } = await apiClient.post<UploadFileResult>("/Storage/upload", formData, {
         params: { folder },
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": undefined },
       });
-      return data;
+      const raw = data as any;
+      const url = raw?.fileUrl || raw?.FileUrl || raw?.data?.fileUrl || (typeof raw === "string" ? raw : "");
+      return { fileUrl: url };
     },
   });
 }

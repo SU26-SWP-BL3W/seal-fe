@@ -1,4 +1,4 @@
-import { AdminUsersView } from "@/views/AdminUsersView";
+import { AdminUsersView } from "@/views/admin/AdminUsersView";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function AdminUsersPage() {

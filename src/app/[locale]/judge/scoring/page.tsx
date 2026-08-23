@@ -1,4 +1,4 @@
-import { JudgeScoringView } from "@/views/JudgeScoringView";
+import { JudgeScoringView } from "@/views/judge/JudgeScoringView";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function JudgeScoringPage() {

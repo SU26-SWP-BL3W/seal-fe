@@ -10,6 +10,7 @@ import {
   FileCheck2,
   Scale,
   Award,
+  Bell,
   Settings,
   Shield,
   GraduationCap,
@@ -227,7 +228,7 @@ export function DashboardSidebar() {
           {/* Mentor section */}
           {isMentor && (
             <div className="pt-2">
-              <span className="text-[9px] font-mono font-bold text-[#2dd4bf] tracking-widest uppercase block px-2 mb-1">
+              <span className="text-[9px] font-mono font-bold text-[var(--accent-mentor)] tracking-widest uppercase block px-2 mb-1">
                 ĐỘI NGŨ CỐ VẤN
               </span>
               {MENTOR_ITEMS.map((item) => {
@@ -240,12 +241,12 @@ export function DashboardSidebar() {
                     href={item.href}
                     className={`group flex items-center justify-between px-3 py-2 font-mono text-xs font-bold tracking-wider uppercase transition-all duration-150 ${
                       isActive
-                        ? "hud-clipped border-l-2 border-[#2dd4bf] bg-[#2dd4bf]/10 text-[#2dd4bf]"
+                        ? "hud-clipped border-l-2 border-[var(--accent-mentor)] bg-[var(--accent-mentor)]/10 text-[var(--accent-mentor)]"
                         : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)]"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <Icon className={`h-4 w-4 ${isActive ? "text-[#2dd4bf]" : "text-[var(--text-muted)]"}`} />
+                      <Icon className={`h-4 w-4 ${isActive ? "text-[var(--accent-mentor)]" : "text-[var(--text-muted)]"}`} />
                       <span>{item.label}</span>
                     </div>
                   </Link>

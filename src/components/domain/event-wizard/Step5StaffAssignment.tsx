@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Button, Input, Card, Badge } from "@/components/ui";
-import { StaffInviteFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
-import { Users, Mail, UserPlus, Trash2, ArrowLeft, CheckCircle2, Clock, AlertCircle } from "lucide-react";
-import { checkEmailInSystem } from "@/views/CoordinatorStaffView";
+import { StaffInviteFormState, TrackFormState } from "@/viewModels/coordinator/useCreateEventWizardViewModel";
+import { Users, Mail, UserPlus, Trash2, ArrowLeft, CheckCircle2, ShieldCheck, Clock, AlertCircle } from "lucide-react";
+import { checkEmailInSystem } from "@/viewModels/coordinator/useCoordinatorStaffViewModel";
 import { useGetUsers } from "@/repositories/usersRepository";
 
 interface Step5StaffAssignmentProps {
@@ -87,7 +87,7 @@ export const Step5StaffAssignment: React.FC<Step5StaffAssignmentProps> = ({
               onChange={(e) => setEmailInput(e.target.value)}
               required
             />
-            {emailInput.trim() && !checkEmailInSystem(emailInput, systemAccounts) && (
+            {emailInput.trim() && !checkEmailInSystem(emailInput) && (
               <p className="text-[11px] font-mono text-amber-400 mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>Email này chưa tồn tại trong hệ thống</span>

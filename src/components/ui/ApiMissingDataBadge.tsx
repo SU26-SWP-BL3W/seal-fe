@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle } from "lucide-react";
+import { Info } from "lucide-react";
 
 interface ApiMissingDataBadgeProps {
   endpoint?: string;
@@ -10,21 +10,18 @@ interface ApiMissingDataBadgeProps {
   className?: string;
 }
 
-/** Trạng thái rỗng dùng chung khi BE chưa có dữ liệu cho mục này. */
 export const ApiMissingDataBadge: React.FC<ApiMissingDataBadgeProps> = ({
-  title = "Chưa có dữ liệu",
-  message = "Mục này hiện chưa có dữ liệu.",
+  title = "CHƯA CÓ DỮ LIỆU",
+  message = "Hiện chưa có dữ liệu hiển thị cho mục này.",
   className = "",
 }) => {
   return (
     <div
-      className={`p-4 bg-[rgba(245,158,11,0.08)] border-2 border-dashed border-[var(--color-warning)]/60 text-[var(--color-warning)] font-mono text-xs hud-clipped space-y-2 animate-fade-in ${className}`}
+      className={`p-6 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped text-center flex flex-col items-center gap-2 font-mono text-xs ${className}`}
     >
-      <div className="flex items-center gap-2 font-bold uppercase tracking-wider border-b border-[var(--color-warning)]/30 pb-2">
-        <AlertTriangle className="w-4 h-4 text-[var(--color-warning)] flex-shrink-0" />
-        <span>{title}</span>
-      </div>
-      <p className="text-[var(--text-primary)] font-semibold text-[11px]">{message}</p>
+      <Info className="w-6 h-6 text-[var(--text-muted)] opacity-60" />
+      <span className="font-bold text-[var(--text-primary)] uppercase tracking-wider">{title}</span>
+      <p className="text-[var(--text-muted)] text-[11px] max-w-md leading-relaxed">{message}</p>
     </div>
   );
 };

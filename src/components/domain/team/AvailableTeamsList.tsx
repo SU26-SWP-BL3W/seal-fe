@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button, Card, SkeletonRows } from "@/components/ui";
+import { Badge, Button, Card, SkeletonRows, Pagination } from "@/components/ui";
+import { usePagination } from "@/hooks/usePagination";
 import { useGetTeamsByEvent } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { JoinRequestEmailModal } from "./JoinRequestEmailModal";
-import { Mail, Search, Sparkles, UserCheck, Users } from "lucide-react";
 import { MAX_MEMBERS, MIN_MEMBERS } from "./teamStatus";
 
 interface Props {
@@ -29,10 +29,10 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
   const [onlyRecruiting, setOnlyRecruiting] = useState<boolean>(true);
   const [selectedTeamForEmail, setSelectedTeamForEmail] = useState<any | null>(null);
 
-  const { data: rawTeams = [], isLoading: isLoadingTeams, refetch: _refetch } = useGetTeamsByEvent(eventId);
+  const { data: rawTeams = [], isLoading: isLoadingTeams, refetch } = useGetTeamsByEvent(eventId);
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
 
-  const trackList = useMemo(() => (Array.isArray(tracks) ? tracks : []), [tracks]);
+  const trackList = Array.isArray(tracks) ? tracks : [];
   const trackMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const t of trackList as any[]) {
@@ -87,19 +87,28 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
     });
   }, [teams, onlyRecruiting, selectedTrackId, searchTerm]);
 
+  const {
+    paginatedItems: paginatedTeams,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredTeams, 6);
+
   return (
     <div className="space-y-6 font-mono">
       {/* Search & Filter Toolbar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[#10171a] border border-zinc-800 p-4 hud-clipped">
         {/* Search Box */}
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
           <input
             type="text"
             placeholder="Tìm theo tên đội, kỹ năng, đội trưởng..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-black/60 border border-zinc-700 rounded text-xs text-white placeholder:text-zinc-500 focus:border-cyan-400 outline-none"
+            className="w-full px-4 py-2 bg-black/60 border border-zinc-700 rounded text-xs text-white placeholder:text-zinc-500 focus:border-cyan-400 outline-none"
           />
         </div>
 
@@ -125,14 +134,13 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
         <button
           type="button"
           onClick={() => setOnlyRecruiting(!onlyRecruiting)}
-          className={`px-3 py-2 text-xs font-bold uppercase rounded border transition-colors flex items-center gap-1.5 cursor-pointer ${
+          className={`px-3 py-2 text-xs font-bold uppercase rounded border transition-colors cursor-pointer ${
             onlyRecruiting
               ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
               : "bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-white"
           }`}
         >
-          <Sparkles className="size-3.5" />
-          <span>{onlyRecruiting ? "Đang tuyển quân" : "Tất cả trạng thái"}</span>
+          {onlyRecruiting ? "Đang tuyển quân" : "Tất cả trạng thái"}
         </button>
       </div>
 
@@ -141,11 +149,6 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
         <SkeletonRows rows={4} />
       ) : filteredTeams.length === 0 ? (
         <Card className="text-center py-12 px-4 space-y-4 border border-zinc-800 bg-[#10171a]">
-          <div className="flex justify-center">
-            <div className="size-12 rounded-full bg-zinc-800/80 flex items-center justify-center text-zinc-400">
-              <Users className="size-6" />
-            </div>
-          </div>
           <div className="space-y-1">
             <h3 className="font-display text-base font-bold uppercase text-white">
               Không tìm thấy đội thi nào phù hợp
@@ -165,96 +168,109 @@ export function AvailableTeamsList({ eventId, eventName, onSwitchToCreate }: Pro
           )}
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredTeams.map((t) => {
-            const missingCount = MAX_MEMBERS - t.memberCount;
-            const isNeedMin = t.memberCount < MIN_MEMBERS;
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {paginatedTeams.map((t) => {
+              const missingCount = MAX_MEMBERS - t.memberCount;
+              const isNeedMin = t.memberCount < MIN_MEMBERS;
 
-            return (
-              <div
-                key={t.id}
-                className="bg-[#10171a] border border-zinc-800 hover:border-cyan-500/50 transition-all p-5 hud-clipped flex flex-col justify-between space-y-4 shadow-sm group"
-              >
-                <div className="space-y-3">
-                  {/* Top Badges */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase hud-clipped">
-                      {t.trackName}
-                    </span>
+              return (
+                <div
+                  key={t.id}
+                  className="bg-[#10171a] border border-zinc-800 hover:border-cyan-500/50 transition-all p-5 hud-clipped flex flex-col justify-between space-y-4 shadow-sm group"
+                >
+                  <div className="space-y-3">
+                    {/* Top Badges */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold uppercase hud-clipped">
+                        {t.trackName}
+                      </span>
 
-                    {t.isRecruiting ? (
-                      <span className="px-2 py-0.5 bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase hud-clipped animate-pulse">
-                        Đang tuyển {missingCount} bạn
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase hud-clipped">
-                        Đã đủ thành viên
-                      </span>
-                    )}
+                      {t.isRecruiting ? (
+                        <span className="px-2 py-0.5 bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase hud-clipped animate-pulse">
+                          Đang tuyển {missingCount} bạn
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase hud-clipped">
+                          Đã đủ thành viên
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Team Title & Description */}
+                    <div>
+                      <h3 className="font-display text-lg font-bold uppercase text-white group-hover:text-cyan-300 transition-colors">
+                        {t.name}
+                      </h3>
+                      <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed font-sans">
+                        {t.description}
+                      </p>
+                    </div>
+
+                    {/* Member Progress Bar */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-400">
+                          Đội hình:
+                        </span>
+                        <span className={`font-bold tabular-nums ${isNeedMin ? "text-amber-400" : "text-emerald-400"}`}>
+                          {t.memberCount}/{MAX_MEMBERS} thành viên
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-zinc-800 overflow-hidden rounded-full">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            isNeedMin ? "bg-amber-400" : "bg-cyan-400"
+                          }`}
+                          style={{ width: `${(t.memberCount / MAX_MEMBERS) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Leader Info */}
+                    <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="truncate">
+                          Đội trưởng: <strong className="text-zinc-200">{t.leaderName}</strong>
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Team Title & Description */}
-                  <div>
-                    <h3 className="font-display text-lg font-bold uppercase text-white group-hover:text-cyan-300 transition-colors">
-                      {t.name}
-                    </h3>
-                    <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed font-sans">
-                      {t.description}
-                    </p>
-                  </div>
-
-                  {/* Member Progress Bar */}
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 flex items-center gap-1.5">
-                        <Users className="size-3.5 text-cyan-400" />
-                        Đội hình:
-                      </span>
-                      <span className={`font-bold tabular-nums ${isNeedMin ? "text-amber-400" : "text-emerald-400"}`}>
-                        {t.memberCount}/{MAX_MEMBERS} thành viên
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full bg-zinc-800 overflow-hidden rounded-full">
-                      <div
-                        className={`h-full transition-all duration-300 ${
-                          isNeedMin ? "bg-amber-400" : "bg-cyan-400"
-                        }`}
-                        style={{ width: `${(t.memberCount / MAX_MEMBERS) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Leader Info */}
-                  <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <UserCheck className="size-3.5 text-zinc-500 shrink-0" />
-                      <span className="truncate">
-                        Đội trưởng: <strong className="text-zinc-200">{t.leaderName}</strong>
-                      </span>
-                    </div>
+                  {/* Join Request Action */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedTeamForEmail({
+                          ...t,
+                          eventName: eventName || "Sự kiện Hackathon SEAL",
+                        })
+                      }
+                      className="w-full py-2.5 px-4 bg-cyan-950/60 border border-cyan-500/40 hover:bg-cyan-500 hover:text-black text-cyan-300 font-bold uppercase text-xs transition-all hud-clipped cursor-pointer shadow-sm"
+                    >
+                      Gửi Email Đề Nghị Gia Nhập
+                    </button>
                   </div>
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Join Request Action */}
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedTeamForEmail({
-                        ...t,
-                        eventName: eventName || "Sự kiện Hackathon SEAL",
-                      })
-                    }
-                    className="w-full py-2.5 px-4 bg-cyan-950/60 border border-cyan-500/40 hover:bg-cyan-500 hover:text-black text-cyan-300 font-bold uppercase text-xs transition-all hud-clipped flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                  >
-                    <Mail className="size-3.5" />
-                    <span>Gửi Email Đề Nghị Gia Nhập</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+          {filteredTeams.length > 0 && (
+            <div className="pt-2">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemLabel="đội thi"
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Join Request Email Modal */}

@@ -2,7 +2,6 @@
 
 import { Link } from "@/i18n/routing";
 import { Badge, Button } from "@/components/ui";
-import { Crown, LogOut, Pencil, Trophy, UserPlus, Users } from "lucide-react";
 import { TEAM_STATUS, TONE_TEXT } from "./teamStatus";
 import type { TeamView } from "./types";
 
@@ -47,7 +46,6 @@ export function TeamHeader({
         <div className="mt-[var(--space-sm)] flex flex-wrap items-center gap-[var(--space-sm)]">
           <Badge tone={status.tone}>{status.label}</Badge>
           <Badge tone="team">
-            {isLeader ? <Crown className="size-3" /> : <Users className="size-3" />}
             {isLeader ? "Đội trưởng" : "Thành viên"}
           </Badge>
           <Link
@@ -98,22 +96,34 @@ export function TeamHeader({
               className="text-xs font-bold border border-[var(--accent-team)]/40 bg-[var(--accent-team)]/10"
               onClick={onOpenInvite}
             >
-              <UserPlus className="size-3.5" /> Mời thành viên
+              Mời thành viên
             </Button>
+          )}
+          {team.status === "Registered" && isLeader && (
+            <Link href="/submissions/new">
+              <Button
+                id="submit-project-btn"
+                variant="primary"
+                accent="team"
+                className="text-xs font-bold shadow-[0_0_15px_rgba(56,189,248,0.3)] bg-[var(--accent-team)] text-black hover:bg-white"
+              >
+                + Nộp bài thi
+              </Button>
+            </Link>
           )}
           <Link href="/my-submissions">
             <Button id="view-submissions-btn" variant="ghost" accent="team" className="text-xs">
-              Bài nộp
+              Quản lý bài nộp
             </Button>
           </Link>
           <Link href={`/events/${team.eventId}/leaderboard`}>
             <Button variant="ghost" accent="team" className="text-xs">
-              <Trophy className="size-3.5" /> Bảng xếp hạng
+              Bảng xếp hạng
             </Button>
           </Link>
           {isLeader && (team.status === "Forming" || team.status === "Rejected") && onEdit && (
             <Button variant="ghost" accent="team" className="text-xs" onClick={onEdit}>
-              <Pencil className="size-3.5" /> Sửa thông tin
+              Sửa thông tin
             </Button>
           )}
           {!isLeader && team.status === "Forming" && (
@@ -123,7 +133,7 @@ export function TeamHeader({
               disabled={isLeaving}
               className="text-xs text-[color:var(--color-danger)] hover:border-[var(--color-danger)] hover:text-[color:var(--color-danger)]"
             >
-              <LogOut className="size-3.5" /> Rời đội
+              Rời đội
             </Button>
           )}
         </div>

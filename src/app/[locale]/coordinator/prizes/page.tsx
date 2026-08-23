@@ -1,4 +1,4 @@
-import { CoordinatorPrizesView } from "@/views/CoordinatorPrizesView";
+import { CoordinatorPrizesView } from "@/views/coordinator/CoordinatorPrizesView";
 
 export default function CoordinatorPrizesPage() {
   return <CoordinatorPrizesView />;

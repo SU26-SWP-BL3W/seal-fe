@@ -1,0 +1,234 @@
+"use client";
+
+import React from "react";
+import { Link } from "@/i18n/routing";
+import { ApiMissingDataBadge } from "@/components/ui";
+import { LandingLeaderboardPodium } from "@/components/domain/LandingLeaderboardPodium";
+import { Pagination } from "@/components/ui/Pagination";
+import { Trophy, Target } from "lucide-react";
+import { useLeaderboardViewModel } from "@/viewModels/team/useLeaderboardViewModel";
+
+export function LeaderboardView({ eventId }: { eventId?: string }) {
+  const { state, data, pagination, actions } = useLeaderboardViewModel(eventId);
+
+  const { isEventScoped, selectedEventId, selectedTrack, selectedRound, event } = state;
+  const { eventsList, filteredResults } = data;
+  const { paginatedItems: paginatedResults, currentPage, totalPages, totalItems, pageSize, setCurrentPage, setPageSize } = pagination;
+
+  return (
+    <main className="hud-lattice flex flex-1 flex-col pb-16">
+      {/* Header Bảng Xếp Hạng */}
+      <section className="border-b border-[var(--border-muted)] bg-[var(--bg-panel)]/70">
+        <div className="mx-auto w-full max-w-[var(--container-max)] px-6 py-8">
+          {isEventScoped ? (
+            <>
+              <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--accent-judge)] tracking-[0.25em] uppercase mb-2">
+                <Link href="/events" className="hover:underline">SỰ KIỆN</Link>
+                <span>›</span>
+                <Link href={`/events/${event.id}`} className="hover:underline">{event.eventName}</Link>
+                <span>›</span>
+                <span className="text-[var(--accent-judge)]">BẢNG XẾP HẠNG</span>
+              </div>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)]">
+                    Bảng Xếp Hạng Kết Quả Thi Đấu
+                  </h1>
+                  <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
+                    Sự kiện: <strong className="text-[var(--text-primary)]">{event.eventName}</strong> · Quỹ giải thưởng: <strong className="text-[var(--accent-judge)]">{event.totalPrizeVnd ? `${(event.totalPrizeVnd / 1_000_000).toLocaleString("vi-VN")} TRIỆU ₫` : "200.000.000 ₫"}</strong>
+                  </p>
+                </div>
+
+                <Link href={`/events/${event.id}`}>
+                  <button className="hud-clipped px-5 py-2.5 border border-[var(--border-muted)] font-mono text-xs text-[var(--text-muted)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors cursor-pointer">
+                    ← XEM THỂ LỆ &amp; SỰ KIỆN
+                  </button>
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--accent-judge)] tracking-[0.25em] uppercase mb-2">
+                <Link href="/" className="hover:underline">TRANG CHỦ</Link>
+                <span>›</span>
+                <span className="text-[var(--accent-judge)]">BẢNG VINH DANH HỆ THỐNG (HALL OF FAME)</span>
+              </div>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-[var(--text-primary)] flex items-center gap-3">
+                    <Trophy className="w-7 h-7 text-[var(--accent-judge)]" />
+                    <span>BẢNG VINH DANH CÁC MÙA GIẢI (HALL OF FAME)</span>
+                  </h1>
+                  <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
+                    Vinh danh Top Đội Thi Xuất Sắc Nhất đạt giải cao tại các Cuộc thi Hackathon toàn quốc.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-[var(--bg-input)] p-2 border border-[var(--accent-judge)]/50 hud-clipped">
+                  <span className="font-mono text-xs text-[var(--accent-judge)] font-bold flex items-center gap-1">
+                    <Target className="w-3.5 h-3.5" /> CHỌN SỰ KIỆN:
+                  </span>
+                  <select
+                    value={selectedEventId}
+                    onChange={(e) => actions.setSelectedEventId(e.target.value)}
+                    className="bg-[var(--bg-panel)] text-[var(--text-primary)] font-mono text-xs font-bold px-3 py-1.5 border border-[var(--border-muted)] focus:outline-none focus:border-[var(--accent-judge)]"
+                  >
+                    <option value="all">Tất Cả Mùa Giải (Hall of Fame)</option>
+                    {eventsList.map((ev: any) => {
+                      const id = ev.id || ev.Id || ev.eventId || ev.EventId;
+                      const name = ev.eventName || ev.EventName || "Sự kiện";
+                      return (
+                        <option key={id} value={id}>
+                          {name}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* Top 3 E-Sports Podium Section */}
+      <LandingLeaderboardPodium
+        eventName={selectedEventId === "all" ? "HỆ THỐNG XẾP HẠNG TOÀN QUỐC" : event.eventName}
+        season="MÙA HÈ 2026"
+        totalPrizeVnd={selectedEventId === "all" ? 500_000_000 : (event.totalPrizeVnd || 200_000_000)}
+      />
+
+      {/* Full Score Table Section */}
+      <section className="mx-auto w-full max-w-[var(--container-max)] px-6 py-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 p-4 bg-[var(--bg-panel)] border border-[var(--border-muted)] hud-clipped">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-mono text-xs font-bold text-[var(--accent-judge)] uppercase">
+              BỘ LỌC ĐIỂM SỐ:
+            </span>
+            <select
+              value={selectedRound}
+              onChange={(e) => actions.setSelectedRound(e.target.value)}
+              className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
+            >
+              <option value="all">Tất cả Vòng thi</option>
+              <option value="Chung Kết">Vòng 3: Chung Kết</option>
+              <option value="Bán Kết">Vòng 2: Bán Kết</option>
+              <option value="Sơ Loại">Vòng 1: Sơ Loại</option>
+            </select>
+
+            <select
+              value={selectedTrack}
+              onChange={(e) => actions.setSelectedTrack(e.target.value)}
+              className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
+            >
+              <option value="all">Tất cả Hạng mục (Tracks)</option>
+              <option value="AI & Machine Learning">AI &amp; Machine Learning</option>
+              <option value="Bảo mật & An ninh mạng">Bảo mật &amp; An ninh mạng</option>
+              <option value="IoT & Phần cứng thông minh">IoT &amp; Phần cứng thông minh</option>
+              <option value="Phát triển Web">Phát triển Web</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                import("@/lib/exportUtils").then(({ exportToCsv }) => {
+                  exportToCsv(`Leaderboard_${event.eventName.replace(/\s+/g, "_")}`, filteredResults, [
+                    { key: "rank", label: "Hạng" },
+                    { key: "teamCode", label: "Mã Đội" },
+                    { key: "teamName", label: "Tên Đội Thi" },
+                    { key: "projectName", label: "Tên Dự Án" },
+                    { key: "school", label: "Trường Học" },
+                    { key: "track", label: "Hạng Mục Track" },
+                    { key: "roundName", label: "Vòng Thi" },
+                    { key: "score", label: "Điểm Số RBL" },
+                    { key: "status", label: "Thành Tích" },
+                  ]);
+                });
+              }}
+              className="px-4 py-2 bg-[var(--bg-input)] border border-[var(--accent-judge)]/50 hover:border-[var(--accent-judge)] text-[var(--accent-judge)] font-mono text-xs font-bold hud-clipped flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <span>📥</span> XUẤT EXCEL BẢNG XẾP HẠNG
+            </button>
+            <span className="font-mono text-xs text-[var(--text-muted)]">
+              Hiển thị: <strong className="text-[var(--accent-judge)]">{filteredResults.length}</strong> đội
+            </span>
+          </div>
+        </div>
+
+        {/* Data Grid Table */}
+        {filteredResults.length === 0 ? (
+          <ApiMissingDataBadge
+            title="CHƯA CÓ BẢNG XẾP HẠNG"
+            message="Ban Tổ Chức chưa công bố kết quả thi đấu công khai cho sự kiện / vòng thi này."
+          />
+        ) : (
+          <div className="w-full overflow-x-auto border border-[var(--border-muted)] bg-[var(--bg-panel)] hud-clipped">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--border-muted)] bg-[var(--bg-base)]">
+                  <th className="p-4 font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase text-center w-16">HẠNG</th>
+                  <th className="p-4 font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase">MÃ ĐỘI</th>
+                  <th className="p-4 font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase">TÊN ĐỘI THI &amp; DỰ ÁN</th>
+                  <th className="p-4 font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase">TRƯỜNG</th>
+                  <th className="p-4 font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase">HẠNG MỤC</th>
+                  <th className="p-4 font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase">VÒNG THI</th>
+                  <th className="p-4 font-mono text-xs text-[var(--text-muted)] tracking-wider uppercase text-right">ĐIỂM SỐ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/60">
+                {paginatedResults.map((row) => (
+                  <tr key={row.teamCode} className="hover:bg-zinc-800/40 transition-colors">
+                    <td className="p-4 text-center">
+                      <span className={`inline-flex items-center justify-center w-7 h-7 font-mono font-bold text-xs hud-clipped border ${
+                        row.rank === 1 ? "bg-[var(--accent-judge)]/20 border-[var(--accent-judge)] text-[var(--accent-judge)] font-extrabold" :
+                        row.rank === 2 ? "bg-[var(--accent-team)]/20 border-[var(--accent-team)] text-[var(--accent-team)] font-bold" :
+                        row.rank === 3 ? "bg-[var(--color-warning)]/20 border-[var(--color-warning)] text-[var(--color-warning)] font-bold" :
+                        "bg-[var(--bg-input)] border-[var(--border-muted)] text-[var(--text-muted)]"
+                      }`}>
+                        {row.rank < 10 ? `0${row.rank}` : row.rank}
+                      </span>
+                    </td>
+                    <td className="p-4 font-mono text-xs text-[var(--accent-team)] font-semibold">{row.teamCode}</td>
+                    <td className="p-4 font-mono">
+                      <div className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-judge)] transition-colors">
+                        {row.teamName}
+                      </div>
+                      <div className="text-xs text-[var(--text-muted)] mt-0.5">{row.projectName}</div>
+                    </td>
+                    <td className="p-4 font-mono text-xs text-[var(--text-muted)]">{row.school}</td>
+                    <td className="p-4 font-mono text-xs">
+                      <span className="border border-[var(--border-muted)] bg-[var(--bg-input)] px-2 py-0.5 text-[var(--text-muted)]">
+                        {row.track}
+                      </span>
+                    </td>
+                    <td className="p-4 font-mono text-xs text-[var(--text-muted)]">{row.roundName}</td>
+                    <td className="p-4 font-mono text-base font-bold text-right text-[var(--accent-judge)]">
+                      {row.score.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {filteredResults.length > 0 && (
+              <div className="p-4 border-t border-zinc-800 bg-[#0b1013]">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="đội thi"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}

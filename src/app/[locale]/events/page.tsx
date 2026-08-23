@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EventsDiscoveryView } from "@/views/EventsDiscoveryView";
+import { EventsDiscoveryView } from "@/views/public/EventsDiscoveryView";
 
 export const metadata: Metadata = {
   title: "Danh sách sự kiện - SEAL",

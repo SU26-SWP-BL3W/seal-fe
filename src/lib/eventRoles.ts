@@ -205,23 +205,19 @@ export function resolveStaffLandingPath(roles: NormalizedEventRole[]): string | 
       : "/coordinator/dashboard";
   }
 
-  // Judge/Mentor: chỉ vào hạng mục đã được mời/gắn — không tự chọn track.
-  // Nhiều sự kiện → danh sách để chọn event; 1 sự kiện → dock/chi tiết hoặc panel Judge.
+  // Judge/Mentor: đưa thẳng về panel chuyên trách của họ. /judge/events tự liệt kê MỌI
+  // sự kiện được phân công (kể cả nhiều sự kiện) nên không cần đẩy sang trang /events chung;
+  // /mentor cũng vậy. Judge+Mentor: ưu tiên panel Judge.
   const judgeMentorEventIds = getAssignedEventIdsFromRoles(roles, ["Judge", "Mentor"]);
-  if (judgeMentorEventIds.length > 1) {
-    return "/events?filter=mine";
-  }
-  if (judgeMentorEventIds.length === 1) {
-    const eventId = judgeMentorEventIds[0];
-    const names = getUniqueRoleNames(getRolesForEvent(roles, eventId));
-    if (names.includes("Judge") && names.includes("Mentor")) {
-      return `/events/${eventId}`;
-    }
+  if (judgeMentorEventIds.length >= 1) {
+    const names = getUniqueRoleNames(roles);
     if (names.includes("Judge")) {
       return "/judge/events";
     }
     if (names.includes("Mentor")) {
-      return `/events/${eventId}`;
+      return judgeMentorEventIds.length === 1
+        ? `/mentor?eventId=${judgeMentorEventIds[0]}`
+        : "/mentor";
     }
   }
 

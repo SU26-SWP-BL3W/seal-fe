@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { RoundFormState } from "@/viewModels/useCreateEventWizardViewModel";
-import { Layers, Plus, AlertTriangle, ArrowLeft, ArrowRight, Award, Clock, Calendar, CheckCircle2, Shield, Save } from "lucide-react";
+import { RoundFormState } from "@/viewModels/coordinator/useCreateEventWizardViewModel";
+import { Layers, Plus, Trash2, AlertTriangle, ArrowLeft, ArrowRight, Award, Clock, Calendar, CheckCircle2, Shield, Save } from "lucide-react";
 
 interface ModernDateTimePickerFieldProps {
   label: string;
@@ -39,12 +39,12 @@ const ModernDateTimePickerField: React.FC<ModernDateTimePickerFieldProps> = ({
     onChange(`${date}T${newTime}`);
   };
 
-  const _applyPresetTime = (presetTime: string) => {
+  const applyPresetTime = (presetTime: string) => {
     const date = datePart || minDateStr || new Date().toISOString().substring(0, 10);
     onChange(`${date}T${presetTime}`);
   };
 
-  const _applyPresetDateDays = (days: number) => {
+  const applyPresetDateDays = (days: number) => {
     const base = datePart ? new Date(datePart) : minDate ? new Date(minDate) : new Date();
     base.setDate(base.getDate() + days);
     const dateStr = base.toISOString().substring(0, 10);
@@ -52,7 +52,7 @@ const ModernDateTimePickerField: React.FC<ModernDateTimePickerFieldProps> = ({
     onChange(`${dateStr}T${time}`);
   };
 
-  const _applyMinDateMatch = () => {
+  const applyMinDateMatch = () => {
     if (!minDate) return;
     const iso = minDate.includes("T") ? minDate.substring(0, 16) : `${minDate}T08:00`;
     onChange(iso);
@@ -128,7 +128,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
   eventStartDate,
   eventEndDate,
   onAddRound,
-  onRemoveRound: _onRemoveRound,
+  onRemoveRound,
   onUpdateRound,
   onNext,
   onPrev,
@@ -509,7 +509,7 @@ export const Step2RoundConfig: React.FC<Step2RoundConfigProps> = ({
             </div>
 
             <div className="space-y-3">
-              {rounds.map((rnd, _idx) => {
+              {rounds.map((rnd, idx) => {
                 const isSelected = activeRound ? rnd.id === activeRound.id : false;
                 const rndDateErr =
                   rnd.startDate && rnd.endDate && new Date(rnd.startDate) > new Date(rnd.endDate);

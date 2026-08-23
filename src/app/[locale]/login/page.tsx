@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LoginView } from '@/views/LoginView';
+import { LoginView } from '@/views/auth/LoginView';
 
 export const metadata: Metadata = {
   title: 'Đăng nhập - SEAL',

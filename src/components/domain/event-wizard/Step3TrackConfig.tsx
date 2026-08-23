@@ -1,5 +1,5 @@
 import React from "react";
-import { RoundFormState, TrackFormState } from "@/viewModels/useCreateEventWizardViewModel";
+import { RoundFormState, TrackFormState } from "@/viewModels/coordinator/useCreateEventWizardViewModel";
 import { useGetTemplates } from "@/repositories/templatesRepository";
 import { Target, Plus, Trash2, ArrowLeft, LayoutTemplate, ArrowRight, Save, Link as LinkIcon, Code, Video, Presentation, Layout, FileText } from "lucide-react";
 

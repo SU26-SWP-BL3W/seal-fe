@@ -1,17 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Badge } from "@/components/ui";
 import { eventsRepository } from "@/repositories/eventsRepository";
 import { roundsRepository } from "@/repositories/roundsRepository";
 import { tracksRepository } from "@/repositories/tracksRepository";
 import { useRouter } from "next/navigation";
 import {
+  CheckCircle2,
   AlertTriangle,
+  Calendar,
   Layers,
   Target,
   Sliders,
   Users,
+  Eye,
   EyeOff,
   ArrowLeft,
   Sparkles,
@@ -55,14 +58,16 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
     setIsPublishing(true);
     try {
       const targetId = eventId || (eventData as any)?.id || `ev-draft-${Date.now()}`;
-      
+      const persistedRounds = rounds.map((r) => ({ ...r }));
+      const persistedTracks = tracks.map((t) => ({ ...t }));
+
       const fullPayload = {
         ...eventData,
         id: targetId,
         eventId: targetId,
         status: isPublic,
-        rounds,
-        tracks,
+        rounds: persistedRounds,
+        tracks: persistedTracks,
         criterias,
         criteriasByTrack,
         templateName,
@@ -77,49 +82,68 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
         localStorage.setItem(`seal_wizard_draft_${targetId}`, JSON.stringify(fullPayload));
       }
 
-      // 2. Persist rounds to backend API
-      if (Array.isArray(rounds) && rounds.length > 0) {
-        for (const rnd of rounds) {
-          try {
-            await roundsRepository.createRound({
-              eventId: targetId,
-              roundName: rnd.roundName,
-              roundNumber: rnd.roundNumber || 1,
-              startDate: rnd.startDate,
-              endDate: rnd.endDate,
-              advancementRule: rnd.advancementRule,
-              scoringStartDate: rnd.scoringStartDate,
-              scoringEndDate: rnd.scoringEndDate,
-            });
-          } catch {
-            // Ignore API network error
+      // 2. Persist rounds to backend API (update in DB if ID is real, create if temp ID)
+      for (let i = 0; i < persistedRounds.length; i++) {
+        const rnd = persistedRounds[i];
+        try {
+          const isDbRound = rnd.id && typeof rnd.id === "string" && !rnd.id.startsWith("tmp-") && !rnd.id.startsWith("rnd-") && !rnd.id.startsWith("temp-");
+          const roundPayload = {
+            eventId: targetId,
+            roundName: rnd.roundName,
+            roundNumber: rnd.roundNumber || 1,
+            startDate: rnd.startDate,
+            endDate: rnd.endDate,
+            advancementRule: rnd.advancementRule,
+            scoringStartDate: rnd.scoringStartDate,
+            scoringEndDate: rnd.scoringEndDate,
+          };
+          if (isDbRound) {
+            await roundsRepository.updateRound(rnd.id, roundPayload);
+          } else {
+            const created = await roundsRepository.createRound(roundPayload);
+            if (created?.id) {
+              persistedRounds[i] = { ...rnd, id: created.id };
+            }
           }
+        } catch (e) {
+          console.error("Persist round error:", e);
         }
       }
 
-      // 3. Persist tracks to backend API (update if id exists to prevent duplicate track records in DB)
-      if (Array.isArray(tracks) && tracks.length > 0) {
-        for (const trk of tracks) {
-          try {
-            if (trk.id && typeof trk.id === "string" && !trk.id.startsWith("trk-")) {
-              await tracksRepository.updateTrack(trk.id, {
-                eventId: targetId,
-                trackName: trk.trackName,
-                templateId: trk.templateId,
-                description: trk.description,
-              });
-            } else {
-              await tracksRepository.createTrack({
-                eventId: targetId,
-                trackName: trk.trackName,
-                templateId: trk.templateId,
-                description: trk.description,
-              });
+      // 3. Persist tracks to backend API (create in DB if ID is temporary tmp- or trk-)
+      for (let i = 0; i < persistedTracks.length; i++) {
+        const trk = persistedTracks[i];
+        try {
+          const isDbTrack = trk.id && typeof trk.id === "string" && !trk.id.startsWith("trk-") && !trk.id.startsWith("tmp-") && !trk.id.startsWith("temp-");
+          if (isDbTrack) {
+            await tracksRepository.updateTrack(trk.id, {
+              eventId: targetId,
+              trackName: trk.trackName,
+              templateId: trk.templateId,
+              description: trk.description,
+            });
+          } else {
+            const created = await tracksRepository.createTrack({
+              eventId: targetId,
+              trackName: trk.trackName,
+              templateId: trk.templateId,
+              description: trk.description,
+            });
+            if (created?.id) {
+              persistedTracks[i] = { ...trk, id: created.id };
             }
-          } catch {
-            // Ignore API network error
           }
+        } catch (e) {
+          console.error("Persist track error:", e);
         }
+      }
+
+      // 4. Update localStorage with real DB track IDs
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          `seal_wizard_draft_${targetId}`,
+          JSON.stringify({ ...fullPayload, tracks: persistedTracks, rounds: persistedRounds }),
+        );
       }
 
       setIsPublishing(false);
@@ -127,7 +151,7 @@ export const Step6EventConfirmation: React.FC<Step6EventConfirmationProps> = ({
       setTimeout(() => {
         router.push("/coordinator/dashboard");
       }, 1500);
-    } catch {
+    } catch (err: any) {
       setIsPublishing(false);
       setPublishSuccess(true);
       setTimeout(() => {

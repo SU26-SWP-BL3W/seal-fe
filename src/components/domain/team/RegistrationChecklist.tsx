@@ -1,7 +1,6 @@
 "use client";
 
-import { Check, X } from "lucide-react";
-import type { MemberItem } from "@/viewModels/teamTypes";
+import type { MemberItem } from "@/viewModels/team/teamTypes";
 import { MAX_MEMBERS, MIN_MEMBERS } from "./teamStatus";
 
 export interface RegistrationRequirements {
@@ -46,15 +45,15 @@ export function RegistrationChecklist({ requirements }: { requirements: Registra
     <ul className="flex flex-col gap-3">
       {items.map((item) => (
         <li key={item.label} className="flex items-start gap-3 p-2.5 rounded bg-zinc-900/40 border border-zinc-800/80">
-          {item.ok ? (
-            <div className="p-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 shrink-0 mt-0.5">
-              <Check className="size-4 text-emerald-400" aria-hidden="true" />
-            </div>
-          ) : (
-            <div className="p-1 rounded-full bg-amber-950/60 border border-amber-500/40 shrink-0 mt-0.5">
-              <X className="size-4 text-amber-400" aria-hidden="true" />
-            </div>
-          )}
+          <div
+            className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 mt-0.5 ${
+              item.ok
+                ? "bg-emerald-950/60 border border-emerald-500/40 text-emerald-400"
+                : "bg-amber-950/60 border border-amber-500/40 text-amber-400"
+            }`}
+          >
+            {item.ok ? "Đạt" : "Chưa đạt"}
+          </div>
           <div className="min-w-0">
             <div className="text-sm font-bold text-white tracking-wide">{item.label}</div>
             <div

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EventDetailView } from "@/views/EventDetailView";
+import { EventDetailView } from "@/views/public/EventDetailView";
 
 export const metadata: Metadata = {
   title: "Chi tiết sự kiện - SEAL",

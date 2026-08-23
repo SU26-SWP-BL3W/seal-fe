@@ -9,14 +9,23 @@ import type { PagedResult } from "@/models/types";
 // cửa sổ thời gian của Track (hoặc Round nếu Track không có mốc riêng).
 
 export interface CreateSubmitResultPayload {
-  teamId: string;
-  trackId: string;
-  roundId: string;
-  submissionUrl: string;
-  repoUrl: string;
-  demoUrl: string;
-  slideUrl: string;
-  description: string;
+  teamId?: string;
+  trackId?: string;
+  roundId?: string;
+  submissionUrl?: string;
+  repoUrl?: string;
+  demoUrl?: string;
+  slideUrl?: string;
+  description?: string;
+  /** Alias PascalCase back-compat cho code cũ — mutationFn tự nhận diện cả 2 kiểu. */
+  TeamId?: string;
+  TrackId?: string;
+  RoundId?: string;
+  SubmissionUrl?: string;
+  RepoUrl?: string;
+  DemoUrl?: string;
+  SlideUrl?: string;
+  Description?: string;
 }
 
 export interface SubmitResultCreated {
@@ -242,6 +251,10 @@ export interface MentorFeedbackItem {
   mentorName?: string;
   comment: string;
   createdTime: string;
+  /** Giải mã sẵn từ `comment` (xem parseMentorFeedbackComment) để UI cũ đọc trực tiếp không cần tự parse. */
+  feedbackContent?: string;
+  technicalAdvice?: string;
+  suggestedScore?: number;
 }
 
 // BE (MentorFeedbackModel) chỉ lưu duy nhất 1 field Comment — không có cột riêng cho
@@ -283,9 +296,20 @@ export function useMentorFeedbacks(submitResultId?: string) {
       try {
         const res = await apiClient.get<any>(`/SubmitResults/${submitResultId}/mentor-feedback`);
         const list = res.data?.data ?? res.data ?? [];
-        return Array.isArray(list) ? list : [];
-      } catch {
-        return [];
+        const items = Array.isArray(list) ? list : [];
+        return items.map((item: any) => {
+          const decoded = parseMentorFeedbackComment(item.comment ?? "");
+          return {
+            ...item,
+            feedbackContent: decoded.text,
+            technicalAdvice: decoded.technicalAdvice,
+            suggestedScore: decoded.suggestedScore,
+          };
+        });
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 404) return [];
+        throw err;
       }
     },
     enabled: !!submitResultId,
@@ -297,10 +321,18 @@ export function useCreateMentorFeedback() {
   return useMutation({
     mutationFn: async (args: any) => {
       const submitResultId = args.submitResultId;
-      const comment = args.comment || args.data?.feedbackContent || args.feedbackContent || JSON.stringify(args.data || {});
+      const text = args.data?.feedbackContent ?? args.feedbackContent;
+      const comment =
+        args.comment ||
+        (text !== undefined
+          ? encodeMentorFeedbackComment({
+              text,
+              technicalAdvice: args.data?.technicalAdvice ?? args.technicalAdvice,
+              suggestedScore: args.data?.suggestedScore ?? args.suggestedScore,
+            })
+          : JSON.stringify(args.data || {}));
       const res = await apiClient.post<any>(`/SubmitResults/${submitResultId}/mentor-feedback`, {
         comment,
-        ...(args.data || {}),
       });
       return res.data;
     },
@@ -314,7 +346,7 @@ export function useCreateMentorFeedback() {
 export function useDeleteMentorFeedback() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ feedbackId }: { feedbackId: string; submitResultId?: string }) => {
+    mutationFn: async ({ feedbackId, submitResultId }: { feedbackId: string; submitResultId?: string }) => {
       const res = await apiClient.delete<any>(`/SubmitResults/mentor-feedback/${feedbackId}`);
       return res.data;
     },
@@ -327,13 +359,16 @@ export function useDeleteMentorFeedback() {
 }
 
 export async function fetchSubmitResultsByTrack(trackId: string, eventId?: string): Promise<SubmitResultListItem[]> {
-  try {
-    const res = await apiClient.get<PagedResult<SubmitResultListItem>>("/SubmitResults", {
-      params: { TrackId: trackId, EventId: eventId, PageSize: 100 },
-    });
-    return res.data?.data ?? [];
-  } catch {
-    return [];
-  }
+  // Chỉ gửi 1 casing mỗi param. Gửi trùng trackId+TrackId khiến ASP.NET gộp "X,X" -> 403.
+  const params: Record<string, any> = { pageSize: 100 };
+  if (trackId) params.trackId = trackId;
+  if (eventId) params.eventId = eventId;
+  const res = await apiClient.get<any>("/SubmitResults", { params });
+  const items =
+    res.data?.data?.items ??
+    res.data?.items ??
+    res.data?.data ??
+    (Array.isArray(res.data) ? res.data : []);
+  return Array.isArray(items) ? items : [];
 }
 

@@ -4,13 +4,18 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useMyInvitations, type MyInvitationItem } from "@/repositories/usersRepository";
 import { useAcceptOrDeclineInvitation } from "@/repositories/teamsRepository";
 import { useRespondEventRoleInvitation } from "@/repositories/eventRolesRepository";
-import { useMyNotifications, useMarkNotificationRead } from "@/repositories/notificationsRepository";
+import {
+  useMyNotifications,
+  useMarkNotificationRead,
+  pushSystemNotification,
+  type SystemNotification,
+} from "@/repositories/shared/notificationsRepository";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, X, ExternalLink, RefreshCw, Bell, UserPlus, UserCheck, UserX, AlertCircle } from "lucide-react";
 
 interface NotificationBellProps {
-  align?: "left" | "right";
+  align?: "left" | "right" | "sidebar";
 }
 
 function formatNotificationContent(rawTitle: string, rawMessage: string, type?: string) {
@@ -26,7 +31,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("chính thức tham gia")
   ) {
     return {
-      title: "🏆 Ban Tổ Chức đã phê duyệt đội thi!",
+      title: "Ban Tổ Chức đã phê duyệt đội thi!",
       message: rawMessage || "Chúc mừng! Đội thi của bạn đã được Ban Tổ Chức phê duyệt chính thức tham gia giải đấu. Cổng nộp bài thi đã được mở.",
       badgeText: "ĐÃ DUYỆT ĐỘI",
       badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
@@ -42,7 +47,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("loại khỏi giải đấu")
   ) {
     return {
-      title: "🚫 Quyết định: Loại đội thi khỏi cuộc thi",
+      title: "Quyết định: Loại đội thi khỏi cuộc thi",
       message: rawMessage || "Đội thi của bạn đã bị Ban Tổ Chức loại khỏi cuộc thi do vi phạm quy chế. Vui lòng liên hệ BTC để biết thêm chi tiết.",
       badgeText: "BỊ LOẠI",
       badgeClass: "bg-red-950/60 text-red-300 border-red-500/50 shadow-[0_0_8px_rgba(239,68,68,0.3)]",
@@ -58,7 +63,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("bị từ chối")
   ) {
     return {
-      title: "⚠️ Ban Tổ Chức từ chối / trả hồ sơ đội",
+      title: "Ban Tổ Chức từ chối / trả hồ sơ đội",
       message: rawMessage || "Hồ sơ ghi danh của đội chưa đạt yêu cầu. Vui lòng vào trang Đội thi để xem lý do chi tiết từ BTC.",
       badgeText: "TRẢ HỒ SƠ",
       badgeClass: "bg-rose-950/40 text-rose-300 border-rose-500/30",
@@ -68,7 +73,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
   // 3. Đã gửi hồ sơ ghi danh tới BTC
   if (tLower.includes("ghi danh") || mLower.includes("chờ ban tổ chức") || mLower.includes("chờ btc")) {
     return {
-      title: "📋 Đã gửi hồ sơ ghi danh tới Ban Tổ Chức",
+      title: "Đã gửi hồ sơ ghi danh tới Ban Tổ Chức",
       message: rawMessage || "Hồ sơ đội đã được gửi thành công. Ban Tổ Chức đang tiến hành thẩm định sĩ số và thẻ sinh viên.",
       badgeText: "ĐANG THẨM ĐỊNH",
       badgeClass: "bg-sky-950/40 text-sky-300 border-sky-500/30",
@@ -78,7 +83,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
   // 4. Biên nhận nộp bài thi
   if (tLower.includes("nộp bài") || tLower.includes("submission") || mLower.includes("đã nộp bài") || mLower.includes("biên nhận")) {
     return {
-      title: "📤 Biên nhận nộp bài thi thành công",
+      title: "Biên nhận nộp bài thi thành công",
       message: rawMessage || "Hệ thống đã ghi nhận bài thi của đội bạn và gửi email biên nhận tới các thành viên.",
       badgeText: "BÀI THI",
       badgeClass: "bg-cyan-950/40 text-cyan-300 border-cyan-500/30",
@@ -94,7 +99,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("công bố điểm")
   ) {
     return {
-      title: "📊 Kết quả chấm điểm đã được công bố!",
+      title: "Kết quả chấm điểm đã được công bố!",
       message: rawMessage || "Ban Giám Khảo đã công bố bảng điểm và nhận xét cho bài thi của đội bạn. Hãy vào xem chi tiết.",
       badgeText: "ĐIỂM THI",
       badgeClass: "bg-purple-950/40 text-purple-300 border-purple-500/30",
@@ -109,7 +114,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("cập nhật điểm phúc khảo")
   ) {
     return {
-      title: "✅ Kết quả phúc khảo: Đã chấp nhận & cập nhật điểm",
+      title: "Kết quả phúc khảo: Đã chấp nhận & cập nhật điểm",
       message: rawMessage || "Ban Tổ Chức đã chấp nhận đơn phúc khảo của đội bạn và cập nhật lại điểm số chính thức.",
       badgeText: "PHÚC KHẢO",
       badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
@@ -123,7 +128,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("giữ nguyên kết quả")
   ) {
     return {
-      title: "❌ Kết quả phúc khảo: Giữ nguyên điểm số",
+      title: "Kết quả phúc khảo: Giữ nguyên điểm số",
       message: rawMessage || "Ban Tổ Chức đã xem xét và giữ nguyên kết quả chấm điểm ban đầu kèm giải trình chi tiết.",
       badgeText: "TỪ CHỐI",
       badgeClass: "bg-rose-950/40 text-rose-300 border-rose-500/30",
@@ -137,7 +142,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("tiếp nhận phúc khảo")
   ) {
     return {
-      title: "⚖️ Đơn phúc khảo điểm thi đã được tiếp nhận",
+      title: "Đơn phúc khảo điểm thi đã được tiếp nhận",
       message: rawMessage || "Đơn phúc khảo của bạn đã được chuyển tới Ban Tổ Chức để xem xét.",
       badgeText: "PHÚC KHẢO",
       badgeClass: "bg-amber-950/40 text-amber-300 border-amber-500/30",
@@ -158,7 +163,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("giải thưởng")
   ) {
     return {
-      title: "👑 Chúc mừng! Đội của bạn đã đạt giải thưởng chung cuộc!",
+      title: "Chúc mừng! Đội của bạn đã đạt giải thưởng chung cuộc!",
       message: rawMessage || "Chúc mừng đội thi của bạn đã xuất sắc giành giải thưởng tại giải đấu! Ban Tổ Chức đã gửi email chúc mừng và hướng dẫn nhận giải.",
       badgeText: "GIẢI THƯỞNG",
       badgeClass: "bg-amber-950/50 text-amber-300 border-amber-400/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]",
@@ -173,7 +178,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("bảng vàng")
   ) {
     return {
-      title: "🏆 Công bố kết quả chung cuộc & Bảng vinh danh",
+      title: "Công bố kết quả chung cuộc & Bảng vinh danh",
       message: rawMessage || "Ban Tổ Chức đã chính thức công bố bảng xếp hạng tổng và vinh danh các đội thi xuất sắc nhất giải đấu.",
       badgeText: "CHUNG CUỘC",
       badgeClass: "bg-yellow-950/40 text-yellow-300 border-yellow-500/30",
@@ -189,14 +194,58 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("đã tham gia đội")
   ) {
     return {
-      title: "🎉 Thành viên mới gia nhập đội",
+      title: "Thành viên mới gia nhập đội",
       message: rawMessage.replace(/Một thành viên đã đồng ý vào đội (.*)\./i, "Thí sinh đã đồng ý lời mời và chính thức gia nhập đội $1."),
       badgeText: "THÀNH VIÊN MỚI",
       badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
     };
   }
 
-  // 6. Lời mời bị từ chối / không tham gia
+  // Thu hồi vai trò nhân sự (Có lý do đính kèm)
+  if (
+    tLower.includes("thu hồi") ||
+    mLower.includes("thu hồi vai trò") ||
+    mLower.includes("bị thu hồi") ||
+    mLower.includes("quyết định thu hồi")
+  ) {
+    return {
+      title: "Quyết định: Thu hồi vai trò sự kiện",
+      message: rawMessage,
+      badgeText: "THU HỒI VAI TRÒ",
+      badgeClass: "bg-red-950/60 text-red-300 border-red-500/50 shadow-[0_0_8px_rgba(239,68,68,0.3)]",
+    };
+  }
+
+  // Mời đảm nhiệm vai trò
+  if (
+    tLower.includes("mời làm") ||
+    tLower.includes("phân công vai trò") ||
+    mLower.includes("mời bạn làm") ||
+    mLower.includes("được mời làm")
+  ) {
+    return {
+      title: "Lời mời đảm nhận vai trò sự kiện",
+      message: rawMessage,
+      badgeText: "MỜI VAI TRÒ",
+      badgeClass: "bg-cyan-950/40 text-cyan-300 border-cyan-500/30",
+    };
+  }
+
+  // Nhân sự đã đồng ý nhận vai trò
+  if (
+    tLower.includes("nhận vai trò") ||
+    tLower.includes("đồng ý nhận vai trò") ||
+    mLower.includes("đã đồng ý nhận vai trò") ||
+    mLower.includes("chính thức đảm nhiệm vai trò")
+  ) {
+    return {
+      title: "Nhân sự đã đồng ý nhận vai trò",
+      message: rawMessage,
+      badgeText: "ĐÃ NHẬN VAI TRÒ",
+      badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+    };
+  }
+
   if (
     tLower.includes("từ chối") ||
     tLower.includes("declined") ||
@@ -205,7 +254,7 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("không đồng ý")
   ) {
     return {
-      title: "❌ Lời mời tham gia bị từ chối",
+      title: "Lời mời tham gia bị từ chối",
       message: rawMessage || "Một thí sinh đã từ chối lời mời tham gia đội thi.",
       badgeText: "TỪ CHỐI",
       badgeClass: "bg-rose-950/40 text-rose-300 border-rose-500/30",
@@ -219,27 +268,77 @@ function formatNotificationContent(rawTitle: string, rawMessage: string, type?: 
     mLower.includes("bạn đã trở thành thành viên")
   ) {
     return {
-      title: "🏆 Gia nhập đội thi thành công",
+      title: "Gia nhập đội thi thành công",
       message: rawMessage || "Bạn đã chính thức gia nhập đội thi. Chúc bạn và đồng đội đạt thành tích xuất sắc!",
       badgeText: "VÀO ĐỘI",
       badgeClass: "bg-cyan-950/40 text-cyan-300 border-cyan-500/30",
     };
   }
 
-  // 8. Lời mời mới vào đội
+  // 8. Giải thưởng & Thư chúc mừng
+  if (tLower.includes("giải thưởng") || tLower.includes("chúc mừng") || mLower.includes("đạt giải") || mLower.includes("thư chúc mừng")) {
+    return {
+      title: rawTitle || "Thư chúc mừng đạt giải thưởng",
+      message: rawMessage,
+      badgeText: "GIẢI THƯỞNG",
+      badgeClass: "bg-amber-950/60 text-amber-300 border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.3)]",
+    };
+  }
+
+  // 9. Nộp bài thi
+  if (tLower.includes("nộp bài") || mLower.includes("nộp bài thành công") || mLower.includes("bài nộp mới")) {
+    return {
+      title: rawTitle || "Bài nộp sự kiện",
+      message: rawMessage,
+      badgeText: "BÀI NỘP",
+      badgeClass: "bg-sky-950/40 text-sky-300 border-sky-500/30",
+    };
+  }
+
+  // 10. Chấm điểm bài thi
+  if (tLower.includes("chấm điểm") || mLower.includes("chấm điểm bài thi") || mLower.includes("bảng điểm")) {
+    return {
+      title: rawTitle || "Chấm điểm bài thi",
+      message: rawMessage,
+      badgeText: "CHẤM ĐIỂM",
+      badgeClass: "bg-emerald-950/40 text-emerald-300 border-emerald-500/30",
+    };
+  }
+
+  // 11. Phúc khảo bài thi
+  if (tLower.includes("phúc khảo") || mLower.includes("đơn phúc khảo")) {
+    return {
+      title: rawTitle || "Đơn phúc khảo",
+      message: rawMessage,
+      badgeText: "PHÚC KHẢO",
+      badgeClass: "bg-cyan-950/40 text-cyan-300 border-cyan-500/30",
+    };
+  }
+
+  // 12. Lời khuyên & Nhận xét Cố vấn
+  if (tLower.includes("cố vấn") || mLower.includes("nhận xét bài thi") || mLower.includes("lời khuyên kỹ thuật")) {
+    return {
+      title: rawTitle || "Nhận xét từ Cố vấn",
+      message: rawMessage,
+      badgeText: "CỐ VẤN",
+      badgeClass: "bg-teal-950/40 text-teal-300 border-teal-500/30",
+    };
+  }
+
+  // 13. Lời mời mới vào đội
   if (tLower.includes("lời mời") || mLower.includes("mời bạn tham gia")) {
     return {
-      title: rawTitle || "📩 Lời mời tham gia đội thi",
+      title: rawTitle || "Lời mời tham gia đội thi",
       message: rawMessage,
       badgeText: "LỜI MỜI",
       badgeClass: "bg-sky-950/40 text-sky-300 border-sky-500/30",
     };
   }
 
-  // 9. Yêu cầu xin gia nhập đội
+  // 14. Yêu cầu xin gia nhập đội
   if (tLower.includes("yêu cầu") || mLower.includes("xin gia nhập") || mLower.includes("yêu cầu tham gia")) {
     return {
-      title: "🙋 Yêu cầu xin gia nhập đội thi",
+      title: "Yêu cầu xin gia nhập đội thi",
       message: rawMessage,
       badgeText: "YÊU CẦU",
       badgeClass: "bg-amber-950/40 text-amber-300 border-amber-500/30",
@@ -275,16 +374,26 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
   const { mutateAsync: respondEventRole, isPending: isRespondingEventRole } = useRespondEventRoleInvitation();
   const isResponding = isRespondingTeam || isRespondingEventRole;
 
-  // Close dropdown on click outside
+  // Close dropdown on click outside & listen for local notification events
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
+    const handleNotifUpdate = () => {
+      refetchNotifs();
+      refetch();
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    window.addEventListener("seal-notification-updated", handleNotifUpdate);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("seal-notification-updated", handleNotifUpdate);
+    };
+  }, [refetch, refetchNotifs]);
 
   const handleRespond = async (inv: MyInvitationItem | any, isAccepted: boolean) => {
     const invId = inv.invitationId || inv.InvitationId || inv.id || inv.Id;
@@ -305,13 +414,30 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
 
       if (isAccepted) {
         if (invType === "TEAM" || invType === "TEAM_MEMBER") {
-          toast.success(`🎉 Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
-        } else if (inv.role === "Judge") {
-          toast.success(`🎉 Bạn đã nhận vai trò Ban Giám Khảo sự kiện "${targetName}". Bàn chấm điểm đã sẵn sàng!`);
-        } else if (inv.role === "Mentor") {
-          toast.success(`🎉 Bạn đã nhận vai trò Cố Vấn Chuyên Môn sự kiện "${targetName}". Bàn cố vấn đã sẵn sàng!`);
+          toast.success(`Chúc mừng! Bạn đã chính thức gia nhập đội "${targetName}". Hãy cùng đồng đội hoàn thiện bài thi thật tốt nhé!`);
+          pushSystemNotification({
+            title: "Gia nhập đội thi thành công",
+            message: `Bạn đã chính thức gia nhập đội "${targetName}". Chúc bạn và đồng đội đạt thành tích xuất sắc!`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Thành viên mới gia nhập đội",
+            message: `Một thành viên đã đồng ý lời mời và chính thức gia nhập đội "${targetName}".`,
+            type: "success",
+          });
         } else {
-          toast.success(`🎉 Bạn đã nhận vai trò Cán Bộ Điều Phối sự kiện "${targetName}".`);
+          const roleTitle = formatRoleLabel(inv.role);
+          toast.success(`Bạn đã nhận vai trò ${roleTitle} sự kiện "${targetName}".`);
+          pushSystemNotification({
+            title: "Đã nhận vai trò sự kiện",
+            message: `Bạn đã chính thức đảm nhận vai trò ${roleTitle} trong sự kiện "${targetName}".`,
+            type: "success",
+          });
+          pushSystemNotification({
+            title: "Nhân sự đã nhận vai trò",
+            message: `Nhân sự đã đồng ý nhận vai trò ${roleTitle} sự kiện "${targetName}".`,
+            type: "success",
+          });
         }
         queryClient.invalidateQueries({ queryKey: ["my-team"] });
         queryClient.invalidateQueries({ queryKey: ["myTeam"] });
@@ -319,8 +445,37 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
         queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
         queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+
+        let targetRedirectUrl = "/events";
+        if (invType === "TEAM" || invType === "TEAM_MEMBER") {
+          targetRedirectUrl = "/my-team";
+        } else if (inv.role === "Judge") {
+          targetRedirectUrl = "/judge/events";
+        } else if (inv.role === "Mentor") {
+          targetRedirectUrl = "/mentor";
+        } else if (inv.role === "Coordinator" || inv.role === "EventCoordinator") {
+          targetRedirectUrl = inv.eventId || inv.targetId
+            ? `/coordinator/dashboard?eventId=${inv.eventId || inv.targetId}`
+            : "/coordinator/dashboard";
+        } else if (inv.eventId || inv.targetId) {
+          targetRedirectUrl = `/events/${inv.eventId || inv.targetId}`;
+        }
+
+        setTimeout(() => {
+          window.location.href = targetRedirectUrl;
+        }, 1200);
       } else {
         toast.info(`Bạn đã từ chối lời mời tham gia "${targetName}".`);
+        pushSystemNotification({
+          title: "Đã từ chối lời mời",
+          message: `Bạn đã từ chối lời mời tham gia "${targetName}".`,
+          type: "warning",
+        });
+        pushSystemNotification({
+          title: "Lời mời tham gia bị từ chối",
+          message: `Ứng viên đã từ chối lời mời tham gia "${targetName}".`,
+          type: "danger",
+        });
         queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
         queryClient.invalidateQueries({ queryKey: ["my-notifications"] });
       }
@@ -379,9 +534,13 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
 
       {isOpen && (
         <div
-          className={`absolute ${
-            align === "left" ? "left-0 sm:left-0" : "right-0 sm:right-0"
-          } mt-2 w-84 sm:w-[26rem] md:w-[28rem] rounded border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-2xl z-50 overflow-hidden font-mono text-xs animate-in fade-in zoom-in-95 duration-100`}
+          className={`${
+            align === "sidebar"
+              ? "fixed left-4 right-4 top-16 md:left-[16.5rem] md:top-3 md:right-auto md:w-[28rem] z-[99999]"
+              : align === "left"
+              ? "absolute left-0 mt-2 w-84 sm:w-[26rem] md:w-[28rem] z-[9999]"
+              : "absolute right-0 mt-2 w-84 sm:w-[26rem] md:w-[28rem] z-[9999]"
+          } rounded border border-[var(--border-muted)] bg-[var(--bg-panel)] shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden font-mono text-xs animate-in fade-in zoom-in-95 duration-100`}
         >
           {/* Header */}
           <div className="p-3.5 border-b border-[var(--border-muted)] flex items-center justify-between bg-[var(--bg-input)]/60">
@@ -428,7 +587,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0" />
                       <span className="font-bold text-[var(--text-primary)] text-sm truncate">
-                        {item.type === "TEAM" ? "📩 Lời Mời Vào Đội (Từ Đội Trưởng)" : `🎖️ Lời Mời: ${formatRoleLabel(item.role)}`}
+                        {item.type === "TEAM" ? "Lời Mời Vào Đội (Từ Đội Trưởng)" : `Lời Mời: ${formatRoleLabel(item.role)}`}
                       </span>
                     </div>
                     <span className="text-xs text-[var(--accent-team)] font-bold px-2 py-0.5 bg-cyan-950/40 border border-cyan-500/30 rounded shrink-0">

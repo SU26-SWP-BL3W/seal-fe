@@ -1,4 +1,4 @@
-import { AdminSchoolsView } from "@/views/AdminSchoolsView";
+import { AdminSchoolsView } from "@/views/admin/AdminSchoolsView";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function AdminSchoolsPage() {

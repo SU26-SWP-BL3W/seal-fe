@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ForgotPasswordView } from '@/views/ForgotPasswordView';
+import { ForgotPasswordView } from '@/views/auth/ForgotPasswordView';
 
 export const metadata: Metadata = {
   title: 'Khôi phục mật khẩu - SEAL',

@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Button, Card, Field, Input } from "@/components/ui";
-import { AlertTriangle, CheckCircle2, Mail, ShieldAlert, Sparkles, UserPlus, X } from "lucide-react";
 import { MAX_MEMBERS } from "./teamStatus";
 import type { TeamMemberInvited } from "@/repositories/teamsRepository";
+import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
 interface Props {
   open: boolean;
@@ -68,6 +68,19 @@ export function InviteMemberModal({
         email: value,
         isNewUser: isNewTemporary,
       });
+
+      pushSystemNotification({
+        title: "Gửi lời mời vào đội thi",
+        message: `Đã gửi lời mời tham gia đội "${teamName}" tới ${value}.`,
+        type: "info",
+      });
+      pushSystemNotification({
+        title: "Lời mời tham gia đội thi",
+        message: `Bạn nhận được lời mời gia nhập đội thi "${teamName}".`,
+        type: "info",
+        recipientEmail: value,
+      });
+
       setEmail("");
       setNotes("");
     } catch (err: unknown) {
@@ -84,16 +97,13 @@ export function InviteMemberModal({
         <button
           type="button"
           onClick={handleClose}
-          className="absolute right-4 top-4 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          className="absolute right-4 top-4 text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs font-bold uppercase"
           aria-label="Đóng"
         >
-          <X className="size-5" />
+          Đóng
         </button>
 
         <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
-          <div className="flex size-10 items-center justify-center rounded bg-[var(--accent-team)]/10 text-[var(--accent-team)] border border-[var(--accent-team)]/30">
-            <UserPlus className="size-5" />
-          </div>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-team)]">
               [ MỜI THÀNH VIÊN VÀO ĐỘI ]
@@ -107,7 +117,6 @@ export function InviteMemberModal({
         {successInfo ? (
           <div className="my-6 space-y-4 rounded bg-emerald-950/40 border border-emerald-500/40 p-4 text-xs">
             <div className="flex items-start gap-3 text-emerald-400">
-              <CheckCircle2 className="size-5 shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <p className="font-bold text-white uppercase tracking-wider">
                   Đã Gửi Lời Mời Thành Công!
@@ -117,12 +126,10 @@ export function InviteMemberModal({
                 </p>
                 {successInfo.isNewUser ? (
                   <p className="mt-2 text-amber-300 bg-amber-950/50 p-2 border border-amber-500/30 rounded font-sans text-[11px]">
-                    <Sparkles className="inline size-3.5 mr-1" />
                     <strong>Thành viên mới:</strong> Email này chưa có tài khoản SEAL. Hệ thống đã tự động cấp tài khoản tạm và gửi kèm thông tin đăng nhập/kích hoạt qua email.
                   </p>
                 ) : (
                   <p className="mt-1 text-emerald-300/80 font-sans text-[11px]">
-                    <Mail className="inline size-3.5 mr-1" />
                     Thành viên sẽ nhận được thông báo qua email và tại mục <em>Lời Mời Của Tôi</em> trên SEAL.
                   </p>
                 )}
@@ -157,12 +164,10 @@ export function InviteMemberModal({
 
             {isFull ? (
               <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded text-[11px] text-amber-200 flex items-center gap-2">
-                <ShieldAlert className="size-4 text-amber-400 shrink-0" />
                 <span>Đội đã đủ {MAX_MEMBERS}/{MAX_MEMBERS} thành viên tối đa. Không thể mời thêm.</span>
               </div>
             ) : isPotentialFull ? (
               <div className="p-2.5 bg-cyan-950/30 border border-cyan-500/30 rounded text-[11px] text-cyan-300 flex items-start gap-2">
-                <AlertTriangle className="size-3.5 text-cyan-400 shrink-0 mt-0.5" />
                 <span>
                   Đội có {memberCount} thành viên + {pendingCount} lời mời đang chờ phản hồi (Tổng: {memberCount + pendingCount}/5).
                 </span>
