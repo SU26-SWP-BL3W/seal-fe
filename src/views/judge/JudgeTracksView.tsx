@@ -41,6 +41,7 @@ export const JudgeTracksView: React.FC = () => {
   const {
     isLoading,
     isRefreshing,
+    hasSubmissionFetchError,
     totalAssigned,
     totalPendingScoring,
     totalCompleted,
@@ -114,6 +115,14 @@ export const JudgeTracksView: React.FC = () => {
           accent="var(--color-success)"
         />
       </div>
+
+      {hasSubmissionFetchError && (
+        <Card className="border-[var(--color-danger)]/40 bg-[var(--color-danger)]/5">
+          <p className="text-sm text-[var(--color-danger)]">
+            Không tải được danh sách bài nộp. Bấm Làm mới; nếu vẫn lỗi hãy đăng nhập lại vai trò Giám khảo.
+          </p>
+        </Card>
+      )}
 
       <section className="space-y-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

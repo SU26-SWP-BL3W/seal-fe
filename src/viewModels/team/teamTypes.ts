@@ -14,6 +14,8 @@ export interface TrackItem {
   submissionRuleDescription?: string;
   roundId: string;
   templateId: string | null;
+  startDate?: string;
+  endDate?: string;
 }
 
 export type DeliverableType =

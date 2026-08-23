@@ -6,6 +6,18 @@ import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import type { TrackItem, SubmissionItem } from "@/viewModels/team/teamTypes";
 
+function isIsoWindowOpen(start?: string, end?: string, now = new Date()): boolean {
+  if (start) {
+    const t = new Date(start).getTime();
+    if (!isNaN(t) && now.getTime() < t) return false;
+  }
+  if (end) {
+    const t = new Date(end).getTime();
+    if (!isNaN(t) && now.getTime() > t) return false;
+  }
+  return true;
+}
+
 export function useNewSubmissionViewModel() {
   const { activeRole } = useAuth();
   const eventIdFromRole =
@@ -32,11 +44,15 @@ export function useNewSubmissionViewModel() {
     const endTime = new Date(end).getTime();
     return startTime <= now.getTime() && now.getTime() <= endTime;
   });
-  const roundId = openRound
-    ? (openRound.id || openRound.Id || "")
-    : rounds.length
-      ? (rounds[rounds.length - 1].id || rounds[rounds.length - 1].Id || "")
-      : "";
+  // Không fallback vòng cuối (thường chưa mở) — để trống thì UI báo hết hạn nộp.
+  const roundId = openRound ? (openRound.id || openRound.Id || "") : "";
+
+  const teamTrackRaw = (tracks as any[]).find((t) => (t.id || t.Id) === teamTrackId);
+  const trackWindowOpen = isIsoWindowOpen(
+    teamTrackRaw?.startDate || teamTrackRaw?.StartDate,
+    teamTrackRaw?.endDate || teamTrackRaw?.EndDate,
+    now,
+  );
 
   const availableTracks: TrackItem[] = (tracks as any[])
     .filter((t) => !teamTrackId || (t.id || t.Id) === teamTrackId)
@@ -46,6 +62,8 @@ export function useNewSubmissionViewModel() {
       description: t.description || t.Description || "",
       roundId,
       templateId: t.templateId || t.TemplateId || null,
+      startDate: t.startDate || t.StartDate,
+      endDate: t.endDate || t.EndDate,
     }));
 
   const submissionsFromServer: Record<string, SubmissionItem> = useMemo(() => {
@@ -93,7 +111,15 @@ export function useNewSubmissionViewModel() {
 
   const teamStatus = String((team as { status?: string; Status?: string } | undefined)?.status
     || (team as { Status?: string } | undefined)?.Status || "");
-  const canSubmit = teamStatus === "Registered" || teamStatus === "Approved";
+  const teamEligible = teamStatus === "Registered" || teamStatus === "Approved";
+  const canSubmit = teamEligible && !!roundId && trackWindowOpen;
+  const submitBlockReason: "no-team" | "not-registered" | "window-closed" | null = !team
+    ? "no-team"
+    : !teamEligible
+      ? "not-registered"
+      : !roundId || !trackWindowOpen
+        ? "window-closed"
+        : null;
 
   return {
     state: {
@@ -102,6 +128,7 @@ export function useNewSubmissionViewModel() {
       teamId,
       roundId,
       canSubmit,
+      submitBlockReason,
       isLoading,
     },
     data: {

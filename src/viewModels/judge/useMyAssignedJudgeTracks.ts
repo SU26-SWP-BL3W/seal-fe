@@ -202,6 +202,8 @@ export function useMyAssignedJudgeTracks() {
     submissionQueries.some((q) => q.isLoading) ||
     scoreQueries.some((q) => q.isLoading);
 
+  const hasSubmissionFetchError = submissionQueries.some((q) => q.isError);
+
   const refetch = () => {
     trackQueries.forEach((q) => q.refetch());
     submissionQueries.forEach((q) => q.refetch());
@@ -211,6 +213,7 @@ export function useMyAssignedJudgeTracks() {
   return {
     assignedTracks,
     isLoading,
+    hasSubmissionFetchError,
     refetch,
   };
 }

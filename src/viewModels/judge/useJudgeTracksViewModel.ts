@@ -5,7 +5,7 @@ import { usePagination } from "@/hooks/usePagination";
 
 export function useJudgeTracksViewModel() {
   const { user } = useAuth();
-  const { assignedTracks, isLoading, refetch } = useMyAssignedJudgeTracks();
+  const { assignedTracks, isLoading, hasSubmissionFetchError, refetch } = useMyAssignedJudgeTracks();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -30,6 +30,7 @@ export function useJudgeTracksViewModel() {
     state: {
       isLoading,
       isRefreshing,
+      hasSubmissionFetchError,
       totalAssigned,
       totalPendingScoring,
       totalCompleted,

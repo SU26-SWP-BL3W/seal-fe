@@ -1,15 +1,31 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Link, useRouter } from "@/i18n/routing";
+import { useAuth } from "@/providers/AuthProvider";
 import { useMentorWorkspaceViewModel } from "@/viewModels/mentor/useMentorWorkspaceViewModel";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Badge, Button, Card, EmptyState, Pagination } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Pagination,
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui";
 import { usePagination } from "@/hooks/usePagination";
-import { ChevronRight, RefreshCw, Users, Info, Eye } from "lucide-react";
+import { TEAM_STATUS, resolveTeamStatus } from "@/components/domain/team/teamStatus";
+import { ArrowLeft, Users, Info, ChevronRight, Clock } from "lucide-react";
+
+const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
 
 export function MentorTeamsView() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const trackIdQuery = searchParams.get("trackId") || "";
@@ -20,9 +36,8 @@ export function MentorTeamsView() {
     setSelectedTrackId,
     teamsInTrack,
     submissions,
-    teamById,
     isLoading,
-    refetchAll,
+    hasSubmissionFetchError,
   } = useMentorWorkspaceViewModel();
 
   const {
@@ -36,250 +51,254 @@ export function MentorTeamsView() {
   } = usePagination(teamsInTrack, 6);
 
   const currentTrackId = trackIdQuery || selectedTrackId || (myTracks[0]?.id || myTracks[0]?.Id || "");
-  const currentTrack = myTracks.find((t) => (t.id || t.Id) === currentTrackId);
+  const currentTrack = myTracks.find((t) => normalizeId(String(t.id || t.Id)) === normalizeId(currentTrackId));
+  const trackName = currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách";
 
   const handleTrackChange = (newTrackId: string) => {
     setSelectedTrackId(newTrackId);
     router.push(`/mentor/teams?trackId=${newTrackId}`);
   };
 
-  // Helper to check submission status for a team
-  const getTeamSubmissionStatus = (teamId: string) => {
-    const subs = submissions.filter((s) => (s.teamId || s.TeamId) === teamId);
-    if (subs.length === 0) return { label: "NOT_SUBMITTED", color: "text-on-surface-variant bg-surface-container border-outline-variant", count: 0, tone: "warning" as const };
-    return { label: "SUBMITTED", color: "text-yellow-400 bg-yellow-900/20 border-yellow-500/30", count: subs.length, tone: "success" as const };
+  const getTeamSubmission = (teamId: string) => {
+    const norm = normalizeId(teamId);
+    const list = submissions.filter((s) => normalizeId(String(s.teamId || s.TeamId)) === norm);
+    const latest = list[0];
+    const created = latest?.createdTime || latest?.CreatedTime;
+    return { count: list.length, created };
   };
 
+  const pendingCount = teamsInTrack.filter((t) => getTeamSubmission(String(t.id || t.Id)).count === 0).length;
+
+  if (!user) {
+    return (
+      <PageShell className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Card className="w-full max-w-md text-center">
+          <EmptyState
+            icon={Users}
+            title="Yêu cầu quyền cố vấn"
+            description="Vui lòng đăng nhập với tài khoản Cố vấn để tiếp tục."
+            action={
+              <Link href="/login">
+                <Button accent="mentor">Đến trang đăng nhập</Button>
+              </Link>
+            }
+          />
+        </Card>
+      </PageShell>
+    );
+  }
+
   return (
-    <div className="bg-surface text-on-surface font-sans min-h-screen p-6 flex flex-col">
-      <div className="max-w-[1400px] mx-auto w-full flex flex-col gap-6">
-        {/* Context Header Panel (HUD Style) */}
-        <header className="w-full bg-surface-container-low border border-outline-variant p-5 relative rounded-lg shadow-sm">
-          {/* Breadcrumb */}
-          <div className="font-mono text-xs text-on-surface-variant flex items-center gap-2 mb-2">
-            <Link href="/mentor/tracks" className="text-[#2dd4bf] hover:underline">
-              Bàn Làm Việc Cố Vấn
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span>{currentTrack?.trackName || currentTrack?.TrackName || "Hạng mục phụ trách"}</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-on-surface font-bold">Danh sách đội</span>
-          </div>
+    <PageShell className="min-h-[calc(100vh-4rem)] space-y-6">
+      <PageHeader
+        breadcrumb={
+          <Link
+            href="/mentor/tracks"
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--accent-mentor)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Trở về danh sách hạng mục
+          </Link>
+        }
+        title="Danh sách đội hỗ trợ"
+        description={`Hạng mục: ${trackName}`}
+        actions={
+          <>
+            <Badge tone="neutral">
+              Tổng đội: <span className="font-semibold">{teamsInTrack.length}</span>
+            </Badge>
+            {teamsInTrack.length > 0 && (
+              <Badge tone="mentor">
+                Chưa nộp: <span className="font-semibold">{pendingCount}</span>
+              </Badge>
+            )}
+          </>
+        }
+      />
 
-          {/* Title Row */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-outline-variant pb-3 gap-3">
-            <div>
-              <h1 className="font-display text-2xl md:text-3xl text-on-surface font-extrabold tracking-wider uppercase">
-                DANH SÁCH ĐỘI HỖ TRỢ
-              </h1>
-              <p className="font-mono text-xs text-on-surface-variant mt-1">
-                Danh sách các đội thi thuộc Hạng mục chuyên môn được phân công.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="font-mono text-xs text-[#2dd4bf] bg-[#2dd4bf]/10 px-3 py-1 border border-[#2dd4bf]/30 rounded">
-                [ Trạng thái: Đang theo dõi ]
-              </div>
-              <Button variant="ghost" accent="mentor" onClick={() => refetchAll()} className="text-xs">
-                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Làm mới
+      <Card className="border-[var(--accent-mentor)]/30 bg-[var(--accent-mentor)]/5 p-4">
+        <div className="flex items-start gap-3">
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent-mentor)]" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-[var(--text-primary)]">Cố vấn xem tên đội thật</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              Khác với giám khảo (ẩn danh khi chấm), cố vấn được xem tên đội để hỗ trợ kỹ thuật và góp ý chuyên môn.
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {myTracks.length > 1 && (
+        <Card className="flex flex-wrap items-center gap-2 p-3">
+          <span className="text-xs font-medium text-[var(--text-muted)]">Chọn hạng mục:</span>
+          {myTracks.map((t) => {
+            const tid = String(t.id || t.Id || "");
+            const isCurrent = normalizeId(tid) === normalizeId(currentTrackId);
+            return (
+              <Button
+                key={tid}
+                type="button"
+                variant={isCurrent ? "primary" : "secondary"}
+                accent="mentor"
+                className="text-xs"
+                onClick={() => handleTrackChange(tid)}
+              >
+                {t.trackName || t.TrackName}
               </Button>
-            </div>
-          </div>
-        </header>
+            );
+          })}
+        </Card>
+      )}
 
-        {/* Track Selector Bar */}
-        {myTracks.length > 0 && (
-          <div className="flex items-center gap-3 font-mono text-xs bg-surface-container-low p-3 border border-outline-variant rounded-md">
-            <span className="text-on-surface-variant uppercase font-bold">Hạng mục:</span>
-            <select
-              value={currentTrackId}
-              onChange={(e) => handleTrackChange(e.target.value)}
-              className="bg-surface-container border border-outline-variant px-3 py-1.5 text-on-surface font-mono rounded focus:outline-none focus:border-[#2dd4bf]"
-            >
-              {myTracks.map((t) => {
-                const tid = (t.id || t.Id) as string;
-                return (
-                  <option key={tid} value={tid}>
-                    {t.trackName || t.TrackName} (ID: {tid})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-        )}
+      {hasSubmissionFetchError && (
+        <Card className="border-[var(--color-danger)]/40 bg-[var(--color-danger)]/5">
+          <p className="text-sm text-[var(--color-danger)]">
+            Không tải được danh sách bài nộp. Bấm Làm mới trên trang hạng mục hoặc đăng nhập lại vai trò Cố vấn.
+          </p>
+        </Card>
+      )}
 
-        {/* Data Table Panel (HUD Style) */}
-        <div className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-lg flex flex-col overflow-hidden">
-          {/* Panel Header */}
-          <div className="h-8 bg-[#2dd4bf]/10 border-b border-[#2dd4bf]/20 flex items-center px-4 justify-between font-mono text-xs">
-            <span className="text-[#2dd4bf] font-bold tracking-wider">DANH SÁCH ĐỘI THI</span>
-            <span className="text-on-surface-variant text-[11px]">{teamsInTrack.length} Đội thi</span>
-          </div>
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">Đội cần hỗ trợ</h2>
+          <span className="text-xs text-[var(--text-muted)]">
+            {teamsInTrack.length - pendingCount} / {teamsInTrack.length} đã nộp bài
+          </span>
+        </div>
 
-          {/* Table Container */}
-          <div className="flex-1 overflow-x-auto p-4">
-            {isLoading ? (
-              <div className="flex justify-center py-20 font-mono text-xs text-[#2dd4bf] animate-pulse">
-                Đang tải danh sách đội thi...
-              </div>
-            ) : teamsInTrack.length === 0 ? (
-              <div className="text-center py-16 font-mono text-xs text-on-surface-variant">
-                <Info className="w-8 h-8 mx-auto mb-2 text-on-surface-variant/60" />
-                Chưa có đội thi nào thuộc Hạng mục này.
-              </div>
-            ) : (
-              <table className="w-full text-left font-mono text-xs border-collapse">
-                <thead className="text-[11px] text-on-surface-variant uppercase border-b border-outline-variant bg-surface-container-lowest sticky top-0">
-                  <tr>
-                    <th className="py-3 px-4 font-semibold">TÊN ĐỘI THI</th>
-                    <th className="py-3 px-4 font-semibold">TRẠNG THÁI</th>
-                    <th className="py-3 px-4 font-semibold">THÀNH VIÊN</th>
-                    <th className="py-3 px-4 font-semibold text-right">TIẾN ĐỘ BÀI NỘP</th>
-                    <th className="py-3 px-4 font-semibold text-center">THAO TÁC</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/40">
-                  {teamsInTrack.map((team) => {
-                    const tid = (team.id || team.Id) as string;
+        {isLoading ? (
+          <Card className="py-12 text-center">
+            <p className="animate-pulse text-sm text-[var(--text-muted)]">Đang tải danh sách đội thi…</p>
+          </Card>
+        ) : teamsInTrack.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="Chưa có đội thi"
+            description="Chưa có đội thi nào ghi danh thuộc hạng mục này."
+          />
+        ) : (
+          <>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>Tên đội thi</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Thời gian nộp</TableHead>
+                    <TableHead align="center">Bài nộp</TableHead>
+                    <TableHead align="right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <tbody>
+                  {paginatedTeams.map((team, idx) => {
+                    const tid = String(team.id || team.Id || "");
                     const name = team.name || team.Name || `Đội #${tid}`;
-                    const statusVal = team.status !== undefined ? String(team.status) : "Registered";
-                    const subStatus = getTeamSubmissionStatus(tid);
+                    const statusCfg = TEAM_STATUS[resolveTeamStatus(team.status ?? team.Status)];
+                    const sub = getTeamSubmission(tid);
 
                     return (
-                      <tr key={tid} className="hover:bg-surface-variant/30 transition-colors group">
-                        <td className="py-4 px-4 align-middle">
-                          <div className="flex flex-col">
-                            <span className="text-on-surface font-bold group-hover:text-[#2dd4bf] transition-colors">
-                              {name}
-                            </span>
-                            <span className="text-[10px] text-on-surface-variant">TM-{tid.substring(0, 8)}</span>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4 align-middle">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-900/30 border border-green-500/30 text-green-400 text-[11px] font-bold rounded">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                            {statusVal.toUpperCase()}
-                          </span>
-                        </td>
-
-                        <td className="py-4 px-4 align-middle">
-                          <div className="flex items-center gap-1 text-on-surface-variant">
-                            <Users className="w-4 h-4 text-[#2dd4bf]" />
-                            <span>Thành viên</span>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4 align-middle text-right">
-                          <div className="flex flex-col items-end gap-1">
-                            <span className={`text-[10px] border px-2 py-0.5 font-bold ${subStatus.color}`}>
-                              {subStatus.label} ({subStatus.count})
-                            </span>
-                            <div className="w-24 h-1.5 bg-surface-variant flex rounded overflow-hidden">
-                              <div
-                                className={`h-full ${
-                                  subStatus.count > 0 ? "bg-[#2dd4bf] w-full" : "bg-surface-container-highest w-0"
-                                }`}
-                              />
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-4 align-middle text-center">
-                          <Link href={`/mentor/submissions?teamId=${tid}&trackId=${currentTrackId}`}>
-                            <button className="px-3 py-1.5 bg-surface border border-[#2dd4bf]/40 text-[#2dd4bf] hover:bg-[#2dd4bf] hover:text-[#080f11] text-[11px] font-bold rounded transition-colors inline-flex items-center gap-1">
-                              <Eye className="w-3.5 h-3.5" /> Chi tiết
-                            </button>
-                          </Link>
-                        </td>
-                      </tr>
+                      <TableRow key={tid}>
+                        <TableCell className="text-[var(--text-muted)]">
+                          {(currentPage - 1) * pageSize + idx + 1}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-[var(--text-primary)]">{name}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={statusCfg.tone}>{statusCfg.label}</Badge>
+                        </TableCell>
+                        <TableCell className="text-[var(--text-muted)]">
+                          {sub.created ? new Date(sub.created).toLocaleString("vi-VN") : "—"}
+                        </TableCell>
+                        <TableCell align="center">
+                          {sub.count > 0 ? (
+                            <Badge tone="success">Đã nộp {sub.count} bài</Badge>
+                          ) : (
+                            <Badge tone="warning" className="gap-1">
+                              <Clock className="h-3 w-3" />
+                              Chưa nộp
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          {sub.count > 0 ? (
+                            <Link href={`/mentor/submissions?teamId=${tid}&trackId=${currentTrackId}`}>
+                              <Button accent="mentor" className="text-xs">
+                                Xem bài nộp
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+                          ) : (
+                            <Button accent="mentor" className="text-xs" disabled>
+                              Chưa có bài nộp
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
                 </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-x-auto p-4">
-          {isLoading ? (
-            <EmptyState
-              icon={RefreshCw}
-              title="Đang tải dữ liệu"
-              description="Đang tải danh sách đội thi..."
-            />
-          ) : teamsInTrack.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title="Chưa có đội thi"
-              description="Chưa có đội thi nào ghi danh thuộc hạng mục này."
-            />
-          ) : (
-            <table className="w-full border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border-muted)] text-xs text-[var(--text-muted)]">
-                  <th className="px-4 py-3 font-medium">Tên đội thi</th>
-                  <th className="px-4 py-3 font-medium">Trạng thái</th>
-                  <th className="px-4 py-3 text-right font-medium">Tiến độ bài nộp</th>
-                  <th className="px-4 py-3 text-center font-medium">Tác vụ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-muted)]/60">
-                {paginatedTeams.map((team) => {
-                  const tid = (team.id || team.Id) as string;
-                  const name = team.name || team.Name || `Đội #${tid}`;
-                  const statusVal = team.status !== undefined ? String(team.status) : "Registered";
-                  const subStatus = getTeamSubmissionStatus(tid);
-
-                  return (
-                    <tr key={tid} className="transition-colors hover:bg-[var(--bg-input)]/50">
-                      <td className="px-4 py-4 align-middle">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-[var(--text-primary)]">{name}</span>
-                          <span className="text-xs text-[var(--text-muted)]">ID: {tid.substring(0, 8)}</span>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4 align-middle">
-                        <Badge tone="success">{statusVal}</Badge>
-                      </td>
-
-                      <td className="px-4 py-4 align-middle text-right">
-                        <Badge tone={subStatus.tone}>
-                          {subStatus.label}: {subStatus.count} bài
-                        </Badge>
-                      </td>
-
-                      <td className="px-4 py-4 align-middle text-center">
-                        <Link href={`/mentor/submissions?teamId=${tid}&trackId=${currentTrackId}`}>
-                          <Button variant="secondary" accent="mentor" className="gap-1 text-xs">
-                            Xem bài nộp
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-
-          {teamsInTrack.length > 0 && (
-            <div className="pt-3 border-t border-[var(--border-muted)]">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={setPageSize}
-                itemLabel="đội thi"
-              />
+              </Table>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
+
+            <div className="space-y-3 md:hidden">
+              {paginatedTeams.map((team, idx) => {
+                const tid = String(team.id || team.Id || "");
+                const name = team.name || team.Name || `Đội #${tid}`;
+                const statusCfg = TEAM_STATUS[resolveTeamStatus(team.status ?? team.Status)];
+                const sub = getTeamSubmission(tid);
+
+                return (
+                  <Card key={tid} className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-xs text-[var(--text-muted)]">
+                          #{(currentPage - 1) * pageSize + idx + 1}
+                        </span>
+                        <p className="font-medium text-[var(--text-primary)]">{name}</p>
+                      </div>
+                      <Badge tone={statusCfg.tone}>{statusCfg.label}</Badge>
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {sub.count > 0
+                        ? `Đã nộp ${sub.count} bài${sub.created ? ` · ${new Date(sub.created).toLocaleString("vi-VN")}` : ""}`
+                        : "Chưa nộp bài"}
+                    </p>
+                    {sub.count > 0 ? (
+                      <Link href={`/mentor/submissions?teamId=${tid}&trackId=${currentTrackId}`}>
+                        <Button accent="mentor" className="w-full">
+                          Xem bài nộp
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button accent="mentor" className="w-full" disabled>
+                        Chưa có bài nộp
+                      </Button>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+
+            {teamsInTrack.length > 0 && (
+              <div className="pt-2">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="đội thi"
+                  accent="mentor"
+                />
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </PageShell>
   );
 }

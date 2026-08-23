@@ -57,3 +57,14 @@ export const TONE_TEXT: Record<TeamStatusConfig["tone"], string> = {
 
 export const MIN_MEMBERS = 3;
 export const MAX_MEMBERS = 5;
+
+/** List API có thể trả enum số (0–4) hoặc tên chuỗi. */
+export function resolveTeamStatus(raw: unknown): TeamStatus {
+  const value = raw === null || raw === undefined ? "" : String(raw);
+  if (value === "2" || value === "Disqualified") return "Disqualified";
+  if (value === "3" || value === "PendingApproval") return "PendingApproval";
+  if (value === "4" || value === "Rejected") return "Rejected";
+  if (value === "0" || value === "Forming") return "Forming";
+  if (value === "Approved") return "Approved";
+  return "Registered";
+}
