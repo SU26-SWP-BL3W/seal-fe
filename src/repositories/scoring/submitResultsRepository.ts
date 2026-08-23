@@ -358,18 +358,12 @@ export function useDeleteMentorFeedback() {
 
 export async function fetchSubmitResultsByTrack(trackId: string, eventId?: string): Promise<SubmitResultListItem[]> {
   try {
-    const params: Record<string, any> = {
-      pageSize: 100,
-      PageSize: 100,
-    };
-    if (trackId) {
-      params.trackId = trackId;
-      params.TrackId = trackId;
-    }
-    if (eventId) {
-      params.eventId = eventId;
-      params.EventId = eventId;
-    }
+    // CHỈ gửi 1 casing mỗi param. Gửi trùng (trackId + TrackId) khiến ASP.NET gộp 2
+    // giá trị thành "X,X" -> scope/filter không khớp -> 403/rỗng -> catch nuốt lỗi ->
+    // dashboard "Hạng mục phân công" hiện 0 bài dù thực tế có bài (bug đã xác nhận).
+    const params: Record<string, any> = { pageSize: 100 };
+    if (trackId) params.trackId = trackId;
+    if (eventId) params.eventId = eventId;
     const res = await apiClient.get<any>("/SubmitResults", { params });
     const items =
       res.data?.data?.items ??
