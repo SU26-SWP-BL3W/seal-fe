@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { computeEventStatus, STATUS_PRIORITY, extractTrackNames, type EventCardData } from "./eventsMetadata";
 import { usePublicEvents } from "@/repositories/eventsRepository";
 
@@ -9,7 +9,12 @@ import { usePublicEvents } from "@/repositories/eventsRepository";
  */
 export function useLandingPreviewViewModel() {
   const { data: realPublicEvents = [] } = usePublicEvents();
-  const [now] = useState(() => Date.now());
+  // now=0 ở lần render đầu (SSR và client hydrate đều thấy giống nhau, tránh Hydration
+  // mismatch) — Date.now() thật chỉ lấy trong useEffect, chạy sau khi đã hydrate xong.
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
 
   const allEvents: EventCardData[] = useMemo(() => {
     const mappedReal: EventCardData[] = realPublicEvents.map((ev: any) => {
