@@ -18,15 +18,21 @@ const MINUTE_MS = 60_000;
 
 /** Đếm ngược tới 1 mốc thời gian ISO, tự cập nhật mỗi giây. targetIso=null -> luôn isPast. */
 export function useCountdown(targetIso: string | null): CountdownParts {
-  const [now, setNow] = useState(() => Date.now());
+  // Không gọi Date.now() ngay lúc khởi tạo state — SSR render và lần render đầu tiên trên
+  // client sẽ tính ở 2 thời điểm khác nhau (chênh lệch mạng), gây lỗi Hydration mismatch.
+  // Chờ mounted=true (chỉ xảy ra trên client, trong useEffect) rồi mới tính giá trị thật.
+  const [mounted, setMounted] = useState(false);
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
+    setMounted(true);
+    setNow(Date.now());
     if (!targetIso) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [targetIso]);
 
-  if (!targetIso) {
+  if (!targetIso || !mounted) {
     return { days: 0, hours: 0, minutes: 0, seconds: 0, isUrgent: false, isPast: true };
   }
 

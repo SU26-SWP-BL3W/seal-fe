@@ -94,6 +94,11 @@ export function LandingPortalView() {
   const { user, activeRole } = useAuth();
   const router = useRouter();
 
+  // isRegistrationOpen() mặc định dùng Date.now() — gọi trực tiếp lúc render sẽ ra 2 giá trị
+  // khác nhau giữa SSR và lúc client hydrate, gây Hydration mismatch. Chặn bằng mounted-gate.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // Chỉ auto-điều hướng Admin/EC về dashboard của họ. Judge/Mentor KHÔNG bị đá đi
   // để nút "Quay lại trang chủ" hoạt động (họ vẫn xem được landing). Dùng role thật,
   // không đoán theo chuỗi email.
@@ -109,8 +114,8 @@ export function LandingPortalView() {
   }, [user, activeRole, router]);
 
   const regOpen = useMemo(
-    () => (latestEvent ? isRegistrationOpen(latestEvent) : false),
-    [latestEvent],
+    () => (mounted && latestEvent ? isRegistrationOpen(latestEvent) : false),
+    [mounted, latestEvent],
   );
   const ctas = getHeroCtas({ user, latestEvent, regOpen });
 
@@ -341,7 +346,10 @@ function LatestEventSpotlight({ event }: { event: EventCardData }) {
   const countdown = useCountdown(event.status === "ended" ? null : countdownTarget);
   const countdownLabel = event.status === "ongoing" ? "Hạn nộp còn" : "Hạn đăng ký còn";
   const fillPercent = Math.min(100, Math.round((event.teamCount / Math.max(event.maxTeams, 1)) * 100));
-  const regOpen = isRegistrationOpen(event);
+  // Cùng lý do mounted-gate như ở LandingPortalView — tránh Hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const regOpen = mounted && isRegistrationOpen(event);
 
   return (
     <section className="border-b border-[var(--border-muted)] px-4 py-16 sm:px-6 md:py-20">
