@@ -173,6 +173,8 @@ export function AdminEventsView() {
                   const endDate = ev.endDate || ev.EndDate;
                   const maxTeams = ev.maxTeams || ev.MaxTeams || 50;
                   const teamCount = ev.teamCount || ev.TeamCount || 0;
+                  const ecName = ev.assignedCoordinatorName || ev.AssignedCoordinatorName;
+                  const ecEmail = ev.assignedCoordinatorEmail || ev.AssignedCoordinatorEmail;
                   const isActive = ev.status !== false && ev.Status !== false;
 
                   return (
@@ -185,9 +187,20 @@ export function AdminEventsView() {
                           <span className="truncate font-medium text-[var(--text-primary)]" title={evName}>
                             {evName}
                           </span>
-                          <Badge tone="team">
-                            {season} {year}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge tone="team">
+                              {season} {year}
+                            </Badge>
+                            {ecName || ecEmail ? (
+                              <Badge tone="coordinator">
+                                EC: {ecName || ecEmail}
+                              </Badge>
+                            ) : (
+                              <Badge tone="neutral">
+                                Chưa gán EC
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </td>
 

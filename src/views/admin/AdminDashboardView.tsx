@@ -203,7 +203,9 @@ export const AdminDashboardView: React.FC = () => {
                     const season = ev.season || ev.Season || "Mùa Hè";
                     const year = ev.year || ev.Year || 2026;
                     const roundsCount = ev.rounds?.length ?? ev.Rounds?.length ?? 1;
-                    const ecInfo = ev.coordinatorEmail || ev.CoordinatorEmail || "Chưa gán EC";
+                    const ecName = ev.assignedCoordinatorName || ev.AssignedCoordinatorName;
+                    const ecEmail = ev.assignedCoordinatorEmail || ev.AssignedCoordinatorEmail || ev.coordinatorEmail || ev.CoordinatorEmail;
+                    const ecInfo = ecName ? `${ecName} (${ecEmail || ""})` : (ecEmail ? ecEmail : "Chưa gán EC");
 
                     return (
                       <tr key={id}>
@@ -221,7 +223,7 @@ export const AdminDashboardView: React.FC = () => {
                         </td>
                         <td>
                           <span className="font-mono text-xs text-[var(--accent-coordinator)] font-bold">
-                            EC. {ecInfo}
+                            {ecInfo}
                           </span>
                         </td>
                         <td>

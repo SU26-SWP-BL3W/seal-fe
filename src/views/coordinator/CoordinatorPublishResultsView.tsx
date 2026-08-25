@@ -24,9 +24,27 @@ import {
   Clock,
 } from "lucide-react";
 
+/**
+ * =========================================================================================
+ * COMPONENT: CoordinatorPublishResultsView
+ * VAI TRÒ: Điều phối viên (Event Coordinator - EC) / Ban Tổ Chức
+ * CHỨC NĂNG:
+ *   1. Quản lý, theo dõi tiến độ chấm điểm của Hội đồng Giám khảo theo thời gian thực (HUD Realtime).
+ *   2. Tự động tính toán điểm trung bình và xếp hạng Rank các đội thi (Auto Calculate).
+ *   3. Gán cơ cấu giải thưởng (Prize) cho các Đội thi đạt thứ hạng cao.
+ *   4. CÔNG BỐ KẾT QUẢ (Publish) bảng điểm chính thức ra Bảng Vàng Danh Dự (Public Leaderboard)
+ *      hoặc Ẩn về bản nháp (Draft) an toàn.
+ *   5. Xuất báo cáo kết quả ra file CSV / Excel và gửi email thông báo kết quả hàng loạt.
+ * =========================================================================================
+ */
 export const CoordinatorPublishResultsView: React.FC = () => {
+  // -------------------------------------------------------------------------
+  // 1. KẾT NỐI VỚI TẦNG VIEWMODEL (THEO MÔ HÌNH MVVM)
+  // Bóc tách hoàn toàn logic nghiệp vụ (business logic) ra custom hook useCoordinatorPublishResultsViewModel
+  // -------------------------------------------------------------------------
   const { state, data, pagination, actions } = useCoordinatorPublishResultsViewModel();
 
+  // State quản trị giao diện (Form filter, trạng thái loading, modal, cờ công bố)
   const {
     selectedEventId,
     selectedRoundId,
@@ -44,6 +62,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
     isSendingEmail,
   } = state;
 
+  // Dữ liệu danh sách truy vấn từ Backend (Events, Rounds, Tracks, Bảng điểm kết quả)
   const {
     eventsList,
     roundsList,
@@ -57,6 +76,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
     calibration,
   } = data;
 
+  // Xử lý phân trang client-side cho bảng kết quả
   const {
     paginatedItems: paginatedResults,
     currentPage,
@@ -72,10 +92,13 @@ export const CoordinatorPublishResultsView: React.FC = () => {
       {/* Main Container */}
       <div className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
         
-        {/* Cascade Filter Bar: Event, Round & Track */}
+        {/* =====================================================================
+            KHỐI 1: BỘ LỌC TẦNG BẬC (CASCADE FILTER BAR: EVENT -> ROUND -> TRACK)
+            Cho phép EC lọc chính xác Sự kiện -> Vòng thi -> Hạng mục cần xét duyệt
+            ===================================================================== */}
         <div className="bg-[#13191c] p-4 border border-[#263339] grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
           
-          {/* Filter 1: Event */}
+          {/* Filter 1: Chọn Sự kiện phụ trách */}
           <div className="space-y-1">
             <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Filter className="w-3.5 h-3.5 text-[#8b5cf6]" />
@@ -101,7 +124,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Filter 2: Round */}
+          {/* Filter 2: Chọn Vòng thi */}
           <div className="space-y-1">
             <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Layers className="w-3.5 h-3.5 text-[#8b5cf6]" />
@@ -123,7 +146,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Filter 3: Track */}
+          {/* Filter 3: Chọn Hạng mục thi đấu (Track) */}
           <div className="space-y-1">
             <label className="text-[#8b5cf6] font-bold uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
               <Award className="w-3.5 h-3.5 text-[#8b5cf6]" />
@@ -147,7 +170,10 @@ export const CoordinatorPublishResultsView: React.FC = () => {
 
         </div>
 
-        {/* HUD Judge Progress Monitor Card (100% Real API Data) */}
+        {/* =====================================================================
+            KHỐI 2: HUD GIÁM SÁT TIẾN ĐỘ CHẤM CỦA GIÁM KHẢO (REALTIME MONITORING)
+            Kiểm tra xem toàn bộ Giám khảo trong hạng mục đã nộp/chốt phiếu chấm chưa
+            ===================================================================== */}
         <div className="bg-[#13191c] border border-[#263339] p-5 space-y-4 font-mono text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#263339] pb-3">
             <div className="flex items-center gap-2">
@@ -157,6 +183,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
               </h3>
             </div>
             
+            {/* Nhãn cảnh báo: Đã chốt 100% hay còn phiếu bản nháp (Draft) */}
             <div className="flex items-center gap-2">
               <span className="text-[11px] text-[#8a9ba8]">TRẠNG THÁI TOÀN HẠNG MỤC:</span>
               {calibration.isCalibrationCompleted ? (
@@ -173,7 +200,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Progress Bar & Stats */}
+          {/* Thanh tiến độ (Progress Bar) và thông số tổng hợp */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
             <div className="md:col-span-2 space-y-1.5">
               <div className="flex justify-between text-[11px] text-[#8a9ba8]">
@@ -199,7 +226,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Real API Judges Matrix Overview */}
+          {/* Danh sách thẻ chi tiết từng cặp Giám khảo -> Đội thi */}
           {calibration.scoresList.length > 0 && (
             <div className="pt-2 border-t border-[#263339]">
               <div className="text-[11px] text-[#8a9ba8] uppercase mb-2 flex items-center justify-between">
@@ -231,7 +258,9 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           )}
         </div>
 
-        {/* Title Header */}
+        {/* =====================================================================
+            KHỐI 3: TIÊU ĐỀ & THANH CÔNG CỤ TÁC VỤ CỦA EC (ACTIONS TOOLBAR)
+            ===================================================================== */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-[#263339] pb-4">
           <div>
             <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
@@ -242,8 +271,9 @@ export const CoordinatorPublishResultsView: React.FC = () => {
             </p>
           </div>
 
-          {/* Top Right Action Buttons */}
+          {/* Các nút tác vụ nhanh của EC */}
           <div className="flex flex-wrap items-center gap-3">
+            {/* Nút 1: Xuất bảng điểm ra file CSV / Excel */}
             <button
               type="button"
               onClick={actions.handleExportCSV}
@@ -254,6 +284,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
               <span>XUẤT CSV</span>
             </button>
 
+            {/* Nút 2: Mở modal soạn và gửi email thông báo kết quả cho thí sinh */}
             <button
               type="button"
               onClick={actions.handleOpenEmailModal}
@@ -264,6 +295,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
               <span>GỬI EMAIL</span>
             </button>
 
+            {/* Nút 3: Điều hướng tới trang Cấu hình Giải thưởng */}
             <Link href={`/coordinator/prizes?eventId=${selectedEventId}`}>
               <button
                 type="button"
@@ -274,6 +306,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
               </button>
             </Link>
 
+            {/* Nút 4: TỰ ĐỘNG TÍNH ĐIỂM (Gọi API Calculate để tổng hợp điểm GK và xếp Rank) */}
             <button
               type="button"
               disabled={isSubmitting}
@@ -284,6 +317,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
               <span>TÍNH ĐIỂM TỰ ĐỘNG</span>
             </button>
 
+            {/* Nút 5: CÔNG BỐ KẾT QUẢ / ẨN VỀ BẢN NHÁP (Chuyển trạng thái IsPublished) */}
             <button
               type="button"
               disabled={isSubmitting}
@@ -300,7 +334,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Global Alert Messages */}
+        {/* Khối hiển thị thông báo Lỗi hoặc Thành công toàn cục */}
         {errorMessage && (
           <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs flex items-center gap-3">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -315,9 +349,11 @@ export const CoordinatorPublishResultsView: React.FC = () => {
           </div>
         )}
 
-        {/* Main Data Grid */}
+        {/* =====================================================================
+            KHỐI 4: BẢNG MA TRẬN ĐIỂM VÀ DANH SÁCH THỨ TỰ XẾP HẠNG CÁC ĐỘI THI
+            ===================================================================== */}
         <div className="bg-[#13191c] border border-[#263339]">
-          {/* Header */}
+          {/* Header trạng thái công bố của bảng */}
           <div className="h-10 bg-[#182024] flex items-center justify-between px-4 border-b border-[#263339] font-mono text-xs text-[#8a9ba8] font-bold tracking-widest uppercase">
             <span>
               BẢNG XẾP HẠNG MA TRẬN ĐIỂM{tracksList.find((t) => t.id === selectedTrackId)?.name ? ` — [ ${tracksList.find((t) => t.id === selectedTrackId)?.name} ]` : ""}
@@ -327,7 +363,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
             </span>
           </div>
 
-          {/* Table */}
+          {/* Cấu trúc Bảng xếp hạng */}
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
               <thead>
@@ -347,21 +383,38 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
+                  // =================================================================
+                  // 👉 ĐOẠN CODE GEN RA DANH SÁCH & THỨ TỰ CÁC TEAM ĐÃ ĐƯỢC CHẤM ĐIỂM:
+                  // Lấy từ `paginatedResults` (đã được BE sắp xếp OrderByDescending)
+                  // =================================================================
                   paginatedResults.map((r: any, idx: number) => {
+                    // 1. Tính toán chuỗi hiển thị Hạng (01, 02, 03...):
+                    // Ưu tiên lấy `r.rank` từ Backend; fallback theo vị trí phân trang
                     const rankStr = String(r.rank || (currentPage - 1) * pageSize + idx + 1).padStart(2, "0");
+                    
+                    // 2. Tra cứu tên đội thi từ Map Cache (teamNameById)
                     const name = teamNameById.get(r.teamId) || r.teamName || r.TeamName || r.teamId;
                     const uid = `KQ: ${(r.id || "").slice(0, 8).toUpperCase()}`;
+                    
+                    // 3. Format điểm số làm tròn 2 chữ số thập phân
                     const score = Number(r.finalScore || r.totalScore || r.TotalScore || 0).toFixed(2);
+                    
+                    // 4. Xác định trạng thái Thăng hạng / Bị loại
                     const isAdv = r.isAdvanced !== undefined ? Boolean(r.isAdvanced) : idx < 2;
 
+                    // 5. Lấy giải thưởng hiện tại đã gán cho đội
                     const assignedPrizeId = assignedPrizesMap[r.id] ?? r.prizeId ?? "none";
 
                     return (
                       <tr key={r.id || idx} className="hover:bg-[#182024] transition-colors">
+                        {/* CỘT 1: SỐ THỨ TỰ / HẠNG CỦA ĐỘI THI */}
                         <td className="p-4 text-center font-bold text-base text-[#8b5cf6]">{rankStr}</td>
+                        
+                        {/* CỘT 2: TÊN ĐỘI THI + NÚT [SOI ĐIỂM GK] */}
                         <td className="p-4">
                           <div className="font-sans font-bold text-sm text-[#e1e7ec] flex items-center justify-between gap-2">
                             <span>{name}</span>
+                            {/* Nút mở Modal soi chi tiết từng phiếu chấm của Hội đồng GK */}
                             <button
                               type="button"
                               onClick={() =>
@@ -380,7 +433,11 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                           </div>
                           <div className="text-[10px] text-[#8a9ba8] font-mono mt-0.5">{uid}</div>
                         </td>
+
+                        {/* CỘT 3: TỔNG ĐIỂM TRUNG BÌNH CHUNG CUỘC */}
                         <td className="p-4 text-right font-bold text-base text-[#e1e7ec]">{score}</td>
+
+                        {/* CỘT 4: HUY HIỆU KẾT QUẢ (THĂNG HẠNG / BỊ LOẠI) */}
                         <td className="p-4 text-center">
                           {isAdv ? (
                             <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold uppercase">
@@ -393,7 +450,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
                           )}
                         </td>
                         
-                        {/* CƠ CHẾ GÁN GIẢI THƯỞNG DROPDOWN */}
+                        {/* CỘT 5: DROPDOWN GÁN GIẢI THƯỞNG (PRIZE ASSIGNMENT) */}
                         <td className="p-4">
                           <div className="flex items-center gap-1.5">
                             <Award className="w-4 h-4 text-[#f59e0b] shrink-0" />
@@ -419,7 +476,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
             </table>
           </div>
 
-          {/* Table Footer Pagination */}
+          {/* Phân trang bảng kết quả */}
           {displayResults.length > 0 && (
             <div className="p-3 bg-[#0a0e10] border-t border-[#263339]">
               <Pagination
@@ -437,10 +494,13 @@ export const CoordinatorPublishResultsView: React.FC = () => {
 
       </div>
 
-      {/* 6.2 Modal Gửi Email Kết Quả */}
+      {/* =====================================================================
+          KHỐI 5: MODAL GỬI EMAIL THÔNG BÁO KẾT QUẢ CHO THÍ SINH
+          ===================================================================== */}
       {isEmailModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="bg-[#13191c] border border-[#263339] max-w-xl w-full p-6 space-y-5 font-mono text-xs shadow-2xl">
+            {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-[#263339] pb-3">
               <div className="flex items-center gap-2 text-[#a855f7] font-bold uppercase text-sm">
                 <Mail className="w-4 h-4" />
@@ -454,6 +514,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
               </button>
             </div>
 
+            {/* Form chọn đối tượng nhận và nhập nội dung Email */}
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[#8a9ba8] uppercase block text-[11px]">Đối tượng nhận mail:</label>
@@ -507,6 +568,7 @@ export const CoordinatorPublishResultsView: React.FC = () => {
               </div>
             </div>
 
+            {/* Nút hành động trong Modal */}
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#263339]">
               <button
                 type="button"
@@ -529,7 +591,9 @@ export const CoordinatorPublishResultsView: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Soi Chi Tiết Điểm Giám Khảo */}
+      {/* =====================================================================
+          KHỐI 6: MODAL SOI CHI TIẾT ĐIỂM TỪNG TIÊU CHÍ RUBRIC CỦA GIÁM KHẢO
+          ===================================================================== */}
       <SubmissionJudgeScoresModal
         open={inspectScoresModal.open}
         onClose={() => actions.setInspectScoresModal({ open: false })}

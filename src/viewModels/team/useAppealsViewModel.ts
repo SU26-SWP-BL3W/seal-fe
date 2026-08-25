@@ -15,6 +15,9 @@ import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/providers/ToastProvider";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 
+/**
+ * Hàm tiện ích trích xuất an toàn giá trị chuỗi từ Object
+ */
 function pick(obj: unknown, ...keys: string[]): string {
   const rec = obj as Record<string, unknown> | null;
   if (!rec) return "";
@@ -25,37 +28,61 @@ function pick(obj: unknown, ...keys: string[]): string {
   return "";
 }
 
+/**
+ * =========================================================================================
+ * VIEWMODEL: useAppealsViewModel
+ * MÔ HÌNH: MVVM (Model - View - ViewModel)
+ * VAI TRÒ: Sinh viên (Team Leader / Member) & Điều phối viên (Event Coordinator - EC)
+ * 
+ * NHIỆM VỤ CHÍNH:
+ *   1. Quản lý logic tạo mới đơn phúc khảo cho Trưởng nhóm (`handleCreateAppeal`).
+ *   2. Đẩy thông báo chuông hệ thống tới Ban Tổ Chức khi có khiếu nại mới.
+ *   3. Cho phép EC phản hồi / duyệt đơn phúc khảo trực tiếp từ giao diện (`handleRespond`).
+ *   4. Tự động chuyển đổi chế độ xem dữ liệu: nếu là EC -> lấy toàn bộ đơn sự kiện; nếu là Đội -> lấy đơn của đội mình.
+ * =========================================================================================
+ */
 export function useAppealsViewModel() {
   const toast = useToast();
   const { user, activeRole } = useAuth();
+  
+  // State form gửi đơn phúc khảo
   const [reason, setReason] = useState("");
   const [submitResultId, setSubmitResultId] = useState("");
   const [formError, setFormError] = useState("");
 
+  // State Modal xem chi tiết và phản hồi đơn
   const [detailModal, setDetailModal] = useState<Appeal | null>(null);
   const [responseText, setResponseText] = useState("");
   const [respondError, setRespondError] = useState("");
 
+  // Xác định quyền hạn: Trưởng nhóm (TeamLeader) hay Điều phối viên (EC)
   const roleName = pick(activeRole, "roleName", "RoleName");
   const isLeader = roleName === "TeamLeader";
   const isEC = roleName === "EventCoordinator" || roleName === "Coordinator" || Boolean(user?.isAdmin || user?.IsAdmin);
   const eventIdFromRole = pick(activeRole, "eventId", "EventId");
 
+  // Truy vấn thông tin Đội thi và Bài nộp của đội
   const { data: myTeam } = useMyTeam(eventIdFromRole || undefined);
   const teamId = pick(myTeam, "id", "Id", "TeamId");
   const { data: mySubmissions = [] } = useMySubmissions();
 
+  // Truy vấn danh sách đơn: Nếu là EC -> lấy toàn bộ đơn của Sự kiện; Nếu là Đội -> lấy đơn của Đội mình
   const teamAppeals = useGetAppealsByTeam(!isEC ? teamId || undefined : undefined);
   const eventAppeals = useGetAppealsByEvent(isEC ? eventIdFromRole || undefined : undefined);
 
   const { data: appealsRaw, isLoading, refetch } = isEC ? eventAppeals : teamAppeals;
   const appeals: Appeal[] = Array.isArray(appealsRaw) ? appealsRaw : ((appealsRaw as any)?.data ?? []);
 
+  // Phân trang 6 đơn / trang
   const pagination = usePagination(appeals, 6);
 
+  // TanStack Query Mutations
   const { mutateAsync: createAppeal, isPending: isSubmitting } = useCreateAppeal();
   const { mutateAsync: respondAppeal, isPending: isResponding } = useRespondAppeal();
 
+  // ---------------------------------------------------------------------------------------
+  // [ACTION 1]: GỬI ĐƠN PHÚC KHẢO (CHỈ DÀNH CHO TEAM LEADER)
+  // ---------------------------------------------------------------------------------------
   const handleCreateAppeal = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
@@ -64,16 +91,20 @@ export function useAppealsViewModel() {
     try {
       await createAppeal({ submitResultId, reason: reason.trim() });
       toast.success("Đã gửi đơn phúc khảo thành công! Ban Tổ Chức sẽ tiếp nhận và phản hồi kết quả qua email và thông báo chuông.");
+      
+      // Bắn thông báo xác nhận cho Thí sinh
       pushSystemNotification({
         title: "Gửi đơn phúc khảo thành công",
         message: `Đội thi đã gửi đơn phúc khảo bài nộp. Ban Tổ Chức sẽ tiếp nhận và xử lý sớm nhất.`,
         type: "info",
       });
+      // Bắn thông báo cảnh báo cho Cán bộ điều phối (EC)
       pushSystemNotification({
         title: "Đơn phúc khảo mới cần xử lý",
         message: `Có đơn phúc khảo mới từ Đội thi cho bài nộp. Cán bộ điều phối vui lòng kiểm tra và xử lý.`,
         type: "warning",
       });
+
       setReason("");
       setSubmitResultId("");
       refetch();
@@ -84,11 +115,21 @@ export function useAppealsViewModel() {
     }
   };
 
+  // ---------------------------------------------------------------------------------------
+  // [ACTION 2]: PHẢN HỒI ĐƠN PHÚC KHẢO TỪ PHÍA EC (APPROVE / REJECT)
+  // ---------------------------------------------------------------------------------------
   const handleRespond = async (status: typeof AppealStatus.Approved | typeof AppealStatus.Rejected) => {
     if (!detailModal || !responseText.trim()) return;
     setRespondError("");
     try {
-      await respondAppeal({ id: detailModal.id, appealId: detailModal.id, status, response: responseText.trim(), payload: { status, response: responseText.trim() } } as any);
+      await respondAppeal({
+        id: detailModal.id,
+        appealId: detailModal.id,
+        status,
+        response: responseText.trim(),
+        payload: { status, response: responseText.trim() },
+      } as any);
+
       if (status === AppealStatus.Approved) {
         toast.success("✅ Đã phê duyệt đơn phúc khảo. Điểm số bài thi đã được cập nhật và gửi thông báo tới đội thi.");
         pushSystemNotification({
@@ -114,6 +155,7 @@ export function useAppealsViewModel() {
     }
   };
 
+  // Tìm bài nộp liên quan đến đơn phúc khảo đang mở
   const relatedSubmission = detailModal
     ? mySubmissions.find((s: any) => pick(s, "id", "Id") === detailModal.submitResultId)
     : undefined;

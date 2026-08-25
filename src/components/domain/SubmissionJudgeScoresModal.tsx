@@ -36,21 +36,32 @@ export function SubmissionJudgeScoresModal({
     data: breakdown,
     isLoading,
     isError,
+    error,
     refetch,
-  } = useGetTeamScoreBreakdown(open ? teamId : undefined);
+  } = useGetTeamScoreBreakdown(open && teamId ? teamId : undefined);
 
   if (!open) return null;
 
-  // Filter submissions by submitResultId if specified
-  const allSubmissions = breakdown?.submissions || [];
-  const targetSubmissions = submitResultId
-    ? allSubmissions.filter(
-        (s) => (s.submitResultId || (s as any).SubmitResultId) === submitResultId
-      )
-    : allSubmissions;
+  // Trích xuất an toàn danh sách submissions từ mọi cấu trúc dữ liệu trả về
+  const rawSubmissions: any[] =
+    breakdown?.submissions ||
+    (breakdown as any)?.Submissions ||
+    (breakdown as any)?.data?.submissions ||
+    (breakdown as any)?.data?.Submissions ||
+    [];
 
-  const activeSubmissionsList =
-    targetSubmissions.length > 0 ? targetSubmissions : allSubmissions;
+  // So khớp mã bài nộp (submitResultId) không phân biệt hoa thường
+  const normalizedSubmitId = (submitResultId || "").trim().toLowerCase();
+  const targetSubmissions = normalizedSubmitId
+    ? rawSubmissions.filter((s: any) => {
+        const sId = String(s.submitResultId || s.SubmitResultId || s.id || s.Id || "").trim().toLowerCase();
+        return sId === normalizedSubmitId;
+      })
+    : rawSubmissions;
+
+  // Nếu tìm thấy đúng bài nộp thì hiển thị bài đó, nếu không thì hiển thị toàn bộ bài nộp của đội
+  const activeSubmissionsList = targetSubmissions.length > 0 ? targetSubmissions : rawSubmissions;
+  const displayTeamName = breakdown?.teamName || (breakdown as any)?.TeamName || teamName;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in font-mono text-xs">
@@ -75,7 +86,7 @@ export function SubmissionJudgeScoresModal({
           </div>
           <h2 className="font-display text-xl font-bold uppercase text-white flex items-center gap-2">
             <Award className="w-6 h-6 text-[#a855f7]" />
-            Bảng Điểm Giám Khảo — {breakdown?.teamName || teamName}
+            Bảng Điểm Giám Khảo — {displayTeamName}
           </h2>
           <p className="text-xs text-[var(--text-muted)]">
             Theo dõi chi tiết điểm số từng tiêu chí, nhận xét và trạng thái nộp phiếu chấm của tất cả Giám khảo trong hội đồng.
@@ -84,7 +95,15 @@ export function SubmissionJudgeScoresModal({
 
         {/* Content */}
         <div className="py-4 space-y-6">
-          {isLoading ? (
+          {!teamId ? (
+            <div className="p-8 text-center border border-dashed border-amber-500/40 rounded bg-amber-950/20 space-y-2 text-amber-300">
+              <AlertCircle className="w-8 h-8 mx-auto text-amber-400" />
+              <p className="font-bold">Không xác định được Mã đội thi (TeamId)</p>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                Bài nộp này chưa được liên kết với hồ sơ Đội thi hợp lệ trong hệ thống.
+              </p>
+            </div>
+          ) : isLoading ? (
             <div className="py-16 flex flex-col items-center justify-center gap-3 text-[#a855f7]">
               <RefreshCw className="w-7 h-7 animate-spin" />
               <span className="font-bold">Đang tải bảng điểm chi tiết từ các Giám khảo...</span>
@@ -92,7 +111,10 @@ export function SubmissionJudgeScoresModal({
           ) : isError ? (
             <div className="p-6 bg-red-950/30 border border-red-500/40 text-red-300 rounded text-center space-y-3">
               <AlertCircle className="w-8 h-8 mx-auto text-red-400" />
-              <p>Không thể tải dữ liệu điểm chấm của đội thi này.</p>
+              <p className="font-bold">Không thể tải dữ liệu điểm chấm của đội thi này.</p>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                {(error as any)?.response?.data?.message || (error as any)?.message || "Vui lòng kiểm tra quyền truy cập Event Coordinator của bạn."}
+              </p>
               <Button variant="ghost" onClick={() => refetch()} className="text-xs border border-red-500/50">
                 Thử lại
               </Button>
@@ -106,31 +128,34 @@ export function SubmissionJudgeScoresModal({
               </p>
             </div>
           ) : (
-            activeSubmissionsList.map((sub, sIdx) => {
-              const judgeScores = sub.judgeScores || [];
+            activeSubmissionsList.map((sub: any, sIdx: number) => {
+              const judgeScores: any[] = sub.judgeScores || sub.JudgeScores || [];
+              const roundName = sub.roundName || sub.RoundName || "Vòng thi";
+              const trackName = sub.trackName || sub.TrackName || "Chung";
+              const isRoundPublished = Boolean(sub.roundPublished ?? sub.RoundPublished);
 
               return (
-                <div key={sub.submitResultId || sIdx} className="space-y-4">
+                <div key={sub.submitResultId || sub.SubmitResultId || sIdx} className="space-y-4">
                   {/* Round & Track Meta Strip */}
                   <div className="p-3 bg-[var(--bg-input)] border border-[#a855f7]/30 rounded flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <span className="px-2.5 py-0.5 bg-[#a855f7]/20 border border-[#a855f7]/40 text-[#a855f7] rounded font-bold">
-                        Vòng: {sub.roundName || "Vòng thi"}
+                        Vòng: {roundName}
                       </span>
                       <span className="text-[var(--accent-team)] font-bold">
-                        Hạng mục: {sub.trackName || "Chung"}
+                        Hạng mục: {trackName}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
                       <span>Trạng thái vòng:</span>
                       <span
                         className={`font-bold px-2 py-0.5 rounded ${
-                          sub.roundPublished
+                          isRoundPublished
                             ? "bg-emerald-950/50 text-emerald-300 border border-emerald-500/40"
                             : "bg-amber-950/50 text-amber-300 border border-amber-500/40"
                         }`}
                       >
-                        {sub.roundPublished ? "Đã công bố điểm" : "Chưa công bố điểm"}
+                        {isRoundPublished ? "Đã công bố điểm" : "Chưa công bố điểm"}
                       </span>
                     </div>
                   </div>
@@ -142,9 +167,12 @@ export function SubmissionJudgeScoresModal({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {judgeScores.map((jScore, jIdx) => {
-                        const criteriaList = jScore.criteria || [];
-                        const isDone = jScore.isSubmitted;
+                      {judgeScores.map((jScore: any, jIdx: number) => {
+                        const criteriaList: any[] = jScore.criteria || jScore.Criteria || [];
+                        const isDone = Boolean(jScore.isSubmitted ?? jScore.IsSubmitted);
+                        const judgeName = jScore.judgeName || jScore.JudgeName || `Giám khảo #${jIdx + 1}`;
+                        const totalScore = Number(jScore.totalScore ?? jScore.TotalScore ?? 0);
+                        const comment = jScore.comment || jScore.Comment;
 
                         return (
                           <div
@@ -159,7 +187,7 @@ export function SubmissionJudgeScoresModal({
                                 </div>
                                 <div>
                                   <div className="font-bold text-sm text-white flex items-center gap-2">
-                                    <span>{jScore.judgeName || `Giám khảo #${jIdx + 1}`}</span>
+                                    <span>{judgeName}</span>
                                   </div>
                                   <span className="text-[10px] text-[var(--text-muted)]">
                                     Thành viên Hội đồng Giám khảo
@@ -193,7 +221,7 @@ export function SubmissionJudgeScoresModal({
                                 <div className="px-3 py-1 bg-black/60 border border-[#a855f7]/50 rounded text-right">
                                   <span className="text-[10px] text-[var(--text-muted)] block uppercase">Tổng điểm:</span>
                                   <span className="font-mono text-base font-bold text-[#00d9ff]">
-                                    {jScore.totalScore ? Number(jScore.totalScore).toFixed(2) : "0.00"}{" "}
+                                    {totalScore.toFixed(2)}{" "}
                                     <span className="text-xs text-[var(--text-muted)]">/ 10</span>
                                   </span>
                                 </div>
@@ -213,16 +241,17 @@ export function SubmissionJudgeScoresModal({
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-[var(--border-muted)]/40">
-                                    {criteriaList.map((crit, cIdx) => {
-                                      const val = Number(crit.value || 0);
-                                      const max = Number(crit.maxScore || 10);
-                                      const weight = Number(crit.weight || 0);
+                                    {criteriaList.map((crit: any, cIdx: number) => {
+                                      const critName = crit.criteriaName || crit.CriteriaName || `Tiêu chí #${cIdx + 1}`;
+                                      const val = Number(crit.value ?? crit.Value ?? 0);
+                                      const max = Number(crit.maxScore ?? crit.MaxScore ?? 10);
+                                      const weight = Number(crit.weight ?? crit.Weight ?? 0);
                                       const weightedVal = max > 0 ? (val / max) * weight : 0;
 
                                       return (
                                         <tr key={cIdx} className="hover:bg-white/5">
                                           <td className="p-2.5 font-bold text-[var(--text-primary)]">
-                                            {crit.criteriaName || `Tiêu chí #${cIdx + 1}`}
+                                            {critName}
                                           </td>
                                           <td className="p-2.5 text-center font-bold text-[#00d9ff]">
                                             {val} / {max}
@@ -248,7 +277,7 @@ export function SubmissionJudgeScoresModal({
                                 <span>Nhận Xét &amp; Phản Hồi Từ Giám Khảo:</span>
                               </div>
                               <p className="font-sans text-xs text-zinc-200 leading-relaxed italic pl-5">
-                                {jScore.comment ? `"${jScore.comment}"` : "Giám khảo không để lại lời nhắn kèm theo."}
+                                {comment ? `"${comment}"` : "Giám khảo không để lại lời nhắn kèm theo."}
                               </p>
                             </div>
                           </div>

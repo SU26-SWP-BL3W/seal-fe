@@ -8,9 +8,26 @@ import { Button } from "@/components/ui";
 import { useCoordinatorAppealsViewModel } from "@/viewModels/coordinator/useCoordinatorAppealsViewModel";
 import { Check, X, AlertCircle, CheckCircle2, UserPlus, Filter, ChevronDown, ArrowLeft, RefreshCw } from "lucide-react";
 
+/**
+ * =========================================================================================
+ * COMPONENT: CoordinatorAppealsView
+ * VAI TRÒ: Điều phối viên (Event Coordinator - EC) / Ban Tổ Chức
+ * CHỨC NĂNG TRỌNG TÂM:
+ *   1. Quản lý Hàng đợi đơn khiếu nại / phúc khảo điểm số từ các đội thi (/coordinator/appeals).
+ *   2. Xem chi tiết lý do khiếu nại, mã bài nộp, đội thi và thời gian nộp đơn.
+ *   3. DUYỆT ĐƠN PHÚC KHẢO (Approve Appeal) & PHÂN CÔNG GIÁM KHẢO CHẤM LẠI (Re-assign Judge).
+ *   4. TỪ CHỐI ĐƠN PHÚC KHẢO (Reject Appeal) kèm lý do giải trình bắt buộc gửi về cho đội thi.
+ *   5. Lọc đơn phúc khảo theo từng Sự kiện và Vòng thi tương ứng.
+ * =========================================================================================
+ */
 export const CoordinatorAppealsView: React.FC = () => {
+  // -------------------------------------------------------------------------
+  // [BƯỚC 1]: KẾT NỐI VỚI VIEWMODEL (MVVM PATTERN)
+  // Bóc tách toàn bộ state xử lý form, modal và mutation sang useCoordinatorAppealsViewModel
+  // -------------------------------------------------------------------------
   const { state, data, pagination, actions } = useCoordinatorAppealsViewModel();
 
+  // State quản trị form, modal duyệt/từ chối và thông báo
   const {
     selectedEventId,
     eventId,
@@ -24,13 +41,19 @@ export const CoordinatorAppealsView: React.FC = () => {
     errorMessage,
   } = state;
 
+  // Dữ liệu danh sách truy vấn từ Backend (Sự kiện, Vòng thi, Giám khảo, Đơn phúc khảo)
   const { eventsList, rounds, judges, teamNameById, appeals, displayAppeals, isLoading } = data;
+  
+  // Phân trang danh sách đơn phúc khảo
   const { paginatedItems: paginatedAppeals, currentPage, totalPages, totalItems, pageSize, setCurrentPage, setPageSize } = pagination;
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#0a0e10] text-[#e1e7ec] font-sans selection:bg-[#8b5cf6] selection:text-white">
       <div className="flex-1 p-6 space-y-6 max-w-[1500px] w-full mx-auto">
-        {/* Navigation back */}
+        
+        {/* =====================================================================
+            KHỐI 1: THANH ĐIỀU HƯỚNG & LÀM MỚI (TOP NAVIGATION)
+            ===================================================================== */}
         <div className="flex items-center justify-between">
           <Link href={`/coordinator/submissions${selectedEventId ? `?eventId=${selectedEventId}` : ""}`} className="text-xs font-mono text-[#8a9ba8] hover:text-white flex items-center gap-1">
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -46,8 +69,11 @@ export const CoordinatorAppealsView: React.FC = () => {
           </Button>
         </div>
 
-        {/* Event + Round selectors */}
+        {/* =====================================================================
+            KHỐI 2: BỘ LỌC SỰ KIỆN & VÒNG THI (FILTER BAR)
+            ===================================================================== */}
         <div className="bg-[#13191c] p-4 border border-[#263339] flex flex-col sm:flex-row sm:items-center gap-4 font-mono text-xs">
+          {/* Lọc Sự kiện */}
           <div className="flex items-center gap-3 flex-1">
             <Filter className="w-4 h-4 text-[#8b5cf6] shrink-0" />
             <span className="text-[#8b5cf6] font-bold uppercase tracking-wider shrink-0">SỰ KIỆN:</span>
@@ -74,6 +100,7 @@ export const CoordinatorAppealsView: React.FC = () => {
             </div>
           </div>
 
+          {/* Lọc Vòng thi */}
           <div className="flex items-center gap-3 flex-1">
             <span className="text-[#8b5cf6] font-bold uppercase tracking-wider shrink-0">VÒNG THI:</span>
             <div className="relative flex-1 max-w-md">
@@ -98,6 +125,7 @@ export const CoordinatorAppealsView: React.FC = () => {
           </div>
         </div>
 
+        {/* Tiêu đề trang */}
         <div className="border-b border-[#263339] pb-4">
           <h1 className="font-mono font-bold text-2xl md:text-3xl text-[#e1e7ec] uppercase tracking-wider">
             HÀNG ĐỢI XỬ LÝ PHÚC KHẢO
@@ -107,6 +135,7 @@ export const CoordinatorAppealsView: React.FC = () => {
           </p>
         </div>
 
+        {/* Thông báo Alert */}
         {errorMessage && (
           <div className="p-4 bg-red-500/10 border border-[#ef4444]/30 text-[#ef4444] font-mono text-xs flex items-center gap-3">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -120,6 +149,9 @@ export const CoordinatorAppealsView: React.FC = () => {
           </div>
         )}
 
+        {/* =====================================================================
+            KHỐI 3: BẢNG HÀNG ĐỢI ĐƠN PHÚC KHẢO (APPEALS QUEUE TABLE)
+            ===================================================================== */}
         <div className="bg-[#13191c] border border-[#263339]">
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
@@ -152,28 +184,39 @@ export const CoordinatorAppealsView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
+                  // 👉 Render từng đơn phúc khảo của các đội thi
                   paginatedAppeals.map((apl) => {
                     const team = teamNameById.get(apl.teamId) || apl.teamId;
                     const isPending = apl.status === AppealStatus.Pending;
 
                     return (
                       <tr key={apl.id} className="hover:bg-[#182024] transition-colors">
+                        {/* Cột 1: Mã bài nộp + Tên đội thi */}
                         <td className="p-4 text-[#8b5cf6] font-bold">
                           #{apl.submitResultId}
                           <div className="text-[10px] text-[#8a9ba8] font-normal mt-0.5 truncate max-w-[8rem]">{team}</div>
                         </td>
+
+                        {/* Cột 2: Lý do khiếu nại do đội trưởng gửi lên */}
                         <td className="p-4 text-[#8a9ba8] truncate max-w-xs">{apl.reason}</td>
+
+                        {/* Cột 3: Thời gian gửi đơn */}
                         <td className="p-4 text-[#8a9ba8]">
                           {apl.createdTime ? new Date(apl.createdTime).toLocaleString("vi-VN") : "—"}
                         </td>
+
+                        {/* Cột 4: Trạng thái (Chờ xử lý / Đã duyệt / Đã từ chối) */}
                         <td className="p-4">
                           <span className={`font-semibold text-[10px] ${isPending ? "text-[#f59e0b]" : apl.status === 1 ? "text-emerald-400" : "text-[#ef4444]"}`}>
                             {isPending ? "[ CHỜ XỬ LÝ ]" : apl.status === 1 ? "[ ĐÃ DUYỆT ]" : "[ ĐÃ TỪ CHỐI ]"}
                           </span>
                         </td>
+
+                        {/* Cột 5: NÚT THAO TÁC CỦA EC (DUYỆT HOẶC TỪ CHỐI) */}
                         <td className="p-4 text-right pr-6">
                           {isPending && (
                             <div className="flex items-center justify-end gap-2">
+                              {/* Nút mở popup Duyệt đơn & Phân công giám khảo */}
                               <button
                                 type="button"
                                 disabled={isSubmitting}
@@ -183,6 +226,8 @@ export const CoordinatorAppealsView: React.FC = () => {
                                 <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                                 <span>DUYỆT</span>
                               </button>
+
+                              {/* Nút mở popup Từ chối đơn & Nhập lý do */}
                               <button
                                 type="button"
                                 disabled={isSubmitting}
@@ -203,6 +248,7 @@ export const CoordinatorAppealsView: React.FC = () => {
             </table>
           </div>
 
+          {/* Phân trang danh sách đơn */}
           {displayAppeals.length > 0 && (
             <div className="p-4 border-t border-[#263339]">
               <Pagination
@@ -219,6 +265,9 @@ export const CoordinatorAppealsView: React.FC = () => {
         </div>
       </div>
 
+      {/* =====================================================================
+          KHỐI 4: MODAL DUYỆT ĐƠN & PHÂN CÔNG GIÁM KHẢO CHẤM LẠI
+          ===================================================================== */}
       {selectedAppealId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#13191c] border border-[#263339] p-6 max-w-md w-full space-y-4">
@@ -274,6 +323,9 @@ export const CoordinatorAppealsView: React.FC = () => {
         </div>
       )}
 
+      {/* =====================================================================
+          KHỐI 5: MODAL TỪ CHỐI ĐƠN PHÚC KHẢO & NHẬP GIẢI TRÌNH
+          ===================================================================== */}
       {rejectingAppealId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#13191c] border border-[#263339] p-6 max-w-md w-full space-y-4">
