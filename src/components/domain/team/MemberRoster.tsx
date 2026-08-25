@@ -57,7 +57,11 @@ function MemberRow({
           <span className="truncate font-mono text-sm font-semibold text-[color:var(--text-primary)]">
             {member.fullName}
           </span>
-          {member.roleName === "TeamLeader" && <Badge tone="team">Đội trưởng</Badge>}
+          {member.roleName === "TeamLeader" ? (
+            <Badge tone="team">Đội trưởng</Badge>
+          ) : (
+            <Badge tone="info">Thành viên</Badge>
+          )}
           {isCurrentUser && <Badge tone="neutral">Bạn</Badge>}
         </div>
         <div className="truncate font-mono text-[11px] text-[color:var(--text-muted)]">{member.email}</div>
