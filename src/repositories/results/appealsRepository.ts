@@ -1,12 +1,23 @@
+/**
+ * =========================================================================================
+ * REPOSITORY: appealsRepository & useAppeals* Hooks
+ * TẦNG KIẾN TRÚC: Data Access / Repository Layer
+ * MÔ TẢ:
+ *   Quản lý toàn bộ các lời gọi API (HTTP Request qua apiClient Axios) tương tác với Controller:
+ *   `SEAL_Backend.Controllers.AppealsController` (C# .NET) cho cả vai trò Thí sinh (Team) và Cán bộ Điều phối (EC).
+ * =========================================================================================
+ */
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/models/apiClient";
 import type { PagedResult } from "@/models/types";
 
-// Field/route đối chiếu trực tiếp AppealsController.cs + Features/Appeals/**.
-// Body của Create/Respond KHÔNG bọc trong "RequestModel" — controller bind thẳng
-// Command làm body (giống ResendEmailVerification/UpdateStudentProfile ở Auth).
-
-/** Khớp enum AppealStatus bên BE — serialize dạng SỐ (0/1/2), không phải chuỗi. */
+/**
+ * Khớp với enum AppealStatus bên Backend (C# SEAL_Domain.Entity.Enums.AppealStatus):
+ * - Pending (0): Đơn đang chờ EC xử lý
+ * - Approved (1): EC đã chấp nhận & phân công Giám khảo chấm lại
+ * - Rejected (2): EC từ chối khiếu nại kèm giải trình
+ */
 export const AppealStatus = {
   Pending: 0,
   Approved: 1,
@@ -14,6 +25,9 @@ export const AppealStatus = {
 } as const;
 export type AppealStatusValue = (typeof AppealStatus)[keyof typeof AppealStatus];
 
+/**
+ * Interface cấu trúc Entity Đơn phúc khảo (Appeal)
+ */
 export interface Appeal {
   id: string;
   teamId: string;
@@ -26,12 +40,22 @@ export interface Appeal {
   lastUpdatedTime: string;
 }
 
+/**
+ * Interface Payload tạo đơn phúc khảo mới từ Thí sinh (Team Leader)
+ */
 export interface CreateAppealPayload {
   submitResultId: string;
   reason: string;
 }
 
-/** POST /Appeals — chỉ Team Leader, và phải nộp TRƯỚC KHI kết quả vòng được công bố (BE tự chặn). */
+/**
+ * =====================================================================================
+ * HOOK: useCreateAppeal (POST /api/Appeals)
+ * VAI TRÒ: Chỉ Trưởng nhóm (Team Leader) mới được gọi.
+ * RÀNG BUỘC NGHIỆP VỤ:
+ *   Đơn phúc khảo bắt buộc phải nộp TRƯỚC KHI kết quả vòng thi được công bố (Backend tự kiểm tra cờ IsPublished).
+ * =====================================================================================
+ */
 export function useCreateAppeal() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -40,19 +64,28 @@ export function useCreateAppeal() {
       return data;
     },
     onSuccess: () => {
+      // Invalidate cache để cập nhật danh sách đơn phúc khảo
       queryClient.invalidateQueries({ queryKey: ["appeals"] });
     },
   });
 }
 
+/**
+ * Interface Payload phản hồi đơn phúc khảo từ Điều phối viên (EC)
+ */
 export interface RespondAppealPayload {
-  status: AppealStatusValue;
-  response: string;
-  /** Tuỳ chọn — phân công giám khảo khác chấm lại nếu đơn được chấp nhận. */
-  assignedJudgeId?: string;
+  status: AppealStatusValue;     // 1 = Approved, 2 = Rejected
+  response: string;              // Nội dung giải trình hoặc phản hồi
+  assignedJudgeId?: string;      // ID Giám khảo phụ trách chấm lại (bắt buộc nếu Approved)
 }
 
-/** PUT /Appeals/{id}/respond — chỉ EC/Admin. */
+/**
+ * =====================================================================================
+ * HOOK: useRespondAppeal (PUT /api/Appeals/{id}/respond)
+ * VAI TRÒ: Chỉ Điều phối viên (EC) hoặc Admin.
+ * CHỨC NĂNG: Duyệt / Từ chối đơn khiếu nại điểm số của đội thi.
+ * =====================================================================================
+ */
 export function useRespondAppeal() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -67,6 +100,7 @@ export function useRespondAppeal() {
       return data;
     },
     onSuccess: () => {
+      // Xóa cache để tự động nạp lại danh sách đơn mới nhất
       queryClient.invalidateQueries({ queryKey: ["appeals"] });
       queryClient.invalidateQueries({ queryKey: ["appealsByRound"] });
       queryClient.invalidateQueries({ queryKey: ["appealsByTeam"] });
@@ -81,7 +115,12 @@ export interface AppealListParams {
   isAscending?: boolean;
 }
 
-/** GET /Appeals/team/{teamId} — đơn phúc khảo của 1 đội. */
+/**
+ * =====================================================================================
+ * HOOK: useGetAppealsByTeam (GET /api/Appeals/team/{teamId})
+ * CHỨC NĂNG: Lấy toàn bộ lịch sử đơn phúc khảo của 1 đội thi cụ thể.
+ * =====================================================================================
+ */
 export function useGetAppealsByTeam(teamId: string | undefined, params: AppealListParams = {}) {
   return useQuery({
     queryKey: ["appealsByTeam", teamId, params],
@@ -97,7 +136,12 @@ export function useGetAppealsByTeam(teamId: string | undefined, params: AppealLi
   });
 }
 
-/** GET /Appeals/round/{roundId} — toàn bộ đơn phúc khảo trong 1 vòng (EC dùng để xử lý). */
+/**
+ * =====================================================================================
+ * HOOK: useGetAppealsByRound (GET /api/Appeals/round/{roundId})
+ * VAI TRÒ: EC sử dụng để xem toàn bộ danh sách đơn khiếu nại trong Vòng thi đã chọn.
+ * =====================================================================================
+ */
 export function useGetAppealsByRound(roundId: string | undefined, params: any = {}) {
   return useQuery({
     queryKey: ["appealsByRound", roundId, params],
@@ -114,7 +158,12 @@ export function useGetAppealsByRound(roundId: string | undefined, params: any = 
   });
 }
 
-/** GET /Appeals/assigned/{eventRoleId} — đơn được phân công cho 1 giám khảo cụ thể xử lý. */
+/**
+ * =====================================================================================
+ * HOOK: useGetAssignedAppeals (GET /api/Appeals/assigned/{eventRoleId})
+ * VAI TRÒ: Giám khảo sử dụng để xem danh sách bài thi được EC phân công chấm lại.
+ * =====================================================================================
+ */
 export function useGetAssignedAppeals(eventRoleId: string | undefined) {
   return useQuery({
     queryKey: ["assignedAppeals", eventRoleId],
@@ -130,10 +179,11 @@ export const useAppealsByRound = useGetAppealsByRound;
 export { readApiError } from "../shared/errorHelper";
 
 /**
- * Không có endpoint "GET đơn phúc khảo theo sự kiện" trên BE — gom từ tất cả vòng thi
- * của sự kiện đang chọn (GET /Rounds/event rồi GET /Appeals/round/{roundId} cho từng vòng).
- * Dùng cho màn EC quản lý phúc khảo (không dùng useGetAssignedAppeals — endpoint đó chỉ trả
- * về đơn ĐÃ Approved và đã gán cho đúng eventRoleId, không phải hàng đợi đơn Pending cần xử lý).
+ * =====================================================================================
+ * HOOK: useGetAppealsByEvent
+ * CHỨC NĂNG:
+ *   Gom tất cả đơn phúc khảo từ các Vòng thi thuộc một Sự kiện (Event).
+ * =====================================================================================
  */
 export function useGetAppealsByEvent(eventId: string | undefined) {
   return useQuery({
@@ -183,6 +233,13 @@ export function useGetAppealsByEvent(eventId: string | undefined) {
   });
 }
 
+/**
+ * =====================================================================================
+ * OBJECT SERVICE: appealsRepository
+ * CHỨC NĂNG:
+ *   Cung cấp phương thức trực tiếp `respondAppeal` để gọi API phản hồi đơn phúc khảo.
+ * =====================================================================================
+ */
 export const appealsRepository = {
   async respondAppeal(
     id: string,
@@ -202,4 +259,3 @@ export const appealsRepository = {
     return res.data;
   },
 };
-

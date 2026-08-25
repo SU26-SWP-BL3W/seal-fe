@@ -1,8 +1,16 @@
 /**
- * Results & Publishing Domain Service
- * Pure business logic for score calculation, prize payload creation, and CSV export.
+ * =========================================================================================
+ * DOMAIN SERVICE: resultsService
+ * TẦNG KIẾN TRÚC: Business Service / Domain Service
+ * MÔ TẢ:
+ *   Chứa pure business logic xử lý kết quả thi, định dạng và xuất file CSV báo cáo bảng điểm,
+ *   tạo payload thông báo chúc mừng đạt giải và thông báo công bố bảng điểm chính thức.
+ * =========================================================================================
  */
 
+/**
+ * Interface đại diện cho 1 dòng dữ liệu kết quả đội thi cần xuất báo cáo
+ */
 export interface ExportResultItem {
   id?: string;
   rank?: number | string;
@@ -16,6 +24,9 @@ export interface ExportResultItem {
   prizeId?: string | null;
 }
 
+/**
+ * Interface cấu hình tùy chọn khi xuất file CSV
+ */
 export interface ResultExportOptions {
   results: ExportResultItem[];
   eventName: string;
@@ -28,14 +39,24 @@ export interface ResultExportOptions {
 
 export const resultsService = {
   /**
-   * Export final results to a CSV file and trigger browser download with UTF-8 BOM.
+   * =====================================================================================
+   * HÀM: exportResultsToCsv
+   * CHỨC NĂNG:
+   *   1. Nhận danh sách kết quả xếp hạng từ ViewModel.
+   *   2. Format các cột (Hạng, Tên đội, Tổng điểm, Kết quả thăng hạng, Giải thưởng gán...).
+   *   3. Đính kèm tiền tố UTF-8 BOM ("\uFEFF") để Microsoft Excel hiển thị đúng tiếng Việt có dấu.
+   *   4. Tự động kích hoạt trình duyệt tải xuống file `.csv`.
+   * =====================================================================================
    */
   exportResultsToCsv(options: ResultExportOptions): void {
     const { results, eventName, roundName, trackName, teamNameById, availablePrizes, assignedPrizesMap } = options;
+    
+    // Kiểm tra tính hợp lệ của dữ liệu trước khi xuất
     if (!results || results.length === 0) {
       throw new Error("Chưa có dữ liệu bảng điểm kết quả để xuất file!");
     }
 
+    // Tiêu đề các cột trong file CSV
     const headers = [
       "Hạng",
       "Tên Đội Thi",
@@ -49,6 +70,7 @@ export const resultsService = {
       "Ngày Xuất",
     ];
 
+    // Map từng dòng dữ liệu từ Object sang chuỗi CSV (xử lý escape dấu ngoặc kép "")
     const rows = results.map((r, idx) => {
       const rankStr = String(r.rank || idx + 1);
       const name = teamNameById.get(r.teamId || "") || r.teamName || r.TeamName || r.teamId || "Đội thi";
@@ -57,6 +79,7 @@ export const resultsService = {
       const isAdv = r.isAdvanced !== undefined ? Boolean(r.isAdvanced) : idx < 2;
       const statusStr = isAdv ? "THĂNG HẠNG" : "BỊ LOẠI";
 
+      // Tra cứu tên giải thưởng đã gán cho đội
       const assignedPrizeId = assignedPrizesMap[r.id || ""] ?? r.prizeId ?? "none";
       const prizeObj = availablePrizes.find((p) => p.id === assignedPrizeId);
       const prizeStr = prizeObj ? prizeObj.name : "Không";
@@ -75,12 +98,14 @@ export const resultsService = {
       ].join(",");
     });
 
+    // Ghép UTF-8 Byte Order Mark (\uFEFF) + Header + Rows
     const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
 
+    // Chuẩn hóa tên file an toàn (bỏ ký tự đặc biệt)
     const safeEventName = eventName.replace(/[^a-zA-Z0-9_-]/g, "_");
     const safeRoundName = roundName.replace(/[^a-zA-Z0-9_-]/g, "_");
     link.setAttribute("download", `Ket_Qua_${safeEventName}_${safeRoundName}_${Date.now()}.csv`);
@@ -91,7 +116,11 @@ export const resultsService = {
   },
 
   /**
-   * Builds the congratulatory notification payload when a prize is assigned.
+   * =====================================================================================
+   * HÀM: buildPrizeNotificationPayload
+   * CHỨC NĂNG:
+   *   Tạo nội dung thông báo chúc mừng gửi tới tài khoản thành viên khi Đội thi được trao giải.
+   * =====================================================================================
    */
   buildPrizeNotificationPayload(teamName: string, prizeName: string, eventName: string) {
     return {
@@ -102,7 +131,11 @@ export const resultsService = {
   },
 
   /**
-   * Builds the official publication notification payload.
+   * =====================================================================================
+   * HÀM: buildPublishNotificationPayload
+   * CHỨC NĂNG:
+   *   Tạo nội dung thông báo đẩy toàn hệ thống khi Điều phối viên (EC) công bố điểm chính thức.
+   * =====================================================================================
    */
   buildPublishNotificationPayload(roundName: string, eventName: string) {
     return {

@@ -20,16 +20,25 @@ export interface AssignRolePayload {
   roleName: "Judge" | "Mentor" | "EventCoordinator" | "TeamLeader" | "TeamMember";
 }
 
+function unwrapEventRolesList(resData: any): EventRole[] {
+  if (Array.isArray(resData)) return resData;
+  if (Array.isArray(resData?.data?.data)) return resData.data.data;
+  if (Array.isArray(resData?.data?.items)) return resData.data.items;
+  if (Array.isArray(resData?.data)) return resData.data;
+  if (Array.isArray(resData?.items)) return resData.items;
+  return [];
+}
+
 export function useGetEventRoles(eventId?: string) {
   return useQuery({
     queryKey: ["event-roles", eventId],
-    queryFn: async () => {
+    queryFn: async (): Promise<EventRole[]> => {
       if (!eventId) return [];
       try {
-        const res = await apiClient.get<BaseResponse<EventRole[]>>("/EventRoles/event", {
-          params: { EventId: eventId },
+        const res = await apiClient.get<any>("/EventRoles/event", {
+          params: { EventId: eventId, PageSize: 200 },
         });
-        return res.data?.data ?? [];
+        return unwrapEventRolesList(res.data);
       } catch (err: any) {
         console.warn("[SEAL BE-DATA MISSING] GET /api/EventRoles/event error:", err?.message);
         return [];

@@ -22,7 +22,7 @@ export function useCoordinatorSubmissionsViewModel() {
   const eventsList = useMemo(() => {
     const myEventsList = Array.isArray(rawMyEvents) ? rawMyEvents : (rawMyEvents as any)?.data ?? [];
 
-    if (currentUser?.isAdmin) {
+    if (currentUser?.isAdmin || currentUser?.IsAdmin) {
       const allList = Array.isArray(rawAllEvents) ? rawAllEvents : (rawAllEvents as any)?.data ?? [];
       const map = new Map<string, any>();
       allList.forEach((ev: any) => {
@@ -36,8 +36,9 @@ export function useCoordinatorSubmissionsViewModel() {
       return Array.from(map.values());
     }
 
+    // Với EC: CHỈ fetch và hiển thị đúng các sự kiện mà EC được phân công
     return myEventsList;
-  }, [rawMyEvents, rawAllEvents, currentUser?.isAdmin]);
+  }, [rawMyEvents, rawAllEvents, currentUser?.isAdmin, currentUser?.IsAdmin]);
 
   const [selectedEventId, setSelectedEventId] = useState<string>(queryEventId);
   const [selectedTrackId, setSelectedTrackId] = useState<string>(queryTrackId);
