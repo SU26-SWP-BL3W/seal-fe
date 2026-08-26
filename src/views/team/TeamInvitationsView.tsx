@@ -272,6 +272,8 @@ export function TeamInvitationsView() {
                 <ul className="flex flex-col gap-[var(--space-xs)]">
                   {historyPagination.paginatedItems.map((inv: MyInvitationItem) => {
                     const isAccepted = inv.status === "Accepted";
+                    const isExpired = inv.status === "Expired";
+                    const isCancelled = inv.status === "Cancelled";
                     const role = inv.role || "";
                     const isTeam = inv.type === "TEAM";
 
@@ -307,8 +309,8 @@ export function TeamInvitationsView() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <Badge tone={isAccepted ? "success" : "neutral"}>
-                              {isAccepted ? "Đã chấp nhận" : "Đã từ chối"}
+                            <Badge tone={isAccepted ? "success" : isExpired || isCancelled ? "neutral" : "danger"}>
+                              {isAccepted ? "Đã chấp nhận" : isExpired ? "Hết hạn" : isCancelled ? "Đã hủy" : "Đã từ chối"}
                             </Badge>
                             {isAccepted && (
                               <Link href={destinationUrl}>

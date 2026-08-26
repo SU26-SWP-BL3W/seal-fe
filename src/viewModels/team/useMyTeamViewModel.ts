@@ -185,7 +185,7 @@ export function useMyTeamViewModel() {
     if (!team?.id || !transferTarget) return;
     try {
       await transferLeadership({ teamId: team.id, newLeaderUserId: transferTarget.id });
-      toast.success(`Đã chuyển quyền trưởng đội cho ${transferTarget.name}`);
+      toast.success(`Đã gửi yêu cầu chuyển quyền Trưởng nhóm cho ${transferTarget.name} — đang chờ họ xác nhận.`);
       setTransferTarget(null);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || "Chuyển quyền thất bại");

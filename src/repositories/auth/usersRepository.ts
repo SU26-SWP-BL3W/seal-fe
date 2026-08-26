@@ -105,7 +105,7 @@ export function useUpdateUserProfile() {
 // vai trò sự kiện (EVENT_ROLE: Judge/Mentor/EventCoordinator) trong 1 lần gọi.
 
 export type MyInvitationType = "TEAM" | "EVENT_ROLE";
-export type MyInvitationStatus = "PendingAccept" | "Accepted" | "Declined";
+export type MyInvitationStatus = "PendingAccept" | "Accepted" | "Declined" | "Expired" | "Cancelled";
 
 export interface MyInvitationItem {
   invitationId: string;
