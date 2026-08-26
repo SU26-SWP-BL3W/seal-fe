@@ -5,6 +5,7 @@
 
 import type { TeamStatus, TeamView, InvitationView } from "@/components/domain/team";
 import type { MemberItem } from "@/viewModels/team/teamTypes";
+import type { NormalizedEventRole } from "@/lib/eventRoles";
 
 function pick(obj: unknown, ...keys: string[]): string {
   const record = obj as Record<string, unknown> | null | undefined;
@@ -23,14 +24,27 @@ type ActiveRoleLike = {
 } | null;
 
 export const teamService = {
-  /** URL eventId ưu tiên, rồi activeRole — khớp /my-team và tránh lấy nhầm đội khi user tham gia nhiều sự kiện. */
-  resolveTargetEventId(eventIdFromUrl: string, activeRole?: ActiveRoleLike): string {
+  resolveLatestTeamEventId(roles: NormalizedEventRole[]): string {
+    const teamRoles = roles.filter(
+      (r) => r.roleName === "TeamLeader" || r.roleName === "TeamMember",
+    );
+    if (teamRoles.length === 0) return "";
+    return [...teamRoles].sort((a, b) => (b.assignedAtMs ?? 0) - (a.assignedAtMs ?? 0))[0].eventId;
+  },
+
+  /** URL eventId ưu tiên; không có thì role active; cuối cùng là sự kiện đội mới nhất. */
+  resolveTargetEventId(
+    eventIdFromUrl: string,
+    activeRole?: ActiveRoleLike,
+    allEventRoles: NormalizedEventRole[] = [],
+  ): string {
     const fromUrl = eventIdFromUrl.trim();
     if (fromUrl) return fromUrl;
     const fromRole = pick(activeRole, "eventId", "EventId");
     if (fromRole) return fromRole;
     const assigned = activeRole?.assignedEventIds?.[0] || activeRole?.AssignedEventIds?.[0];
-    return assigned ? String(assigned) : "";
+    if (assigned) return String(assigned);
+    return this.resolveLatestTeamEventId(allEventRoles);
   },
 
   /**

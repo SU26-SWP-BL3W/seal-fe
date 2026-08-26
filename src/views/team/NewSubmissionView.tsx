@@ -356,7 +356,8 @@ function TrackSubmissionCard({
 
 export function NewSubmissionView() {
   const { state, data, actions } = useNewSubmissionViewModel();
-  const { team, teamId, roundId, canSubmit, submitBlockReason, isLoading } = state;
+  const { team, teamId, roundId, targetEventId, canSubmit, submitBlockReason, isLoading } = state;
+  const myTeamHref = targetEventId ? `/my-team?eventId=${targetEventId}` : "/my-team";
   const { availableTracks, submissions } = data;
 
   if (!isLoading && (!team || !canSubmit)) {
@@ -377,7 +378,7 @@ export function NewSubmissionView() {
                 : "Đội cần được BTC phê duyệt ghi danh trước khi thực hiện nộp bài."}
             </span>
           </p>
-          <Link href="/my-team">
+          <Link href={myTeamHref}>
             <button className="hud-clipped px-5 py-2.5 border border-[var(--accent-team)] text-[var(--accent-team)] font-mono text-xs tracking-wider uppercase hover:bg-[var(--accent-team)]/10 transition-colors">
               ← VỀ TRANG ĐỘI THI
             </button>
@@ -393,11 +394,11 @@ export function NewSubmissionView() {
         
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--text-muted)] mb-6">
-          <Link href="/my-team" className="hover:text-[var(--accent-team)] transition-colors">
+          <Link href={myTeamHref} className="hover:text-[var(--accent-team)] transition-colors">
             ĐỘI THI
           </Link>
           <span>›</span>
-          <Link href="/my-submissions" className="hover:text-[var(--accent-team)] transition-colors">
+          <Link href={targetEventId ? `/my-submissions?eventId=${targetEventId}` : "/my-submissions"} className="hover:text-[var(--accent-team)] transition-colors">
             DANH SÁCH BÀI NỘP
           </Link>
           <span>›</span>
@@ -433,7 +434,7 @@ export function NewSubmissionView() {
                 BẢNG XẾP HẠNG
               </button>
             </Link>
-            <Link href="/my-team">
+            <Link href={myTeamHref}>
               <button className="hud-clipped px-4 py-2.5 border border-[var(--accent-team)]/40 bg-[var(--accent-team)]/10 text-[var(--accent-team)] font-mono text-xs font-bold tracking-wider uppercase hover:bg-[var(--accent-team)]/20 transition-colors">
                 ĐỘI THI
               </button>

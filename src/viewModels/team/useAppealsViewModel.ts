@@ -45,7 +45,7 @@ function pick(obj: unknown, ...keys: string[]): string {
  */
 export function useAppealsViewModel() {
   const toast = useToast();
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, allEventRoles } = useAuth();
   
   // State form gửi đơn phúc khảo
   const [reason, setReason] = useState("");
@@ -65,6 +65,7 @@ export function useAppealsViewModel() {
   const targetEventId = teamService.resolveTargetEventId(
     searchParams.get("eventId") || "",
     activeRole,
+    allEventRoles,
   );
   const eventIdFromRole = targetEventId || pick(activeRole, "eventId", "EventId");
 

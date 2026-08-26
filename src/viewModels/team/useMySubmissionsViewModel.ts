@@ -27,13 +27,14 @@ function pick(obj: unknown, ...keys: string[]): string {
 export function useMySubmissionsViewModel() {
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, allEventRoles } = useAuth();
   const searchParams = useSearchParams();
   const roleName = pick(activeRole, "RoleName", "roleName");
   const currentUserId = pick(user, "id", "userId", "UserID");
   const targetEventId = teamService.resolveTargetEventId(
     searchParams.get("eventId") || "",
     activeRole,
+    allEventRoles,
   );
 
   const { data: rawTeam, isLoading: isLoadingTeam } = useMyTeam(targetEventId || undefined);

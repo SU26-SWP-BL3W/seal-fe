@@ -22,9 +22,13 @@ export function useAdminDashboardViewModel() {
 
   const handleSetupDemoEvents = async () => {
     try {
-      await setupDemoEvents(new Date().toISOString());
+      const res = await setupDemoEvents(new Date().toISOString());
+      const apiMsg =
+        (res as any)?.message ||
+        (res as any)?.data?.message ||
+        "Đã tạo Nộp Bài & Chấm.";
       setDemoToolMessage(
-        "Đã tạo Nộp Bài & Chấm: Team 1 trống (student1_demo); Team 2 đã nộp+chấm sẵn. judge/mentor/ec_demo. Pass: 123456. Khác nút Đầy Đủ 100%."
+        `${apiMsg} Đăng xuất/login lại student1_demo sau seed. Pass: 123456.`
       );
       refetch();
     } catch (err: any) {
