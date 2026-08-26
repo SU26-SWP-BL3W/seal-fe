@@ -134,7 +134,8 @@ export function useCoordinatorStaffViewModel() {
       setIsSubmittingCoordinator(false);
 
       if (res && res.success !== false) {
-        const isExistingAccount = checkEmailInSystem(coordinatorEmail);
+        const isTempAccount = Boolean(res?.isTemporary || res?.data?.isTemporary);
+        const isExistingAccount = !isTempAccount && (checkEmailInSystem(coordinatorEmail) || true);
         const noteText = isExistingAccount
           ? "Đã có tài khoản / Đã gửi thư mời phân công"
           : "Cấp tài khoản tạm / Chờ kích hoạt qua email";
@@ -229,7 +230,8 @@ export function useCoordinatorStaffViewModel() {
       });
 
       if (res && res.success !== false) {
-        const isExistingAccount = checkEmailInSystem(judgeEmail);
+        const isTempAccount = Boolean(res?.isTemporary || res?.data?.isTemporary);
+        const isExistingAccount = !isTempAccount && (checkEmailInSystem(judgeEmail) || true);
         const noteText = isExistingAccount
           ? "Đã có tài khoản / Đã gửi thư mời phân công"
           : "Cấp tài khoản tạm / Chờ kích hoạt qua email";
@@ -331,7 +333,8 @@ export function useCoordinatorStaffViewModel() {
       });
 
       if (res && res.success !== false) {
-        const isExistingAccount = checkEmailInSystem(mentorEmail);
+        const isTempAccount = Boolean(res?.isTemporary || res?.data?.isTemporary);
+        const isExistingAccount = !isTempAccount && (checkEmailInSystem(mentorEmail) || true);
         const noteText = isExistingAccount
           ? "Đã có tài khoản / Đã gửi thư mời phân công"
           : "Cấp tài khoản tạm / Chờ kích hoạt qua email";

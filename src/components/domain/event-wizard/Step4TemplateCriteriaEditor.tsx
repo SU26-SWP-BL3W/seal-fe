@@ -101,38 +101,104 @@ export const Step4TemplateCriteriaEditor: React.FC<Step4TemplateCriteriaEditorPr
 
   const activeTrack = tracks.find((t) => t.id === selectedTrackId) || tracks[0];
 
-  // Active track's criteria list
+  // Fetch real Template Detail from Backend DB API when a track has a templateId selected
+  React.useEffect(() => {
+    if (!activeTrack) return;
+    const tid = activeTrack.templateId;
+
+    if (tid && tid !== "__custom__" && (!criteriasByTrack[activeTrack.id] || criteriasByTrack[activeTrack.id].length === 0)) {
+      let isMounted = true;
+      templatesRepository
+        .getTemplateById(tid)
+        .then((tpl) => {
+          if (!isMounted || !tpl) return;
+          const rawCriterias = (tpl as any)?.criterias || (tpl as any)?.Criterias || (tpl as any)?.criteria || [];
+          if (Array.isArray(rawCriterias) && rawCriterias.length > 0) {
+            const mapped: TemplateCriteriaFormState[] = rawCriterias.map((c: any, idx: number) => ({
+              criteriaId: c.criteriaId || c.CriteriaId || c.id || c.Id || `crit-tpl-${activeTrack.id}-${idx}`,
+              criterionName: c.criterionName || c.CriterionName || c.name || c.Name || `Tiêu chí ${idx + 1}`,
+              description: c.description || c.Description || "",
+              weight: Number(c.weight || c.Weight || 25),
+              maxScore: Number(c.maxScore || c.MaxScore || 10),
+            }));
+            if (onUpdateTrackCriterias) {
+              onUpdateTrackCriterias(activeTrack.id, mapped);
+            }
+          }
+        })
+        .catch(() => {});
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [activeTrack?.id, activeTrack?.templateId, criteriasByTrack, onUpdateTrackCriterias]);
+
+  // Active track's criteria list isolated per track
   const activeCriteriaList: TemplateCriteriaFormState[] = useMemo(() => {
-    if (activeTrack && criteriasByTrack[activeTrack.id]) {
+    if (!activeTrack) return [];
+
+    // 1. If explicit criteria list exists for THIS specific track in criteriasByTrack, use it
+    if (criteriasByTrack[activeTrack.id] && criteriasByTrack[activeTrack.id].length > 0) {
       return criteriasByTrack[activeTrack.id];
     }
-    if (criterias && criterias.length > 0) {
+
+    // 2. If track has a templateId selected from DB/Bank (not __custom__), auto-load criteria from matched template
+    if (activeTrack.templateId && activeTrack.templateId !== "__custom__") {
+      const targetTpl = allAvailableTemplates.find(
+        (t: any) => (t.id || t.Id || t.templateId || t.TemplateId) === activeTrack.templateId
+      );
+
+      if (targetTpl && Array.isArray(targetTpl.criterias) && targetTpl.criterias.length > 0) {
+        return targetTpl.criterias.map((c: any, idx: number) => ({
+          criteriaId: c.criteriaId || c.CriteriaId || `crit-tpl-${activeTrack.id}-${idx}`,
+          criterionName: c.criterionName || c.CriterionName || c.name || `Tiêu chí ${idx + 1}`,
+          description: c.description || c.Description || "",
+          weight: Number(c.weight || c.Weight || 25),
+          maxScore: Number(c.maxScore || c.MaxScore || 10),
+        }));
+      }
+    }
+
+    // 3. Fallback for single track mode
+    if (tracks.length <= 1 && criterias && criterias.length > 0) {
       return criterias;
     }
+
+    // 4. Default fresh criteria for custom tracks (independent per track)
     return [
       {
-        criteriaId: `crit-${Date.now()}-1`,
+        criteriaId: `crit-${activeTrack.id}-1`,
         criterionName: "Tính Sáng Tạo & Đổi Mới",
         description: "Ý tưởng có tính đột phá, giải quyết bài toán thực tế rõ ràng.",
         weight: 40,
         maxScore: 10,
       },
       {
-        criteriaId: `crit-${Date.now()}-2`,
+        criteriaId: `crit-${activeTrack.id}-2`,
         criterionName: "Chất Lượng Kỹ Thuật & Mã Nguồn",
         description: "Kiến trúc rõ ràng, mã nguồn sạch, ứng dụng chạy ổn định.",
         weight: 30,
         maxScore: 10,
       },
       {
-        criteriaId: `crit-${Date.now()}-3`,
+        criteriaId: `crit-${activeTrack.id}-3`,
         criterionName: "Thuyết Trình & Trải Nghiệm Người Dùng",
         description: "Demo mượt mà, trả lời phản biện thuyết phục.",
         weight: 30,
         maxScore: 10,
       },
     ];
-  }, [activeTrack, criteriasByTrack, criterias]);
+  }, [activeTrack, criteriasByTrack, criterias, allAvailableTemplates, tracks.length]);
+
+  // Pre-initialize criteriasByTrack for tracks that do not have their own criteria list yet
+  React.useEffect(() => {
+    if (activeTrack?.id && !criteriasByTrack[activeTrack.id] && activeCriteriaList.length > 0) {
+      if (onUpdateTrackCriterias) {
+        onUpdateTrackCriterias(activeTrack.id, activeCriteriaList);
+      }
+    }
+  }, [activeTrack?.id, criteriasByTrack, activeCriteriaList, onUpdateTrackCriterias]);
 
   const activeTotalWeight = activeCriteriaList.reduce((acc: number, c: any) => acc + (Number(c.weight) || 0), 0);
   const activeIsValidWeight100 = Math.abs(activeTotalWeight - 100) < 0.01;

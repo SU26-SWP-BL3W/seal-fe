@@ -282,21 +282,21 @@ export const CoordinatorDashboardView: React.FC = () => {
                           )}
                         </Button>
 
-                        <Link href="/coordinator/teams">
+                        <Link href={`/coordinator/teams?eventId=${id}`}>
                           <Button variant="secondary" className="w-full text-[11px] font-mono py-1.5 flex items-center justify-center gap-1">
                             <Users className="w-3.5 h-3.5 text-[var(--accent-team)]" />
                             <span>Duyệt Đội</span>
                           </Button>
                         </Link>
 
-                        <Link href="/coordinator/staff">
+                        <Link href={`/coordinator/staff?eventId=${id}`}>
                           <Button variant="secondary" className="w-full text-[11px] font-mono py-1.5 flex items-center justify-center gap-1">
                             <Users className="w-3.5 h-3.5 text-purple-400" />
                             <span>Staff</span>
                           </Button>
                         </Link>
 
-                        <Link href="/coordinator/publish-results">
+                        <Link href={`/coordinator/publish-results?eventId=${id}`}>
                           <Button variant="secondary" className="w-full text-[11px] font-mono py-1.5 flex items-center justify-center gap-1">
                             <Award className="w-3.5 h-3.5 text-amber-400" />
                             <span>Công Bố</span>
