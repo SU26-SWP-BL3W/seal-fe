@@ -76,6 +76,7 @@ export function MySubmissionsView() {
 
   const {
     team,
+    targetEventId,
     isLeader,
     isRegistered,
     isLoadingSubs,
@@ -142,7 +143,7 @@ export function MySubmissionsView() {
                 <RefreshCw className="w-3.5 h-3.5" /> Làm mới
               </button>
 
-              <Link href="/submissions/new">
+              <Link href={targetEventId ? `/submissions/new?eventId=${targetEventId}` : "/submissions/new"}>
                 <button className="bg-[#00d9ff] text-[#080f11] font-display text-sm font-bold px-5 py-2 rounded-[12px] rounded-br-none hover:bg-white transition-all flex items-center gap-1.5 uppercase shadow-[0_0_15px_rgba(0,217,255,0.3)]">
                   <Plus className="w-4 h-4" /> Nộp bài mới
                 </button>
@@ -154,7 +155,7 @@ export function MySubmissionsView() {
           <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-[#3c494d]/40 font-mono text-xs">
             <div className="bg-[#0e1417] border border-[#3c494d] px-3.5 py-1.5 flex items-center gap-2">
               <span className="text-[#859398]">ĐỘI:</span>
-              <span className="text-[#38bdf8] font-bold">{team?.name || team?.Name || "Chưa có đội"}</span>
+              <span className="text-[#38bdf8] font-bold">{team?.teamName || "Chưa có đội"}</span>
             </div>
             <div className="bg-[#0e1417] border border-[#3c494d] px-3.5 py-1.5 flex items-center gap-2">
               <span className="text-[#859398]">VAI TRÒ:</span>
@@ -181,7 +182,7 @@ export function MySubmissionsView() {
           ) : submissions.length === 0 ? (
             <div className="p-12 text-center font-mono text-xs text-[#859398] space-y-3">
               <p>Đội của bạn chưa có bài nộp nào được lưu trên hệ thống.</p>
-              <Link href="/submissions/new">
+              <Link href={targetEventId ? `/submissions/new?eventId=${targetEventId}` : "/submissions/new"}>
                 <button className="bg-[#00d9ff] text-[#080f11] font-bold px-4 py-2 uppercase text-xs hover:bg-white transition-colors">
                   [ Nộp Bài Thi Đầu Tiên ]
                 </button>

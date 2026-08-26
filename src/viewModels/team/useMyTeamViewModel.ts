@@ -39,11 +39,10 @@ export function useMyTeamViewModel() {
   const searchParams = useSearchParams();
   const roleName = pick(activeRole, "RoleName", "roleName");
   const currentUserId = pick(user, "id", "userId", "UserID");
-  const eventIdFromUrl = searchParams.get("eventId") || "";
-  const eventIdFromRole =
-    pick(activeRole, "eventId", "EventId") ||
-    ((activeRole?.assignedEventIds?.[0] as string | undefined) ?? "");
-  const targetEventId = eventIdFromUrl || eventIdFromRole;
+  const targetEventId = teamService.resolveTargetEventId(
+    searchParams.get("eventId") || "",
+    activeRole,
+  );
 
   const { data: rawTeam, isLoading } = useMyTeam(targetEventId || undefined);
 

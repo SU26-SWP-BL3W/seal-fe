@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMySubmissions } from "@/repositories/submitResultsRepository";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import type { TrackItem, SubmissionItem } from "@/viewModels/team/teamTypes";
+import { teamService } from "@/services/team/teamService";
 
 function isIsoWindowOpen(start?: string, end?: string, now = new Date()): boolean {
   if (start) {
@@ -20,18 +22,19 @@ function isIsoWindowOpen(start?: string, end?: string, now = new Date()): boolea
 
 export function useNewSubmissionViewModel() {
   const { activeRole } = useAuth();
-  const eventIdFromRole =
-    (activeRole as { eventId?: string; EventId?: string } | null)?.eventId ||
-    (activeRole as { EventId?: string } | null)?.EventId ||
-    "";
-  const { data: realTeam, isLoading } = useMyTeam(eventIdFromRole || undefined);
+  const searchParams = useSearchParams();
+  const targetEventId = teamService.resolveTargetEventId(
+    searchParams.get("eventId") || "",
+    activeRole,
+  );
+  const { data: realTeam, isLoading } = useMyTeam(targetEventId || undefined);
   const team = realTeam;
-  const eventId = (team as any)?.EventId || (team as any)?.eventId || eventIdFromRole;
+  const eventId = (team as any)?.EventId || (team as any)?.eventId || targetEventId;
   const teamId = (team as any)?.TeamId || (team as any)?.id || "";
   const teamTrackId = (team as any)?.TrackId || (team as any)?.trackId || "";
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
   const { data: rounds = [] } = useEventRounds(eventId);
-  const { data: existingSubs = [] } = useMySubmissions();
+  const { data: existingSubs = [] } = useMySubmissions(teamId || undefined);
   // Chọn vòng đang MỞ (now nằm trong [startDate, endDate]), không phải luôn lấy vòng
   // cuối cùng — sự kiện có ≥2 vòng thì vòng cuối thường chưa mở, khiến nộp bài luôn bị
   // BE từ chối dù vòng trước đó đang mở thật.

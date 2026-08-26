@@ -15,7 +15,24 @@ function pick(obj: unknown, ...keys: string[]): string {
   return "";
 }
 
+type ActiveRoleLike = {
+  eventId?: string;
+  EventId?: string;
+  assignedEventIds?: string[];
+  AssignedEventIds?: string[];
+} | null;
+
 export const teamService = {
+  /** URL eventId ưu tiên, rồi activeRole — khớp /my-team và tránh lấy nhầm đội khi user tham gia nhiều sự kiện. */
+  resolveTargetEventId(eventIdFromUrl: string, activeRole?: ActiveRoleLike): string {
+    const fromUrl = eventIdFromUrl.trim();
+    if (fromUrl) return fromUrl;
+    const fromRole = pick(activeRole, "eventId", "EventId");
+    if (fromRole) return fromRole;
+    const assigned = activeRole?.assignedEventIds?.[0] || activeRole?.AssignedEventIds?.[0];
+    return assigned ? String(assigned) : "";
+  },
+
   /**
    * Normalizes raw backend team response into frontend TeamView.
    */

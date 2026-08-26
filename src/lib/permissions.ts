@@ -2,6 +2,7 @@ import { User, EventRole } from "@/models/entities";
 import {
   hasEventRole,
   hasTrackRole,
+  idsMatch,
   normalizeEventRoleRows,
   type NormalizedEventRole,
 } from "@/lib/eventRoles";
@@ -77,6 +78,6 @@ export function hasEventPermission(
     return false;
   }
 
-  // 3. Chỉ cho thao tác trên đúng các Event đã thật sự được gán.
-  return getAssignedEventIds(activeRole).includes(eventId);
+  // 3. Chỉ cho thao tác trên đúng các Event đã thật sự được gán (staff + đội thi).
+  return getAssignedEventIds(activeRole).some((id) => idsMatch(id, eventId));
 }
