@@ -8,6 +8,8 @@ export interface NormalizedEventRole {
   roleName: string;
   trackName?: string;
   eventName?: string;
+  /** ms since epoch — ưu tiên role mới nhất khi user tham gia nhiều sự kiện. */
+  assignedAtMs?: number;
 }
 
 const STAFF_ROLE_NAMES = new Set(["EventCoordinator", "Coordinator", "Judge", "Mentor"]);
@@ -46,6 +48,9 @@ export function normalizeEventRoleRows(rows: unknown[]): NormalizedEventRole[] {
     const eventId = readStr(r, "eventId", "EventId");
     if (!roleName || !eventId) continue;
 
+    const assignedAtStr = readStr(r, "assignedAt", "AssignedAt", "createdTime", "CreatedTime");
+    const assignedAtMs = assignedAtStr ? new Date(assignedAtStr).getTime() : undefined;
+
     result.push({
       id: readStr(r, "id", "Id"),
       eventId,
@@ -54,6 +59,7 @@ export function normalizeEventRoleRows(rows: unknown[]): NormalizedEventRole[] {
       roleName,
       trackName: readStr(r, "trackName", "TrackName") || undefined,
       eventName: readStr(r, "eventName", "EventName") || undefined,
+      assignedAtMs: assignedAtMs && !isNaN(assignedAtMs) ? assignedAtMs : undefined,
     });
   }
 
@@ -68,7 +74,9 @@ export function getAssignedEventIdsFromRoles(
   roles: NormalizedEventRole[],
   roleNames?: string[],
 ): string[] {
-  const allowed = roleNames ? new Set(roleNames) : STAFF_ROLE_NAMES;
+  const allowed = roleNames
+    ? new Set(roleNames)
+    : new Set([...STAFF_ROLE_NAMES, "TeamLeader", "TeamMember"]);
   return [
     ...new Set(
       roles
@@ -233,7 +241,19 @@ const ROLE_RANK = ["EventCoordinator", "Coordinator", "Judge", "Mentor", "TeamLe
 
 export function pickPrimaryRoleFromRows(rows: unknown[], userId: string): EventRole | null {
   const norm = normalizeEventRoleRows(rows);
-  const chosen = ROLE_RANK.map((rn) => norm.find((r) => r.roleName === rn)).find(Boolean);
+  if (norm.length === 0) return null;
+
+  const pickLatest = (candidates: NormalizedEventRole[]) =>
+    [...candidates].sort((a, b) => (b.assignedAtMs ?? 0) - (a.assignedAtMs ?? 0))[0];
+
+  let chosen: NormalizedEventRole | undefined;
+  for (const rn of ROLE_RANK) {
+    const candidates = norm.filter((r) => r.roleName === rn);
+    if (candidates.length > 0) {
+      chosen = pickLatest(candidates);
+      break;
+    }
+  }
   if (!chosen) return null;
 
   const assigned = getAssignedEventIdsFromRoles(norm);

@@ -1,10 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMySubmissions } from "@/repositories/submitResultsRepository";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
 import { useEventRounds } from "@/repositories/eventsRepository";
 import type { TrackItem, SubmissionItem } from "@/viewModels/team/teamTypes";
+import { teamService } from "@/services/team/teamService";
 
 function isIsoWindowOpen(start?: string, end?: string, now = new Date()): boolean {
   if (start) {
@@ -18,20 +21,58 @@ function isIsoWindowOpen(start?: string, end?: string, now = new Date()): boolea
   return true;
 }
 
+function pick(obj: unknown, ...keys: string[]): string {
+  const record = obj as Record<string, unknown> | null | undefined;
+  for (const key of keys) {
+    const value = record?.[key];
+    if (value != null && value !== "") return String(value);
+  }
+  return "";
+}
+
 export function useNewSubmissionViewModel() {
-  const { activeRole } = useAuth();
-  const eventIdFromRole =
-    (activeRole as { eventId?: string; EventId?: string } | null)?.eventId ||
-    (activeRole as { EventId?: string } | null)?.EventId ||
-    "";
-  const { data: realTeam, isLoading } = useMyTeam(eventIdFromRole || undefined);
+  const router = useRouter();
+  const { activeRole, allEventRoles } = useAuth();
+  const searchParams = useSearchParams();
+  const eventIdFromUrl = searchParams.get("eventId") || "";
+  const latestTeamEventId = useMemo(
+    () => teamService.resolveLatestTeamEventId(allEventRoles),
+    [allEventRoles],
+  );
+  const [targetEventId, setTargetEventId] = useState(() =>
+    teamService.resolveTargetEventId(eventIdFromUrl, activeRole, allEventRoles),
+  );
+
+  useEffect(() => {
+    setTargetEventId(
+      teamService.resolveTargetEventId(eventIdFromUrl, activeRole, allEventRoles),
+    );
+  }, [eventIdFromUrl, activeRole, allEventRoles]);
+
+  const { data: realTeam, isLoading } = useMyTeam(targetEventId || undefined);
+
+  // URL event cũ (đội Forming/không có đội) → chuyển sang sự kiện đội mới nhất (seed)
+  useEffect(() => {
+    if (isLoading || !latestTeamEventId) return;
+    const status = pick(realTeam, "status", "Status");
+    const isForming = status === "Forming" || status === "0";
+    const wrongEvent =
+      !!eventIdFromUrl &&
+      eventIdFromUrl !== latestTeamEventId &&
+      (!realTeam || isForming);
+    if (wrongEvent) {
+      setTargetEventId(latestTeamEventId);
+      router.replace(`/submissions/new?eventId=${latestTeamEventId}`);
+    }
+  }, [isLoading, realTeam, eventIdFromUrl, latestTeamEventId, router]);
+
   const team = realTeam;
-  const eventId = (team as any)?.EventId || (team as any)?.eventId || eventIdFromRole;
+  const eventId = (team as any)?.EventId || (team as any)?.eventId || targetEventId;
   const teamId = (team as any)?.TeamId || (team as any)?.id || "";
   const teamTrackId = (team as any)?.TrackId || (team as any)?.trackId || "";
   const { data: tracks = [] } = useGetTracksByEvent(eventId);
   const { data: rounds = [] } = useEventRounds(eventId);
-  const { data: existingSubs = [] } = useMySubmissions();
+  const { data: existingSubs = [] } = useMySubmissions(teamId || undefined);
   // Chọn vòng đang MỞ (now nằm trong [startDate, endDate]), không phải luôn lấy vòng
   // cuối cùng — sự kiện có ≥2 vòng thì vòng cuối thường chưa mở, khiến nộp bài luôn bị
   // BE từ chối dù vòng trước đó đang mở thật.
@@ -127,6 +168,7 @@ export function useNewSubmissionViewModel() {
       eventId,
       teamId,
       roundId,
+      targetEventId,
       canSubmit,
       submitBlockReason,
       isLoading,

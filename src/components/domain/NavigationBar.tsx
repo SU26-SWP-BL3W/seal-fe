@@ -893,7 +893,7 @@ export function NavigationBar() {
             {isJoinedThisEvent && (
               <>
                 <Link
-                  href="/my-team"
+                  href={activeViewEventId ? `/my-team?eventId=${activeViewEventId}` : "/my-team"}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/my-team")
                       ? "bg-[var(--accent-team)] text-[var(--bg-base)] shadow-sm"
@@ -904,7 +904,7 @@ export function NavigationBar() {
                 </Link>
 
                 <Link
-                  href="/my-submissions"
+                  href={activeViewEventId ? `/my-submissions?eventId=${activeViewEventId}` : "/my-submissions"}
                   className={`flex items-center gap-2.5 px-3 py-2.5 hud-clipped transition-all font-bold ${
                     pathname.includes("/my-submissions") || pathname.includes("/submissions/")
                       ? "bg-[var(--accent-team)] text-[var(--bg-base)] shadow-sm"

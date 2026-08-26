@@ -18,12 +18,52 @@ import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge, Button, Card, EmptyState, Table, TableHeader, TableRow, TableHead, TableCell, Pagination } from "@/components/ui";
 import { useJudgeTrackTeamsViewModel } from "@/viewModels/judge/useJudgeTrackTeamsViewModel";
+import { countSubmissionArtifactLinks, getSubmissionArtifactUrls } from "@/lib/submissionArtifacts";
+import type { SubmitResultListItem } from "@/repositories/scoring/submitResultsRepository";
+
+function SubmissionLinksCell({ sub }: { sub: Record<string, unknown> }) {
+  const { repoUrl, demoUrl, slideUrl } = getSubmissionArtifactUrls(sub);
+  const linkCount = countSubmissionArtifactLinks(sub);
+
+  if (linkCount === 0) {
+    return <span className="text-xs text-[var(--text-muted)]">Chưa có link</span>;
+  }
+
+  const items = [
+    { label: "Repo", url: repoUrl },
+    { label: "Demo", url: demoUrl },
+    { label: "Slide", url: slideUrl },
+  ].filter((item) => item.url);
+
+  return (
+    <div className="space-y-1">
+      <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+        {linkCount} link
+      </span>
+      <div className="flex flex-wrap gap-x-2 gap-y-1">
+        {items.map((item) => (
+          <a
+            key={item.label}
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-0.5 text-xs text-[var(--accent-primary)] hover:underline"
+          >
+            {item.label}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function JudgeTrackTeamsView() {
   const { user } = useAuth();
   const { state, data, pagination } = useJudgeTrackTeamsViewModel();
 
   const {
+    trackId,
     trackName,
     isLoadingSubs,
     evaluatedCount,
@@ -134,17 +174,9 @@ export function JudgeTrackTeamsView() {
                   </TableRow>
                 </TableHeader>
                 <tbody>
-                  {paginatedSubmissions.map((sub: {
-                    id?: string;
-                    Id?: string;
-                    submissionUrl?: string;
-                    SubmissionUrl?: string;
-                    createdTime?: string;
-                    CreatedTime?: string;
-                  }, idx: number) => {
+                  {paginatedSubmissions.map((sub: SubmitResultListItem, idx: number) => {
                     const subId = sub.id || sub.Id || "";
                     const code = `SUB-${subId.slice(0, 8).toUpperCase()}`;
-                    const submissionUrl = sub.submissionUrl || sub.SubmissionUrl || "";
                     const submitTime = sub.createdTime || sub.CreatedTime;
                     const isEvaluated = submittedIds.has(subId);
 
@@ -159,19 +191,7 @@ export function JudgeTrackTeamsView() {
                           {submitTime ? new Date(submitTime).toLocaleString("vi-VN") : "N/A"}
                         </TableCell>
                         <TableCell>
-                          {submissionUrl ? (
-                            <a
-                              href={submissionUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-[var(--accent-primary)] hover:underline"
-                            >
-                              Xem bài nộp
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          ) : (
-                            <span className="text-xs text-[var(--text-muted)]">Chưa có link</span>
-                          )}
+                          <SubmissionLinksCell sub={sub as Record<string, unknown>} />
                         </TableCell>
                         <TableCell align="center">
                           {isEvaluated ? (
@@ -187,7 +207,7 @@ export function JudgeTrackTeamsView() {
                           )}
                         </TableCell>
                         <TableCell align="right">
-                          <Link href={`/judge/scoring?subId=${subId}`}>
+                          <Link href={`/judge/scoring?trackId=${trackId}&subId=${subId}`}>
                             <Button accent="judge" className="text-xs">
                               <FileCheck2 className="h-3.5 w-3.5" />
                               Chấm điểm
@@ -203,17 +223,9 @@ export function JudgeTrackTeamsView() {
 
             {/* Mobile cards */}
             <div className="space-y-3 md:hidden">
-              {paginatedSubmissions.map((sub: {
-                id?: string;
-                Id?: string;
-                submissionUrl?: string;
-                SubmissionUrl?: string;
-                createdTime?: string;
-                CreatedTime?: string;
-              }, idx: number) => {
+              {paginatedSubmissions.map((sub: SubmitResultListItem, idx: number) => {
                 const subId = sub.id || sub.Id || "";
                 const code = `SUB-${subId.slice(0, 8).toUpperCase()}`;
-                const submissionUrl = sub.submissionUrl || sub.SubmissionUrl || "";
                 const submitTime = sub.createdTime || sub.CreatedTime;
                 const isEvaluated = submittedIds.has(subId);
 
@@ -244,22 +256,10 @@ export function JudgeTrackTeamsView() {
                           {submitTime ? new Date(submitTime).toLocaleString("vi-VN") : "N/A"}
                         </span>
                       </p>
-                      {submissionUrl ? (
-                        <a
-                          href={submissionUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[var(--accent-primary)] hover:underline"
-                        >
-                          Xem bài nộp
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      ) : (
-                        <span>Chưa có link bài nộp</span>
-                      )}
+                      <SubmissionLinksCell sub={sub as Record<string, unknown>} />
                     </div>
 
-                    <Link href={`/judge/scoring?subId=${subId}`}>
+                    <Link href={`/judge/scoring?trackId=${trackId}&subId=${subId}`}>
                       <Button accent="judge" className="w-full">
                         Chấm điểm
                         <ChevronRight className="h-4 w-4" />

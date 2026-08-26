@@ -81,7 +81,7 @@ export function TeamHeader({
         )}
 
         {isRegistered && (
-          <Link href="/submissions/new">
+          <Link href={team.eventId ? `/submissions/new?eventId=${team.eventId}` : "/submissions/new"}>
             <Button id="submit-project-btn" accent="team" className="w-full">
               Nộp bài thi
             </Button>
@@ -100,7 +100,7 @@ export function TeamHeader({
             </Button>
           )}
           {team.status === "Registered" && isLeader && (
-            <Link href="/submissions/new">
+            <Link href={team.eventId ? `/submissions/new?eventId=${team.eventId}` : "/submissions/new"}>
               <Button
                 id="submit-project-btn"
                 variant="primary"
@@ -111,7 +111,7 @@ export function TeamHeader({
               </Button>
             </Link>
           )}
-          <Link href="/my-submissions">
+          <Link href={team.eventId ? `/my-submissions?eventId=${team.eventId}` : "/my-submissions"}>
             <Button id="view-submissions-btn" variant="ghost" accent="team" className="text-xs">
               Quản lý bài nộp
             </Button>

@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
+import { teamService } from "@/services/team/teamService";
 import { useMyTeam } from "@/repositories/teamsRepository";
 import { useMySubmissions } from "@/repositories/submitResultsRepository";
 import {
@@ -43,7 +45,7 @@ function pick(obj: unknown, ...keys: string[]): string {
  */
 export function useAppealsViewModel() {
   const toast = useToast();
-  const { user, activeRole } = useAuth();
+  const { user, activeRole, allEventRoles } = useAuth();
   
   // State form gửi đơn phúc khảo
   const [reason, setReason] = useState("");
@@ -59,12 +61,18 @@ export function useAppealsViewModel() {
   const roleName = pick(activeRole, "roleName", "RoleName");
   const isLeader = roleName === "TeamLeader";
   const isEC = roleName === "EventCoordinator" || roleName === "Coordinator" || Boolean(user?.isAdmin || user?.IsAdmin);
-  const eventIdFromRole = pick(activeRole, "eventId", "EventId");
+  const searchParams = useSearchParams();
+  const targetEventId = teamService.resolveTargetEventId(
+    searchParams.get("eventId") || "",
+    activeRole,
+    allEventRoles,
+  );
+  const eventIdFromRole = targetEventId || pick(activeRole, "eventId", "EventId");
 
   // Truy vấn thông tin Đội thi và Bài nộp của đội
-  const { data: myTeam } = useMyTeam(eventIdFromRole || undefined);
+  const { data: myTeam } = useMyTeam(targetEventId || undefined);
   const teamId = pick(myTeam, "id", "Id", "TeamId");
-  const { data: mySubmissions = [] } = useMySubmissions();
+  const { data: mySubmissions = [] } = useMySubmissions(teamId || undefined);
 
   // Truy vấn danh sách đơn: Nếu là EC -> lấy toàn bộ đơn của Sự kiện; Nếu là Đội -> lấy đơn của Đội mình
   const teamAppeals = useGetAppealsByTeam(!isEC ? teamId || undefined : undefined);

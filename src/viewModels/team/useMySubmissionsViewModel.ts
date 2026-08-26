@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/providers/ToastProvider";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,18 +13,42 @@ import {
 } from "@/repositories/submitResultsRepository";
 import { validateDemoUrl, validateRepoUrl, validateSlideUrl } from "@/lib/linkValidators";
 import { usePagination } from "@/hooks/usePagination";
+import { teamService } from "@/services/team/teamService";
+
+function pick(obj: unknown, ...keys: string[]): string {
+  const record = obj as Record<string, unknown> | null | undefined;
+  for (const key of keys) {
+    const value = record?.[key];
+    if (value != null && value !== "") return String(value);
+  }
+  return "";
+}
 
 export function useMySubmissionsViewModel() {
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const { data: teamResponse, isLoading: isLoadingTeam } = useMyTeam();
-  const team = (teamResponse as any)?.team ?? teamResponse;
-
-  const teamId = team?.id || team?.Id || "";
-  const isLeader = (team?.members || []).some(
-    (m: any) => (m.userId === user?.id || m.userId === user?.userId) && (m.roleName === "TeamLeader" || m.roleName === "Leader"),
+  const { user, activeRole, allEventRoles } = useAuth();
+  const searchParams = useSearchParams();
+  const roleName = pick(activeRole, "RoleName", "roleName");
+  const currentUserId = pick(user, "id", "userId", "UserID");
+  const targetEventId = teamService.resolveTargetEventId(
+    searchParams.get("eventId") || "",
+    activeRole,
+    allEventRoles,
   );
+
+  const { data: rawTeam, isLoading: isLoadingTeam } = useMyTeam(targetEventId || undefined);
+  const team = useMemo(
+    () => teamService.normalizeTeamView(rawTeam, targetEventId),
+    [rawTeam, targetEventId],
+  );
+  const members = useMemo(() => teamService.normalizeTeamMembers(rawTeam), [rawTeam]);
+  const isLeader = useMemo(
+    () => teamService.checkIsTeamLeader(rawTeam, members, currentUserId, roleName),
+    [rawTeam, members, currentUserId, roleName],
+  );
+
+  const teamId = team?.id || "";
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
   const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
@@ -129,6 +154,7 @@ export function useMySubmissionsViewModel() {
     state: {
       team,
       teamId,
+      targetEventId,
       isLeader,
       isRegistered,
       isLoadingTeam,

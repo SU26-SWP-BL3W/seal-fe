@@ -29,6 +29,8 @@ export interface JudgeTrackItem {
   endDate?: string;
   scoringStartDate?: string;
   scoringEndDate?: string;
+  /** ms since epoch — ưu tiên track/event được gán mới nhất. */
+  assignedAtMs?: number;
 }
 
 async function fetchTracksByEvent(eventId: string): Promise<TrackWithStaffModel[]> {
@@ -54,6 +56,20 @@ export function useMyAssignedJudgeTracks() {
     const map = new Map<string, string>();
     myEventRoles.forEach((r) => {
       if (r.roleName === "Judge" && r.trackId) map.set(r.trackId, r.id);
+    });
+    return map;
+  }, [myEventRoles]);
+
+  const assignedAtMsByTrack = useMemo(() => {
+    const map = new Map<string, number>();
+    myEventRoles.forEach((r: any) => {
+      if (r.roleName !== "Judge" && r.RoleName !== "Judge") return;
+      const trackId = r.trackId || r.TrackId;
+      if (!trackId) return;
+      const atStr = r.assignedAt || r.AssignedAt || r.createdTime || r.CreatedTime;
+      const ms = atStr ? new Date(atStr).getTime() : 0;
+      const prev = map.get(trackId) ?? 0;
+      if (ms >= prev) map.set(trackId, ms);
     });
     return map;
   }, [myEventRoles]);
@@ -131,6 +147,7 @@ export function useMyAssignedJudgeTracks() {
           trackId,
           templateId: t.templateId || t.TemplateId || "",
           eventRoleId: eventRoleIdByTrack.get(trackId) || fallbackEventRoleId,
+          assignedAtMs: assignedAtMsByTrack.get(trackId),
           // Mang theo mốc thời gian THẬT của track để gate cổng chấm không đọc nhầm ngày Round.
           endDate: (t as any).endDate || (t as any).EndDate,
           scoringStartDate: (t as any).scoringStartDate || (t as any).ScoringStartDate,
@@ -140,7 +157,7 @@ export function useMyAssignedJudgeTracks() {
     });
 
     return list;
-  }, [candidateEventIds, trackQueries, eventMeta, isAdmin, userId, assignedTrackId, eventRoleIdByTrack, fallbackEventRoleId]);
+  }, [candidateEventIds, trackQueries, eventMeta, isAdmin, userId, assignedTrackId, eventRoleIdByTrack, assignedAtMsByTrack, fallbackEventRoleId, myEventRoles]);
 
   // Bài nộp thật của từng track (song song — không gọi hook trong vòng lặp được nên dùng useQueries).
   const submissionQueries = useQueries({
@@ -176,7 +193,7 @@ export function useMyAssignedJudgeTracks() {
   }, [scoreQueries]);
 
   const assignedTracks: JudgeTrackItem[] = useMemo(() => {
-    return baseTracks.map((t, idx) => {
+    const items = baseTracks.map((t, idx) => {
       const rawList = submissionQueries[idx]?.data ?? [];
       const normTrackId = (t.trackId || "").replace(/-/g, "").toLowerCase();
       const submissions = rawList.filter((s: any) => {
@@ -193,6 +210,8 @@ export function useMyAssignedJudgeTracks() {
         status: total > 0 && scored === total ? "DONE" : "PENDING",
       };
     });
+
+    return items.sort((a, b) => (b.assignedAtMs ?? 0) - (a.assignedAtMs ?? 0));
   }, [baseTracks, submissionQueries, submittedIds]);
 
   const isLoading =
