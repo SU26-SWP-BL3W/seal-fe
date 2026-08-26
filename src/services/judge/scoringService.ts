@@ -4,7 +4,7 @@
  */
 
 export interface ScoringTimelineContext {
-  event?: { status?: boolean; endDate?: string } | null;
+  event?: { status?: boolean; endDate?: string; eventName?: string; EventName?: string } | null;
   round?: { startDate?: string; endDate?: string; submissionDeadline?: string; scoringStartDate?: string; scoringEndDate?: string; evaluationEndDate?: string } | null;
   track?: { endDate?: string; scoringStartDate?: string; scoringEndDate?: string } | null;
   now?: number;
@@ -17,6 +17,7 @@ export interface ScoringTimelineStatus {
   isScoringTimeExpired: boolean;
   isScoringLocked: boolean;
   lockReason?: string;
+  isDemoLive?: boolean;
 }
 
 export interface CriteriaItem {
@@ -28,6 +29,13 @@ export interface CriteriaItem {
 }
 
 const DRAFT_SCORE_PREFIX = "seal_judge_draft_score_";
+
+const DEMO_LIVE_EVENT_PREFIX = "Nộp Bài & Chấm -";
+
+function isDemoLiveSubmitScoreEvent(event?: ScoringTimelineContext["event"]): boolean {
+  const name = event?.eventName || event?.EventName || "";
+  return name.startsWith(DEMO_LIVE_EVENT_PREFIX);
+}
 
 export const scoringService = {
   /**
@@ -50,6 +58,7 @@ export const scoringService = {
     const isSubmissionStillOpen = Boolean(
       !isEventEnded && submissionDeadlineTime && !isNaN(submissionDeadlineTime) && now <= submissionDeadlineTime
     );
+    const demoLive = isDemoLiveSubmitScoreEvent(event);
     const isBeforeScoringTime = Boolean(
       !isEventEnded && !isSubmissionStillOpen && scoringStartTime && !isNaN(scoringStartTime) && now < scoringStartTime
     );
@@ -57,12 +66,13 @@ export const scoringService = {
       !isEventEnded && scoringEndTime && !isNaN(scoringEndTime) && now > scoringEndTime
     );
 
-    const isScoringLocked = isEventEnded || isSubmissionStillOpen || isBeforeScoringTime || isScoringTimeExpired;
+    const blockForOpenSubmission = isSubmissionStillOpen && !demoLive;
+    const isScoringLocked = isEventEnded || blockForOpenSubmission || isBeforeScoringTime || isScoringTimeExpired;
 
     let lockReason: string | undefined;
     if (isEventEnded) {
       lockReason = "Sự kiện đã kết thúc.";
-    } else if (isSubmissionStillOpen) {
+    } else if (blockForOpenSubmission) {
       lockReason = "Thời hạn nộp bài của thí sinh vẫn đang diễn ra. Bàn chấm điểm sẽ mở sau khi đóng cổng nộp.";
     } else if (isBeforeScoringTime) {
       lockReason = "Chưa đến thời gian bắt đầu chấm điểm theo lịch trình.";
@@ -77,6 +87,7 @@ export const scoringService = {
       isScoringTimeExpired,
       isScoringLocked,
       lockReason,
+      isDemoLive: demoLive,
     };
   },
 

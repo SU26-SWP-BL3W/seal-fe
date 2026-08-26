@@ -104,6 +104,7 @@ export function useJudgeScoringViewModel() {
     isBeforeScoringTime,
     isScoringTimeExpired,
     isScoringLocked,
+    isDemoLive,
   } = useMemo(
     () =>
       scoringService.evaluateScoringTimeline({
@@ -303,6 +304,7 @@ export function useJudgeScoringViewModel() {
       isBeforeScoringTime,
       isScoringTimeExpired,
       isScoringLocked,
+      isDemoLive,
       submissionDeadlineStr,
       scoringStartDateStr,
       scoringEndDateStr,

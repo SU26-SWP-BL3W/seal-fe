@@ -76,6 +76,7 @@ export function JudgeScoringView() {
     isBeforeScoringTime,
     isScoringTimeExpired,
     isScoringLocked,
+    isDemoLive,
     submissionDeadlineStr,
     scoringStartDateStr,
     scoringEndDateStr,
@@ -224,7 +225,7 @@ export function JudgeScoringView() {
             </Link>
           )}
         </div>
-      ) : isSubmissionStillOpen ? (
+      ) : isSubmissionStillOpen && !isDemoLive ? (
         <div className="p-3.5 bg-amber-950/40 border border-amber-500/50 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs shadow-sm">
           <div className="space-y-1 text-amber-300">
             <div className="flex items-center gap-2 font-bold uppercase">
@@ -237,6 +238,18 @@ export function JudgeScoringView() {
           </div>
           <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold uppercase text-[11px] hud-clipped shrink-0">
             [ CHƯA MỞ CHẤM ]
+          </span>
+        </div>
+      ) : isSubmissionStillOpen && isDemoLive ? (
+        <div className="p-3 bg-emerald-950/30 border border-emerald-500/40 hud-clipped flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono text-xs shadow-sm">
+          <div className="flex items-center gap-2 text-emerald-300">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-bold uppercase">
+              [ ● DEMO: NỘP BÀI &amp; CHẤM SONG SONG — CỔNG CHẤM ĐANG MỞ ]
+            </span>
+          </div>
+          <span className="text-zinc-400 text-[11px]">
+            Hạn nộp: <strong className="text-emerald-300">{formatDateTime(submissionDeadlineStr)}</strong>
           </span>
         </div>
       ) : isBeforeScoringTime ? (
@@ -285,7 +298,7 @@ export function JudgeScoringView() {
       )}
 
       {/* ── NẾU ĐANG TRONG THỜI GIAN NỘP BÀI HOẶC CHƯA ĐẾN GIỜ CHẤM: HIỂN THỊ MÀN HÌNH CHỜ GIÁM KHẢO ── */}
-      {(isSubmissionStillOpen || isBeforeScoringTime) ? (
+      {(isBeforeScoringTime || (isSubmissionStillOpen && !isDemoLive)) ? (
         <div className="flex-1 bg-[#10171a] border border-amber-500/40 p-8 md:p-12 hud-clipped flex flex-col items-center justify-center text-center space-y-6 shadow-lg font-mono">
           <div className="w-16 h-16 rounded-full bg-amber-500/10 border-2 border-amber-500/40 flex items-center justify-center text-amber-300 text-3xl animate-pulse">
             ⏳
