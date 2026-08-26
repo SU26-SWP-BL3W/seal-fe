@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge, Button, Card, EmptyState, Table, TableHeader, TableRow, TableHead, TableCell, Pagination } from "@/components/ui";
 import { useJudgeTrackTeamsViewModel } from "@/viewModels/judge/useJudgeTrackTeamsViewModel";
 import { countSubmissionArtifactLinks, getSubmissionArtifactUrls } from "@/lib/submissionArtifacts";
+import type { SubmitResultListItem } from "@/repositories/scoring/submitResultsRepository";
 
 function SubmissionLinksCell({ sub }: { sub: Record<string, unknown> }) {
   const { repoUrl, demoUrl, slideUrl } = getSubmissionArtifactUrls(sub);
@@ -173,20 +174,7 @@ export function JudgeTrackTeamsView() {
                   </TableRow>
                 </TableHeader>
                 <tbody>
-                  {paginatedSubmissions.map((sub: {
-                    id?: string;
-                    Id?: string;
-                    repoUrl?: string;
-                    RepoUrl?: string;
-                    demoUrl?: string;
-                    DemoUrl?: string;
-                    slideUrl?: string;
-                    SlideUrl?: string;
-                    submissionUrl?: string;
-                    SubmissionUrl?: string;
-                    createdTime?: string;
-                    CreatedTime?: string;
-                  }, idx: number) => {
+                  {paginatedSubmissions.map((sub: SubmitResultListItem, idx: number) => {
                     const subId = sub.id || sub.Id || "";
                     const code = `SUB-${subId.slice(0, 8).toUpperCase()}`;
                     const submitTime = sub.createdTime || sub.CreatedTime;
@@ -235,20 +223,7 @@ export function JudgeTrackTeamsView() {
 
             {/* Mobile cards */}
             <div className="space-y-3 md:hidden">
-              {paginatedSubmissions.map((sub: {
-                id?: string;
-                Id?: string;
-                repoUrl?: string;
-                RepoUrl?: string;
-                demoUrl?: string;
-                DemoUrl?: string;
-                slideUrl?: string;
-                SlideUrl?: string;
-                submissionUrl?: string;
-                SubmissionUrl?: string;
-                createdTime?: string;
-                CreatedTime?: string;
-              }, idx: number) => {
+              {paginatedSubmissions.map((sub: SubmitResultListItem, idx: number) => {
                 const subId = sub.id || sub.Id || "";
                 const code = `SUB-${subId.slice(0, 8).toUpperCase()}`;
                 const submitTime = sub.createdTime || sub.CreatedTime;
