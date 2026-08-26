@@ -62,6 +62,7 @@ export function JudgeTrackTeamsView() {
   const { state, data, pagination } = useJudgeTrackTeamsViewModel();
 
   const {
+    trackId,
     trackName,
     isLoadingSubs,
     evaluatedCount,
@@ -218,7 +219,7 @@ export function JudgeTrackTeamsView() {
                           )}
                         </TableCell>
                         <TableCell align="right">
-                          <Link href={`/judge/scoring?subId=${subId}`}>
+                          <Link href={`/judge/scoring?trackId=${trackId}&subId=${subId}`}>
                             <Button accent="judge" className="text-xs">
                               <FileCheck2 className="h-3.5 w-3.5" />
                               Chấm điểm
@@ -283,7 +284,7 @@ export function JudgeTrackTeamsView() {
                       <SubmissionLinksCell sub={sub as Record<string, unknown>} />
                     </div>
 
-                    <Link href={`/judge/scoring?subId=${subId}`}>
+                    <Link href={`/judge/scoring?trackId=${trackId}&subId=${subId}`}>
                       <Button accent="judge" className="w-full">
                         Chấm điểm
                         <ChevronRight className="h-4 w-4" />
