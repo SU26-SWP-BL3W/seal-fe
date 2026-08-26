@@ -23,7 +23,9 @@ export function useAdminDashboardViewModel() {
   const handleSetupDemoEvents = async () => {
     try {
       await setupDemoEvents(new Date().toISOString());
-      setDemoToolMessage("Đã tạo 2 sự kiện demo (Nộp bài + Chấm điểm) quanh ngày hôm nay.");
+      setDemoToolMessage(
+        "Đã tạo [DEMO LIVE] Nộp Bài & Chấm: Team Nộp Bài 1 trống (student1_demo nộp live); Team 2 đã nộp+chấm sẵn. judge/mentor/ec_demo. Pass: 123456. Không nhầm với nút Đầy Đủ 100%."
+      );
       refetch();
     } catch (err: any) {
       setDemoToolMessage(err?.response?.data?.message || "Tạo sự kiện demo thất bại.");
