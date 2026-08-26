@@ -679,7 +679,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                               }}
                               className="text-[var(--accent-primary)] font-bold hover:underline"
                             >
-                              [ Xem chi tiết ]
+                              {n.linkUrl.startsWith("/my-team") ? "[ Xem đội thi ]" : "[ Xem chi tiết ]"}
                             </Link>
                           )
                         ) : (

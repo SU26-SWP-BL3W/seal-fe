@@ -11,7 +11,6 @@ import {
 
 import { usePublicEvents } from "@/repositories/eventsRepository";
 import { useAuth } from "@/providers/AuthProvider";
-import { getAssignedEventIdsFromRoles } from "@/lib/eventRoles";
 
 export type { EventDisplayStatus, EventCardData };
 
@@ -24,16 +23,15 @@ export interface TrackSummary {
 }
 
 export function useEventsDiscoveryViewModel() {
-  const { activeRole, allEventRoles } = useAuth();
+  const { allEventRoles } = useAuth();
+  // Lấy TOÀN BỘ eventId mà user có bất kỳ vai trò nào (staff LẪN TeamLeader/TeamMember) —
+  // trước đây lọc qua getAssignedEventIdsFromRoles() mặc định chỉ nhận vai trò tổ chức
+  // (STAFF_ROLE_NAMES), còn activeRole chỉ mang eventId của 1 vai trò "chính" duy nhất
+  // (ROLE_RANK chọn role đầu tiên khớp, không phải mọi sự kiện) -> user làm Trưởng nhóm
+  // ở 2 sự kiện thì sự kiện thứ 2 luôn bị rớt khỏi "Sự kiện của tôi".
   const myEventIds = useMemo(() => {
-    const fromRoles = getAssignedEventIdsFromRoles(allEventRoles);
-    const ids = [
-      ...fromRoles,
-      ...(activeRole?.assignedEventIds ?? activeRole?.AssignedEventIds ?? []),
-      activeRole?.eventId || activeRole?.EventId || "",
-    ].filter(Boolean);
-    return [...new Set(ids)];
-  }, [activeRole, allEventRoles]);
+    return [...new Set(allEventRoles.map((r) => r.eventId).filter(Boolean))];
+  }, [allEventRoles]);
   const { data: realPublicEvents = [] } = usePublicEvents();
   const [now] = useState(() => Date.now());
   const [search, setSearch] = useState("");

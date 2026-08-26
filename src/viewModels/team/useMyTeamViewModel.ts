@@ -146,17 +146,16 @@ export function useMyTeamViewModel() {
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [dialogError, setDialogError] = useState("");
 
+  // Không tự try/catch + toast ở đây — InvitePanel và InviteMemberModal đều tự await onInvite(...)
+  // trong try/catch RIÊNG của chúng để hiện thông báo chi tiết hơn (kèm isNewTemporaryUser).
+  // Trước đây hàm này nuốt lỗi (chỉ toast.error, không throw lại) khiến 2 nơi gọi tưởng thành
+  // công và hiện nhầm thông báo xanh dù lời mời thực tế bị BE từ chối (vd: "đã tham gia đội
+  // khác trong sự kiện này"). Phải để lỗi ném ngược lên và trả về kết quả thật cho caller.
   const handleInviteSubmit = async (args: string | { teamId?: string; email: string; notes?: string }) => {
     if (!team?.id) return;
     const email = typeof args === "string" ? args : args.email;
     const notes = typeof args === "string" ? undefined : args.notes;
-    try {
-      await inviteMember({ teamId: team.id, email, notes });
-      toast.success(`Đã gửi lời mời tới ${email}`);
-      setShowInviteModal(false);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || "Gửi lời mời thất bại");
-    }
+    return await inviteMember({ teamId: team.id, email, notes });
   };
 
   const handleKickMember = async () => {
