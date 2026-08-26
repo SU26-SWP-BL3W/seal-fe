@@ -4,8 +4,17 @@ import { staffRepository } from "@/repositories/staffRepository";
 import { useEvents } from "@/repositories/eventsRepository";
 import { usersRepository } from "@/repositories/usersRepository";
 import { useSetupDemoEvents, useSetupDemoAppealEvent, useSetupFullEventDemo } from "@/repositories/shared/demoRepository";
+import { useToast } from "@/providers/ToastProvider";
+
+function parseDemoSeedMeta(message: string) {
+  const eventId = message.match(/eventId=([^,\s)]+)/)?.[1]?.trim() || "";
+  const trackId = message.match(/trackId=([^,\s)]+)/)?.[1]?.trim() || "";
+  const trackName = message.match(/track=([^.|]+)/)?.[1]?.trim() || "Phần mềm";
+  return { eventId, trackId, trackName };
+}
 
 export function useAdminDashboardViewModel() {
+  const toast = useToast();
   const { data: rawEvents = [], refetch } = useEvents();
   const realEvents = Array.isArray(rawEvents) ? rawEvents : (rawEvents as any)?.data ?? [];
   const displayEvents = realEvents;
@@ -27,12 +36,27 @@ export function useAdminDashboardViewModel() {
         (res as any)?.message ||
         (res as any)?.data?.message ||
         "Đã tạo Nộp Bài & Chấm.";
+      const { eventId, trackId, trackName } = parseDemoSeedMeta(apiMsg);
+
       setDemoToolMessage(
-        `${apiMsg} Đăng xuất/login lại student1_demo sau seed. Pass: 123456.`
+        `${apiMsg} Đăng xuất/login lại tài khoản demo sau seed. Pass: 123456.`
       );
+
+      if (eventId && trackId) {
+        toast.success(
+          `Hạng mục: ${trackName}. Judge → /judge/scoring?trackId=${trackId} | Mentor → /mentor/teams?eventId=${eventId}&trackId=${trackId}. eventId=${eventId}`,
+          "Demo Nộp → Chấm đã sẵn sàng",
+          12000,
+        );
+      } else {
+        toast.success("Đã tạo sự kiện demo Nộp → Chấm. Đăng xuất/login lại tài khoản demo.", undefined, 8000);
+      }
+
       refetch();
     } catch (err: any) {
-      setDemoToolMessage(err?.response?.data?.message || "Tạo sự kiện demo thất bại.");
+      const msg = err?.response?.data?.message || "Tạo sự kiện demo thất bại.";
+      setDemoToolMessage(msg);
+      toast.error(msg);
     }
   };
 

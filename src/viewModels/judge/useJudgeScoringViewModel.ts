@@ -6,7 +6,7 @@ import { useSaveScore, useGetScoresByEventRole } from "@/repositories/scoresRepo
 import { useMyAssignedJudgeTracks } from "@/viewModels/judge/useMyAssignedJudgeTracks";
 import { useEvents } from "@/repositories/eventsRepository";
 import { useEventRounds } from "@/repositories/events/eventsRepository";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/providers/ToastProvider";
 import { pushSystemNotification } from "@/repositories/shared/notificationsRepository";
 import { scoringService } from "@/services/judge/scoringService";
@@ -15,6 +15,7 @@ const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLower
 
 export function useJudgeScoringViewModel() {
   const toast = useToast();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const prefillSubId = searchParams?.get("subId");
   const prefillTrackId = searchParams?.get("trackId") || "";
@@ -32,11 +33,42 @@ export function useJudgeScoringViewModel() {
 
   const [selectedTrackId, setSelectedTrackId] = useState("");
 
+  const urlTrackIsAssigned = useMemo(() => {
+    if (!prefillTrackId || assignedTracks.length === 0) return false;
+    const urlNorm = normalizeId(prefillTrackId);
+    return assignedTracks.some((t) => normalizeId(t.trackId) === urlNorm);
+  }, [prefillTrackId, assignedTracks]);
+
   const selectedTrack = useMemo(() => {
-    const targetNorm = normalizeId(selectedTrackId) || normalizeId(prefillTrackId);
-    if (!targetNorm && assignedTracks.length > 0) return assignedTracks[0];
-    return assignedTracks.find((t) => normalizeId(t.trackId) === targetNorm) || assignedTracks[0];
-  }, [assignedTracks, selectedTrackId, prefillTrackId]);
+    const urlNorm = normalizeId(prefillTrackId);
+    if (urlNorm && urlTrackIsAssigned) {
+      return assignedTracks.find((t) => normalizeId(t.trackId) === urlNorm) || assignedTracks[0];
+    }
+    if (selectedTrackId) {
+      const picked = assignedTracks.find((t) => normalizeId(t.trackId) === normalizeId(selectedTrackId));
+      if (picked) return picked;
+    }
+    return assignedTracks[0];
+  }, [assignedTracks, selectedTrackId, prefillTrackId, urlTrackIsAssigned]);
+
+  // Bỏ qua trackId URL cũ (không còn role) — chuyển sang track mới nhất
+  useEffect(() => {
+    if (loadingTracks || assignedTracks.length === 0) return;
+
+    const resolved = selectedTrack;
+    if (!resolved?.trackId) return;
+
+    setSelectedTrackId((prev) => {
+      if (normalizeId(prev) === normalizeId(resolved.trackId)) return prev;
+      return resolved.trackId;
+    });
+
+    if (prefillTrackId && !urlTrackIsAssigned) {
+      const params = new URLSearchParams(searchParams?.toString() || "");
+      params.set("trackId", resolved.trackId);
+      router.replace(`/judge/scoring?${params.toString()}`);
+    }
+  }, [loadingTracks, assignedTracks, selectedTrack, prefillTrackId, urlTrackIsAssigned, router, searchParams]);
 
   const activeTrackId = selectedTrack?.trackId || "";
   const eventId = selectedTrack?.eventId || "";

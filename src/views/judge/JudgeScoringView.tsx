@@ -6,8 +6,9 @@ import { useAuth } from "@/providers/AuthProvider";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge, Button, Card, EmptyState } from "@/components/ui";
-import { Scale, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Scale, ChevronLeft, ChevronRight, Check, Code, PlayCircle, Presentation, ExternalLink } from "lucide-react";
 import { useJudgeScoringViewModel } from "@/viewModels/judge/useJudgeScoringViewModel";
+import { getSubmissionArtifactUrls, hasAnySubmissionArtifactLink } from "@/lib/submissionArtifacts";
 
 const normalizeId = (id?: string | null) => (id || "").replace(/-/g, "").toLowerCase();
 
@@ -23,6 +24,43 @@ function formatDateTime(iso?: string): string {
     hour: "2-digit",
     minute: "2-digit",
   })}`;
+}
+
+function JudgeArtifactLink({
+  icon: Icon,
+  label,
+  url,
+  empty,
+}: {
+  icon: typeof Code;
+  label: string;
+  url: string;
+  empty: string;
+}) {
+  return (
+    <div className="p-3 bg-[#090e11] border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hud-clipped">
+      <div className="flex min-w-0 flex-1 items-start gap-2">
+        <Icon className="h-4 w-4 shrink-0 text-cyan-400 mt-0.5" aria-hidden="true" />
+        <div className="min-w-0">
+          <span className="font-mono text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+            {label}
+          </span>
+          <div className="font-mono text-xs text-cyan-300 truncate">{url || empty}</div>
+        </div>
+      </div>
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="px-4 py-2 bg-cyan-500 text-black hover:bg-white font-mono text-xs font-bold uppercase transition-all hud-clipped cursor-pointer shrink-0 text-center inline-flex items-center justify-center gap-1"
+        >
+          Mở
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      ) : null}
+    </div>
+  );
 }
 
 export function JudgeScoringView() {
@@ -82,7 +120,8 @@ export function JudgeScoringView() {
   const sub = selectedSubmission;
   const subId = sub?.id || sub?.Id || "";
   const displayCode = subId ? `SUB-${String(subId).slice(0, 8).toUpperCase()}` : "";
-  const submissionUrl = sub?.submissionUrl || sub?.SubmissionUrl || "";
+  const { repoUrl, demoUrl, slideUrl } = getSubmissionArtifactUrls(sub);
+  const hasSubmissionLinks = hasAnySubmissionArtifactLink(sub);
   const isGraded = submittedIds.has(subId);
 
   if (loadingTracks && assignedTracks.length === 0) {
@@ -412,19 +451,26 @@ export function JudgeScoringView() {
                     <span className="font-mono text-xs font-bold text-zinc-300 uppercase tracking-wider block">
                       [ LIÊN KẾT BÀI NỘP / SẢN PHẨM ]
                     </span>
-                    {submissionUrl ? (
-                      <div className="p-3 bg-[#090e11] border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hud-clipped">
-                        <div className="min-w-0 flex-1 font-mono text-xs text-cyan-300 truncate">
-                          {submissionUrl}
-                        </div>
-                        <a
-                          href={submissionUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-4 py-2 bg-cyan-500 text-black hover:bg-white font-mono text-xs font-bold uppercase transition-all hud-clipped cursor-pointer shrink-0 text-center"
-                        >
-                          [ XEM BÀI NỘP TRỰC TIẾP &gt; ]
-                        </a>
+                    {hasSubmissionLinks ? (
+                      <div className="space-y-2">
+                        <JudgeArtifactLink
+                          icon={Code}
+                          label="Kho mã nguồn"
+                          url={repoUrl}
+                          empty="Chưa cung cấp repository"
+                        />
+                        <JudgeArtifactLink
+                          icon={PlayCircle}
+                          label="Live demo"
+                          url={demoUrl}
+                          empty="Chưa cung cấp demo"
+                        />
+                        <JudgeArtifactLink
+                          icon={Presentation}
+                          label="Slide thuyết trình"
+                          url={slideUrl}
+                          empty="Chưa cung cấp slide"
+                        />
                       </div>
                     ) : (
                       <div className="p-3 bg-[#090e11] border border-zinc-800 text-zinc-500 font-mono text-xs text-center hud-clipped">
