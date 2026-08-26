@@ -174,7 +174,7 @@ export function useMyTeamViewModel() {
     if (!team?.id || !cancelTarget) return;
     try {
       await cancelInvitation({ teamId: team.id, invitationId: cancelTarget.id });
-      toast.success("Đã hủy lời mời");
+      toast.success(cancelTarget.isTransfer ? "Đã hủy yêu cầu chuyển quyền Trưởng nhóm" : "Đã hủy lời mời");
       setCancelTarget(null);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || "Hủy lời mời thất bại");

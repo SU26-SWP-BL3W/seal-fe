@@ -56,6 +56,9 @@ export const teamService = {
    * Normalizes team invitations.
    */
   normalizeTeamInvitations(rawInvitations: unknown[] = []): InvitationView[] {
+    // Gộp CHUNG 1 danh sách cho cả lời mời vào đội LẪN yêu cầu chuyển quyền Trưởng nhóm —
+    // giữ nguyên field isTransfer để UI (InvitePanel) tự hiển thị nhãn/nội dung khác nhau,
+    // không tách thành 2 panel riêng (dễ rối, dữ liệu vẫn chung 1 nguồn TeamInvitation ở BE).
     return rawInvitations.map((inv) => ({
       id: pick(inv, "invitationId", "InvitationId", "id", "Id"),
       email: pick(inv, "invitedUserEmail", "InvitedUserEmail", "email", "Email"),
@@ -64,6 +67,7 @@ export const teamService = {
       statusLabel: pick(inv, "statusLabel", "StatusLabel") || "Đang chờ",
       sentAt: pick(inv, "createdTime", "CreatedTime", "sentAt"),
       respondedAt: pick(inv, "respondedAt", "RespondedAt"),
+      isTransfer: (inv as any)?.isTransfer === true || (inv as any)?.IsTransfer === true,
     }));
   },
 
