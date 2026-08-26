@@ -15,6 +15,7 @@ import {
   Crown,
   Maximize2,
   Check,
+  Unlock,
 } from "lucide-react";
 
 export interface StudentProfileData {
@@ -33,6 +34,12 @@ export interface StudentProfileData {
   rejectionCount?: number;
   lastRejectionReason?: string;
   rejectionReason?: string;
+  rejections?: Array<{
+    id?: string;
+    reason?: string;
+    createdTime?: string | Date;
+    isActive?: boolean;
+  }>;
 }
 
 interface StudentProfileModalProps {
@@ -41,6 +48,7 @@ interface StudentProfileModalProps {
   onClose: () => void;
   onApprove?: (userId: string) => Promise<void> | void;
   onReject?: (userId: string, reason: string) => Promise<void> | void;
+  onUnblock?: (userId: string) => Promise<void> | void;
   canManage?: boolean;
 }
 
@@ -50,6 +58,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
   onClose,
   onApprove,
   onReject,
+  onUnblock,
   canManage = false,
 }) => {
   const [rejecting, setRejecting] = useState(false);
@@ -97,6 +106,22 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
       onClose();
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || "Từ chối hồ sơ thất bại.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!onUnblock || !userId) return;
+    if (!confirm(`Bạn có chắc chắn muốn MỞ KHÓA tài khoản cho thí sinh "${fullName}" không?\nThao tác này sẽ gỡ toàn bộ lịch sử từ chối để thí sinh có thể nộp lại hồ sơ.`)) {
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      await onUnblock(userId);
+      onClose();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || "Mở khóa tài khoản thất bại.");
     } finally {
       setIsProcessing(false);
     }
@@ -257,16 +282,57 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                 </div>
               </div>
 
-              {/* Cảnh Báo Lý Do Từ Chối (Nếu Có) */}
-              {(rejectionReason || rejectionCount > 0) && (
-                <div className="p-3.5 bg-rose-950/30 border border-rose-500/40 rounded-xl font-mono text-xs space-y-1 text-rose-300">
-                  <span className="font-bold flex items-center gap-1.5 uppercase">
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                    LỊCH SỬ TỪ CHỐI ({rejectionCount || 1} LẦN):
-                  </span>
-                  <p className="text-zinc-300 text-[11px] leading-relaxed font-sans">
-                    {rejectionReason || "Ảnh thẻ sinh viên chưa đạt chuẩn hoặc thông tin MSSV không trùng khớp."}
-                  </p>
+              {/* Cảnh Báo & Lịch Sử Lý Do Từ Chối (Nếu Có) */}
+              {(rejectionReason || rejectionCount > 0 || (user.rejections && user.rejections.length > 0)) && (
+                <div className="p-3.5 bg-rose-950/30 border border-rose-500/40 rounded-xl font-mono text-xs space-y-2 text-rose-300">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5 uppercase text-rose-400">
+                      <AlertTriangle className="w-4 h-4 text-rose-400" />
+                      LỊCH SỬ TỪ CHỐI ({user.rejections?.length || rejectionCount || 1} LẦN):
+                    </span>
+                    {rejectionCount >= 2 && (
+                      <span className="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-bold">
+                        ĐANG BỊ KHÓA
+                      </span>
+                    )}
+                  </div>
+
+                  {user.rejections && user.rejections.length > 0 ? (
+                    <div className="space-y-1.5 pt-1">
+                      {user.rejections.map((rej, idx) => (
+                        <div key={rej.id || idx} className="p-2 bg-black/40 border border-rose-500/20 rounded text-[11px] font-sans">
+                          <div className="flex items-center justify-between font-mono text-[10px] text-rose-400 font-bold mb-0.5">
+                            <span>LẦN {idx + 1}:</span>
+                            {rej.createdTime && (
+                              <span className="text-zinc-500">{new Date(rej.createdTime).toLocaleString("vi-VN")}</span>
+                            )}
+                          </div>
+                          <p className="text-zinc-200">{rej.reason || "Ảnh thẻ không hợp lệ hoặc thông tin không trùng khớp."}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-zinc-300 text-[11px] leading-relaxed font-sans">
+                      {rejectionReason || "Ảnh thẻ sinh viên chưa đạt chuẩn hoặc thông tin MSSV không trùng khớp."}
+                    </p>
+                  )}
+
+                  {onUnblock && (rejectionCount > 0 || (user.rejections && user.rejections.length > 0)) && (
+                    <div className="pt-2 border-t border-rose-500/30 flex items-center justify-between">
+                      <span className="text-[10px] text-zinc-400">
+                        {rejectionCount >= 2 ? "Tài khoản bị khóa nộp hồ sơ. Mở khóa để cho phép nộp lại." : "Gỡ các lần từ chối để làm sạch lịch sử."}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleUnblock}
+                        disabled={isProcessing}
+                        className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black border border-amber-500/40 rounded font-bold text-xs font-mono transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <Unlock className="w-3.5 h-3.5" />
+                        <span>Mở Khóa Tài Khoản</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -317,26 +383,40 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
             Đóng
           </button>
 
-          {canManage && user.isApproved === false && !rejecting && (
-            <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
+            {canManage && onUnblock && rejectionCount >= 2 && (
               <button
                 type="button"
-                onClick={() => setRejecting(true)}
-                className="px-4 py-2 bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500 hover:text-white font-bold rounded-lg transition-all cursor-pointer"
-              >
-                Từ Chối Thẻ SV
-              </button>
-              <button
-                type="button"
-                onClick={handleApprove}
+                onClick={handleUnblock}
                 disabled={isProcessing}
-                className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold rounded-lg shadow-lg shadow-emerald-950/40 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                className="px-4 py-2 bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-black font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
-                <Check className="w-4 h-4 stroke-[2.5]" />
-                <span>{isProcessing ? "Đang lưu..." : "Phê Duyệt Thẻ SV"}</span>
+                <Unlock className="w-4 h-4" />
+                <span>Mở Khóa Tài Khoản</span>
               </button>
-            </div>
-          )}
+            )}
+
+            {canManage && user.isApproved === false && !rejecting && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setRejecting(true)}
+                  className="px-4 py-2 bg-rose-500/15 border border-rose-500/40 text-rose-300 hover:bg-rose-500 hover:text-white font-bold rounded-lg transition-all cursor-pointer"
+                >
+                  Từ Chối Thẻ SV
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={isProcessing}
+                  className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold rounded-lg shadow-lg shadow-emerald-950/40 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>{isProcessing ? "Đang lưu..." : "Phê Duyệt Thẻ SV"}</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
       </div>

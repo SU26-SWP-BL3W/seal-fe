@@ -7,6 +7,7 @@ import {
   UserCheck,
   UserX,
   Lock,
+  Unlock,
   Plus,
   RefreshCw,
   CheckCircle2,
@@ -241,6 +242,19 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = () => {
                         </td>
                         <td className="text-center">
                           <div className="flex items-center justify-center gap-2">
+                            {isLocked && (
+                              <Button
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm(`Mở khóa tài khoản cho "${u.fullName || u.email}"?`)) {
+                                    actions.handleUnblock(userId);
+                                  }
+                                }}
+                                className="text-xs font-mono border-amber-500/60 text-amber-300 hover:bg-amber-500/20 font-bold flex items-center gap-1"
+                              >
+                                <Unlock className="w-3.5 h-3.5" /> MỞ KHÓA
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               onClick={() => actions.setDetailUserModal(u)}
@@ -349,13 +363,24 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = () => {
                       <div className="space-y-2 p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped">
                         <span className="text-[10px] text-[var(--text-muted)] uppercase block font-bold">2. Trạng thái &amp; Lịch sử duyệt thẻ:</span>
                         <div>Số lần bị từ chối: <strong className={detailUserModal.rejectionCount && detailUserModal.rejectionCount >= 2 ? "text-[var(--color-danger)] font-bold" : "text-[var(--color-success)]"}>{detailUserModal.rejectionCount ?? 0} / 2 lần</strong></div>
-                        {detailUserModal.rejectionReason && (
+                        {((detailUserModal as any).rejections && (detailUserModal as any).rejections.length > 0) ? (
+                          <div className="space-y-1.5 pt-1">
+                            {(detailUserModal as any).rejections.map((r: any, idx: number) => (
+                              <div key={r.id || idx} className="p-2 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/30 text-[10px] text-[var(--color-danger)]">
+                                <span className="font-bold">Lần {idx + 1}:</span> {r.reason || "Không đạt chuẩn"}
+                                {r.createdTime && <span className="text-zinc-400 ml-2">({new Date(r.createdTime).toLocaleDateString("vi-VN")})</span>}
+                              </div>
+                            ))}
+                          </div>
+                        ) : detailUserModal.rejectionReason ? (
                           <div className="p-2 bg-[rgba(239,68,68,0.1)] border border-[var(--color-danger)]/30 text-[10px] text-[var(--color-danger)]">
                             Lý do từ chối trước: {detailUserModal.rejectionReason}
                           </div>
-                        )}
+                        ) : null}
                         <div>Trạng thái hiện tại: {detailUserModal.isApproved ? (
                           <span className="text-[var(--color-success)] font-bold">ĐÃ PHÊ DUYỆT HỒ SƠ</span>
+                        ) : (detailUserModal.rejectionCount ?? 0) >= 2 ? (
+                          <span className="text-[var(--color-danger)] font-bold">🔒 TÀI KHOẢN TẠM KHÓA</span>
                         ) : (
                           <span className="text-[var(--color-warning)] font-bold">⏳ ĐANG CHỜ PHÊ DUYỆT</span>
                         )}</div>
@@ -389,6 +414,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = () => {
                       </Button>
 
                       <div className="flex items-center gap-2">
+                        {(detailUserModal.rejectionCount ?? 0) >= 2 && (
+                          <Button
+                            variant="primary"
+                            onClick={() => actions.handleUnblock(detailUserModal.id || detailUserModal.userId || "")}
+                            className="font-mono text-xs bg-amber-500 hover:bg-amber-400 text-black font-bold flex items-center gap-1.5"
+                          >
+                            <Unlock className="w-3.5 h-3.5" /> Mở Khóa Tài Khoản
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           onClick={() => actions.openEditUserModal(detailUserModal)}

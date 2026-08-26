@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search, RefreshCw, CheckCircle2, Lock, Eye } from "lucide-react";
+import { Search, RefreshCw, CheckCircle2, Lock, Eye, Unlock } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { StudentProfileModal } from "@/components/domain/StudentProfileModal";
 import { Pagination } from "@/components/ui/Pagination";
@@ -17,10 +17,11 @@ export const CoordinatorProfilesView: React.FC = () => {
     actionSuccess,
     actionError,
     isLoading,
+    isUnblocking,
     isCoordinatorAccess,
   } = state;
 
-  const { usersList, filteredCandidates } = data;
+  const { usersList, filteredCandidates, candidatesStats } = data;
   const { paginatedItems: paginatedCandidates, currentPage, totalPages, totalItems, pageSize, setCurrentPage, setPageSize } = pagination;
 
   if (!isCoordinatorAccess) {
@@ -61,7 +62,7 @@ export const CoordinatorProfilesView: React.FC = () => {
               DANH SÁCH THÍ SINH &amp; DUYỆT THẺ SINH VIÊN
             </h1>
             <p className="text-xs text-zinc-400 font-sans mt-1">
-              Tra cứu danh sách sinh viên, xem ảnh thẻ 3x4, kiểm tra MSSV và phê duyệt/từ chối hồ sơ đăng ký tham gia cuộc thi.
+              Tra cứu danh sách sinh viên, xem ảnh thẻ 3x4, kiểm tra MSSV, phê duyệt/từ chối và mở khóa tài khoản bị tạm khóa.
             </p>
           </div>
 
@@ -110,55 +111,61 @@ export const CoordinatorProfilesView: React.FC = () => {
             </div>
 
             <span className="font-mono text-xs text-zinc-400">
-              Kết quả: <strong className="text-white">{filteredCandidates.length}</strong> / {usersList.length} thí sinh
+              Kết quả: <strong className="text-white">{filteredCandidates.length}</strong> / {candidatesStats.all} thí sinh
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 pt-2 border-t border-zinc-800/80 text-xs font-mono">
+          <div className="flex items-center gap-1.5 pt-2 border-t border-zinc-800/80 text-xs font-mono flex-wrap">
             <span className="text-zinc-400 font-bold mr-1">TRẠNG THÁI:</span>
             <button
               type="button"
               onClick={() => actions.setStatusFilter("all")}
-              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 statusFilter === "all"
                   ? "bg-amber-500 text-black font-extrabold"
                   : "bg-[#0b1013] text-zinc-400 border border-zinc-800 hover:text-white"
               }`}
             >
-              Tất Cả
+              <span>Tất Cả</span>
+              <span className="px-1.5 py-0.2 bg-black/30 rounded text-[10px]">{candidatesStats.all}</span>
             </button>
             <button
               type="button"
               onClick={() => actions.setStatusFilter("approved")}
-              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 statusFilter === "approved"
                   ? "bg-emerald-500 text-black font-extrabold"
                   : "bg-[#0b1013] text-emerald-400 border border-emerald-500/20 hover:bg-emerald-950/30"
               }`}
             >
-              Đã Duyệt
+              <span>Đã Duyệt</span>
+              <span className="px-1.5 py-0.2 bg-black/30 rounded text-[10px]">{candidatesStats.approved}</span>
             </button>
             <button
               type="button"
               onClick={() => actions.setStatusFilter("pending")}
-              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 statusFilter === "pending"
                   ? "bg-amber-400 text-black font-extrabold"
                   : "bg-[#0b1013] text-amber-300 border border-amber-500/20 hover:bg-amber-950/30"
               }`}
             >
-              Chờ Phê Duyệt
+              <span>Chờ Phê Duyệt</span>
+              <span className="px-1.5 py-0.2 bg-black/30 rounded text-[10px]">{candidatesStats.pending}</span>
             </button>
             <button
               type="button"
               onClick={() => actions.setStatusFilter("locked")}
-              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 statusFilter === "locked"
                   ? "bg-rose-500 text-white font-extrabold"
                   : "bg-[#0b1013] text-rose-400 border border-rose-500/20 hover:bg-rose-950/30"
               }`}
             >
-              Tạm Khóa (≥2 lần)
+              <span>Tạm Khóa (≥2 lần)</span>
+              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${candidatesStats.locked > 0 ? "bg-rose-600 text-white" : "bg-black/30"}`}>
+                {candidatesStats.locked}
+              </span>
             </button>
           </div>
         </div>
@@ -213,8 +220,9 @@ export const CoordinatorProfilesView: React.FC = () => {
                         <td className="py-3.5 px-4 text-zinc-400">{u.schoolName || (u.isFpt ? "FPT University" : "N/A")}</td>
                         <td className="py-3.5 px-4 text-center">
                           {isLocked ? (
-                            <span className="px-2 py-0.5 bg-rose-950/40 text-rose-300 border border-rose-500/30 rounded font-bold text-[10px]">
-                              KHÓA ({u.rejectionCount})
+                            <span className="px-2 py-0.5 bg-rose-950/60 text-rose-300 border border-rose-500/50 rounded font-bold text-[10px] inline-flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-rose-400" />
+                              KHÓA ({u.rejectionCount} GẬY)
                             </span>
                           ) : isApproved ? (
                             <span className="px-2 py-0.5 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 rounded font-bold text-[10px]">
@@ -222,12 +230,28 @@ export const CoordinatorProfilesView: React.FC = () => {
                             </span>
                           ) : (
                             <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 border border-amber-500/30 rounded font-bold text-[10px]">
-                              CHỜ DUYỆT
+                              CHỜ DUYỆT {u.rejectionCount ? `(LẦN ${u.rejectionCount + 1})` : ""}
                             </span>
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            {isLocked && (
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Mở khóa tài khoản cho "${u.fullName || u.email}"?`)) {
+                                    actions.handleUnblock(userId);
+                                  }
+                                }}
+                                disabled={isUnblocking}
+                                className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500 hover:text-black text-amber-300 font-mono text-xs rounded transition-all cursor-pointer flex items-center gap-1 font-bold"
+                                title="Mở khóa tài khoản (Gỡ các lần từ chối)"
+                              >
+                                <Unlock className="w-3.5 h-3.5" />
+                                <span>Mở Khóa</span>
+                              </button>
+                            )}
+
                             <button
                               onClick={() => actions.setDetailUserModal(u)}
                               className="px-2.5 py-1 bg-[#141f23] border border-zinc-700 hover:border-amber-400 hover:text-white text-zinc-300 font-mono text-xs rounded transition-all cursor-pointer flex items-center gap-1.5"
@@ -275,6 +299,10 @@ export const CoordinatorProfilesView: React.FC = () => {
           }}
           onReject={async (uId, reason) => {
             await actions.handleReject(uId, reason);
+            actions.setDetailUserModal(null);
+          }}
+          onUnblock={async (uId) => {
+            await actions.handleUnblock(uId);
             actions.setDetailUserModal(null);
           }}
         />

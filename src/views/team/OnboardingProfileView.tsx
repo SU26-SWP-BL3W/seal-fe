@@ -249,7 +249,7 @@ export function OnboardingProfileView() {
       <div className="flex items-center justify-center min-h-[70vh] hud-lattice px-4 py-8">
         <Card className="w-full max-w-md p-[var(--space-xl)] bg-[var(--bg-panel)] hud-clipped border-[var(--border-muted)]">
           <button
-            onClick={() => { actions.setStep("choose"); actions.setFptResult(null); actions.setFptError(""); }}
+            onClick={() => { actions.setStep("choose"); actions.setFptResult(null); actions.setFptError(""); actions.setSubmitError(""); }}
             className="text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-4 flex items-center gap-1 cursor-pointer"
           >
             ← Quay lại
@@ -309,6 +309,12 @@ export function OnboardingProfileView() {
                   <div>Chuyên ngành: <span className="text-[var(--text-primary)]">{fptResult.major || "Kỹ thuật phần mềm"}</span></div>
                   <div>Khóa: <span className="text-[var(--text-primary)]">{fptResult.enrollYear ? `K${fptResult.enrollYear - 2004}` : "K18"}</span></div>
                 </div>
+              </div>
+            )}
+
+            {submitError && (
+              <div className="p-3 bg-[rgba(239,68,68,0.08)] border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)] font-mono">
+                {submitError}
               </div>
             )}
 

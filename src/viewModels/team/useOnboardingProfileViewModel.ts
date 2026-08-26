@@ -14,7 +14,7 @@ import type { FptStudentResponse } from "@/models/entities";
 export type OnboardingStep = "choose" | "fpt" | "nonFpt" | "pending";
 
 export function useOnboardingProfileViewModel() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<OnboardingStep>("choose");
@@ -43,6 +43,7 @@ export function useOnboardingProfileViewModel() {
 
   const handleVerifyFpt = async () => {
     setFptError("");
+    setSubmitError("");
     setFptResult(null);
     try {
       const result = await verifyFpt(fptCode);
@@ -70,14 +71,31 @@ export function useOnboardingProfileViewModel() {
     if (!fptResult) return;
     setSubmitError("");
     try {
-      await submitProfile({
+      const fptSchool = schools.find(
+        (s: any) =>
+          s.schoolName?.toLowerCase().includes("fpt") ||
+          s.schoolName?.toLowerCase().includes("đại học fpt")
+      );
+
+      const res = await submitProfile({
         isFpt: true,
+        schoolId: fptSchool?.id || "",
         studentCode: fptResult.studentCode ?? fptCode,
         fullName: fptResult.fullName ?? undefined,
-      } as any);
+      });
+
+      if (res) {
+        updateUser(res);
+      }
       router.push("/profile");
     } catch (err: any) {
-      setSubmitError(err?.response?.data?.message || "Không thể gửi hồ sơ. Vui lòng thử lại.");
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.errors?.SchoolId?.[0] ||
+        err?.response?.data?.errors?.StudentCode?.[0] ||
+        err?.message ||
+        "Không thể gửi hồ sơ. Vui lòng thử lại.";
+      setSubmitError(errorMsg);
     }
   };
 
@@ -93,7 +111,10 @@ export function useOnboardingProfileViewModel() {
           throw new Error("Không thể lấy đường dẫn ảnh sau khi tải lên. Vui lòng thử lại.");
         }
       }
-      await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl });
+      const res = await submitProfile({ isFpt: false, schoolId, studentCode, photoStudentCardUrl: photoCardUrl });
+      if (res) {
+        updateUser(res);
+      }
       router.push("/profile");
     } catch (err: any) {
       const errorMsg =
@@ -151,6 +172,7 @@ export function useOnboardingProfileViewModel() {
       setFptCode,
       setFptResult,
       setFptError,
+      setSubmitError,
       setSchoolId,
       setStudentCode,
       setPhotoFile,

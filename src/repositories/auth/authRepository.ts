@@ -189,7 +189,7 @@ export function useRequestUnblock() {
 // KHÔNG có userId trong body — BE tự lấy từ JWT ([Authorize]).
 
 export interface StudentProfilePayload {
-  schoolId: string;
+  schoolId?: string;
   studentCode?: string;
   photoStudentCardUrl?: string;
   isFpt: boolean;
@@ -200,12 +200,15 @@ export function useSubmitStudentProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: StudentProfilePayload) => {
-      const { data } = await apiClient.post<User>("/Auth/student-profiles", payload);
+      const res = await apiClient.post<any>("/Auth/student-profiles", payload);
+      const data = res.data?.data ?? res.data;
       return data;
     },
     onSuccess: (profile) => {
-      localStorage.setItem("currentUser", JSON.stringify(profile));
-      queryClient.setQueryData(["currentUser"], profile);
+      if (profile) {
+        localStorage.setItem("currentUser", JSON.stringify(profile));
+        queryClient.setQueryData(["currentUser"], profile);
+      }
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       queryClient.invalidateQueries({ queryKey: ["user"] });
       queryClient.invalidateQueries({ queryKey: ["my-team"] });
@@ -218,12 +221,15 @@ export function useUpdateStudentProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: StudentProfilePayload) => {
-      const { data } = await apiClient.put<User>("/Auth/student-profiles", payload);
+      const res = await apiClient.put<any>("/Auth/student-profiles", payload);
+      const data = res.data?.data ?? res.data;
       return data;
     },
     onSuccess: (profile) => {
-      localStorage.setItem("currentUser", JSON.stringify(profile));
-      queryClient.setQueryData(["currentUser"], profile);
+      if (profile) {
+        localStorage.setItem("currentUser", JSON.stringify(profile));
+        queryClient.setQueryData(["currentUser"], profile);
+      }
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       queryClient.invalidateQueries({ queryKey: ["user"] });
       queryClient.invalidateQueries({ queryKey: ["my-team"] });
@@ -237,7 +243,7 @@ export function useFptStudentVerification() {
   return useMutation({
     mutationFn: async (studentCode: string) => {
       const res = await apiClient.get<any>(`/fpt-students/${studentCode}`);
-      return res.data;
+      return res.data?.data ?? res.data;
     },
   });
 }

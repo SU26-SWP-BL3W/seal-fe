@@ -140,6 +140,27 @@ export function useMyInvitations(enabled: boolean = true) {
 
 // ─── User Rejections ─────────────────────────────────────────
 
+/** GET /api/UserRejections — Lấy tất cả lịch sử từ chối (Admin/EC) */
+export function useGetAllUserRejections(params?: { pageSize?: number; pageNumber?: number }) {
+  return useQuery({
+    queryKey: ["allUserRejections", params],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<BaseResponse<PagedResult<UserRejection>> | PagedResult<UserRejection> | UserRejection[]>("/UserRejections", {
+          params: { PageSize: params?.pageSize ?? 1000, PageNumber: params?.pageNumber ?? 1 },
+        });
+        const data = (res.data as any)?.data ?? res.data;
+        const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : Array.isArray((data as any)?.items) ? (data as any).items : [];
+        return list as UserRejection[];
+      } catch (err: any) {
+        console.warn("[UserRejections] GET /api/UserRejections error:", err?.message);
+        return [] as UserRejection[];
+      }
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
 /** GET /api/UserRejections/user/{userId} — Lấy lịch sử từ chối hồ sơ */
 export function useGetUserRejections(userId: string | undefined) {
   return useQuery({
@@ -147,13 +168,62 @@ export function useGetUserRejections(userId: string | undefined) {
     queryFn: async () => {
       try {
         const res = await apiClient.get<UserRejection[]>(`/UserRejections/user/${userId}`);
-        if (res.data) return res.data;
+        const data = (res.data as any)?.data ?? res.data;
+        if (Array.isArray(data)) return data as UserRejection[];
+        if (Array.isArray(res.data)) return res.data as UserRejection[];
       } catch {
         // Fallback
       }
       return [];
     },
     enabled: !!userId,
+  });
+}
+
+/** DELETE /api/UserRejections/{id} — Xóa một bản ghi từ chối */
+export function useDeleteUserRejection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (rejectionId: string) => {
+      const res = await apiClient.delete(`/UserRejections/${rejectionId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userRejections"] });
+      queryClient.invalidateQueries({ queryKey: ["allUserRejections"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+}
+
+/** Mở khóa tài khoản: xóa toàn bộ bản ghi từ chối của user để đưa số gậy về 0 */
+export function useUnblockUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      try {
+        // Lấy danh sách rejections của user
+        const res = await apiClient.get<any>(`/UserRejections/user/${userId}`);
+        const raw = res.data?.data ?? res.data;
+        const list: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
+        for (const rej of list) {
+          const rejId = rej?.id || rej?.Id;
+          if (rejId) {
+            await apiClient.delete(`/UserRejections/${rejId}`);
+          }
+        }
+      } catch (err: any) {
+        console.warn("[Unblock] Error deleting rejections for user " + userId, err?.message);
+        throw err;
+      }
+      return true;
+    },
+    onSuccess: (_data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["userRejections", userId] });
+      queryClient.invalidateQueries({ queryKey: ["allUserRejections"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["user", userId] });
+    },
   });
 }
 

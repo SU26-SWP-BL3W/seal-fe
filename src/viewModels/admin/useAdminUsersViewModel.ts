@@ -1,5 +1,13 @@
-import React, { useState } from "react";
-import { useGetUsers, useApproveUser, useRejectUser, useCreateUser, useUpdateUser } from "@/repositories/usersRepository";
+import React, { useState, useMemo } from "react";
+import {
+  useGetUsers,
+  useApproveUser,
+  useRejectUser,
+  useCreateUser,
+  useUpdateUser,
+  useGetAllUserRejections,
+  useUnblockUser,
+} from "@/repositories/usersRepository";
 import { useGetSchools } from "@/repositories/schoolsRepository";
 import { staffRepository } from "@/repositories/staffRepository";
 import { useEvents } from "@/repositories/eventsRepository";
@@ -21,13 +29,46 @@ export function useAdminUsersViewModel() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const { data: rawUsersData, isLoading, refetch } = useGetUsers({ pageSize: 1000 });
-  const usersList: User[] = rawUsersData?.data ?? [];
+  const { data: rawUsersData, isLoading: isLoadingUsers, refetch: refetchUsers } = useGetUsers({ pageSize: 1000 });
+  const rawUsersList: User[] = rawUsersData?.data ?? [];
+
+  const { data: allRejections = [], isLoading: isLoadingRejections, refetch: refetchRejections } = useGetAllUserRejections({ pageSize: 1000 });
+  const isLoading = isLoadingUsers || isLoadingRejections;
+
+  const rejectionsMap = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    for (const r of allRejections) {
+      const uid = r.userId || (r as any).UserId;
+      if (uid) {
+        if (!map[uid]) map[uid] = [];
+        map[uid].push(r);
+      }
+    }
+    return map;
+  }, [allRejections]);
+
+  const usersList: User[] = useMemo(() => {
+    return rawUsersList.map((u) => {
+      const uId = u.id || (u as any).Id || u.userId || "";
+      const userRejs = rejectionsMap[uId] || [];
+      const count = userRejs.length || (u as any).rejectionCount || 0;
+      const sorted = [...userRejs].sort(
+        (a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime()
+      );
+      return {
+        ...u,
+        rejectionCount: count,
+        lastRejectionReason: sorted[0]?.reason || (u as any).lastRejectionReason,
+        rejections: sorted,
+      };
+    });
+  }, [rawUsersList, rejectionsMap]);
 
   const { data: schoolsList = [] } = useGetSchools();
 
   const { mutateAsync: approveUser } = useApproveUser();
   const { mutateAsync: rejectUser } = useRejectUser();
+  const { mutateAsync: unblockUser, isPending: isUnblocking } = useUnblockUser();
   const { mutateAsync: createUser, isPending: isCreatingUser } = useCreateUser();
   const { mutateAsync: updateUser, isPending: isUpdatingUser } = useUpdateUser();
 
@@ -42,6 +83,11 @@ export function useAdminUsersViewModel() {
     isStudent: true,
     isAdmin: false,
   });
+
+  const refetch = () => {
+    refetchUsers();
+    refetchRejections();
+  };
 
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,30 +159,32 @@ export function useAdminUsersViewModel() {
     }
   };
 
-  const filteredUsers = usersList.filter((u) => {
-    const searchLower = searchTerm.toLowerCase().trim();
-    const matchesSearch =
-      !searchLower ||
-      (u.fullName || "").toLowerCase().includes(searchLower) ||
-      (u.email || "").toLowerCase().includes(searchLower) ||
-      (u.studentCode || "").toLowerCase().includes(searchLower) ||
-      (u.schoolName || "").toLowerCase().includes(searchLower);
+  const filteredUsers = useMemo(() => {
+    return usersList.filter((u) => {
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        !searchLower ||
+        (u.fullName || "").toLowerCase().includes(searchLower) ||
+        (u.email || "").toLowerCase().includes(searchLower) ||
+        (u.studentCode || "").toLowerCase().includes(searchLower) ||
+        (u.schoolName || "").toLowerCase().includes(searchLower);
 
-    let matchesRole = true;
-    const emailLower = (u.email || "").toLowerCase();
-    if (roleFilter === "admin") matchesRole = !!u.isAdmin || emailLower.includes("admin");
-    else if (roleFilter === "coordinator") matchesRole = emailLower.includes("ec.coordinator");
-    else if (roleFilter === "judge") matchesRole = emailLower.includes("judge");
-    else if (roleFilter === "mentor") matchesRole = emailLower.includes("mentor");
-    else if (roleFilter === "student") matchesRole = !u.isAdmin && !emailLower.includes("admin") && !emailLower.includes("ec.coordinator") && !emailLower.includes("judge") && !emailLower.includes("mentor");
+      let matchesRole = true;
+      const emailLower = (u.email || "").toLowerCase();
+      if (roleFilter === "admin") matchesRole = !!u.isAdmin || emailLower.includes("admin");
+      else if (roleFilter === "coordinator") matchesRole = emailLower.includes("ec.coordinator");
+      else if (roleFilter === "judge") matchesRole = emailLower.includes("judge");
+      else if (roleFilter === "mentor") matchesRole = emailLower.includes("mentor");
+      else if (roleFilter === "student") matchesRole = !u.isAdmin && !emailLower.includes("admin") && !emailLower.includes("ec.coordinator") && !emailLower.includes("judge") && !emailLower.includes("mentor");
 
-    let matchesStatus = true;
-    if (statusFilter === "approved") matchesStatus = !!u.isApproved;
-    else if (statusFilter === "pending") matchesStatus = !u.isApproved && (u.rejectionCount ?? 0) < 2;
-    else if (statusFilter === "locked") matchesStatus = (u.rejectionCount ?? 0) >= 2;
+      let matchesStatus = true;
+      if (statusFilter === "approved") matchesStatus = !!u.isApproved;
+      else if (statusFilter === "pending") matchesStatus = !u.isApproved && (u.rejectionCount ?? 0) < 2;
+      else if (statusFilter === "locked") matchesStatus = (u.rejectionCount ?? 0) >= 2;
 
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [usersList, searchTerm, roleFilter, statusFilter]);
 
   const pagination = usePagination(filteredUsers, 10);
 
@@ -162,6 +210,17 @@ export function useAdminUsersViewModel() {
       refetch();
     } catch {
       alert("Đã ghi nhận từ chối hồ sơ kèm lý do.");
+    }
+  };
+
+  const handleUnblock = async (userId: string) => {
+    try {
+      await unblockUser(userId);
+      setDetailUserModal(null);
+      refetch();
+      alert("Đã mở khóa tài khoản thành công!");
+    } catch {
+      alert("Không thể mở khóa tài khoản. Vui lòng thử lại.");
     }
   };
 
@@ -201,6 +260,7 @@ export function useAdminUsersViewModel() {
       isSubmitting,
       successMessage,
       isLoading,
+      isUnblocking,
       createUserModalOpen,
       createUserError,
       createUserForm,
@@ -235,6 +295,7 @@ export function useAdminUsersViewModel() {
       handleEditUserSubmit,
       handleApprove,
       handleRejectSubmit,
+      handleUnblock,
       handleAssignEc,
       refetch,
     },
