@@ -108,6 +108,11 @@ export function CreateTeamForm({ defaultEventId }: CreateTeamFormProps) {
         title: "Tạo đội thi thành công",
         message: `Chúc mừng! Bạn đã tạo đội "${teamName.trim()}" thành công và là Đội trưởng. Hãy mời thành viên để hoàn thiện đội thi!`,
         type: "success",
+        // Chỉ định thẳng eventId của đội vừa tạo — nếu để trống, nút "Xem đội thi" sẽ rơi về
+        // /my-team không kèm eventId, và trang đó mặc định lấy theo activeRole (vai trò được
+        // chọn làm "chính" toàn hệ thống, không phải sự kiện vừa tạo đội) -> hiện nhầm đội khác
+        // khi người dùng đang làm Trưởng nhóm ở nhiều sự kiện cùng lúc.
+        linkUrl: `/my-team?eventId=${activeEventId}`,
       });
     } catch (err: unknown) {
       const detail = err as { message?: string; response?: { data?: { message?: string } } };
