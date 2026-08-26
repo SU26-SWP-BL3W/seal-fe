@@ -147,8 +147,8 @@ export const AdminDashboardView: React.FC = () => {
               disabled={isSettingUpDemoEvents}
               className="font-mono text-xs flex flex-col items-start gap-1 p-4 h-auto text-left"
             >
-              <span className="flex items-center gap-1.5 font-bold"><Sparkles className="w-3.5 h-3.5" /> Demo LIVE: Nộp → Chấm → Công bố</span>
-              <span className="text-[var(--text-muted)] font-normal">Khác Full 100%. Event [DEMO LIVE] + Chấm Điểm (bài sẵn)</span>
+              <span className="flex items-center gap-1.5 font-bold"><Sparkles className="w-3.5 h-3.5" /> Nộp → Chấm → Công bố</span>
+              <span className="text-[var(--text-muted)] font-normal">Khác Full 100%. 1 sự kiện: Team 1 trống, Team 2 đã chấm sẵn</span>
               {isSettingUpDemoEvents && <span className="text-[var(--accent-primary)]">Đang tạo...</span>}
             </Button>
             <Button

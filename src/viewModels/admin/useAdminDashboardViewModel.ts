@@ -24,7 +24,7 @@ export function useAdminDashboardViewModel() {
     try {
       await setupDemoEvents(new Date().toISOString());
       setDemoToolMessage(
-        "Đã tạo [DEMO LIVE] Nộp Bài & Chấm: Team Nộp Bài 1 trống (student1_demo nộp live); Team 2 đã nộp+chấm sẵn. judge/mentor/ec_demo. Pass: 123456. Không nhầm với nút Đầy Đủ 100%."
+        "Đã tạo Nộp Bài & Chấm: Team 1 trống (student1_demo); Team 2 đã nộp+chấm sẵn. judge/mentor/ec_demo. Pass: 123456. Khác nút Đầy Đủ 100%."
       );
       refetch();
     } catch (err: any) {
