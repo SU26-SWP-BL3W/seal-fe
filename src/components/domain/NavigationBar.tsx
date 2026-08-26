@@ -5,8 +5,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Link } from "@/i18n/routing";
 import { SealShield } from "./SealShield";
 import { NotificationBell } from "./NotificationBell";
-import { hasEventPermission, hasEventRolePermission, hasTrackRolePermission } from "@/lib/permissions";
-import { resolveMentorContext, resolveJudgeContext, filterRolesByName } from "@/lib/eventRoles";
+import { hasEventRolePermission, hasTrackRolePermission } from "@/lib/permissions";
+import { resolveMentorContext, resolveJudgeContext, filterRolesByName, hasEventRole } from "@/lib/eventRoles";
 import { useEventDetail } from "@/repositories/eventsRepository";
 import {
   Globe,
@@ -826,7 +826,14 @@ export function NavigationBar() {
   // ─────────────────────────────────────────────────────────────
   if (showParticipantSidebar) {
     const activeViewEventId = currentEventId;
-    const isJoinedThisEvent = hasEventPermission(user, activeRole, activeViewEventId);
+    // hasEventPermission() chỉ dành cho vai trò tổ chức (assignedEventIds lọc theo
+    // STAFF_ROLE_NAMES trong eventRoles.ts, KHÔNG gồm TeamLeader/TeamMember) — dùng nó ở
+    // đây luôn trả false cho thí sinh dù activeRole.roleName đã đúng "TeamMember". Kiểm
+    // tra thẳng allEventRoles (danh sách đầy đủ, không bị lọc) cho đúng vai trò Team.
+    const isJoinedThisEvent =
+      !!(user?.isAdmin || user?.IsAdmin) ||
+      hasEventRole(allEventRoles, activeViewEventId, "TeamLeader") ||
+      hasEventRole(allEventRoles, activeViewEventId, "TeamMember");
 
     return (
       <aside className="w-full md:w-64 bg-[var(--bg-panel)] border-b md:border-b-0 md:border-r border-[var(--border-muted)] flex flex-col justify-between p-5 shrink-0 z-50 md:fixed md:left-0 md:top-0 md:bottom-0">

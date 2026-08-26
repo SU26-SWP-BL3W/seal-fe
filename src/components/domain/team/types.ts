@@ -19,4 +19,5 @@ export interface InvitationView {
   statusLabel: string;
   sentAt: string;
   respondedAt?: string;
+  isTransfer?: boolean;
 }

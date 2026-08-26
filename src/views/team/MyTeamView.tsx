@@ -15,7 +15,6 @@ import {
   TeamHeader,
   TeamInfoCard,
   TransferLeaderDialog,
-  type InvitationView,
 } from "@/components/domain/team";
 import { TeamCountdownTimer } from "@/components/domain/TeamCountdownTimer";
 import { useMyTeamViewModel } from "@/viewModels/team/useMyTeamViewModel";
@@ -406,12 +405,16 @@ export function MyTeamView() {
           onConfirm={actions.handleKickMember}
         />
 
-        {/* Dialog Hủy Lời Mời */}
+        {/* Dialog Hủy Lời Mời / Hủy Yêu Cầu Chuyển Quyền */}
         <ConfirmDialog
           open={Boolean(cancelTarget)}
-          title="Hủy lời mời tham gia?"
-          description={`Hủy lời mời đã gửi tới email ${cancelTarget?.email}?`}
-          confirmLabel={isCancelling ? "Đang hủy..." : "Hủy lời mời"}
+          title={cancelTarget?.isTransfer ? "Hủy yêu cầu chuyển quyền Trưởng nhóm?" : "Hủy lời mời tham gia?"}
+          description={
+            cancelTarget?.isTransfer
+              ? `Hủy yêu cầu chuyển quyền Trưởng nhóm đã gửi tới ${cancelTarget?.email}? Bạn vẫn tiếp tục là Trưởng nhóm.`
+              : `Hủy lời mời đã gửi tới email ${cancelTarget?.email}?`
+          }
+          confirmLabel={isCancelling ? "Đang hủy..." : cancelTarget?.isTransfer ? "Hủy yêu cầu" : "Hủy lời mời"}
           destructive
           onCancel={() => actions.setCancelTarget(null)}
           onConfirm={actions.handleCancelInvitation}

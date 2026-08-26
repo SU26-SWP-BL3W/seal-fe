@@ -323,10 +323,15 @@ export function useRespondTeamInvitation() {
       );
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["myTeamInvitation"] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
       queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      // Cùng thiếu sót như useTransferTeamLeader — panel "Đang chờ/Lịch sử" phía Trưởng nhóm
+      // (người GỬI lời mời/yêu cầu) không tự thấy trạng thái đổi khi người nhận vừa phản hồi.
+      if (data?.teamId) {
+        queryClient.invalidateQueries({ queryKey: ["teamInvitations", data.teamId] });
+      }
     },
   });
 }
@@ -349,6 +354,9 @@ export function useTransferTeamLeader() {
       queryClient.invalidateQueries({ queryKey: ["team", teamId] });
       queryClient.invalidateQueries({ queryKey: ["myTeam"] });
       queryClient.invalidateQueries({ queryKey: ["my-team"] });
+      // Thiếu dòng này trước đây -> panel "Đang chờ/Lịch sử" không tự thấy yêu cầu chuyển quyền
+      // vừa gửi, phải F5 thủ công mới thấy (cache React Query của teamInvitations không bị invalidate).
+      queryClient.invalidateQueries({ queryKey: ["teamInvitations", teamId] });
     },
   });
 }

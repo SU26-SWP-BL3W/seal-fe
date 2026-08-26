@@ -36,15 +36,24 @@ export function InvitePanel({
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
 
   const pendingInvitations = invitations.filter(
-    (inv) => inv.status === "PendingAccept" || inv.status === "Pending" || !inv.status
+    (inv) =>
+      inv.status === "PendingAccept" ||
+      inv.status === "Pending" ||
+      inv.status === "TransferPending" ||
+      !inv.status
   );
   const historyInvitations = invitations.filter(
-    (inv) => inv.status && inv.status !== "PendingAccept" && inv.status !== "Pending"
+    (inv) =>
+      inv.status &&
+      inv.status !== "PendingAccept" &&
+      inv.status !== "Pending" &&
+      inv.status !== "TransferPending"
   );
 
   const pendingCount = pendingInvitations.length;
+  const pendingMemberInviteCount = pendingInvitations.filter((inv) => !inv.isTransfer).length;
   const isFull = memberCount >= MAX_MEMBERS;
-  const isPotentialFull = memberCount + pendingCount >= MAX_MEMBERS && !isFull;
+  const isPotentialFull = memberCount + pendingMemberInviteCount >= MAX_MEMBERS && !isFull;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +123,7 @@ export function InvitePanel({
       ) : isPotentialFull ? (
         <div className="p-3 bg-cyan-950/30 border-b border-cyan-500/30 text-[11px] font-mono text-cyan-300/90 flex items-start gap-2">
           <span>
-            Đội có {memberCount} thành viên + {pendingCount} lời mời đang chờ (Tổng: {memberCount + pendingCount}/5).
+            Đội có {memberCount} thành viên + {pendingMemberInviteCount} lời mời đang chờ (Tổng: {memberCount + pendingMemberInviteCount}/5).
           </span>
         </div>
       ) : null}
@@ -216,18 +225,31 @@ export function InvitePanel({
                       <span className="text-[10px] text-zinc-400 font-mono">
                         Gửi: {inv.sentAt ? new Date(inv.sentAt).toLocaleString("vi-VN", { dateStyle: "short", timeStyle: "short" }) : "—"}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950/60 text-amber-300 border border-amber-500/40 shrink-0">
-                        Đang chờ
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border shrink-0 ${
+                          inv.isTransfer
+                            ? "bg-purple-950/60 text-purple-300 border-purple-500/40"
+                            : "bg-amber-950/60 text-amber-300 border-amber-500/40"
+                        }`}
+                      >
+                        {inv.isTransfer ? "Chờ nhận quyền" : "Đang chờ"}
                       </span>
                     </div>
 
                     {/* Middle Row: Full Email & Full Name */}
                     <div className="space-y-0.5 pt-0.5">
+                      {inv.isTransfer && (
+                        <div className="text-[10px] font-bold text-purple-300 font-mono uppercase tracking-wide">
+                          Yêu cầu chuyển quyền Trưởng nhóm
+                        </div>
+                      )}
                       <div className="text-xs font-bold text-white font-mono break-all leading-snug" title={inv.email}>
                         {inv.email}
                       </div>
                       {inv.fullName && (
-                        <div className="text-[11px] text-zinc-400 font-sans">{inv.fullName}</div>
+                        <div className="text-[11px] text-zinc-400 font-sans">
+                          {inv.isTransfer ? `Đề xuất làm Trưởng nhóm mới: ${inv.fullName}` : inv.fullName}
+                        </div>
                       )}
                     </div>
 
@@ -241,7 +263,7 @@ export function InvitePanel({
                           onClick={() => onCancel(inv)}
                           className="px-2 py-0.5 font-mono font-bold uppercase text-rose-400 hover:text-white bg-rose-950/30 hover:bg-rose-900/60 border border-rose-500/30 rounded transition-all cursor-pointer disabled:opacity-40"
                         >
-                          Hủy mời
+                          {inv.isTransfer ? "Hủy yêu cầu" : "Hủy mời"}
                         </button>
                       </div>
                     )}
@@ -265,6 +287,15 @@ export function InvitePanel({
                   const isAccepted = inv.status === "Accepted";
                   const isDeclined = inv.status === "Declined";
                   const isExpired = inv.status === "Expired";
+                  const defaultLabel = isAccepted
+                    ? inv.isTransfer
+                      ? "Đã nhận quyền"
+                      : "Đã chấp nhận"
+                    : isDeclined
+                    ? "Đã từ chối"
+                    : isExpired
+                    ? "Đã hết hạn"
+                    : inv.statusLabel;
 
                   return (
                     <li
@@ -286,9 +317,14 @@ export function InvitePanel({
                               : "bg-zinc-800 text-zinc-300 border-zinc-700"
                           }`}
                         >
-                          {isAccepted ? "Đã chấp nhận" : isDeclined ? "Đã từ chối" : isExpired ? "Đã hết hạn" : inv.statusLabel}
+                          {inv.statusLabel || defaultLabel}
                         </span>
                       </div>
+                      {inv.isTransfer && (
+                        <div className="text-[10px] font-bold text-purple-300 font-mono uppercase tracking-wide">
+                          Yêu cầu chuyển quyền Trưởng nhóm
+                        </div>
+                      )}
                       <div className="space-y-0.5">
                         <div className="text-xs font-bold text-zinc-200 font-mono break-all" title={inv.email}>
                           {inv.email}
