@@ -25,6 +25,9 @@ import {
 import { AppealStatus } from "@/repositories/appealsRepository";
 import { useAppealsViewModel } from "@/viewModels/team/useAppealsViewModel";
 
+/**
+ * Hàm tiện ích trích xuất an toàn giá trị chuỗi từ Object (xử lý cả PascalCase và camelCase)
+ */
 function pick(obj: unknown, ...keys: string[]): string {
   const rec = obj as Record<string, unknown> | null;
   if (!rec) return "";
@@ -35,7 +38,20 @@ function pick(obj: unknown, ...keys: string[]): string {
   return "";
 }
 
+/**
+ * =========================================================================================
+ * COMPONENT: AppealsView
+ * VAI TRÒ: Sinh viên / Trưởng nhóm (Team Leader) & Điều phối viên (EC) (/appeals)
+ * CHỨC NĂNG:
+ *   1. Dành cho Thí sinh: Tạo và nộp đơn phúc khảo cho bài nộp khi có khiếu nại về điểm số.
+ *   2. Dành cho EC (khi isEC=true): Xem toàn bộ đơn khiếu nại và phản hồi trực tiếp qua modal.
+ *   3. Theo dõi trạng thái giải quyết đơn: ĐANG CHỜ (Pending), CHẤP NHẬN (Approved), TỪ CHỐI (Rejected).
+ * =========================================================================================
+ */
 export function AppealsView() {
+  // -------------------------------------------------------------------------
+  // [BƯỚC 1]: KẾT NỐI VỚI VIEWMODEL (MVVM PATTERN)
+  // -------------------------------------------------------------------------
   const { state, data, pagination, actions } = useAppealsViewModel();
 
   const {
@@ -58,6 +74,7 @@ export function AppealsView() {
 
   return (
     <div className="p-[var(--space-xl)] max-w-[var(--container-max)] mx-auto hud-lattice min-h-[calc(100vh-4rem)]">
+      {/* Tiêu đề trang & Nút làm mới */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-[var(--border-muted)] pb-6">
         <div>
           <div className="flex items-center gap-2 font-mono text-xs text-[#f59e0b] font-bold uppercase tracking-wider mb-1">
@@ -80,6 +97,9 @@ export function AppealsView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* =====================================================================
+            KHỐI 1: FORM GỬI ĐƠN PHÚC KHẢO (CHỈ DÀNH CHO TEAM LEADER)
+            ===================================================================== */}
         {!isEC && (
           <div className="flex flex-col gap-4">
             <h2 className="font-display text-lg font-bold text-white uppercase tracking-widest border-b border-[var(--border-muted)] pb-2 flex items-center gap-2">
@@ -94,6 +114,7 @@ export function AppealsView() {
 
               {isLeader ? (
                 <form onSubmit={actions.handleCreateAppeal} className="flex flex-col gap-4">
+                  {/* Chọn bài nộp cần phúc khảo */}
                   <div className="flex flex-col gap-1.5 w-full">
                     <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
                       Bài nộp cần phúc khảo *
@@ -119,6 +140,7 @@ export function AppealsView() {
                     )}
                   </div>
 
+                  {/* Nhập lý do khiếu nại */}
                   <div className="flex flex-col gap-1.5 w-full">
                     <label className="text-xs font-mono tracking-widest text-[var(--text-muted)] uppercase">
                       Lý do phúc khảo *
@@ -128,7 +150,7 @@ export function AppealsView() {
                       onChange={(e) => actions.setReason(e.target.value)}
                       required
                       rows={4}
-                      placeholder="Ghi rõ lý do khiếu nại..."
+                      placeholder="Ghi rõ lý do khiếu nại (ví dụ: Điểm tiêu chí sáng tạo bị chấm sót chức năng AI)..."
                       className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] text-xs font-mono focus:border-[var(--color-warning)] focus:outline-none text-[var(--text-primary)] resize-none"
                     />
                   </div>
@@ -162,6 +184,9 @@ export function AppealsView() {
           </div>
         )}
 
+        {/* =====================================================================
+            KHỐI 2: BẢNG DANH SÁCH ĐƠN PHÚC KHẢO ĐÃ GỬI & TRẠNG THÁI XỬ LÝ
+            ===================================================================== */}
         <div className={isEC ? "lg:col-span-3 flex flex-col gap-4" : "lg:col-span-2 flex flex-col gap-4"}>
           <h2 className="font-display text-lg font-bold text-white uppercase tracking-widest border-b border-[var(--border-muted)] pb-2 flex items-center justify-between">
             <span>Danh sách đơn phúc khảo ({appeals.length})</span>
@@ -244,6 +269,9 @@ export function AppealsView() {
         </div>
       </div>
 
+      {/* =====================================================================
+          KHỐI 3: MODAL XEM CHI TIẾT ĐƠN PHÚC KHẢO & PHẢN HỒI CỦA BAN TỔ CHỨC
+          ===================================================================== */}
       {detailModal && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-4">
           <Card className="w-full max-w-2xl p-6 bg-[var(--bg-panel)] hud-clipped border-[var(--color-warning)] space-y-6 max-h-[90vh] overflow-y-auto">
@@ -270,6 +298,7 @@ export function AppealsView() {
                 </span>
               </div>
 
+              {/* Thông tin bài nộp liên quan */}
               {relatedSubmission ? (
                 <div className="p-3 bg-[var(--bg-input)] border border-[var(--border-muted)] hud-clipped space-y-1">
                   <span className="text-[10px] text-[var(--accent-primary)] font-bold uppercase block">Bài nộp liên quan</span>
@@ -294,6 +323,7 @@ export function AppealsView() {
                 </p>
               )}
 
+              {/* Phản hồi từ Ban Tổ Chức (Dành cho EC) */}
               {isEC && (
                 <div className="space-y-2 pt-2 border-t border-[var(--border-muted)]">
                   <label className="text-xs font-mono text-[var(--accent-coordinator)] uppercase font-bold block">
@@ -320,6 +350,7 @@ export function AppealsView() {
                 Đóng
               </Button>
 
+              {/* Các nút Chấp nhận / Từ chối (Dành riêng cho EC khi đơn đang Pending) */}
               {isEC && detailModal.status === AppealStatus.Pending && (
                 <div className="flex items-center gap-2">
                   <Button

@@ -583,11 +583,20 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                   key={item.invitationId}
                   className="p-4 flex flex-col gap-2 bg-[var(--accent-primary)]/5 hover:bg-[var(--bg-input)]/40 transition-colors"
                 >
+                  {(() => {
+                    const isTransfer = item.type === "TEAM" && item.role === "Trưởng nhóm";
+                    const isJoin = item.type === "TEAM" && !isTransfer;
+                    return (
+                  <>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shrink-0" />
                       <span className="font-bold text-[var(--text-primary)] text-sm truncate">
-                        {item.type === "TEAM" ? "Lời Mời Vào Đội (Từ Đội Trưởng)" : `Lời Mời: ${formatRoleLabel(item.role)}`}
+                        {isTransfer
+                          ? "Yêu Cầu Chuyển Quyền Trưởng Nhóm"
+                          : isJoin
+                          ? "Lời Mời Vào Đội (Từ Đội Trưởng)"
+                          : `Lời Mời: ${formatRoleLabel(item.role)}`}
                       </span>
                     </div>
                     <span className="text-xs text-[var(--accent-team)] font-bold px-2 py-0.5 bg-cyan-950/40 border border-cyan-500/30 rounded shrink-0">
@@ -596,7 +605,11 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                   </div>
 
                   <p className="font-sans text-xs sm:text-[13px] text-zinc-300 leading-relaxed">
-                    {item.type === "TEAM"
+                    {isTransfer
+                      ? item.inviterName
+                        ? `Đội trưởng ${item.inviterName} muốn chuyển quyền Trưởng nhóm đội "${item.targetName}" cho bạn. Nhấn "Đồng ý" nếu bạn chấp nhận làm Trưởng nhóm mới!`
+                        : `Bạn nhận được yêu cầu chuyển quyền Trưởng nhóm đội "${item.targetName}". Nhấn "Đồng ý" nếu bạn chấp nhận làm Trưởng nhóm mới!`
+                      : isJoin
                       ? item.inviterName
                         ? `Đội trưởng ${item.inviterName} đã gửi lời mời bạn gia nhập đội thi "${item.targetName}". Nhấn "Đồng ý" để chính thức vào đội ngay!`
                         : `Bạn nhận được lời mời gia nhập đội thi "${item.targetName}" từ Đội trưởng. Nhấn "Đồng ý" để chính thức vào đội ngay!`
@@ -611,7 +624,7 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                       onClick={() => handleRespond(item, true)}
                       className="px-3.5 py-1.5 bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/40 font-bold uppercase hover:bg-[var(--color-success)] hover:text-black transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer rounded"
                     >
-                      <Check className="w-3.5 h-3.5" /> {item.type === "TEAM" ? "ĐỒNG Ý VÀO ĐỘI" : "ĐỒNG Ý NHẬN VAI TRÒ"}
+                      <Check className="w-3.5 h-3.5" /> {isTransfer ? "ĐỒNG Ý NHẬN QUYỀN" : isJoin ? "ĐỒNG Ý VÀO ĐỘI" : "ĐỒNG Ý NHẬN VAI TRÒ"}
                     </button>
                     <button
                       disabled={isResponding}
@@ -621,6 +634,9 @@ export function NotificationBell({ align = "left" }: NotificationBellProps) {
                       <X className="w-3.5 h-3.5" /> TỪ CHỐI
                     </button>
                   </div>
+                  </>
+                    );
+                  })()}
                 </div>
               ))}
               {systemNotifs.map((n) => {

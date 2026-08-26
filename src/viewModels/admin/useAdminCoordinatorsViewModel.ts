@@ -61,13 +61,15 @@ export function useAdminCoordinatorsViewModel() {
   const rawRoles = useMemo(() => rawRolesData || [], [rawRolesData]);
 
   const currentCoordinators: EventRole[] = useMemo(() => {
-    const list = Array.isArray(rawRoles) ? rawRoles : [];
+    const list = Array.isArray(rawRoles)
+      ? rawRoles
+      : (rawRoles as any)?.data?.data || (rawRoles as any)?.data?.items || (rawRoles as any)?.data || (rawRoles as any)?.items || [];
     return list.filter((r: any) => {
-      const roleName = r.roleName || r.RoleName;
+      const roleName = String(r.roleName ?? r.RoleName ?? "");
       return (
-        roleName === "EventCoordinator" ||
-        roleName === 0 ||
-        (typeof roleName === "string" && roleName.toLowerCase().includes("coordinator"))
+        roleName.toLowerCase().includes("coordinator") ||
+        roleName === "0" ||
+        roleName === "EventCoordinator"
       );
     });
   }, [rawRoles]);
