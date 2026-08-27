@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGetFinalResultsByRound, useAssignPrize, finalResultsRepository } from "@/repositories/finalResultsRepository";
 import { useMyEvents, useEvents, useEventRounds } from "@/repositories/eventsRepository";
 import { useGetTracksByEvent } from "@/repositories/tracksRepository";
@@ -35,6 +36,7 @@ import { calibrationService } from "@/services/coordinator/calibrationService";
  */
 export function useCoordinatorPublishResultsViewModel() {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const params = useParams();
   const { user: currentUser } = useAuth();
 
@@ -144,6 +146,15 @@ export function useCoordinatorPublishResultsViewModel() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPublishedState, setIsPublishedState] = useState(false);
 
+  useEffect(() => {
+    if (results.length > 0) {
+      const published = results.some(
+        (r: any) => r.isPublished === true || r.IsPublished === true,
+      );
+      setIsPublishedState(published);
+    }
+  }, [results]);
+
   // State quản lý Modal soi chi tiết điểm từng Giám khảo chấm
   const [inspectScoresModal, setInspectScoresModal] = useState<{
     open: boolean;
@@ -250,7 +261,9 @@ export function useCoordinatorPublishResultsViewModel() {
       const okMsg = `Đã tự động tính toán xếp hạng điểm số cho Vòng thi (Top ${topN}).`;
       setSuccessMessage(okMsg);
       toast.success(okMsg);
-      await refetch(); // Làm mới lại bảng điểm từ DB
+      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ["finalResultsByRound"] });
+      await queryClient.invalidateQueries({ queryKey: ["finalResultsByTeam"] });
     } catch (err: any) {
       const errMsg = `Tính điểm thất bại: ${err?.response?.data?.message || err?.message}`;
       setErrorMessage(errMsg);
@@ -290,6 +303,8 @@ export function useCoordinatorPublishResultsViewModel() {
         );
       }
       await refetch();
+      await queryClient.invalidateQueries({ queryKey: ["finalResultsByRound"] });
+      await queryClient.invalidateQueries({ queryKey: ["finalResultsByTeam"] });
     } catch (err: any) {
       const errMsg = `Đổi trạng thái thất bại: ${err?.response?.data?.message || err?.message}`;
       setErrorMessage(errMsg);

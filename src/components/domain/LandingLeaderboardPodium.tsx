@@ -134,10 +134,24 @@ function PodiumCard({
   );
 }
 
+export interface PodiumTeamEntry {
+  eventName?: string;
+  season?: string;
+  teamName: string;
+  projectName?: string;
+  school?: string;
+  track?: string;
+  score: number;
+  prizeTitle?: string;
+  prizeVnd?: number;
+  rank: 1 | 2 | 3;
+}
+
 interface LandingLeaderboardPodiumProps {
   eventName?: string;
   season?: string;
   totalPrizeVnd?: number;
+  teams?: PodiumTeamEntry[];
 }
 
 // ─── Main Podium Section ───────────────────────────────────────────────────────
@@ -145,8 +159,9 @@ export function LandingLeaderboardPodium({
   eventName = "SEAL Hackathon 2026",
   season = "MÙA GIẢI 2026",
   totalPrizeVnd = 200_000_000,
+  teams = [],
 }: LandingLeaderboardPodiumProps) {
-  const podiumTeams: any[] = [];
+  const podiumTeams = teams;
   const gold   = podiumTeams.find((t) => t.rank === 1);
   const silver = podiumTeams.find((t) => t.rank === 2);
   const bronze = podiumTeams.find((t) => t.rank === 3);

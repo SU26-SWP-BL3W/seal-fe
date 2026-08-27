@@ -11,6 +11,7 @@ import {
   readApiError,
   type SubmitResultListItem,
 } from "@/repositories/submitResultsRepository";
+import { useGetFinalResultsByTeam, type FinalResult } from "@/repositories/results/finalResultsRepository";
 import { validateDemoUrl, validateRepoUrl, validateSlideUrl } from "@/lib/linkValidators";
 import { usePagination } from "@/hooks/usePagination";
 import { teamService } from "@/services/team/teamService";
@@ -52,6 +53,21 @@ export function useMySubmissionsViewModel() {
   const isRegistered = team?.status === "Registered" || team?.status === "Approved";
 
   const { data: submissions = [], isLoading: isLoadingSubs, refetch } = useMySubmissions(teamId);
+  const { data: teamFinalResults = [], refetch: refetchResults } = useGetFinalResultsByTeam(teamId || undefined);
+
+  const resultByRoundId = useMemo(() => {
+    const map = new Map<string, FinalResult>();
+    for (const fr of teamFinalResults) {
+      const roundId = fr.roundId || (fr as any).RoundId;
+      if (roundId) map.set(String(roundId), fr);
+    }
+    return map;
+  }, [teamFinalResults]);
+
+  const publishedResults = useMemo(
+    () => teamFinalResults.filter((fr) => fr.isPublished ?? (fr as any).IsPublished),
+    [teamFinalResults],
+  );
 
   const pagination = usePagination(submissions, 5);
 
@@ -170,6 +186,8 @@ export function useMySubmissionsViewModel() {
     },
     data: {
       submissions,
+      resultByRoundId,
+      publishedResults,
     },
     pagination,
     actions: {
@@ -181,7 +199,9 @@ export function useMySubmissionsViewModel() {
       handleOpenEdit,
       handleSaveEdit,
       handleDelete,
-      refetch,
+      refetch: async () => {
+        await Promise.all([refetch(), refetchResults()]);
+      },
     },
   };
 }

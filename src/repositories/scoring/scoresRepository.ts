@@ -336,12 +336,13 @@ export function useGetScoresByEventRole(
   eventRoleId: string | undefined,
   params: GetScoresByEventRoleParams = {},
 ) {
+  const queryParams: GetScoresByEventRoleParams = { pageSize: 100, ...params };
   return useQuery({
-    queryKey: ["scoresByEventRole", eventRoleId, params],
+    queryKey: ["scoresByEventRole", eventRoleId, queryParams],
     queryFn: async (): Promise<Score[]> => {
       const res = await apiClient.get<PagedResult<Score>>(
         `/Scores/event-role/${eventRoleId}`,
-        { params },
+        { params: queryParams },
       );
       if (Array.isArray(res.data?.data)) return res.data.data;
       if (Array.isArray(res.data)) return res.data as unknown as Score[];
@@ -353,7 +354,9 @@ export function useGetScoresByEventRole(
 
 export async function fetchScoresByEventRole(eventRoleId: string): Promise<Score[]> {
   try {
-    const res = await apiClient.get<PagedResult<Score>>(`/Scores/event-role/${eventRoleId}`);
+    const res = await apiClient.get<PagedResult<Score>>(`/Scores/event-role/${eventRoleId}`, {
+      params: { pageSize: 100 },
+    });
     if (Array.isArray(res.data?.data)) return res.data.data;
     if (Array.isArray(res.data)) return res.data as unknown as Score[];
     return [];
