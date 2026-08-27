@@ -12,7 +12,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
   const { state, data, pagination, actions } = useLeaderboardViewModel(eventId);
 
   const { isEventScoped, selectedEventId, selectedTrack, selectedRound, event } = state;
-  const { eventsList, filteredResults } = data;
+  const { eventsList, filteredResults, topPodiumTeams, trackOptions, roundOptions } = data;
   const { paginatedItems: paginatedResults, currentPage, totalPages, totalItems, pageSize, setCurrentPage, setPageSize } = pagination;
 
   return (
@@ -98,6 +98,7 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
         eventName={selectedEventId === "all" ? "HỆ THỐNG XẾP HẠNG TOÀN QUỐC" : event.eventName}
         season="MÙA HÈ 2026"
         totalPrizeVnd={selectedEventId === "all" ? 500_000_000 : (event.totalPrizeVnd || 200_000_000)}
+        teams={topPodiumTeams}
       />
 
       {/* Full Score Table Section */}
@@ -113,9 +114,11 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
               className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
             >
               <option value="all">Tất cả Vòng thi</option>
-              <option value="Chung Kết">Vòng 3: Chung Kết</option>
-              <option value="Bán Kết">Vòng 2: Bán Kết</option>
-              <option value="Sơ Loại">Vòng 1: Sơ Loại</option>
+              {roundOptions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
             </select>
 
             <select
@@ -124,10 +127,11 @@ export function LeaderboardView({ eventId }: { eventId?: string }) {
               className="px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-muted)] font-mono text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-judge)]"
             >
               <option value="all">Tất cả Hạng mục (Tracks)</option>
-              <option value="AI & Machine Learning">AI &amp; Machine Learning</option>
-              <option value="Bảo mật & An ninh mạng">Bảo mật &amp; An ninh mạng</option>
-              <option value="IoT & Phần cứng thông minh">IoT &amp; Phần cứng thông minh</option>
-              <option value="Phát triển Web">Phát triển Web</option>
+              {trackOptions.map((tr) => (
+                <option key={tr.id} value={tr.id}>
+                  {tr.name}
+                </option>
+              ))}
             </select>
           </div>
 

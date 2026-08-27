@@ -17,6 +17,7 @@ import {
   MessageSquare,
   ExternalLink,
   X,
+  Trophy,
 } from "lucide-react";
 import { useMentorFeedbacks, parseMentorFeedbackComment } from "@/repositories/submitResultsRepository";
 import { useMySubmissionsViewModel } from "@/viewModels/team/useMySubmissionsViewModel";
@@ -89,7 +90,7 @@ export function MySubmissionsView() {
     isUpdating,
   } = state;
 
-  const { submissions } = data;
+  const { submissions, resultByRoundId, publishedResults } = data;
   const { paginatedItems: paginatedSubmissions, currentPage, totalPages, totalItems, pageSize, setCurrentPage, setPageSize } = pagination;
 
   if (!user) {
@@ -168,6 +169,34 @@ export function MySubmissionsView() {
           </div>
         </div>
 
+        {publishedResults.length > 0 && (
+          <div className="mt-4 p-4 bg-[#0e1417] border border-[#fbbf24]/40 font-mono text-xs space-y-2">
+            <div className="flex items-center gap-2 text-[#fbbf24] font-bold uppercase">
+              <Trophy className="w-4 h-4" />
+              Kết quả chính thức đã công bố
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {publishedResults.map((fr) => {
+                const score = Number(fr.finalScore ?? (fr as any).FinalScore ?? 0);
+                const rank = fr.rank ?? (fr as any).Rank;
+                return (
+                  <div
+                    key={fr.id || `${fr.roundId}-result`}
+                    className="px-3 py-2 border border-[#fbbf24]/30 bg-[#fbbf24]/5 text-white"
+                  >
+                    <span className="text-[#fbbf24] font-bold">Hạng #{rank ?? "—"}</span>
+                    <span className="mx-2 text-[#859398]">·</span>
+                    <span>Điểm: <strong className="text-[#fbbf24]">{score.toFixed(2)}</strong>/10</span>
+                    {fr.isAdvanced && (
+                      <span className="ml-2 text-[#34d399]">[ Thăng hạng ]</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Command Grid Table Panel (Stitch T5) */}
         <div className="bg-[#1a2123] border border-white/10 glow-box flex flex-col">
           <div className="h-8 bg-[#38bdf8]/10 border-b border-[#38bdf8]/30 flex items-center px-4 justify-between font-mono text-xs">
@@ -197,6 +226,7 @@ export function MySubmissionsView() {
                     <th className="py-3 px-4 uppercase tracking-wider">LIÊN KẾT BÀI NỘP (3 URLS)</th>
                     <th className="py-3 px-4 uppercase tracking-wider">THỜI GIAN NỘP</th>
                     <th className="py-3 px-4 uppercase tracking-wider">TRẠNG THÁI</th>
+                    <th className="py-3 px-4 uppercase tracking-wider">KẾT QUẢ</th>
                     <th className="py-3 px-4 uppercase tracking-wider text-right">THAO TÁC</th>
                   </tr>
                 </thead>
@@ -205,6 +235,11 @@ export function MySubmissionsView() {
                     const id = sub.id || sub.Id || `sub-${idx}`;
                     const isEliminated = (sub as any).isTeamDisqualified || (sub as any).IsTeamDisqualified;
                     const isActive = sub.isActive ?? sub.IsActive ?? true;
+                    const roundId = String((sub as any).roundId || (sub as any).RoundId || "");
+                    const finalResult = roundId ? resultByRoundId.get(roundId) : undefined;
+                    const isResultPublished = Boolean(
+                      finalResult?.isPublished ?? (finalResult as any)?.IsPublished,
+                    );
 
                     return (
                       <tr key={id} className="hover:bg-white/[0.02] transition-colors group">
@@ -267,6 +302,21 @@ export function MySubmissionsView() {
                             <span className="px-2 py-0.5 border border-[#34d399]/30 bg-[#34d399]/10 text-[#34d399] text-[10px] font-bold uppercase">
                               ĐÃ NỘP
                             </span>
+                          )}
+                        </td>
+
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          {isResultPublished && finalResult ? (
+                            <div className="space-y-0.5">
+                              <span className="px-2 py-0.5 border border-[#fbbf24]/30 bg-[#fbbf24]/10 text-[#fbbf24] text-[10px] font-bold uppercase block w-fit">
+                                Hạng #{(finalResult.rank ?? (finalResult as any).Rank) ?? "—"}
+                              </span>
+                              <span className="text-[11px] text-white">
+                                {Number(finalResult.finalScore ?? (finalResult as any).FinalScore ?? 0).toFixed(2)}/10
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-[#859398] uppercase">Chờ công bố</span>
                           )}
                         </td>
 

@@ -87,6 +87,24 @@ export function useLeaderboardViewModel(eventId?: string) {
     { trackId: activeTrackId, pageSize: 100 }
   );
 
+  const trackOptions = useMemo(
+    () =>
+      (dbTracks as any[]).map((tr) => ({
+        id: tr.id || tr.Id || "",
+        name: tr.trackName || tr.TrackName || tr.name || "Hạng mục",
+      })),
+    [dbTracks],
+  );
+
+  const roundOptions = useMemo(
+    () =>
+      (dbRounds as any[]).map((r) => ({
+        id: r.id || r.Id || "",
+        name: r.roundName || r.RoundName || "Vòng thi",
+      })),
+    [dbRounds],
+  );
+
   const realResults: TableTeam[] = useMemo(() => {
     if (!rawFinalResults || rawFinalResults.length === 0) return [];
 
@@ -112,20 +130,17 @@ export function useLeaderboardViewModel(eventId?: string) {
         prizeTitle: prize ? prize.prizeName : undefined,
         isAdvanced: Boolean(fr.isAdvanced),
       };
-    });
+    }).sort((a, b) => a.rank - b.rank);
   }, [rawFinalResults, teamMap, prizeMap, trackMap, roundsMap]);
 
-  const filteredResults = realResults.filter((r) => {
-    if (selectedTrack !== "all" && r.track !== selectedTrack) return false;
-    if (selectedRound !== "all" && !r.roundName.includes(selectedRound)) return false;
-    return true;
-  });
+  // API đã lọc theo roundId/trackId — không lọc lại theo tên (tránh lệch "Phần mềm" vs hardcode)
+  const filteredResults = realResults;
 
   const pagination = usePagination(filteredResults, 10);
 
   const topPodiumTeams = useMemo(() => {
     if (filteredResults.length === 0) return [];
-    return filteredResults.slice(0, 3).map((r, idx) => ({
+    return filteredResults.slice(0, 3).map((r) => ({
       eventName: event.eventName,
       season: event.season,
       teamName: r.teamName,
@@ -133,9 +148,9 @@ export function useLeaderboardViewModel(eventId?: string) {
       school: r.school || "SEAL Candidate",
       track: r.track,
       score: r.score,
-      prizeTitle: r.prizeTitle || ((idx + 1) === 1 ? "QUÁN QUÂN" : (idx + 1) === 2 ? "Á QUÂN 1" : "Á QUÂN 2"),
-      prizeVnd: (idx + 1) === 1 ? 50_000_000 : (idx + 1) === 2 ? 30_000_000 : 20_000_000,
-      rank: (idx + 1) as 1 | 2 | 3,
+      prizeTitle: r.prizeTitle || (r.rank === 1 ? "QUÁN QUÂN" : r.rank === 2 ? "Á QUÂN 1" : "Á QUÂN 2"),
+      prizeVnd: r.rank === 1 ? 50_000_000 : r.rank === 2 ? 30_000_000 : 20_000_000,
+      rank: r.rank as 1 | 2 | 3,
     }));
   }, [filteredResults, event.eventName, event.season]);
 
@@ -151,6 +166,8 @@ export function useLeaderboardViewModel(eventId?: string) {
       eventsList,
       filteredResults,
       topPodiumTeams,
+      trackOptions,
+      roundOptions,
     },
     pagination,
     actions: {
